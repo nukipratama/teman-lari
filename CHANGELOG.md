@@ -265,3 +265,10 @@ Files touched:
 - `tests/Unit/Models/StravaConnectionTest.php`
 - `tests/Unit/Services/Strava/StravaClientTest.php`
 
+## 2026-05-09 17:42 +0700 — fix(views): guard @vite + @fonts on built-asset existence
+
+Files touched:
+- `resources/views/layouts/app.blade.php`
+- `tests/Pest.php`
+- `tests/Unit/Providers/AppServiceProviderTest.php`
+
