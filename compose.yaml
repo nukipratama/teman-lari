@@ -1,5 +1,6 @@
 x-mysql-base: &mysql-base
     image: 'mysql:8.4'
+    restart: unless-stopped
     networks:
         - sail
     healthcheck:

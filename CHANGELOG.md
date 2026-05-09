@@ -295,3 +295,8 @@ Files touched:
 - `app/Providers/AppServiceProvider.php`
 - `tests/Feature/Auth/StravaAuthTest.php`
 
+## 2026-05-09 23:20 +0700 — chore(compose): auto-restart mysql containers on death
+
+Files touched:
+- `compose.yaml`
+
