@@ -282,3 +282,8 @@ Files touched:
 Files touched:
 - `.github/workflows/ci.yml`
 
+## 2026-05-09 19:37 +0700 — ci: stub .env before tests to silence Laravel bootstrap warning
+
+Files touched:
+- `.github/workflows/ci.yml`
+
