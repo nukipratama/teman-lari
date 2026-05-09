@@ -88,8 +88,6 @@ gh pr create --fill           # or open in the GitHub UI
 # CI runs; merge once green via the GitHub UI
 ```
 
-Bypass once with `git push --no-verify` (only for genuine emergencies — there's no server-side enforcement on GitHub Free private repos).
-
 ## Deploy
 
 Target: **homelab** (TBD — separate task). Production env overrides are sketched in `.env.example` (commented out): `LOG_CHANNEL=stderr`, `APP_ENV=production`, etc. Plug into whatever runtime the homelab settles on.
