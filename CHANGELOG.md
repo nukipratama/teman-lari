@@ -277,3 +277,8 @@ Files touched:
 Files touched:
 - `.github/workflows/ci.yml`
 
+## 2026-05-09 17:53 +0700 — ci: fix flag names — --min not --min-msi, add phpunit-level fail flags
+
+Files touched:
+- `.github/workflows/ci.yml`
+
