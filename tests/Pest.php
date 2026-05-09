@@ -1,5 +1,9 @@
 <?php
 
+use Illuminate\Support\Facades\Http;
+use Laravel\Socialite\Facades\Socialite;
+use Laravel\Socialite\Two\AbstractProvider;
+use Mockery\MockInterface;
 use Tests\TestCase;
 
 /*
@@ -14,6 +18,10 @@ use Tests\TestCase;
 */
 
 pest()->extend(TestCase::class)->in('Feature', 'Unit');
+
+pest()->beforeEach(function (): void {
+    Http::preventStrayRequests();
+})->in('Feature', 'Unit');
 
 /*
 |--------------------------------------------------------------------------
@@ -39,7 +47,17 @@ expect()->extend('toBeOne', fn () => $this->toBe(1));
 |
 */
 
-function something()
+function mockStravaDriver(callable $configure): MockInterface
 {
-    // ..
+    $driver = Mockery::mock(AbstractProvider::class);
+    $driver->shouldReceive('redirectUrl')
+        ->once()
+        ->with(route('auth.strava.callback'))
+        ->andReturnSelf();
+
+    $configure($driver);
+
+    Socialite::shouldReceive('driver')->once()->with('strava')->andReturn($driver);
+
+    return $driver;
 }

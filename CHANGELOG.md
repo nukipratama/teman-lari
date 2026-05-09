@@ -219,3 +219,31 @@ Files touched:
 - `.gitignore`
 - `.vscode/settings.json`
 
+## 2026-05-09 17:16 +0700 — feat(strava): add OAuth login + token-aware API client
+
+Files touched:
+- `app/Http/Controllers/Auth/StravaAuthController.php`
+- `app/Models/StravaConnection.php`
+- `app/Models/User.php`
+- `app/Providers/AppServiceProvider.php`
+- `app/Services/Strava/Exceptions/StravaRateLimitedException.php`
+- `app/Services/Strava/Exceptions/StravaTokenRefreshFailedException.php`
+- `app/Services/Strava/StravaClient.php`
+- `composer.json`
+- `composer.lock`
+- `config/services.php`
+- `database/factories/StravaConnectionFactory.php`
+- `database/factories/UserFactory.php`
+- `database/migrations/0001_01_01_000000_create_users_table.php`
+- `database/migrations/2026_05_09_095455_create_strava_connections_table.php`
+- `resources/views/auth/login.blade.php`
+- `resources/views/dashboard.blade.php`
+- `resources/views/layouts/app.blade.php`
+- `routes/web.php`
+- `tests/Feature/Auth/StravaAuthTest.php`
+- `tests/Feature/ExampleTest.php`
+- `tests/Pest.php`
+- `tests/Unit/Models/StravaConnectionTest.php`
+- `tests/Unit/Models/UserTest.php`
+- `tests/Unit/Services/Strava/StravaClientTest.php`
+
