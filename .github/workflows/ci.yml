@@ -90,7 +90,10 @@ jobs:
         run: composer install --prefer-dist --no-interaction --no-progress
 
       - name: Tests + 100% line coverage
-        run: ./vendor/bin/pest --coverage --min=100
+        run: >-
+          ./vendor/bin/pest --coverage --min=100
+          --fail-on-warning --fail-on-notice
+          --fail-on-deprecation --fail-on-risky
 
   # Mutation testing — measures test *quality*, not just coverage. Slow (re-runs
   # test suite per mutation) so it lives in its own job to parallelize with lint.
@@ -143,4 +146,4 @@ jobs:
         run: composer install --prefer-dist --no-interaction --no-progress
 
       - name: Mutation testing
-        run: ./vendor/bin/pest --mutate --everything --covered-only
+        run: ./vendor/bin/pest --mutate --everything --covered-only --min-msi=90

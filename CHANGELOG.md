@@ -272,3 +272,8 @@ Files touched:
 - `tests/Pest.php`
 - `tests/Unit/Providers/AppServiceProviderTest.php`
 
+## 2026-05-09 17:50 +0700 — ci: fail on hidden test warnings + mutation regressions
+
+Files touched:
+- `.github/workflows/ci.yml`
+
