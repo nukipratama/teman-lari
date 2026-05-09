@@ -7,54 +7,41 @@ on:
 
 env:
   PHP_VERSION: '8.4'
-  DB_CONNECTION: mysql
-  DB_HOST: 127.0.0.1
-  DB_PORT: 3306
-  DB_DATABASE: teman_lari_testing
-  DB_USERNAME: sail
-  DB_PASSWORD: password
-  REDIS_HOST: 127.0.0.1
-  REDIS_PORT: 6379
 
 jobs:
-  quality:
+  # No DB / no redis — just static analysis + style.
+  lint:
     runs-on: ubuntu-latest
-    services:
-      mysql:
-        image: mysql:8.4
-        env:
-          MYSQL_ROOT_PASSWORD: password
-          MYSQL_DATABASE: teman_lari_testing
-          MYSQL_USER: sail
-          MYSQL_PASSWORD: password
-        ports: ['3306:3306']
-        options: >-
-          --health-cmd="mysqladmin ping -ppassword"
-          --health-interval=5s --health-timeout=2s --health-retries=10
-      redis:
-        image: redis:alpine
-        ports: ['6379:6379']
-        options: >-
-          --health-cmd="redis-cli ping"
-          --health-interval=5s --health-timeout=2s --health-retries=10
     steps:
       - uses: actions/checkout@v6
-      - uses: shivammathur/setup-php@v2
-        with:
-          php-version: ${{ env.PHP_VERSION }}
-          coverage: pcov
-      - uses: actions/cache@v5
-        with:
-          path: vendor
-          key: composer-${{ runner.os }}-php${{ env.PHP_VERSION }}-${{ hashFiles('composer.lock') }}
-          restore-keys: composer-${{ runner.os }}-php${{ env.PHP_VERSION }}-
-      - run: composer install --prefer-dist --no-interaction --no-progress
-      - run: ./vendor/bin/pint --test
-      - run: ./vendor/bin/phpstan analyse --no-progress
-      - run: ./vendor/bin/rector --dry-run --no-progress-bar
-      - run: ./vendor/bin/pest --coverage --min=100
 
-  mutation:
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ env.PHP_VERSION }}
+
+      - name: Cache composer vendor
+        uses: actions/cache@v5
+        with:
+          path: vendor
+          key: composer-${{ runner.os }}-php${{ env.PHP_VERSION }}-${{ hashFiles('composer.lock') }}
+          restore-keys: composer-${{ runner.os }}-php${{ env.PHP_VERSION }}-
+
+      - name: Install composer deps
+        run: composer install --prefer-dist --no-interaction --no-progress
+
+      - name: Pint (PSR-12)
+        run: ./vendor/bin/pint --test
+
+      - name: PHPStan / Larastan level 8
+        run: ./vendor/bin/phpstan analyse --no-progress
+
+      - name: Rector dry-run
+        run: ./vendor/bin/rector --dry-run --no-progress-bar
+
+  # Test suite + 100% line-coverage gate. Boots Laravel against the mysql + redis
+  # service containers; RefreshDatabase trait migrates the schema per-test class.
+  pest:
     runs-on: ubuntu-latest
     services:
       mysql:
@@ -74,16 +61,86 @@ jobs:
         options: >-
           --health-cmd="redis-cli ping"
           --health-interval=5s --health-timeout=2s --health-retries=10
+    env:
+      DB_CONNECTION: mysql
+      DB_HOST: 127.0.0.1
+      DB_PORT: 3306
+      DB_DATABASE: teman_lari_testing
+      DB_USERNAME: sail
+      DB_PASSWORD: password
+      REDIS_HOST: 127.0.0.1
+      REDIS_PORT: 6379
     steps:
       - uses: actions/checkout@v6
-      - uses: shivammathur/setup-php@v2
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
         with:
           php-version: ${{ env.PHP_VERSION }}
           coverage: pcov
-      - uses: actions/cache@v5
+
+      - name: Cache composer vendor
+        uses: actions/cache@v5
         with:
           path: vendor
           key: composer-${{ runner.os }}-php${{ env.PHP_VERSION }}-${{ hashFiles('composer.lock') }}
           restore-keys: composer-${{ runner.os }}-php${{ env.PHP_VERSION }}-
-      - run: composer install --prefer-dist --no-interaction --no-progress
-      - run: ./vendor/bin/pest --mutate --everything --covered-only
+
+      - name: Install composer deps
+        run: composer install --prefer-dist --no-interaction --no-progress
+
+      - name: Tests + 100% line coverage
+        run: ./vendor/bin/pest --coverage --min=100
+
+  # Mutation testing — measures test *quality*, not just coverage. Slow (re-runs
+  # test suite per mutation) so it lives in its own job to parallelize with lint.
+  mutate:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: password
+          MYSQL_DATABASE: teman_lari_testing
+          MYSQL_USER: sail
+          MYSQL_PASSWORD: password
+        ports: ['3306:3306']
+        options: >-
+          --health-cmd="mysqladmin ping -ppassword"
+          --health-interval=5s --health-timeout=2s --health-retries=10
+      redis:
+        image: redis:alpine
+        ports: ['6379:6379']
+        options: >-
+          --health-cmd="redis-cli ping"
+          --health-interval=5s --health-timeout=2s --health-retries=10
+    env:
+      DB_CONNECTION: mysql
+      DB_HOST: 127.0.0.1
+      DB_PORT: 3306
+      DB_DATABASE: teman_lari_testing
+      DB_USERNAME: sail
+      DB_PASSWORD: password
+      REDIS_HOST: 127.0.0.1
+      REDIS_PORT: 6379
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ env.PHP_VERSION }}
+          coverage: pcov
+
+      - name: Cache composer vendor
+        uses: actions/cache@v5
+        with:
+          path: vendor
+          key: composer-${{ runner.os }}-php${{ env.PHP_VERSION }}-${{ hashFiles('composer.lock') }}
+          restore-keys: composer-${{ runner.os }}-php${{ env.PHP_VERSION }}-
+
+      - name: Install composer deps
+        run: composer install --prefer-dist --no-interaction --no-progress
+
+      - name: Mutation testing
+        run: ./vendor/bin/pest --mutate --everything --covered-only
