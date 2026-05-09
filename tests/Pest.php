@@ -21,6 +21,7 @@ pest()->extend(TestCase::class)->in('Feature', 'Unit');
 
 pest()->beforeEach(function (): void {
     Http::preventStrayRequests();
+    $this->withoutVite();
 })->in('Feature', 'Unit');
 
 /*

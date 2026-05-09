@@ -14,21 +14,21 @@ use Illuminate\Support\Facades\RateLimiter;
 
 class StravaClient
 {
-    private const API_BASE_URL = 'https://www.strava.com/api/v3';
+    private const string API_BASE_URL = 'https://www.strava.com/api/v3';
 
-    private const TOKEN_URL = 'https://www.strava.com/oauth/token';
+    private const string TOKEN_URL = 'https://www.strava.com/oauth/token';
 
     /**
      * Refresh tokens with this many seconds left to avoid mid-request expiry.
      */
-    private const REFRESH_BUFFER_SECONDS = 60;
+    private const int REFRESH_BUFFER_SECONDS = 60;
 
     /**
      * Strava's per-app shared rate limits. Buckets are app-wide, not per-user.
      *
      * @var array<string, array{int, int}>
      */
-    private const RATE_LIMITS = [
+    private const array RATE_LIMITS = [
         'strava-api:15min' => [200, 15 * 60],
         'strava-api:daily' => [2000, 24 * 60 * 60],
     ];

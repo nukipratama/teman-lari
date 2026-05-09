@@ -20,7 +20,7 @@ use Symfony\Component\HttpFoundation\RedirectResponse as SymfonyRedirectResponse
 
 class StravaAuthController extends Controller
 {
-    private const SCOPES = ['read', 'activity:read_all'];
+    private const array SCOPES = ['read', 'activity:read_all'];
 
     public function redirect(): SymfonyRedirectResponse
     {

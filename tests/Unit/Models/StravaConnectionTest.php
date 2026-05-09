@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Illuminate\Database\UniqueConstraintViolationException;
 use App\Models\StravaConnection;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -50,7 +51,7 @@ it('enforces unique strava_athlete_id', function (): void {
     StravaConnection::factory()->create(['strava_athlete_id' => 12345]);
 
     expect(fn () => StravaConnection::factory()->create(['strava_athlete_id' => 12345]))
-        ->toThrow(Illuminate\Database\UniqueConstraintViolationException::class);
+        ->toThrow(UniqueConstraintViolationException::class);
 });
 
 it('enforces one connection per user', function (): void {
@@ -58,7 +59,7 @@ it('enforces one connection per user', function (): void {
     StravaConnection::factory()->create(['user_id' => $user->id]);
 
     expect(fn () => StravaConnection::factory()->create(['user_id' => $user->id]))
-        ->toThrow(Illuminate\Database\UniqueConstraintViolationException::class);
+        ->toThrow(UniqueConstraintViolationException::class);
 });
 
 it('belongs to a user', function (): void {

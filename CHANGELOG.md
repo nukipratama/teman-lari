@@ -247,3 +247,12 @@ Files touched:
 - `tests/Unit/Models/UserTest.php`
 - `tests/Unit/Services/Strava/StravaClientTest.php`
 
+## 2026-05-09 17:22 +0700 — fix(ci): satisfy Rector typed-const + skip @vite in tests
+
+Files touched:
+- `app/Http/Controllers/Auth/StravaAuthController.php`
+- `app/Models/StravaConnection.php`
+- `app/Services/Strava/StravaClient.php`
+- `tests/Pest.php`
+- `tests/Unit/Models/StravaConnectionTest.php`
+

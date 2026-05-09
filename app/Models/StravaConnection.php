@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use Illuminate\Support\Carbon;
 use Database\Factories\StravaConnectionFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
@@ -18,9 +19,9 @@ use Override;
  * @property int $strava_athlete_id
  * @property string $access_token
  * @property string $refresh_token
- * @property \Illuminate\Support\Carbon $token_expires_at
+ * @property Carbon $token_expires_at
  * @property string $scopes
- * @property-read \App\Models\User $user
+ * @property-read User $user
  */
 #[Fillable([
     'user_id',
