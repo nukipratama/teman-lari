@@ -189,3 +189,9 @@ Files touched:
 - `.githooks/pre-push`
 - `README.md`
 
+## 2026-05-09 14:31 +0700 — chore(hooks): drop --no-verify hint from pre-push + README
+
+Files touched:
+- `.githooks/pre-push`
+- `README.md`
+
