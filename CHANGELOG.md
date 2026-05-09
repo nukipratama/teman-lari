@@ -300,3 +300,8 @@ Files touched:
 Files touched:
 - `compose.yaml`
 
+## 2026-05-09 23:32 +0700 — chore(ci): drop mutation testing job
+
+Files touched:
+- `.github/workflows/ci.yml`
+
