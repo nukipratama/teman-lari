@@ -178,3 +178,8 @@ Files touched:
 Files touched:
 - `.github/workflows/ci.yml`
 
+## 2026-05-09 14:17 +0700 — chore(deps): bump actions/checkout to v6 and actions/cache to v5
+
+Files touched:
+- `.github/workflows/ci.yml`
+
