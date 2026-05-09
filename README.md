@@ -79,13 +79,4 @@ CI uses GitHub Actions service containers (mysql:8.4 + redis:alpine) — every w
 
 ## Deploy
 
-Target: **Laravel Cloud** via GitHub auto-deploy. Push to `main` → Cloud builds + ships.
-
-Production env overrides are documented in `.env.example` (commented out): `LOG_CHANNEL=stderr`, `APP_ENV=production`, etc. Set those in the Cloud dashboard, do not commit values.
-
-The bundled `laravel/cloud-cli` is for terminal-side ops (logs, env, ad-hoc artisan against prod):
-
-```bash
-./vendor/bin/sail exec laravel.test ./vendor/bin/cloud login
-./vendor/bin/sail exec laravel.test ./vendor/bin/cloud logs --tail
-```
+Target: **homelab** (TBD — separate task). Production env overrides are sketched in `.env.example` (commented out): `LOG_CHANNEL=stderr`, `APP_ENV=production`, etc. Plug into whatever runtime the homelab settles on.
