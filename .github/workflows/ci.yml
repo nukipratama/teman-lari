@@ -89,8 +89,16 @@ jobs:
       - name: Install composer deps
         run: composer install --prefer-dist --no-interaction --no-progress
 
+      - name: Stub .env so Laravel doesn't warn on bootstrap
+        run: cp .env.example .env
+
       - name: Tests + 100% line coverage
-        run: ./vendor/bin/pest --coverage --min=100
+        run: >-
+          ./vendor/bin/pest --coverage --min=100
+          --fail-on-warning --fail-on-notice
+          --fail-on-deprecation --fail-on-risky
+          --fail-on-phpunit-warning --fail-on-phpunit-notice
+          --fail-on-phpunit-deprecation
 
   # Mutation testing — measures test *quality*, not just coverage. Slow (re-runs
   # test suite per mutation) so it lives in its own job to parallelize with lint.
@@ -142,5 +150,8 @@ jobs:
       - name: Install composer deps
         run: composer install --prefer-dist --no-interaction --no-progress
 
+      - name: Stub .env so Laravel doesn't warn on bootstrap
+        run: cp .env.example .env
+
       - name: Mutation testing
-        run: ./vendor/bin/pest --mutate --everything --covered-only
+        run: ./vendor/bin/pest --mutate --everything --covered-only --min=100
