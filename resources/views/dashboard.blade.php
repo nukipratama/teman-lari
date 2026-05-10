@@ -36,8 +36,8 @@
     <main class="mx-auto max-w-5xl px-6 py-10">
         <div class="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
             <div>
-                <h1 class="text-2xl font-semibold tracking-tight">Halo, {{ explode(' ', auth()->user()->name)[0] }}.</h1>
-                <p class="mt-1 text-sm text-gray-600 dark:text-gray-200">Berikut ringkasan lari kamu.</p>
+                <h1 class="text-2xl font-semibold tracking-tight">Halo, {{ explode(' ', auth()->user()->name)[0] }}</h1>
+                <p class="mt-1 text-sm text-gray-600 dark:text-gray-200">Berikut ringkasan lari kamu</p>
             </div>
         </div>
 
@@ -61,7 +61,7 @@
             </div>
             <h2 class="mt-4 text-base font-semibold">Belum ada aktivitas tersinkron</h2>
             <p class="mx-auto mt-1 max-w-sm text-sm text-gray-600 dark:text-gray-200">
-                Sinkronisasi Strava akan muncul di sini setelah integrasi dinyalakan.
+                Sinkronisasi Strava akan muncul di sini setelah integrasi dinyalakan
             </p>
         </section>
     </main>
