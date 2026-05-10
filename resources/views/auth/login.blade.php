@@ -14,15 +14,15 @@
             </span>
             <h1 class="mt-4 text-3xl font-semibold tracking-tight">TemanLari</h1>
             <p class="mt-2 text-base text-gray-600 dark:text-gray-300">
-                Setiap Langkah Berarti.
+                Setiap Langkah Berarti
             </p>
         </div>
 
         <section class="mb-10 grid grid-cols-1 gap-4 sm:grid-cols-3">
             @foreach ([
-                ['icon' => 'mdi:cloud-download-outline', 'label' => 'Catat', 'desc' => 'Setiap lari, otomatis dari Strava.'],
-                ['icon' => 'mdi:chart-line', 'label' => 'Pantau', 'desc' => 'Lihat progress mingguan.'],
-                ['icon' => 'mdi:calendar-check', 'label' => 'Konsisten', 'desc' => 'Bangun kebiasaan, bukan target.'],
+                ['icon' => 'mdi:cloud-download-outline', 'label' => 'Catat', 'desc' => 'Setiap lari, otomatis dari Strava'],
+                ['icon' => 'mdi:chart-line', 'label' => 'Pantau', 'desc' => 'Lihat progress mingguan'],
+                ['icon' => 'mdi:calendar-check', 'label' => 'Konsisten', 'desc' => 'Bangun kebiasaan, bukan target'],
             ] as $feature)
                 <div class="rounded-2xl border border-black/5 bg-white/60 p-5 backdrop-blur dark:border-white/5 dark:bg-[#161615]/60">
                     <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-lime-500/15 text-lime-600 dark:text-lime-400">
@@ -37,9 +37,9 @@
         </section>
 
         <div class="mx-auto w-full max-w-md rounded-3xl border border-black/5 bg-white p-8 shadow-[0_1px_3px_rgba(0,0,0,0.04),0_8px_24px_-12px_rgba(0,0,0,0.08)] dark:border-white/5 dark:bg-[#161615] dark:shadow-none">
-            <h2 class="text-2xl font-semibold tracking-tight">Selamat datang.</h2>
+            <h2 class="text-2xl font-semibold tracking-tight">Selamat datang</h2>
             <p class="mt-2 text-sm leading-relaxed text-gray-600 dark:text-gray-200">
-                Masuk pakai Strava untuk mulai catat lari kamu.
+                Masuk pakai Strava untuk mulai catat lari kamu
             </p>
 
             @if ($errors->any())
@@ -59,12 +59,12 @@
             </a>
 
             <p class="mt-5 text-center text-xs leading-relaxed text-gray-500 dark:text-gray-300">
-                Kami hanya pakai Strava untuk login dan baca aktivitas lari kamu.
+                Kami hanya pakai Strava untuk login dan baca aktivitas lari kamu
             </p>
         </div>
 
         <p class="mt-6 text-center text-xs text-gray-400 dark:text-gray-400">
-            Made with <span class="text-lime-500">&#x2665;</span> by a runner, for runners.
+            Made with <span class="text-lime-500">&#x2665;</span> by a runner, for runners
         </p>
     </main>
 </div>
