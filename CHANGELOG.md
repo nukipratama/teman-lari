@@ -413,3 +413,8 @@ Files touched:
 Files touched:
 - `README.md`
 
+## 2026-05-11 00:20 +0700 — feat(deploy): cloudflare edge caching for static files
+
+Files touched:
+- `docker/Caddyfile`
+
