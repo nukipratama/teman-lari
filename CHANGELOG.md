@@ -408,3 +408,8 @@ Files touched:
 Files touched:
 - `compose.prod.yaml`
 
+## 2026-05-10 23:31 +0700 — docs(readme): rework for clarity and structure
+
+Files touched:
+- `README.md`
+
