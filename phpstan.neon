@@ -6,3 +6,10 @@ parameters:
     paths:
         - app/
     tmpDir: .phpstan-cache
+
+    # PHPStan parallel workers inherit PHP CLI's memory_limit. The Sail
+    # container ships with memory_limit=-1 (unlimited), so workers grow
+    # until the host OOM-killer kicks in. Capping to 2 keeps total memory
+    # under control without single-threading CI on bigger machines.
+    parallel:
+        maximumNumberOfProcesses: 2
