@@ -142,3 +142,17 @@ it('skips when user has no Strava connection', function (): void {
     expect(ActivityDetail::query()->where('activity_id', $activity->id)->exists())->toBeFalse();
     Http::assertNothingSent();
 });
+
+it('treats non-array Strava detail as a fetch failure', function (): void {
+    $activity = makeActivityWithConnection();
+    // Strava returns a scalar (not the expected object): pipeline must
+    // treat it the same as a transient detail-fetch failure.
+    Http::fake([
+        'strava.com/api/v3/activities/999' => Http::response('"unexpected scalar"'),
+    ]);
+
+    (new ActivityPipeline(new StravaClient()))->ingest($activity);
+
+    expect($activity->fresh()->detail_fail_count)->toBe(1)
+        ->and(ActivityDetail::query()->where('activity_id', $activity->id)->exists())->toBeFalse();
+});

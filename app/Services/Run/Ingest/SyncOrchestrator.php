@@ -89,10 +89,10 @@ class SyncOrchestrator
             'updated_at' => $now,
         ], $externalIds);
 
-        return DB::transaction(function () use ($rows): int {
+        return DB::transaction(
             // insertOrIgnore handles the rare double-sync race where another job
             // already created the row between our existing-check and this insert.
-            return (int) Activity::query()->insertOrIgnore($rows);
-        });
+            fn (): int => (int) Activity::query()->insertOrIgnore($rows)
+        );
     }
 }

@@ -10,6 +10,7 @@ use App\Models\ActivityStream;
 use App\Services\Strava\StravaClient;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Log;
+use RuntimeException;
 use Throwable;
 
 /**
@@ -50,7 +51,7 @@ class ActivityPipeline
         }
 
         if (! is_array($detail)) {
-            $this->handleDetailFailure($activity, new \RuntimeException('Strava returned non-array detail'));
+            $this->handleDetailFailure($activity, new RuntimeException('Strava returned non-array detail'));
 
             return;
         }

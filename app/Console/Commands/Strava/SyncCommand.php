@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Console\Commands\Strava;
 
+use Illuminate\Database\Eloquent\Collection;
 use App\Models\User;
 use App\Services\Run\Ingest\SyncOrchestrator;
 use Illuminate\Console\Attributes\Description;
@@ -32,9 +33,9 @@ class SyncCommand extends Command
     }
 
     /**
-     * @return \Illuminate\Database\Eloquent\Collection<int, User>
+     * @return Collection<int, User>
      */
-    private function resolveUsers(): \Illuminate\Database\Eloquent\Collection
+    private function resolveUsers(): Collection
     {
         $userIdOption = $this->option('user');
 

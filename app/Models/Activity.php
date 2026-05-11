@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Collection;
 use Database\Factories\ActivityFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -27,8 +28,8 @@ use Override;
  * @property-read ActivityDetail|null $detail
  * @property-read ActivityStream|null $stream
  * @property-read RunCard|null $runCard
- * @property-read \Illuminate\Database\Eloquent\Collection<int, PersonalRecord> $personalRecords
- * @property-read \Illuminate\Database\Eloquent\Collection<int, StoryLine> $storyLines
+ * @property-read Collection<int, PersonalRecord> $personalRecords
+ * @property-read Collection<int, StoryLine> $storyLines
  */
 #[Fillable([
     'user_id',

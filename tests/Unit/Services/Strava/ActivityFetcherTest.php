@@ -122,3 +122,41 @@ it('returns empty list when athlete has no activities', function (): void {
 
     expect($ids)->toBe([]);
 });
+
+it('skips items with missing or zero ids', function (): void {
+    $connection = makeConnection();
+    Http::fake([
+        'strava.com/api/v3/athlete/activities*' => Http::sequence()
+            ->push([
+                ['sport_type' => 'Run'],         // no id
+                ['id' => 0, 'sport_type' => 'Run'],
+                ['id' => 42, 'sport_type' => 'Run'],
+            ])
+            ->push([]),
+    ]);
+
+    expect((new ActivityFetcher(new StravaClient()))->fetchNewExternalIds($connection))->toBe([42]);
+});
+
+it('paginates beyond page 1 when a full page returns', function (): void {
+    $connection = makeConnection();
+    // Build 200 items so the first response is exactly PER_PAGE and forces page 2.
+    $firstPage = array_map(
+        fn (int $i): array => ['id' => 1000 + $i, 'sport_type' => 'Run'],
+        range(0, 199),
+    );
+    Http::fake([
+        'strava.com/api/v3/athlete/activities*' => Http::sequence()
+            ->push($firstPage)
+            ->push([
+                ['id' => 500, 'sport_type' => 'Run'],
+            ])
+            ->push([]),
+    ]);
+
+    $ids = (new ActivityFetcher(new StravaClient()))->fetchNewExternalIds($connection);
+
+    expect($ids)->toContain(500)
+        ->and(count($ids))->toBe(201);
+    Http::assertSentCount(2); // page 1 + page 2
+});

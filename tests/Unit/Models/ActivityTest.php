@@ -48,7 +48,10 @@ it('has one detail, one stream, and one run card', function (): void {
 
 it('has many personal records and story lines', function (): void {
     $activity = Activity::factory()->create();
-    PersonalRecord::factory()->forActivity($activity)->count(2)->create();
+    // Explicit categories to avoid factory randomness colliding on the
+    // (user_id, category) unique index.
+    PersonalRecord::factory()->forActivity($activity)->create(['category' => '5km']);
+    PersonalRecord::factory()->forActivity($activity)->create(['category' => '10km']);
     StoryLine::factory()->for($activity)->count(1)->create([
         'user_id' => $activity->user_id,
     ]);
