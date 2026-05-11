@@ -134,6 +134,22 @@ it('awards tahan_diri badge on a 10K+ run with <10% Z3+', function (): void {
     expect($card->badges)->toContain('tahan_diri');
 });
 
+it('skips the legendaris check when current detail has no distance', function (): void {
+    $user = User::factory()->create();
+    $prev = Activity::factory()->for($user)->create();
+    ActivityDetail::factory()->for($prev)->create(['distance' => 5_000]);
+
+    $activity = Activity::factory()->for($user)->create();
+    $detail = ActivityDetail::factory()->for($activity)->create([
+        'distance' => 0,
+        'stream_summary' => null,
+    ]);
+
+    $card = app(RunCardFactory::class)->build($activity, $detail);
+
+    expect($card->rarity)->toBe('biasa');
+});
+
 it('is idempotent — rebuilding overwrites the same row', function (): void {
     $activity = Activity::factory()->create();
     $detail = ActivityDetail::factory()->for($activity)->create([

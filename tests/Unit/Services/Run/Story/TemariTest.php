@@ -135,6 +135,34 @@ it('upserts the daily greeting (no dup on second call)', function (): void {
     expect($rows)->toHaveCount(1)->and($rows->first()->speech)->toContain('Segar');
 });
 
+it('produces a daily greeting with a non-empty speech for every vibe state', function (): void {
+    $user = User::factory()->create();
+    $vibes = [
+        Vibe::PUMPED, Vibe::FRESH, Vibe::BOUNCY, Vibe::STEADY,
+        Vibe::WORN_DOWN, Vibe::COOKED, Vibe::STRETCHED_THIN, Vibe::HIBERNATING,
+    ];
+    foreach ($vibes as $i => $vibe) {
+        $line = app(Temari::class)->dailyGreeting($user, $vibe, Carbon::parse('2026-05-01')->addDays($i));
+        expect($line->speech)->not->toBeEmpty()->and($line->mood)->not->toBeEmpty();
+    }
+});
+
+it('renders a bouncy mood post-run line when the run had a negative split', function (): void {
+    $activity = Activity::factory()->create();
+    $detail = ActivityDetail::factory()->for($activity)->create([
+        'distance' => 8_000,
+        'stream_summary' => [
+            'time_in_zone_pct' => ['Z2' => 80, 'Z3' => 20],
+            'negative_split' => true,
+        ],
+        'weather_temp_c' => 25,
+    ]);
+
+    $line = app(Temari::class)->postRunLine($activity, $detail);
+
+    expect($line->mood)->toBe(Temari::MOOD_BOUNCY);
+});
+
 it('produces deterministic speech for the same activity + mood pair', function (): void {
     $temari = new Temari();
     $first = $temari->generateSpeech(Temari::MOOD_GLOW, ['distance_km' => 5.0, 'dominant_zone' => 'Z3']);
