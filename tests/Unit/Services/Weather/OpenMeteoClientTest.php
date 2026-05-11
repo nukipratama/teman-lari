@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Illuminate\Http\Client\ConnectionException;
 use App\Services\Weather\OpenMeteoClient;
 use App\Services\Weather\WeatherSnapshot;
 use Carbon\CarbonImmutable;
@@ -37,7 +38,7 @@ it('hits the forecast endpoint for recent activities', function (): void {
         ->and($snap->humidityPct)->toBe(78)
         ->and($snap->rainDetected)->toBeFalse();
 
-    Http::assertSent(fn ($req): bool => str_contains($req->url(), 'api.open-meteo.com/v1/forecast'));
+    Http::assertSent(fn ($req): bool => str_contains((string) $req->url(), 'api.open-meteo.com/v1/forecast'));
 });
 
 it('hits the archive endpoint for activities older than 7 days', function (): void {
@@ -58,7 +59,7 @@ it('hits the archive endpoint for activities older than 7 days', function (): vo
     expect($snap)->toBeInstanceOf(WeatherSnapshot::class)
         ->and($snap->tempC)->toBe(30);
 
-    Http::assertSent(fn ($req): bool => str_contains($req->url(), 'archive-api.open-meteo.com/v1/archive'));
+    Http::assertSent(fn ($req): bool => str_contains((string) $req->url(), 'archive-api.open-meteo.com/v1/archive'));
 });
 
 it('buckets the start time down to the containing hour', function (): void {
@@ -174,7 +175,7 @@ it('caches and short-circuits the second call', function (): void {
 it('returns null when the http client throws (timeout / connection failure)', function (): void {
     $startedAt = CarbonImmutable::parse('2026-05-10 06:00:00');
     Http::fake(function (): void {
-        throw new \Illuminate\Http\Client\ConnectionException('connection refused');
+        throw new ConnectionException('connection refused');
     });
 
     expect((new OpenMeteoClient())->fetchForActivity(-6.2, 106.8, $startedAt))->toBeNull();

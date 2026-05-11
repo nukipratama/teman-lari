@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Models\PersonalRecord;
 use App\Models\Activity;
 use App\Models\ActivityDetail;
 use App\Models\ActivityStream;
@@ -279,7 +280,7 @@ it('inserts a PR row when the activity beats the user\'s ledger', function (): v
 
     app(ActivityPipeline::class)->ingest($activity);
 
-    expect(\App\Models\PersonalRecord::query()
+    expect(PersonalRecord::query()
         ->where('user_id', $activity->user_id)
         ->where('category', '5km')
         ->value('value_sec'))->toBe(1800.0);

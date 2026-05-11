@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services\Run\Metrics;
 
+use Illuminate\Database\Eloquent\Collection;
 use App\Models\ActivityDetail;
 use App\Models\User;
 use Illuminate\Support\Carbon;
@@ -39,7 +40,7 @@ class ThresholdEstimator
     {
         $cutoff = ($asOf ?? Carbon::today())->copy()->subDays(self::LOOKBACK_DAYS)->toDateString();
 
-        /** @var \Illuminate\Database\Eloquent\Collection<int, ActivityDetail> $details */
+        /** @var Collection<int, ActivityDetail> $details */
         $details = ActivityDetail::query()
             ->whereHas('activity', fn ($q) => $q->where('user_id', $user->id))
             ->where('start_date_local', '>=', $cutoff)

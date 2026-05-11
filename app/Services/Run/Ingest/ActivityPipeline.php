@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services\Run\Ingest;
 
+use App\Models\StravaConnection;
 use App\Models\Activity;
 use App\Models\ActivityDetail;
 use App\Models\ActivityStream;
@@ -123,7 +124,7 @@ class ActivityPipeline
     /**
      * @return array<string, mixed>|null
      */
-    private function fetchStreams(Activity $activity, \App\Models\StravaConnection $connection): ?array
+    private function fetchStreams(Activity $activity, StravaConnection $connection): ?array
     {
         try {
             $streams = $this->client

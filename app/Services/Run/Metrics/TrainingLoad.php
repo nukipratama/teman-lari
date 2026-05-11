@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services\Run\Metrics;
 
+use Illuminate\Support\Collection;
 use App\Models\ActivityDetail;
 use App\Models\User;
 use Illuminate\Support\Carbon;
@@ -63,7 +64,7 @@ class TrainingLoad
         $today = ($asOf ?? Carbon::today())->copy()->startOfDay();
         $cutoff = $today->copy()->subDays(self::LOAD_LOOKBACK_DAYS)->toDateString();
 
-        /** @var \Illuminate\Support\Collection<int, object{dt: string, trimp_sum: float}> $rows */
+        /** @var Collection<int, object{dt: string, trimp_sum: float}> $rows */
         $rows = ActivityDetail::query()
             ->join('activities', 'activities.id', '=', 'activity_details.activity_id')
             ->where('activities.user_id', $user->id)
