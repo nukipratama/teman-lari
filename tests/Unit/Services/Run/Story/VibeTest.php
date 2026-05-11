@@ -12,6 +12,11 @@ use Illuminate\Support\Carbon;
 
 uses(RefreshDatabase::class);
 
+// Freeze the clock for tests that backfill activity_history with relative
+// offsets to Carbon::today(). afterEach guarantees no leak across siblings.
+beforeEach(fn () => Carbon::setTestNow('2026-05-11 12:00:00'));
+afterEach(fn () => Carbon::setTestNow());
+
 it('returns hibernating when the user has never run', function (): void {
     $user = User::factory()->create();
 
@@ -19,7 +24,6 @@ it('returns hibernating when the user has never run', function (): void {
 });
 
 it('returns hibernating when the last run is 12 days ago', function (): void {
-    Carbon::setTestNow('2026-05-11 12:00:00');
     $user = User::factory()->create();
     $activity = Activity::factory()->for($user)->create();
     ActivityDetail::factory()->for($activity)->create([
@@ -28,11 +32,9 @@ it('returns hibernating when the last run is 12 days ago', function (): void {
     ]);
 
     expect(app(Vibe::class)->current($user))->toBe(Vibe::HIBERNATING);
-    Carbon::setTestNow();
 });
 
 it('returns pumped on a recent PR with non-negative form', function (): void {
-    Carbon::setTestNow('2026-05-11 12:00:00');
     $user = User::factory()->create();
 
     // 80 days of steady 50 TRIMP/day so CTL catches up to ATL (form ≈ -7,
@@ -52,11 +54,9 @@ it('returns pumped on a recent PR with non-negative form', function (): void {
     ]);
 
     expect(app(Vibe::class)->current($user))->toBe(Vibe::PUMPED);
-    Carbon::setTestNow();
 });
 
 it('averages decoupling_pct across recent runs to drive the vibe', function (): void {
-    Carbon::setTestNow('2026-05-11 12:00:00');
     $user = User::factory()->create();
 
     for ($i = 0; $i < 80; $i++) {
@@ -72,7 +72,6 @@ it('averages decoupling_pct across recent runs to drive the vibe', function (): 
     }
 
     expect(app(Vibe::class)->current($user))->toBe(Vibe::BOUNCY);
-    Carbon::setTestNow();
 });
 
 it('exposes display labels in Indonesian', function (): void {

@@ -8,6 +8,7 @@ use App\Models\Activity;
 use App\Models\ActivityDetail;
 use App\Models\PersonalRecord;
 use App\Models\RunCard;
+use App\Services\Run\Metrics\StreamSummary;
 
 use function is_array;
 
@@ -115,7 +116,7 @@ class RunCardFactory
             return false;
         }
 
-        return $this->hardZoneShare($summary) < 25.0;
+        return StreamSummary::hardZoneShare($summary) < 25.0;
     }
 
     /**
@@ -128,22 +129,7 @@ class RunCardFactory
             return false;
         }
 
-        return $this->hardZoneShare($summary) < 10.0;
-    }
-
-    /**
-     * Z3 + Z4 + Z5 share of total time-in-zone, defaults to 0 when zone
-     * data is missing (badge logic treats that as "not hard").
-     *
-     * @param  array<string, mixed>  $summary
-     */
-    private function hardZoneShare(array $summary): float
-    {
-        $zonePct = is_array($summary['time_in_zone_pct'] ?? null) ? $summary['time_in_zone_pct'] : [];
-
-        return (float) ($zonePct['Z3'] ?? 0)
-            + (float) ($zonePct['Z4'] ?? 0)
-            + (float) ($zonePct['Z5'] ?? 0);
+        return StreamSummary::hardZoneShare($summary) < 10.0;
     }
 
     private function hasPrFromThisActivity(Activity $activity): bool

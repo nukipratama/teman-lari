@@ -9,6 +9,7 @@ use App\Models\ActivityDetail;
 use App\Models\PersonalRecord;
 use App\Models\StoryLine;
 use App\Models\User;
+use App\Services\Run\Metrics\StreamSummary;
 use Illuminate\Support\Carbon;
 
 use function is_array;
@@ -58,9 +59,11 @@ class Temari
 
     public function postRunLine(Activity $activity, ActivityDetail $detail): StoryLine
     {
-        $mood = $this->moodForActivity($detail);
-        $speech = $this->generateSpeech($mood, $this->contextFor($activity, $detail));
-        $sigil = self::SIGIL_FOR_MOOD[$mood] ?? self::SIGIL_FOR_MOOD[self::MOOD_DIM];
+        // Hit the PR ledger once and feed the answer into both mood inference
+        // and the speech context — the prior version asked the DB twice per run.
+        $hasPr = PersonalRecord::query()->where('activity_id', $activity->id)->exists();
+        $mood = $this->moodForActivity($detail, $hasPr);
+        $speech = $this->generateSpeech($mood, $this->contextFor($detail, $hasPr));
 
         return StoryLine::query()->updateOrCreate(
             [
@@ -72,7 +75,7 @@ class Temari
                 'for_date' => null,
                 'mood' => $mood,
                 'speech' => $speech,
-                'sigil_pattern' => $sigil,
+                'sigil_pattern' => $this->sigilFor($mood),
             ],
         );
     }
@@ -81,8 +84,6 @@ class Temari
     {
         $date = $forDate?->toDateString() ?? Carbon::today()->toDateString();
         $mood = $this->moodForVibe($vibe);
-        $speech = $this->generateGreeting($vibe);
-        $sigil = self::SIGIL_FOR_MOOD[$mood] ?? self::SIGIL_FOR_MOOD[self::MOOD_DIM];
 
         return StoryLine::query()->updateOrCreate(
             [
@@ -93,26 +94,27 @@ class Temari
                 'kind' => StoryLine::KIND_DAILY_GREETING,
                 'activity_id' => null,
                 'mood' => $mood,
-                'speech' => $speech,
-                'sigil_pattern' => $sigil,
+                'speech' => $this->generateGreeting($vibe),
+                'sigil_pattern' => $this->sigilFor($mood),
             ],
         );
+    }
+
+    private function sigilFor(string $mood): string
+    {
+        return self::SIGIL_FOR_MOOD[$mood] ?? self::SIGIL_FOR_MOOD[self::MOOD_DIM];
     }
 
     /**
      * Mood inference for a *specific* activity (different from the global daily vibe).
      * Order matters — first matching rule wins, so the most-prestigious moods come first.
      */
-    private function moodForActivity(ActivityDetail $detail): string
+    private function moodForActivity(ActivityDetail $detail, bool $hasPr): string
     {
         $summary = is_array($detail->stream_summary) ? $detail->stream_summary : [];
-        $zonePct = is_array($summary['time_in_zone_pct'] ?? null) ? $summary['time_in_zone_pct'] : [];
-        $hardShare = (float) ($zonePct['Z3'] ?? 0)
-            + (float) ($zonePct['Z4'] ?? 0)
-            + (float) ($zonePct['Z5'] ?? 0);
+        $hardShare = StreamSummary::hardZoneShare($summary);
         $decoupling = (float) ($summary['decoupling_pct'] ?? 0);
         $hotWeather = (int) ($detail->weather_temp_c ?? 0) >= 31;
-        $hasPr = PersonalRecord::query()->where('activity_id', $detail->activity_id)->exists();
 
         return match (true) {
             $hasPr => self::MOOD_GLOW,
@@ -144,12 +146,11 @@ class Temari
      *
      * @return array<string, mixed>
      */
-    private function contextFor(Activity $activity, ActivityDetail $detail): array
+    private function contextFor(ActivityDetail $detail, bool $hasPr): array
     {
         $summary = is_array($detail->stream_summary) ? $detail->stream_summary : [];
-        $zonePct = is_array($summary['time_in_zone_pct'] ?? null) ? $summary['time_in_zone_pct'] : [];
+        $zonePct = StreamSummary::zonePct($summary);
         $dominantZone = $zonePct === [] ? null : array_search(max($zonePct), $zonePct, strict: true);
-        $hasPr = PersonalRecord::query()->where('activity_id', $activity->id)->exists();
 
         return [
             'distance_km' => round(((float) ($detail->distance ?? 0)) / 1000, 1),
@@ -178,7 +179,9 @@ class Temari
         $distance = $context['distance_km'] ?? 0;
         $zone = $context['dominant_zone'] ?? 'Z2';
         $decoupling = $context['decoupling_pct'] ?? null;
-        $template = $templates[crc32($mood.':'.$distance.':'.$zone) % count($templates)];
+        // crc32() returns a signed int on 32-bit platforms; abs() before
+        // modulo so the index never goes negative regardless of host.
+        $template = $templates[abs(crc32($mood.':'.$distance.':'.$zone)) % count($templates)];
 
         return strtr($template, [
             ':distance' => (string) $distance,
