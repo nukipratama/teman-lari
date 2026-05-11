@@ -8,6 +8,7 @@ use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -26,5 +27,37 @@ class User extends Authenticatable
     public function stravaConnection(): HasOne
     {
         return $this->hasOne(StravaConnection::class);
+    }
+
+    /**
+     * @return HasMany<Activity, $this>
+     */
+    public function activities(): HasMany
+    {
+        return $this->hasMany(Activity::class);
+    }
+
+    /**
+     * @return HasMany<PersonalRecord, $this>
+     */
+    public function personalRecords(): HasMany
+    {
+        return $this->hasMany(PersonalRecord::class);
+    }
+
+    /**
+     * @return HasMany<WeeklySnapshot, $this>
+     */
+    public function weeklySnapshots(): HasMany
+    {
+        return $this->hasMany(WeeklySnapshot::class);
+    }
+
+    /**
+     * @return HasMany<StoryLine, $this>
+     */
+    public function storyLines(): HasMany
+    {
+        return $this->hasMany(StoryLine::class);
     }
 }
