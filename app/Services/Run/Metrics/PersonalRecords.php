@@ -99,7 +99,7 @@ class PersonalRecords
             if (! is_string($label)) {
                 continue;
             }
-            $value = $this->parsePace($label);
+            $value = PaceFormatter::parse($label);
             if ($value === null) {
                 continue;
             }
@@ -166,14 +166,5 @@ class PersonalRecords
         );
 
         return true;
-    }
-
-    private function parsePace(string $label): ?float
-    {
-        if (! preg_match('/^(\d+):(\d{2})$/', $label, $m)) {
-            return null;
-        }
-
-        return (float) $m[1] * 60 + (float) $m[2];
     }
 }

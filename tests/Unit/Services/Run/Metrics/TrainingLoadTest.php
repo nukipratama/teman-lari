@@ -11,6 +11,12 @@ use Illuminate\Support\Carbon;
 
 uses(RefreshDatabase::class);
 
+// Tests that compute against "today" all freeze the clock to the same
+// reference instant; afterEach guarantees the freeze never leaks even
+// when an earlier assertion blows up.
+beforeEach(fn () => Carbon::setTestNow('2026-05-11 12:00:00'));
+afterEach(fn () => Carbon::setTestNow());
+
 // ── Edwards TRIMP ────────────────────────────────────────────────────────────
 
 it('computes Edwards TRIMP as zone-weighted minute sum', function (): void {
@@ -75,7 +81,6 @@ it('returns null when the user has no TRIMP-bearing activities', function (): vo
 });
 
 it('rolls TRIMP into ATL/CTL/form with sane magnitudes', function (): void {
-    Carbon::setTestNow('2026-05-11 12:00:00');
     $user = User::factory()->create();
 
     // Steady 80 TRIMP/day through today — ATL/CTL converge near 80
@@ -97,11 +102,9 @@ it('rolls TRIMP into ATL/CTL/form with sane magnitudes', function (): void {
         // Magnitude sanity: typical weekly TRIMP for a serious amateur is 200-1500
         ->and($summary['weekly_trimp'])->toBeGreaterThan(50)->toBeLessThan(2000);
 
-    Carbon::setTestNow();
 });
 
 it('marks fresh when fitness exceeds fatigue (taper-week shape)', function (): void {
-    Carbon::setTestNow('2026-05-11 12:00:00');
     $user = User::factory()->create();
 
     // 6 weeks of 100 TRIMP/day to build CTL, then a 7-day taper at 30 TRIMP/day
@@ -125,11 +128,9 @@ it('marks fresh when fitness exceeds fatigue (taper-week shape)', function (): v
     expect($summary['form'])->toBeGreaterThan(0);
     expect($summary['form_status'])->toBeIn(['fresh', 'optimal']);
 
-    Carbon::setTestNow();
 });
 
 it('computes Foster monotony and strain over the week', function (): void {
-    Carbon::setTestNow('2026-05-11 12:00:00');
     $user = User::factory()->create();
 
     // High-monotony pattern: same 80 TRIMP every day for 7 days
@@ -146,11 +147,9 @@ it('computes Foster monotony and strain over the week', function (): void {
     expect($summary['monotony'])->toBeFloat()->toBeGreaterThan(2.0); // very flat distribution
     expect($summary['strain'])->toBeFloat()->toBeGreaterThan(0);
 
-    Carbon::setTestNow();
 });
 
 it('reports zero weekly_trimp / monotony / strain on a fully rested current week', function (): void {
-    Carbon::setTestNow('2026-05-11 12:00:00');
     $user = User::factory()->create();
 
     // History exists but only OUTSIDE the last 7 days (so week_total == 0).
@@ -168,11 +167,9 @@ it('reports zero weekly_trimp / monotony / strain on a fully rested current week
         ->and($summary['monotony'])->toBe(0.0)
         ->and($summary['strain'])->toBe(0.0);
 
-    Carbon::setTestNow();
 });
 
 it('only counts the requested user', function (): void {
-    Carbon::setTestNow('2026-05-11 12:00:00');
     $userA = User::factory()->create();
     $userB = User::factory()->create();
 
@@ -183,5 +180,4 @@ it('only counts the requested user', function (): void {
 
     expect((new TrainingLoad())->summary($userB))->toBeNull();
 
-    Carbon::setTestNow();
 });

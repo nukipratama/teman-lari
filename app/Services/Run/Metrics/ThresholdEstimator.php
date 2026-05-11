@@ -106,8 +106,12 @@ class ThresholdEstimator
     {
         foreach (['best_60min_pace', 'best_30min_pace'] as $key) {
             $label = $summary[$key] ?? null;
-            if (is_string($label) && preg_match('/^(\d+):(\d{2})$/', $label, $m)) {
-                return (float) $m[1] * 60 + (float) $m[2];
+            if (! is_string($label)) {
+                continue;
+            }
+            $secs = PaceFormatter::parse($label);
+            if ($secs !== null) {
+                return $secs;
             }
         }
 

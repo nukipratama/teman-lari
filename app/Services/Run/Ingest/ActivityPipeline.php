@@ -73,19 +73,16 @@ class ActivityPipeline
             return;
         }
 
-        $this->storeDetail($activity, $detail);
+        $detailModel = $this->storeDetail($activity, $detail);
 
         $streams = $this->fetchStreams($activity, $connection);
         if ($streams !== null) {
             $this->storeStreams($activity, $streams);
         }
 
-        $detailModel = ActivityDetail::query()->where('activity_id', $activity->id)->first();
-        if ($detailModel !== null) {
-            $this->computeAndStoreSummary($detailModel, $streams);
-            $this->lookupWeather($detailModel, $streams);
-            $this->personalRecords->detectAndStore($activity, $detailModel->fresh() ?? $detailModel);
-        }
+        $this->computeAndStoreSummary($detailModel, $streams);
+        $this->lookupWeather($detailModel, $streams);
+        $this->personalRecords->detectAndStore($activity, $detailModel);
 
         $activity->update([
             'analyzed_at' => now(),
@@ -96,11 +93,11 @@ class ActivityPipeline
     /**
      * @param  array<string, mixed>  $detail
      */
-    private function storeDetail(Activity $activity, array $detail): void
+    private function storeDetail(Activity $activity, array $detail): ActivityDetail
     {
         $start = $detail['start_date_local'] ?? $detail['start_date'] ?? null;
 
-        ActivityDetail::query()->updateOrCreate(
+        return ActivityDetail::query()->updateOrCreate(
             ['activity_id' => $activity->id],
             [
                 'name' => $detail['name'] ?? null,

@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Services\Run\Ingest;
 
+use App\Services\Run\Metrics\PaceFormatter;
+
 /**
  * Pure stream-math. Converts Strava's per-second arrays into a compact
  * summary blob: HR zones, decoupling, cadence distribution, best-effort
@@ -140,7 +142,7 @@ class StreamAnalysis
             return null;
         }
 
-        return $this->paceLabel($targetSec / ($bestDist / 1000));
+        return PaceFormatter::format($targetSec / ($bestDist / 1000));
     }
 
     /**
@@ -149,12 +151,13 @@ class StreamAnalysis
      */
     private function elevation(array $altitude): array
     {
-        if (count($altitude) < 2) {
+        $n = count($altitude);
+        if ($n < 2) {
             return [];
         }
         $ascent = 0.0;
         $descent = 0.0;
-        for ($i = 1; $i < count($altitude); $i++) {
+        for ($i = 1; $i < $n; $i++) {
             $delta = (float) $altitude[$i] - (float) $altitude[$i - 1];
             if ($delta > 0) {
                 $ascent += $delta;
@@ -367,7 +370,7 @@ class StreamAnalysis
             $paceSec = $elapsed / ($distance / 1000);
             $row = [
                 'km' => (int) ($split['split'] ?? 0),
-                'pace' => $this->paceLabel($paceSec),
+                'pace' => PaceFormatter::format($paceSec),
             ];
             if (isset($split['average_heartrate'])) {
                 $row['avg_hr'] = (int) round((float) $split['average_heartrate']);
@@ -441,10 +444,4 @@ class StreamAnalysis
         return ['negative_split' => $secondAvg > $firstAvg];
     }
 
-    private function paceLabel(float $secPerKm): string
-    {
-        $rounded = (int) round($secPerKm);
-
-        return sprintf('%d:%02d', intdiv($rounded, 60), $rounded % 60);
-    }
 }
