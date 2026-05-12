@@ -12,10 +12,13 @@
             </div>
         </div>
 
-        {{-- Vibe Check headline + Temari greeting --}}
+        {{-- Briefing Temari headline (replaces the old vibe-card) --}}
         <section class="mt-8">
-            <x-vibe-card :state="$vibeState" :greeting="$greeting->speech" />
+            <x-briefing-card :briefing="$briefing" />
         </section>
+
+        {{-- "Kata Temari" recent verdicts strip --}}
+        <x-verdict-strip :items="$verdicts" />
 
         {{-- 8 KPI tiles --}}
         @if ($load !== null)

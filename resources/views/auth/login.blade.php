@@ -24,7 +24,7 @@
                 ['icon' => 'mdi:chart-line', 'label' => 'Pantau', 'desc' => 'Lihat progress mingguan'],
                 ['icon' => 'mdi:calendar-check', 'label' => 'Konsisten', 'desc' => 'Bangun kebiasaan, bukan target'],
             ] as $feature)
-                <div class="rounded-2xl border border-black/5 bg-white/60 p-5 backdrop-blur dark:border-white/5 dark:bg-[#161615]/60">
+                <div class="flex flex-col items-center rounded-2xl border border-black/5 bg-white/60 p-5 text-center backdrop-blur dark:border-white/5 dark:bg-[#161615]/60">
                     <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-lime-500/15 text-lime-600 dark:text-lime-400">
                         <iconify-icon icon="{{ $feature['icon'] }}" width="22" height="22" aria-hidden="true"></iconify-icon>
                     </div>

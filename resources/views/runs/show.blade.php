@@ -65,7 +65,7 @@
         </div>
 
         {{-- Temari speech bubble FIRST — the headline of the page --}}
-        <x-temari-bubble :line="$storyLine" size="lg" class="mb-6" />
+        <x-temari-bubble :line="$storyLine" :variations="$storyVariations" size="lg" class="mb-6" />
 
         {{-- Headline stats --}}
         <section class="mb-6 grid grid-cols-2 gap-3 md:grid-cols-4">

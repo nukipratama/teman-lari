@@ -5,6 +5,12 @@
     'size' => 96,
     /** Stroke colour. */
     'color' => 'currentColor',
+    /**
+     * Optional mood-driven accessory layered on top of the face. Reads
+     * `null|'headband'|'mata-ngantuk'|'pita'`. Drawn in the same `color`
+     * as the stitches so the whole sigil reads as one piece of needlework.
+     */
+    'accessory' => null,
 ])
 
 @php
@@ -45,6 +51,13 @@
     foreach ([0, 1, 2, 3] as $i) {
         $stitches .= $stitch($chars[$i], $positions[$i]);
     }
+
+    $accessoryGlyph = match ($accessory) {
+        'headband' => "<g><path d='M 15 24 Q 50 18 85 24' fill='none' stroke='{$color}' stroke-width='3' stroke-linecap='round'/><circle cx='50' cy='21' r='2' fill='{$color}'/></g>",
+        'mata-ngantuk' => "<g stroke='{$color}' stroke-width='1.8' stroke-linecap='round' fill='none'><path d='M 34 46 Q 39 50 44 46'/><path d='M 56 46 Q 61 50 66 46'/></g>",
+        'pita' => "<g fill='{$color}'><polygon points='38,12 50,18 38,24'/><polygon points='62,12 50,18 62,24'/><circle cx='50' cy='18' r='2.5'/></g>",
+        default => '',
+    };
 @endphp
 
 <svg viewBox="0 0 100 100"
@@ -54,4 +67,5 @@
      {{ $attributes }}>
     <circle cx="50" cy="50" r="44" fill="none" stroke="{{ $color }}" stroke-width="1" stroke-dasharray="2 3" opacity="0.4" />
     {!! $stitches !!}
+    {!! $accessoryGlyph !!}
 </svg>

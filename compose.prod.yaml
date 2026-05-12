@@ -40,6 +40,9 @@ x-app-env: &app-env
   FRANKENPHP_NUM_WORKERS: "4"
   STRAVA_CLIENT_ID: ${STRAVA_CLIENT_ID:?required}
   STRAVA_CLIENT_SECRET: ${STRAVA_CLIENT_SECRET:?required}
+  # Optional. When "true" the login page renders a "Coba versi demo" button
+  # that signs in as the seeded demo user. Defaults to off so prod is opt-in.
+  DEMO_LOGIN_ENABLED: ${DEMO_LOGIN_ENABLED:-false}
 
 x-app-base: &app-base
   image: *app-image
