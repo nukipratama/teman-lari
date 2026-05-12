@@ -88,6 +88,27 @@ it('writes null avg_decoupling when no runs in the week have decoupling_pct', fu
     expect($snapshot->avg_decoupling)->toBeNull();
 });
 
+it('skips details without trimp_edwards when rolling the daily TRIMP map', function (): void {
+    // Real-world: a Strava activity without HR data (no zone time → no
+    // TRIMP). Should still count toward distance/runs but contribute 0
+    // to the EWMA roll.
+    $user = User::factory()->create();
+    $activity = Activity::factory()->for($user)->analyzed()->create();
+    ActivityDetail::factory()->for($activity)->create([
+        'distance' => 5000,
+        'moving_time' => 1500,
+        'trimp_edwards' => null,
+        'start_date_local' => Carbon::today(),
+    ]);
+
+    app(WeeklyAggregator::class)->rebuildFor($user);
+
+    $snapshot = WeeklySnapshot::query()->where('user_id', $user->id)->latest('week_ending')->firstOrFail();
+    expect($snapshot->runs)->toBe(1)
+        ->and($snapshot->distance_km)->toBe(5.0)
+        ->and($snapshot->weekly_trimp)->toBe(0.0);
+});
+
 it('is idempotent — re-running upserts the same week without duplicating', function (): void {
     $user = User::factory()->create();
     $activity = Activity::factory()->for($user)->analyzed()->create();
