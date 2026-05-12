@@ -104,18 +104,27 @@ class DemoRunSeeder
 
     private function ensureDemoUser(Closure $log): User
     {
+        // Hand-roll the defaults — `User::factory()->raw()` would pull in
+        // fakerphp/faker via the factory's `definition()`, and faker is a
+        // dev-only composer dep so this command would crash in production.
         $user = User::query()->firstOrCreate(
             ['email' => self::DEMO_USER_EMAIL],
-            User::factory()->raw(['name' => 'Demo Runner', 'email' => self::DEMO_USER_EMAIL]),
+            [
+                'name' => 'Demo Runner',
+                'password' => bcrypt('demo-password-not-used-oauth-only'),
+                'avatar_url' => null,
+            ],
         );
 
         StravaConnection::query()->firstOrCreate(
             ['user_id' => $user->id],
-            StravaConnection::factory()->raw([
-                'user_id' => $user->id,
+            [
                 'strava_athlete_id' => 99_999_999,
+                'access_token' => 'demo-mock-token',
+                'refresh_token' => 'demo-mock-refresh',
                 'token_expires_at' => Carbon::now()->addYear(),
-            ]),
+                'scopes' => 'read,activity:read',
+            ],
         );
 
         $log("Demo user ready: {$user->email} (id={$user->id})");
