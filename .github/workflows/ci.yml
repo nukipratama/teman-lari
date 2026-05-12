@@ -123,6 +123,7 @@ jobs:
       MYSQL_ROOT_PASSWORD: ${{ secrets.MYSQL_ROOT_PASSWORD }}
       STRAVA_CLIENT_ID: ${{ secrets.STRAVA_CLIENT_ID }}
       STRAVA_CLIENT_SECRET: ${{ secrets.STRAVA_CLIENT_SECRET }}
+      DEMO_LOGIN_ENABLED: ${{ secrets.DEMO_LOGIN_ENABLED }}
     steps:
       - uses: actions/checkout@v6
 
