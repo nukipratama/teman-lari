@@ -9,7 +9,9 @@ use App\Models\ActivityDetail;
 use App\Models\StoryLine;
 use App\Models\WeeklySnapshot;
 use App\Services\Run\Metrics\TrainingLoad;
+use App\Services\Run\Story\Briefing;
 use App\Services\Run\Story\Temari;
+use App\Services\Run\Story\VerdictTimeline;
 use App\Services\Run\Story\Vibe;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\Request;
@@ -18,15 +20,25 @@ use Illuminate\View\View;
 
 class DashboardController extends Controller
 {
-    public function __invoke(Request $request, Vibe $vibe, Temari $temari, TrainingLoad $trainingLoad): View
-    {
+    public function __invoke(
+        Request $request,
+        Vibe $vibe,
+        Temari $temari,
+        TrainingLoad $trainingLoad,
+        Briefing $briefingService,
+        VerdictTimeline $verdictTimeline,
+    ): View {
         /** @var User $user */
         $user = $request->user();
         $today = Carbon::today();
 
-        $vibeState = $vibe->current($user, $today);
-        $greeting = $this->resolveGreeting($user, $temari, $vibeState, $today);
+        // Persist today's StoryLine so "kata Temari hari ini" stays queryable
+        // historically; the rendered hero comes from Briefing, not this row.
+        $this->resolveGreeting($user, $temari, $vibe->current($user, $today), $today);
+
         $load = $trainingLoad->summary($user, $today);
+        $briefing = $briefingService->generate($user, $today);
+        $verdicts = $verdictTimeline->recent($user);
 
         // One query for both the chart (last 12 weeks ASC) and the headline
         // snapshot (latest = last item) — saves one round-trip vs. fetching
@@ -47,8 +59,8 @@ class DashboardController extends Controller
             ->get();
 
         return view('dashboard', [
-            'vibeState' => $vibeState,
-            'greeting' => $greeting,
+            'briefing' => $briefing,
+            'verdicts' => $verdicts,
             'load' => $load,
             'snapshot' => $weeks->last(),
             'recentRuns' => $recentRuns,

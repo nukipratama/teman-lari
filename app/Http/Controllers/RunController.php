@@ -6,8 +6,10 @@ namespace App\Http\Controllers;
 
 use App\Models\User;
 use App\Models\Activity;
+use App\Models\PersonalRecord;
 use App\Models\StoryLine;
 use App\Services\Run\Story\PastYouMatcher;
+use App\Services\Run\Story\Temari;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
@@ -31,7 +33,7 @@ class RunController extends Controller
         return view('runs.index', ['runs' => $runs]);
     }
 
-    public function show(Request $request, Activity $activity, PastYouMatcher $matcher): View
+    public function show(Request $request, Activity $activity, PastYouMatcher $matcher, Temari $temari): View
     {
         /** @var User $user */
         $user = $request->user();
@@ -47,6 +49,12 @@ class RunController extends Controller
             ->where('kind', StoryLine::KIND_POST_RUN)
             ->first();
 
+        $variations = [];
+        if ($storyLine !== null) {
+            $hasPr = PersonalRecord::query()->where('activity_id', $activity->id)->exists();
+            $variations = $temari->variationsForActivity($detail, $hasPr, $storyLine->mood);
+        }
+
         $pastYou = $matcher->findMatch($activity, $detail);
 
         return view('runs.show', [
@@ -54,6 +62,7 @@ class RunController extends Controller
             'detail' => $detail,
             'card' => $activity->runCard,
             'storyLine' => $storyLine,
+            'storyVariations' => $variations,
             'pastYou' => $pastYou,
         ]);
     }

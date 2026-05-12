@@ -175,19 +175,47 @@ class Temari
      */
     public function generateSpeech(string $mood, array $context): string
     {
-        $templates = $this->templatesFor($mood);
+        $variations = $this->speechVariations($mood, $context);
         $distance = $context['distance_km'] ?? 0;
         $zone = $context['dominant_zone'] ?? 'Z2';
-        $decoupling = $context['decoupling_pct'] ?? null;
         // crc32() returns a signed int on 32-bit platforms; abs() before
         // modulo so the index never goes negative regardless of host.
-        $template = $templates[abs(crc32($mood.':'.$distance.':'.$zone)) % count($templates)];
+        return $variations[abs(crc32($mood.':'.$distance.':'.$zone)) % count($variations)];
+    }
 
-        return strtr($template, [
-            ':distance' => (string) $distance,
-            ':zone' => (string) $zone,
-            ':drift' => is_numeric($decoupling) ? sprintf('%+.1f%%', (float) $decoupling) : '',
-        ]);
+    /**
+     * All templated phrasings for this mood with the activity context
+     * already substituted. Used by the tappable Temari bubble to cycle
+     * through alternatives on click.
+     *
+     * @param  array<string, mixed>  $context
+     * @return list<string>
+     */
+    public function speechVariations(string $mood, array $context): array
+    {
+        $tokens = [
+            ':distance' => (string) ($context['distance_km'] ?? 0),
+            ':zone' => (string) ($context['dominant_zone'] ?? 'Z2'),
+            ':drift' => is_numeric($context['decoupling_pct'] ?? null)
+                ? sprintf('%+.1f%%', (float) $context['decoupling_pct'])
+                : '',
+        ];
+
+        return array_map(
+            fn (string $template): string => strtr($template, $tokens),
+            $this->templatesFor($mood),
+        );
+    }
+
+    /**
+     * Convenience for callers that have a StoryLine + ActivityDetail and
+     * just want the variation list for the bubble's cycling UI.
+     *
+     * @return list<string>
+     */
+    public function variationsForActivity(ActivityDetail $detail, bool $hasPr, string $mood): array
+    {
+        return $this->speechVariations($mood, $this->contextFor($detail, $hasPr));
     }
 
     /**
