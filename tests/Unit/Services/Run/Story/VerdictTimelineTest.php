@@ -81,14 +81,41 @@ it('ignores daily-greeting story lines', function (): void {
 it('maps each mood to a face emoji', function (): void {
     $user = User::factory()->create();
     seedVerdict($user, Carbon::today(), Temari::MOOD_GLOW, 'glow', 5000.0);
-    seedVerdict($user, Carbon::today()->subDay(), Temari::MOOD_WOBBLE, 'wobble', 5000.0);
-    seedVerdict($user, Carbon::today()->subDays(2), Temari::MOOD_DIM, 'dim', 5000.0);
+    seedVerdict($user, Carbon::today()->subDay(), Temari::MOOD_BOUNCY, 'bouncy', 5000.0);
+    seedVerdict($user, Carbon::today()->subDays(2), Temari::MOOD_WOBBLE, 'wobble', 5000.0);
+    seedVerdict($user, Carbon::today()->subDays(3), Temari::MOOD_SQUISHED, 'squished', 5000.0);
+    seedVerdict($user, Carbon::today()->subDays(4), Temari::MOOD_SPINNING, 'spinning', 5000.0);
+    seedVerdict($user, Carbon::today()->subDays(5), Temari::MOOD_DIM, 'dim', 5000.0);
 
     $items = app(VerdictTimeline::class)->recent($user);
 
     expect($items[0]->moodFace)->toBe('✨')
-        ->and($items[1]->moodFace)->toBe('🥵')
-        ->and($items[2]->moodFace)->toBe('🌧️');
+        ->and($items[1]->moodFace)->toBe('🦘')
+        ->and($items[2]->moodFace)->toBe('🥵')
+        ->and($items[3]->moodFace)->toBe('🍳')
+        ->and($items[4]->moodFace)->toBe('💫')
+        ->and($items[5]->moodFace)->toBe('🌧️');
+});
+
+it('skips story lines whose activity has no detail', function (): void {
+    $user = User::factory()->create();
+    // A real StoryLine with full data — should appear.
+    seedVerdict($user, Carbon::today(), Temari::MOOD_BOUNCY, 'real verdict', 5000.0);
+    // An orphaned StoryLine: activity exists but no ActivityDetail.
+    $orphan = Activity::factory()->for($user)->create();
+    StoryLine::query()->create([
+        'user_id' => $user->id,
+        'activity_id' => $orphan->id,
+        'kind' => StoryLine::KIND_POST_RUN,
+        'mood' => Temari::MOOD_DIM,
+        'speech' => 'orphan verdict',
+        'sigil_pattern' => 'dddd',
+    ]);
+
+    $items = app(VerdictTimeline::class)->recent($user);
+
+    expect($items)->toHaveCount(1)
+        ->and($items[0]->oneline)->toBe('real verdict');
 });
 
 it('converts meters to kilometers in the item DTO', function (): void {

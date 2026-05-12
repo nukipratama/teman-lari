@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services\Run\Story;
 
+use Illuminate\Database\Eloquent\Collection;
 use App\Models\StoryLine;
 use App\Models\User;
 
@@ -22,13 +23,12 @@ class VerdictTimeline
      */
     public function recent(User $user, int $limit = self::DEFAULT_LIMIT): array
     {
-        /** @var \Illuminate\Database\Eloquent\Collection<int, StoryLine> $lines */
+        /** @var Collection<int, StoryLine> $lines */
         $lines = StoryLine::query()
             ->with('activity.detail')
             ->where('user_id', $user->id)
             ->where('kind', StoryLine::KIND_POST_RUN)
             ->whereNotNull('activity_id')
-            ->whereHas('activity.detail', fn ($q) => $q->whereNotNull('start_date_local'))
             ->get();
 
         $items = [];

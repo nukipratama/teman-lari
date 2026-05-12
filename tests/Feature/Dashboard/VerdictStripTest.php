@@ -74,7 +74,7 @@ it('renders verdicts newest-first and links each to the run detail', function ()
 
     // Newest must appear before older in the rendered HTML.
     $html = $response->getContent();
-    expect(strpos($html, 'verdict newest'))->toBeLessThan(strpos($html, 'verdict older'));
+    expect(strpos((string) $html, 'verdict newest'))->toBeLessThan(strpos((string) $html, 'verdict older'));
 });
 
 it('does not leak verdicts across users', function (): void {
