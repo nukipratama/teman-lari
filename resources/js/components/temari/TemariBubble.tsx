@@ -5,12 +5,6 @@ import type { Mood, StoryLine } from '@/types/inertia';
 interface TemariBubbleProps {
     line: StoryLine | null;
     size?: 'sm' | 'lg';
-    /**
-     * Additional one-liners from Temari for the same activity. Previously
-     * cycled behind a "tap untuk ganti" interaction; now rendered inline
-     * as muted "alt takes" beneath the primary line so the user sees
-     * everything Temari has to say without having to discover the tap.
-     */
     variations?: string[];
     accessory?: string | null;
     className?: string;
@@ -26,9 +20,7 @@ export default function TemariBubble({
     const mood: Mood = line?.mood ?? 'dim';
     const primary = line?.speech ?? 'Hai! Temari belum punya cerita untuk aktivitas ini.';
     const sigil = line?.sigil_pattern ?? 'dddd';
-    // Variations beyond the primary; deduped against the primary speech
-    // because the BE sometimes seeds the first variation with the same
-    // line. Without the dedupe the user sees the same sentence twice.
+    // BE sometimes seeds the first variation with the primary speech — dedupe to avoid duplicates.
     const altTakes = variations.filter((v) => v !== primary);
 
     const mascotSizeClass = size === 'lg' ? 'h-24 w-24 shrink-0' : 'h-14 w-14 shrink-0';

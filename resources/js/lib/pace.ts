@@ -1,7 +1,4 @@
-/**
- * Format a pace in seconds-per-km as M'SS"/km.
- * Mirrors App\Services\Run\Metrics\PaceFormatter::format()
- */
+// Mirrors App\Services\Run\Metrics\PaceFormatter::format().
 export function formatPace(secPerKm: number): string {
     const total = Math.round(secPerKm);
     const m = Math.floor(total / 60);
@@ -9,11 +6,7 @@ export function formatPace(secPerKm: number): string {
     return `${m}:${s.toString().padStart(2, '0')}`;
 }
 
-/**
- * Compact run-duration label for card-style displays — drops seconds so the
- * value never wraps inside a tight grid cell. Use `formatDurationHMS` when
- * full precision is wanted (run detail page).
- */
+// Drops seconds so card-style cells never wrap; use formatDurationHMS for full precision.
 export function formatDuration(seconds: number): string {
     const total = Math.round(seconds);
     const h = Math.floor(total / 3600);
@@ -21,10 +14,6 @@ export function formatDuration(seconds: number): string {
     return h > 0 ? `${h}j ${m}m` : `${m}m`;
 }
 
-/**
- * Format a duration in seconds as "H:MM:SS" (or "M:SS" when h=0). Useful for
- * full-activity moving-time displays.
- */
 export function formatDurationHMS(seconds: number | null | undefined): string {
     if (seconds == null) return '—';
     const total = Math.round(seconds);
@@ -37,9 +26,6 @@ export function formatDurationHMS(seconds: number | null | undefined): string {
     return `${m}:${s.toString().padStart(2, '0')}`;
 }
 
-/**
- * Format a date string from Inertia (ISO 8601) as Indonesian short date.
- */
 export function formatIdDate(iso: string | null, format: 'short' | 'long' = 'short'): string {
     if (!iso) return '—';
     const d = new Date(iso);

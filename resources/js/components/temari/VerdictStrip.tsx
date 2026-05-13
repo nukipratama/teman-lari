@@ -14,10 +14,6 @@ interface VerdictStripProps {
     items: VerdictTimelineItem[];
 }
 
-/**
- * "Kata Temari" run verdict grid. Shows first 6 cards in a responsive
- * 3-col grid; remaining cards revealed with an expand toggle.
- */
 export default function VerdictStrip({ items }: Readonly<VerdictStripProps>) {
     const [expanded, setExpanded] = useState(false);
 

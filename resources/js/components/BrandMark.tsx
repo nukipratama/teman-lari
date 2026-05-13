@@ -2,22 +2,11 @@ import { Icon } from '@iconify/react';
 import { cn } from '@/lib/cn';
 
 interface BrandMarkProps {
-    /**
-     * `hero` — large stacked layout for pre-auth landings (chip on top,
-     * wordmark + tagline below). `compact` — inline chip + wordmark for
-     * the app header.
-     */
     size?: 'hero' | 'compact';
-    /** Show "Setiap Langkah Berarti" tagline. Hero only. */
     tagline?: boolean;
     className?: string;
 }
 
-/**
- * The TemanLari brand mark — forest-green run-fast chip + wordmark.
- * One source of truth so Login, Welcome, and AppHeader stay in sync if
- * the icon, chip color, or wordmark spelling ever changes.
- */
 export default function BrandMark({ size = 'hero', tagline = false, className }: Readonly<BrandMarkProps>) {
     if (size === 'compact') {
         return (

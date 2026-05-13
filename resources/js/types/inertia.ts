@@ -1,8 +1,3 @@
-/**
- * Shared TS types for Inertia props from teman-lari controllers.
- * Mirrors PHP DTOs in app/Services/Run/Story/* and Eloquent models.
- */
-
 export type Mood = 'glow' | 'bouncy' | 'wobble' | 'squished' | 'spinning' | 'dim';
 
 export type Tone = 'neutral' | 'positive' | 'warning' | 'alert';

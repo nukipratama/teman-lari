@@ -8,15 +8,6 @@ use GuzzleHttp\Client;
 use OpenAI;
 use OpenAI\Contracts\ClientContract;
 
-/**
- * Thin wrapper around openai-php that targets Azure OpenAI specifically:
- * Azure uses `api-key` header (not Bearer), a baseUri that bakes in the
- * deployment path, and a required `api-version` query param.
- *
- * Resolves a fresh client per request because Azure config can change at
- * runtime (e.g. tests overriding env). Cheap to construct — Guzzle PSR
- * client is lazy.
- */
 class AzureOpenAiClient
 {
     private const string DEFAULT_API_VERSION = '2024-10-21';
@@ -45,12 +36,6 @@ class AzureOpenAiClient
     }
 
     /**
-     * Split AZURE_OPENAI_URI into (base, api-version). Accepts the full URL
-     * up to /chat/completions (which openai-php appends itself).
-     *
-     *   in : https://x.openai.azure.com/openai/deployments/y/chat/completions?api-version=2024-10-21
-     *   out: ['https://x.openai.azure.com/openai/deployments/y', self::DEFAULT_API_VERSION]
-     *
      * @return array{0: string, 1: string}
      */
     private function splitUri(string $uri): array

@@ -6,10 +6,6 @@ interface TemariFaceProps extends SVGProps<SVGSVGElement> {
     size?: number;
     color?: string;
     cheekColor?: string;
-    /**
-     * Eye-gaze offset in `[-1, 1]` per axis. Drives pupils toward the
-     * cursor (see [[useGaze]]). Defaults to neutral.
-     */
     gaze?: { x: number; y: number };
 }
 
@@ -18,7 +14,7 @@ const EYE_X_RIGHT = 64;
 const EYE_Y = 48;
 const MOUTH_Y = 64;
 
-const GAZE_PX = 2.4; // max pupil shift in viewBox units
+const GAZE_PX = 2.4;
 
 function Eyes({ mood, color, gaze }: Readonly<{ mood: Mood; color: string; gaze: { x: number; y: number } }>) {
     const sw = 2;
@@ -39,8 +35,7 @@ function Eyes({ mood, color, gaze }: Readonly<{ mood: Mood; color: string; gaze:
         );
     }
     if (mood === 'bouncy') {
-        // Bouncy = closed-happy curves; track only horizontally so the
-        // curve doesn't drift off-position vertically.
+        // Track horizontally only — vertical drift pulls the closed-curve eye shape off-position.
         return (
             <g fill="none" stroke={color} strokeWidth={sw} strokeLinecap="round" transform={`translate(${dx * 0.6} 0)`}>
                 <path d={`M ${EYE_X_LEFT - 3.5} ${EYE_Y + 1.5} Q ${EYE_X_LEFT} ${EYE_Y - 3} ${EYE_X_LEFT + 3.5} ${EYE_Y + 1.5}`} />
@@ -76,7 +71,6 @@ function Eyes({ mood, color, gaze }: Readonly<{ mood: Mood; color: string; gaze:
             </g>
         );
     }
-    // dim — sleepy half-eye line, drifts with gaze for "watching you" effect.
     return (
         <g stroke={color} strokeWidth={sw} strokeLinecap="round" transform={`translate(${dx * 0.8} ${dy * 0.4})`}>
             <line x1={EYE_X_LEFT - 3} y1={EYE_Y} x2={EYE_X_LEFT + 3} y2={EYE_Y} />
@@ -138,15 +132,6 @@ function Mouth({ mood, color }: Readonly<{ mood: Mood; color: string }>) {
     );
 }
 
-/**
- * Mood-driven stitched face. Six eye variants × six mouth variants so
- * each mood reads as a distinct expression rather than the same emoji
- * dropped in. Cheeks are always-on rose-tinted stitched dots — adds
- * warmth across the whole mood range. Stroke palette matches the sigil
- * so face + sigil read as one art style.
- *
- * `gaze` offset shifts pupils (or whole eye groups) toward the cursor.
- */
 export default function TemariFace({
     mood,
     size = 144,

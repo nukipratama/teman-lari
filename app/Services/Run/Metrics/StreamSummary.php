@@ -4,11 +4,6 @@ declare(strict_types=1);
 
 namespace App\Services\Run\Metrics;
 
-/**
- * Tiny accessor helpers over the loosely-typed `stream_summary` JSON
- * shape that StreamAnalysis emits. Centralises the `is_array(... ?? null)`
- * guard so callers don't all reimplement it.
- */
 final class StreamSummary
 {
     /**
@@ -23,9 +18,6 @@ final class StreamSummary
     }
 
     /**
-     * Z3 + Z4 + Z5 share of total time-in-zone — proxies "how hard was this run".
-     * Defaults to 0 when zone data is missing.
-     *
      * @param  array<string, mixed>  $summary
      */
     public static function hardZoneShare(array $summary): float

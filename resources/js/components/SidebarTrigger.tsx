@@ -1,12 +1,6 @@
 import { Icon } from '@iconify/react';
 import { useSidebar } from '@/contexts/SidebarContext';
 
-/**
- * Hamburger button — visible only on `< lg`. Opens the mobile sidebar
- * `<dialog>` via context. Native dialog provides focus trap + Esc-close
- * + backdrop click, so we just call `showModal()` and let the platform
- * handle a11y.
- */
 export default function SidebarTrigger() {
     const { open } = useSidebar();
     return (

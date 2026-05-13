@@ -7,14 +7,9 @@ import type { ActivityDetail, Mood } from '@/types/inertia';
 
 interface RunListRowProps {
     detail: ActivityDetail;
-    /** Optional mood derived from this run's StoryLine — drives the small mood face on the left. */
     mood?: Mood | null;
 }
 
-/**
- * One row in the runs index / dashboard recent list.
- * Adds per-row mood face on the left so users feel the vibe before the numbers.
- */
 export default function RunListRow({ detail, mood = null }: Readonly<RunListRowProps>) {
     const km = detail.distance != null ? (detail.distance / 1000).toFixed(2) : '—';
     const paceSec =

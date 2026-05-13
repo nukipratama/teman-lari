@@ -8,11 +8,6 @@ interface SidebarContextValue {
 
 const SidebarContext = createContext<SidebarContextValue | null>(null);
 
-/**
- * Wires the mobile sidebar `<dialog>` ref to the SidebarTrigger button.
- * Native `<dialog>.showModal()` handles focus trap + Esc + backdrop click
- * for free — context just shares the ref between the two components.
- */
 export function SidebarProvider({ children }: Readonly<{ children: ReactNode }>) {
     const dialogRef = useRef<HTMLDialogElement | null>(null);
 

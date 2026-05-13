@@ -1,11 +1,6 @@
 import type { Rarity } from '@/types/inertia';
 
-/**
- * Mirrors App\Models\RunCard::RARITY_LABELS and BADGE_LABELS so the FE
- * has one place to look up labels (otherwise we'd hardcode them in
- * every component that touches RunCard).
- */
-
+// Mirrors App\Models\RunCard::RARITY_LABELS / BADGE_LABELS.
 export const RARITY_LABELS: Record<Rarity, string> = {
     biasa: 'Biasa',
     jarang: 'Jarang',

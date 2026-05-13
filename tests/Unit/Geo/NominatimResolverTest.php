@@ -65,15 +65,12 @@ it('caches consecutive calls for the same coords (rounded to ~110m)', function (
 
     $resolver = new NominatimResolver();
     $resolver->reverse(-6.595, 106.8155);
-    $resolver->reverse(-6.5951, 106.8156); // same 3-decimal grid
+    $resolver->reverse(-6.5951, 106.8156);
 
     Http::assertSentCount(1);
 });
 
 it('caches miss sentinels so a known-bad coord pair does not retry Nominatim', function (): void {
-    // First call resolves to null (empty address); resolver writes
-    // `false` into the cache. Second call short-circuits on the
-    // sentinel without re-hitting Nominatim.
     Http::fake([
         'nominatim.openstreetmap.org/*' => Http::response(['address' => []]),
     ]);

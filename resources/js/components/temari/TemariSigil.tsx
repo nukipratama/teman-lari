@@ -138,10 +138,6 @@ interface TemariSigilProps extends SVGProps<SVGSVGElement> {
     accessory?: string | null;
 }
 
-/**
- * Stitch-art mascot sigil. 4 cardinal stitch ops around a dashed face circle.
- * Ports resources/views/components/temari-sigil.blade.php verbatim.
- */
 export default function TemariSigil({
     pattern = 'dddd',
     size = 96,
@@ -157,10 +153,8 @@ export default function TemariSigil({
                 <Stitch key={i} op={chars[i] ?? 'd'} pos={pos} color={color} />
             ))}
             {accessory !== null && (
-                // `key={accessory}` re-mounts (and re-plays the pop) when the
-                // accessory itself changes — e.g. the user unlocks a new one.
-                // `style={{ transformOrigin: 'center' }}` keeps the SVG scale
-                // anchored at the centre of the viewBox, not 0,0.
+                // key={accessory} re-mounts on swap so the pop replays; transformOrigin
+                // anchors SVG scale to viewBox centre, not 0,0.
                 <motion.g
                     key={accessory}
                     variants={accessoryPop}

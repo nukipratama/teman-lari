@@ -12,8 +12,6 @@ use Illuminate\Support\Carbon;
 uses(RefreshDatabase::class);
 
 /**
- * Helper: make an analyzed activity + detail for a user with the given metrics.
- *
  * @param  array<string, mixed>  $overrides
  */
 function seedRun(User $user, Carbon $when, float $distanceM, int $movingTimeSec, array $overrides = []): ActivityDetail
@@ -38,20 +36,18 @@ it('returns null when the user has no history', function (): void {
 it('matches the oldest qualifying easy run within ±20% distance', function (): void {
     $user = User::factory()->create();
 
-    // Three past easies of the right pace band + within distance tolerance.
     // Pin temps so the factory's random weather doesn't blow the temp tolerance.
     $temp = ['weather_temp_c' => 27];
-    seedRun($user, Carbon::today()->subDays(45), 10_500, 4_410, $temp); // 7:00/km easy, +5% distance
-    seedRun($user, Carbon::today()->subDays(90), 9_700, 4_074, $temp);  // 7:00/km easy, -3% distance — OLDEST
-    seedRun($user, Carbon::today()->subDays(60), 10_000, 4_200, $temp); // exact match in the middle
+    seedRun($user, Carbon::today()->subDays(45), 10_500, 4_410, $temp);
+    seedRun($user, Carbon::today()->subDays(90), 9_700, 4_074, $temp);
+    seedRun($user, Carbon::today()->subDays(60), 10_000, 4_200, $temp);
 
-    $current = seedRun($user, Carbon::today(), 10_000, 4_140, $temp); // 6:54/km easy
+    $current = seedRun($user, Carbon::today(), 10_000, 4_140, $temp);
     $match = app(PastYouMatcher::class)->findMatch($current->activity, $current);
 
     expect($match)->not->toBeNull()
         ->and($match['past']->start_date_local->toDateString())->toBe(Carbon::today()->subDays(90)->toDateString())
         ->and($match['days_ago'])->toBe(90)
-        // 7:00/km past vs 6:54/km current = +6 sec/km faster today
         ->and($match['pace_diff_sec'])->toBeFloat()->toBeGreaterThan(0);
 });
 
@@ -66,17 +62,15 @@ it('rejects matches less than 21 days apart', function (): void {
 
 it('rejects matches in a different pace band', function (): void {
     $user = User::factory()->create();
-    // Past is a tempo (5:30/km = 330s) — different band from current easy.
     seedRun($user, Carbon::today()->subDays(60), 10_000, 3_300);
 
-    $current = seedRun($user, Carbon::today(), 10_000, 4_200); // 7:00/km easy
+    $current = seedRun($user, Carbon::today(), 10_000, 4_200);
 
     expect(app(PastYouMatcher::class)->findMatch($current->activity, $current))->toBeNull();
 });
 
 it('rejects matches outside the ±20% distance window', function (): void {
     $user = User::factory()->create();
-    // Past run is ~5km — too short for a 10K comparison
     seedRun($user, Carbon::today()->subDays(60), 5_000, 2_100);
 
     $current = seedRun($user, Carbon::today(), 10_000, 4_200);
@@ -104,7 +98,7 @@ it('accepts matches when one side is missing weather', function (): void {
 
 it('reports HR diff when both sides have it', function (): void {
     $user = User::factory()->create();
-    // Pin temps to the same value so the temp-tolerance filter doesn't randomly reject.
+    // Pin temps so factory weather randomness doesn't fail the temp tolerance.
     seedRun($user, Carbon::today()->subDays(60), 10_000, 4_200, [
         'average_heartrate' => 160.0,
         'weather_temp_c' => 27,
@@ -155,7 +149,6 @@ it('returns null when the current activity has no start_date_local', function ()
 
 it('reports a null hr_diff when one side is missing average_heartrate', function (): void {
     $user = User::factory()->create();
-    // Past run has avg_hr, current doesn't.
     seedRun($user, Carbon::today()->subDays(60), 10_000, 4_200, [
         'average_heartrate' => 160.0,
         'weather_temp_c' => 27,

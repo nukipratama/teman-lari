@@ -11,13 +11,6 @@ use App\Models\User;
 use App\Services\Run\Metrics\TrainingLoad;
 use Illuminate\Support\Carbon;
 
-/**
- * Resolves the runner's current vibe state by gathering multi-signal context
- * for `VibeMatrix` to score.
- *
- * Code-side enum keys stay English for greppability (`Vibe::BOUNCY`); display
- * labels live in `LABELS` and are Indonesian per the project voice convention.
- */
 class Vibe
 {
     public const BOUNCY = 'bouncy';
@@ -124,11 +117,6 @@ class Vibe
             ->exists();
     }
 
-    /**
-     * Average decoupling_pct across the user's runs in the last
-     * DECOUPLING_WINDOW_DAYS days. Null when the user has no runs with
-     * decoupling data — VibeMatrix treats null as "no opinion".
-     */
     private function avgDecouplingPct(User $user, Carbon $asOf): ?float
     {
         $cutoff = $asOf->copy()->subDays(self::DECOUPLING_WINDOW_DAYS);

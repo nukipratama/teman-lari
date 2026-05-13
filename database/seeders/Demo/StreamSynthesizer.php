@@ -8,21 +8,11 @@ use Random\Engine\Mt19937;
 use Random\Randomizer;
 
 /**
- * Turns a `RunBlueprint` into Strava-shaped 1 Hz stream arrays. The output
- * keys match what `StreamAnalysis::compute()` reads:
- *
- *   time, heartrate, velocity_smooth, cadence, altitude, latlng, distance
- *
- * Each entry is wrapped as `['data' => [...]]` because Strava's per-stream
- * payload is a dict and `StreamAnalysis::data()` accepts either shape.
- *
  * Determinism: seeded by `RunBlueprint::seed()` so the same blueprint
- * always produces the same streams. Useful when re-running the seeder
- * to compare UI output across iterations.
+ * always produces the same streams.
  */
 class StreamSynthesizer
 {
-    /** Jakarta-ish anchor for the canned route loops. */
     private const float ANCHOR_LAT = -6.2088;
 
     private const float ANCHOR_LNG = 106.8456;
@@ -102,11 +92,6 @@ class StreamSynthesizer
         return (int) round($base + $rng->getFloat(-3.0, 3.0));
     }
 
-    /**
-     * Cadence varies with velocity (faster moments → higher cadence) plus a
-     * profile-specific drift over the run. Real runners shift 6–10 spm
-     * between easy and tempo paces and lose 2–4 spm to end-of-run fatigue.
-     */
     private function cadenceAt(RunBlueprint $b, float $progress, float $currentVelocity, float $avgVelocity, Randomizer $rng): int
     {
         $velocityRatio = $avgVelocity > 0 ? $currentVelocity / $avgVelocity : 1.0;
@@ -121,7 +106,6 @@ class StreamSynthesizer
 
     private function altitudeAt(RunBlueprint $b, float $progress): float
     {
-        // Sine wave so total ascent ≈ elevationGainM.
         return round(10.0 + $b->elevationGainM * (0.5 + 0.5 * sin($progress * M_PI * 2)), 2);
     }
 
@@ -138,7 +122,7 @@ class StreamSynthesizer
         ];
     }
 
-    /** 6-segment cycle: odd thirds are the work bouts. */
+    // 6-segment cycle: odd thirds are the work bouts.
     private function intervalWork(float $progress): bool
     {
         return ((int) floor($progress * 6)) % 2 === 1;

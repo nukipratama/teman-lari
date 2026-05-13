@@ -13,25 +13,6 @@ use Illuminate\Support\Carbon;
 use function count;
 use function is_array;
 
-/**
- * Materialises weekly_snapshots rows from the user's activity_details
- * timeline. The dashboard fitness chart and /progress weekly table read
- * from this table; nothing populates it elsewhere in the codebase.
- *
- * Called by the demo seeder after synthetic runs are materialised, and
- * intended to be called by the Strava ingest pipeline after every sync.
- *
- * Conventions:
- *   - "Week ending" is the Sunday at the end of the ISO week.
- *   - One row per (user_id, week_ending). Re-running upserts.
- *   - Weeks span from the user's first analyzed run up to the current week
- *     (inclusive), even if the user took a week off — the EWMA decay during
- *     a rest week is itself a meaningful signal.
- *
- * Loads all of the user's details once and computes every week's snapshot
- * from the in-memory daily TRIMP map — so a user with N weeks of history
- * costs 1 query + N PHP rolls instead of 1 + N queries.
- */
 class WeeklyAggregator
 {
     public function __construct(private readonly TrainingLoad $trainingLoad)

@@ -27,31 +27,16 @@ use Illuminate\Support\Carbon;
 use function count;
 use function is_array;
 
-/**
- * Orchestrates the demo seed: for each `RunBlueprint`, materialises
- * Activity / ActivityDetail / ActivityStream rows, then runs the real
- * ingest pipeline (`StreamAnalysis` → `PersonalRecords` → `RunCardFactory`
- * → `Temari`) so the cards / PRs / story lines on screen are the actual
- * product output. After all runs, `WeeklyAggregator` materialises
- * weekly_snapshots and `Temari::dailyGreeting` seeds today's bubble.
- *
- * Lives outside `DatabaseSeeder` and is invoked by the `demo:seed`
- * command — keeps the regular `db:seed` cheap for unit tests.
- */
 class DemoRunSeeder
 {
     public const string DEMO_USER_EMAIL = 'demo@teman-lari.local';
 
-    // Demo run start coords: Senayan / SCBD, Jakarta. Hardcoded so the
-    // resolved location below stays accurate. Real users get coords from
-    // Strava's `start_latlng` on sync, then Nominatim resolves the chip.
+    // Senayan / SCBD, Jakarta — must agree with DEMO_LOCATION_NAME below.
     private const float DEMO_START_LAT = -6.2253;
 
     private const float DEMO_START_LNG = 106.8090;
 
-    // Pre-resolved location for demo data — skips the Nominatim call
-    // entirely on seed so `demo:seed --fresh` produces a page that renders
-    // the location chip immediately without waiting on a queue worker.
+    // Pre-resolved so seed skips the Nominatim call and the chip renders immediately.
     private const string DEMO_LOCATION_NAME = 'Senayan, Jakarta Pusat, DKI Jakarta, Indonesia';
 
     private const string DEMO_LOCATION_COUNTRY = 'ID';
@@ -71,12 +56,6 @@ class DemoRunSeeder
     ) {
     }
 
-    /**
-     * Builds an encoded polyline for a small loop around the demo start
-     * coordinates so the route map and the resolved location chip agree.
-     * Returns the same encoded string for every call — `static` cache so
-     * the encoder runs once per seeder lifetime, not per activity.
-     */
     private function demoPolyline(): string
     {
         static $cached = null;
@@ -87,7 +66,6 @@ class DemoRunSeeder
         $lat = self::DEMO_START_LAT;
         $lng = self::DEMO_START_LNG;
 
-        // Loose square loop ~500m on each side, returning to the start.
         $points = [
             [$lat, $lng],
             [$lat + 0.0045, $lng + 0.0010],
@@ -102,8 +80,6 @@ class DemoRunSeeder
     }
 
     /**
-     * Seeds the full demo dataset onto the demo user.
-     *
      * @param  bool  $fresh  truncate prior demo runs/cards/snapshots first
      * @param  Closure(string): void|null  $log  optional reporter (command::info etc.)
      */
@@ -180,8 +156,7 @@ class DemoRunSeeder
         }
 
         PersonalRecord::query()->where('user_id', $user->id)->delete();
-        // StoryLine deleted twice on purpose: by activity_id above for post-run
-        // lines, by user_id here for daily greetings (which have null activity_id).
+        // Second pass: deletes daily greetings whose activity_id is null.
         StoryLine::query()->where('user_id', $user->id)->delete();
         WeeklySnapshot::query()->where('user_id', $user->id)->delete();
         Activity::query()->where('user_id', $user->id)->delete();
@@ -240,8 +215,6 @@ class DemoRunSeeder
         $this->computeStreamSummary($detail, $streams);
         $detail->refresh();
 
-        // PersonalRecords writes to its own table, not activity_details — no
-        // refresh needed before the card/Temari step.
         $this->personalRecords->detectAndStore($activity, $detail);
         $this->cardFactory->build($activity, $detail);
         $this->temari->postRunLine($activity, $detail);

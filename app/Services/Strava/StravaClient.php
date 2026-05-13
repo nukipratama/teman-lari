@@ -18,13 +18,10 @@ class StravaClient
 
     private const string TOKEN_URL = 'https://www.strava.com/oauth/token';
 
-    /**
-     * Refresh tokens with this many seconds left to avoid mid-request expiry.
-     */
     private const int REFRESH_BUFFER_SECONDS = 60;
 
     /**
-     * Strava's per-app shared rate limits. Buckets are app-wide, not per-user.
+     * Per-app shared rate limits (app-wide, not per-user).
      *
      * @var array<string, array{int, int}>
      */

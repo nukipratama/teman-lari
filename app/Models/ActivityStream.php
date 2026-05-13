@@ -12,8 +12,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
- * Raw second-by-second Strava streams blob. Deferred-loaded — never join
- * this in a list query. Read only when re-computing summaries.
+ * Large blob — never eager-load in list queries.
  *
  * @property int $id
  * @property int $activity_id
@@ -35,9 +34,7 @@ class ActivityStream extends Model
     }
 
     /**
-     * `data` is stored as longText (not JSON column type) because the blob
-     * is large and MySQL's JSON validation overhead isn't worth the cost.
-     * Cast handles the encode/decode.
+     * `data` column is longText (not JSON) — cast handles encode/decode.
      *
      * @return array<string, string>
      */

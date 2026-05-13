@@ -6,15 +6,6 @@ namespace Database\Seeders\Demo;
 
 use function count;
 
-/**
- * Collapses synthesized 1 Hz streams into `splits_metric` — the per-km
- * shape PersonalRecords::detectAndStore() and the technical fold on
- * /runs/{id} both read. One row per completed kilometre.
- *
- * Mirrors the slice of Strava's `splits_metric` payload the app actually
- * consumes: `split`, `distance`, `elapsed_time`, `moving_time`,
- * `average_speed`, and `average_heartrate` when HR was paired.
- */
 class SplitsBuilder
 {
     /**
@@ -47,7 +38,6 @@ class SplitsBuilder
             $kmTarget += 1000.0;
         }
 
-        // Trailing partial km (e.g. last 300m of a 5.3km run).
         if ($startIdx < $n - 1 && (float) $distance[$n - 1] - (float) $distance[$startIdx] >= 100) {
             $splits[] = $this->splitRow($splitIndex, $startIdx, $n - 1, $time, $distance, $heartrate);
         }
@@ -81,9 +71,7 @@ class SplitsBuilder
             'average_speed' => round($avgSpeed, 3),
         ];
 
-        // Strava omits average_heartrate from splits when no HR sensor is
-        // paired; mirror that here so PersonalRecords + the per-km table
-        // don't render a misleading 0.0.
+        // Mirror Strava: omit average_heartrate when no HR sensor was paired.
         if ($streamHeartrate !== []) {
             $row['average_heartrate'] = round(StreamStats::sliceMean($streamHeartrate, $startIdx, $endIdx), 1);
         }

@@ -6,11 +6,6 @@ namespace Database\Seeders\Demo;
 
 use function count;
 
-/**
- * Stream-array math the demo seeder needs. `mean` / `max` skip non-scalar
- * entries so it stays safe over heterogeneous Strava-shaped payloads
- * (the `latlng` stream is a list of [lat, lng] pairs, for instance).
- */
 final class StreamStats
 {
     /**
@@ -41,8 +36,8 @@ final class StreamStats
 
     /**
      * Average of $stream over the inclusive [$startIdx, $endIdx] window.
-     * Returns 0.0 when the window has no scalar samples — splits math
-     * relies on this so a missing-HR run still produces a row shape.
+     * Returns 0.0 when the window has no scalar samples — callers rely on
+     * this to keep row shape stable for missing-HR runs.
      *
      * @param  list<int|float|array{float, float}>  $stream
      */

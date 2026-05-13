@@ -4,10 +4,6 @@ declare(strict_types=1);
 
 namespace App\Services\Run\Metrics;
 
-/**
- * Single source of truth for pace serialization. Pace is always
- * seconds-per-kilometre internally and `M:SS` for display.
- */
 final class PaceFormatter
 {
     public static function format(float $secPerKm): string

@@ -14,20 +14,12 @@ use Illuminate\Support\Facades\Log;
 
 class SyncOrchestrator
 {
-    /**
-     * Lock TTL is long enough to cover a worst-case full historical backfill,
-     * short enough that a crashed run releases its grip within minutes.
-     */
     private const int LOCK_TTL_SECONDS = 300;
 
     public function __construct(private readonly ActivityFetcher $fetcher)
     {
     }
 
-    /**
-     * Returns the number of new activities queued for ingestion. Returns 0 if
-     * the user has no Strava connection or another sync is in flight.
-     */
     public function syncUser(User $user): int
     {
         $connection = $user->stravaConnection;
@@ -71,9 +63,6 @@ class SyncOrchestrator
     }
 
     /**
-     * Insert in one batch so we share a single transaction and the resulting
-     * DB ids stay monotonic with the input ordering.
-     *
      * @param  list<int>  $externalIds  already sorted ascending (oldest first)
      */
     private function insertActivityRows(int $userId, array $externalIds): int
@@ -90,8 +79,6 @@ class SyncOrchestrator
         ], $externalIds);
 
         return DB::transaction(
-            // insertOrIgnore handles the rare double-sync race where another job
-            // already created the row between our existing-check and this insert.
             fn (): int => (int) Activity::query()->insertOrIgnore($rows)
         );
     }

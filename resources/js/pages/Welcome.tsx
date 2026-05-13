@@ -2,11 +2,6 @@ import { Head, Link } from '@inertiajs/react';
 import AppShell from '@/layouts/AppShell';
 import BrandMark from '@/components/BrandMark';
 
-/**
- * Public landing — currently unreachable (root redirects to /login or
- * /dashboard). Kept brand-led so a future "/" splash stays on-message:
- * pre-auth visitors don't yet know who Temari is.
- */
 export default function Welcome() {
     return (
         <AppShell showSidebar={false}>

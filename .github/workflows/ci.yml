@@ -130,12 +130,8 @@ jobs:
             } >> "$GITHUB_STEP_SUMMARY"
           fi
 
-  # Deploy to homelab. Runs after all CI jobs pass. Only on pushes to main.
-  # All env values come from repo Secrets — `compose.prod.yaml` uses
-  # `environment:` blocks with `${VAR}` substitution so nothing is ever
-  # written to a host file.
   deploy:
-    name: Deploy to homelab
+    name: Deploy
     needs: [backend-tests, frontend-tests]
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     runs-on: [self-hosted, homelab]

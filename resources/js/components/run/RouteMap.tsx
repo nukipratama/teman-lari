@@ -2,25 +2,13 @@ import { useMemo } from 'react';
 import polylineCodec from '@mapbox/polyline';
 import { latLngBounds } from 'leaflet';
 import { MapContainer, Polyline, TileLayer } from 'react-leaflet';
-// `leaflet.css` lives in [resources/css/app.css] (@import). Importing it
-// here too would race the lazy-load and leave tiles unpositioned on the
-// first render — confirmed via screenshot from user QA.
+// leaflet.css lives in resources/css/app.css (@import). Importing it here would race
+// the lazy-load and leave tiles unpositioned on first render.
 
 interface RouteMapProps {
-    /** Strava `summary_polyline` (encoded polyline format). */
     polyline: string;
 }
 
-/**
- * Renders the run's GPS trace on an OpenStreetMap tile layer (CartoDB
- * Voyager — readable in both light and dark contexts, no API key).
- * Decoded once via `@mapbox/polyline`. Auto-fits the viewport to the
- * trace bounds; map is non-interactive scroll (we don't want a wheel
- * over the map to hijack the page scroll).
- *
- * Loaded via [[lazy]] from Runs/Show so Leaflet's ~40KB + the polyline
- * codec stay out of the initial dashboard bundle.
- */
 export default function RouteMap({ polyline }: Readonly<RouteMapProps>) {
     const positions = useMemo<Array<[number, number]>>(
         () => polylineCodec.decode(polyline) as Array<[number, number]>,
@@ -44,13 +32,8 @@ export default function RouteMap({ polyline }: Readonly<RouteMapProps>) {
                 style={{ height: '280px', width: '100%' }}
                 attributionControl
             >
-                {/* Tile source: OSMF main tile server. Per their tile-usage
-                    policy, personal / low-volume use is allowed. Prior
-                    attempts during user QA:
-                      - `*.basemaps.cartocdn.com` — blocked by uBlock lists
-                      - `tile.openstreetmap.de` — `/tiles/osmde/` prefix is
-                        required for that server; without it every tile
-                        returns 404 (verified via user devtools screenshot). */}
+                {/* OSMF main tile server. Avoid *.basemaps.cartocdn.com (blocked by uBlock
+                    lists) and tile.openstreetmap.de (needs /tiles/osmde/ prefix or all tiles 404). */}
                 <TileLayer
                     attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
                     url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"

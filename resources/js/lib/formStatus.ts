@@ -1,10 +1,6 @@
 import type { FormStatus, Tone } from '@/types/inertia';
 
-/**
- * form_status → human label + Tone token. Mirrors
- * App\Services\Run\Story\FormStatus::label/tone on the backend.
- */
-
+// Mirrors App\Services\Run\Story\FormStatus::label/tone.
 export function formStatusLabel(status: FormStatus | null): string {
     switch (status) {
         case 'fresh':

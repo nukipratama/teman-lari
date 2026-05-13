@@ -19,12 +19,6 @@ interface BriefingCardProps {
     briefing: BriefingResult;
 }
 
-/**
- * Dashboard hero tier 1 — bigger mascot, bigger headline, richer gradient,
- * body text at `text-base ink` not `text-sm ink-soft`. FM fadeInUp on
- * mount. This card should clearly read as "the most important thing on
- * the page".
- */
 export default function BriefingCard({ briefing }: Readonly<BriefingCardProps>) {
     const vibeBg = vibeBackground(briefing.vibeState);
     const recoveryClass = recoveryChipClass(briefing.recoveryTone);
