@@ -5,6 +5,13 @@ on:
     branches: [main]
   pull_request:
 
+# One run per ref. New pushes to a PR cancel the older run so the single
+# self-hosted runner doesn't queue stale work. main is exempt — we never want
+# to cancel a deploy mid-flight.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
 env:
   PHP_VERSION: '8.4'
 
@@ -112,14 +119,9 @@ jobs:
       - name: Install npm deps
         run: npm ci --prefer-offline --no-audit --no-fund
 
-      # Coverage instrumentation roughly doubles vitest wall time. PRs run the
-      # fast suite; the 100% gate still blocks merges via the push-to-main run.
-      - name: Vitest (PR — no coverage)
-        if: github.event_name == 'pull_request'
-        run: npm test
-
-      - name: Vitest + 100% line/function coverage (main)
-        if: github.event_name != 'pull_request'
+      # Coverage gate runs on every event — PR + main. Skipping it on PRs let
+      # coverage drift merge before the gate fired, defeating the gate.
+      - name: Vitest + 100% line/function coverage
         run: npm run test:coverage
 
   # Mutation testing via Infection. Runs in parallel with other CI jobs so the

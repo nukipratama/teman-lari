@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Pre-commit gate: block commits on main, lint staged files.
-# PHP  → Pint (staged) + PHPStan (staged) + Rector dry-run (staged).
+# PHP  → Pint (staged) + PHPStan (full — cross-file type safety) + Rector dry-run (staged).
 # TS   → tsc --noEmit (full — cross-file type safety) + ESLint (staged).
 # Tests + coverage live in CI.
 set -euo pipefail
@@ -33,8 +33,9 @@ if [ -n "$STAGED_PHP" ]; then
   ./vendor/bin/sail exec -T app ./vendor/bin/pint $STAGED_PHP
   # shellcheck disable=SC2086
   git add $STAGED_PHP
-  # shellcheck disable=SC2086
-  ./vendor/bin/sail exec -T app ./vendor/bin/phpstan analyse --no-progress $STAGED_PHP
+  # phpstan analyses full codebase — partial checks silently miss cross-file errors
+  # (e.g. refactoring a util breaks unstaged callers).
+  ./vendor/bin/sail exec -T app ./vendor/bin/phpstan analyse --no-progress
   # shellcheck disable=SC2086
   ./vendor/bin/sail exec -T app ./vendor/bin/rector --dry-run --no-progress-bar $STAGED_PHP
 fi
