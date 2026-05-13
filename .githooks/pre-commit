@@ -1,7 +1,20 @@
 #!/usr/bin/env bash
-# Pre-commit gate: format staged PHP with Pint, then static-analyse app/ with PHPStan.
-# Tests + coverage live in CI.
+# Pre-commit gate: block commits on main, format staged PHP with Pint,
+# then static-analyse app/ with PHPStan. Tests + coverage live in CI.
 set -euo pipefail
+
+CURRENT_BRANCH=$(git symbolic-ref --short HEAD 2>/dev/null || echo "")
+if [ "$CURRENT_BRANCH" = "main" ]; then
+  cat >&2 <<EOF
+pre-commit: direct commits to 'main' are blocked.
+
+  → Create a feature branch:   git switch -c feat/your-change
+  → Push it:                   git push -u origin feat/your-change
+  → Open a PR + let CI run:    gh pr create --fill
+  → Merge via the GitHub UI once green.
+EOF
+  exit 1
+fi
 
 STAGED_PHP=$(git diff --cached --name-only --diff-filter=ACMR | grep -E '\.php$' || true)
 [ -z "$STAGED_PHP" ] && exit 0
