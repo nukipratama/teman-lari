@@ -7,13 +7,17 @@
 FROM dunglas/frankenphp:1-php8.4-alpine AS dev
 WORKDIR /app
 
+# pcov is dev-only — pest --mutate / --coverage need a coverage driver.
+# CI installs it via shivammathur/setup-php; without it locally, mutation
+# testing fails with "Mutation testing requires code coverage to be enabled".
 RUN install-php-extensions \
         pdo_mysql \
         redis \
         intl \
         bcmath \
         opcache \
-        pcntl
+        pcntl \
+        pcov
 
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
