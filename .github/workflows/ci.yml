@@ -124,9 +124,11 @@ jobs:
       - name: Vitest + 100% line/function coverage
         run: npm run test:coverage
 
-  # Mutation testing via Infection. Runs in parallel with other CI jobs so the
-  # full pipeline result is available faster. Blocks deploy: a low MSI means the
-  # suite is brittle regardless of line coverage.
+  # Mutation testing via Pest's native --mutate. Infection 0.32 launches the
+  # initial test suite via `vendor/bin/phpunit`, which Pest 4 refuses to run
+  # ("Please run [./vendor/bin/pest] instead") — so Infection is unusable on
+  # this codebase. Pest's plugin-mutate boots through pest itself, so Pest-
+  # style `uses()` calls work. Blocks deploy: low MSI = brittle suite.
   mutation:
     runs-on: [self-hosted, homelab]
     services:
@@ -172,8 +174,8 @@ jobs:
 
       # NOTE: env is set at step level because `job.services.*.ports` context is
       # only available at step scope, not job-level env.
-      - name: Mutation tests (Infection)
-        id: infection
+      - name: Mutation tests (Pest)
+        id: mutate
         env:
           DB_CONNECTION: mysql
           DB_HOST: 127.0.0.1
@@ -184,15 +186,19 @@ jobs:
           REDIS_HOST: 127.0.0.1
           REDIS_PORT: ${{ job.services.redis.ports['6379'] }}
         run: |
-          ./vendor/bin/infection --no-progress --logger-github 2>&1 | tee /tmp/infection-output.txt
+          ./vendor/bin/pest --mutate --covered-only --parallel --min=100 \
+            --ignore='App\\Console' --ignore='App\\Providers' \
+            2>&1 | tee /tmp/mutate-output.txt
           exit ${PIPESTATUS[0]}
 
       - name: Mutation summary
         if: always()
         run: |
-          echo "## Mutation Testing (Infection)" >> $GITHUB_STEP_SUMMARY
+          echo "## Mutation Testing (Pest)" >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
-          grep -E "MSI|Killed|Escaped|Not covered|Mutation Score|Covered Code" /tmp/infection-output.txt >> $GITHUB_STEP_SUMMARY || true
+          grep -E "Mutations:|Score:|Killed|Escaped|Untested|Uncovered|Duration:" /tmp/mutate-output.txt \
+            | sed 's/\x1b\[[0-9;]*[mGKHF]//g' \
+            | tail -10 >> $GITHUB_STEP_SUMMARY || true
           echo '```' >> $GITHUB_STEP_SUMMARY
 
   # Deploy to homelab. Runs after all CI jobs pass. Only on pushes to main.
