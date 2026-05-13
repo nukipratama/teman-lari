@@ -93,8 +93,10 @@ jobs:
             echo ""
             echo "| | |"
             echo "| --- | --- |"
-            grep -E "^[[:space:]]*(Tests|Duration|Parallel):" /tmp/pest-output.txt \
-              | sed 's/\x1b\[[0-9;]*[mGKHF]//g' \
+            # Strip ANSI escapes first (pest writes color + cursor-move codes);
+            # grep can't anchor "^[space]*Tests" otherwise.
+            sed -E 's/\x1b\[[0-9;]*[a-zA-Z]//g' /tmp/pest-output.txt \
+              | grep -E "^[[:space:]]*(Tests|Duration|Parallel):" \
               | sed -E 's/^[[:space:]]*([A-Za-z]+):[[:space:]]*/| \1 | /; s/$/ |/'
             echo ""
           } >> "$GITHUB_STEP_SUMMARY"
