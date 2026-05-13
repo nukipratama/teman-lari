@@ -7,15 +7,13 @@
 FROM dunglas/frankenphp:1-php8.4-alpine AS dev
 WORKDIR /app
 
-# pcov is dev-only — pest --mutate / --coverage need a coverage driver.
 RUN install-php-extensions \
         pdo_mysql \
         redis \
         intl \
         bcmath \
         opcache \
-        pcntl \
-        pcov
+        pcntl
 
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
