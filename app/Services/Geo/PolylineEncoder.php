@@ -4,15 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services\Geo;
 
-/**
- * Encodes a sequence of `[lat, lng]` points into Google's polyline
- * format (the same format Strava emits as `summary_polyline`). Used by
- * the demo seeder so the polyline drawn on the route map actually
- * starts where `start_lat`/`start_lng` say it does — handy for QA
- * (otherwise the location chip and the map trace contradict each other).
- *
- * Reference: https://developers.google.com/maps/documentation/utilities/polylinealgorithm
- */
+// https://developers.google.com/maps/documentation/utilities/polylinealgorithm
 class PolylineEncoder
 {
     /**

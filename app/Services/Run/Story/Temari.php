@@ -14,27 +14,8 @@ use Illuminate\Support\Carbon;
 
 use function is_array;
 
-/**
- * Temari, the round mascot. Her job is to put the numbers into a sentence.
- *
- * Two surfaces:
- *   - post-run speech bubble (per activity, references concrete signals)
- *   - daily greeting (per user/day, references the runner's vibe)
- *
- * Speech is templated Indonesian copy with deterministic variation seeded
- * by activity_id + mood — same run always gets the same line, but two
- * different runs in the same mood pick different phrasings. The
- * `generateSpeech()` seam exists so a future iteration can swap to an LLM
- * call (Anthropic SDK is already a project pattern) without touching the
- * downstream pipeline.
- *
- * Mood is the *expression* (face frame + sigil pattern). The vibe is the
- * runner's global "today" state; mood is Temari's reaction to one specific
- * run or to the day's vibe.
- */
 class Temari
 {
-    /** Mascot moods (internal enum keys). */
     public const MOOD_BOUNCY = 'bouncy';
 
     public const MOOD_GLOW = 'glow';
@@ -47,20 +28,18 @@ class Temari
 
     public const MOOD_SQUISHED = 'squished';
 
-    /** Map mood → 4-char sigil pattern code (renderer interprets the chars as stitch ops). */
+    // 4-char sigil codes; renderer reads each char as a stitch op.
     private const array SIGIL_FOR_MOOD = [
-        self::MOOD_BOUNCY => 'orct',     // open-round-curve-twist
-        self::MOOD_GLOW => 'ssss',       // star spike pattern
-        self::MOOD_WOBBLE => 'wvwv',     // wave alternating
-        self::MOOD_DIM => 'dddd',        // dot field
-        self::MOOD_SPINNING => 'splr',   // spiral
-        self::MOOD_SQUISHED => 'fhfh',   // flat-horizon
+        self::MOOD_BOUNCY => 'orct',
+        self::MOOD_GLOW => 'ssss',
+        self::MOOD_WOBBLE => 'wvwv',
+        self::MOOD_DIM => 'dddd',
+        self::MOOD_SPINNING => 'splr',
+        self::MOOD_SQUISHED => 'fhfh',
     ];
 
     public function postRunLine(Activity $activity, ActivityDetail $detail): StoryLine
     {
-        // Hit the PR ledger once and feed the answer into both mood inference
-        // and the speech context — the prior version asked the DB twice per run.
         $hasPr = PersonalRecord::query()->where('activity_id', $activity->id)->exists();
         $mood = $this->moodForActivity($detail, $hasPr);
         $speech = $this->generateSpeech($mood, $this->contextFor($detail, $hasPr));
@@ -105,19 +84,11 @@ class Temari
         return self::sigilForMoodPublic($mood);
     }
 
-    /**
-     * Exposed so LLM-generated briefings can still get a stable sigil pattern
-     * derived from the deterministic mood map. LLM picks the mood; we always
-     * pick the sigil to keep the visual mascot consistent.
-     */
     public static function sigilForMoodPublic(string $mood): string
     {
         return self::SIGIL_FOR_MOOD[$mood] ?? self::SIGIL_FOR_MOOD[self::MOOD_DIM];
     }
 
-    /**
-     * @see sigilForMoodPublic() — same reasoning. Mood-driven accessory glyph.
-     */
     public static function accessoryForMoodPublic(string $mood): ?string
     {
         return match ($mood) {
@@ -128,10 +99,7 @@ class Temari
         };
     }
 
-    /**
-     * Mood inference for a *specific* activity (different from the global daily vibe).
-     * Order matters — first matching rule wins, so the most-prestigious moods come first.
-     */
+    // Order matters — first matching rule wins, most-prestigious mood first.
     private function moodForActivity(ActivityDetail $detail, bool $hasPr): string
     {
         $summary = is_array($detail->stream_summary) ? $detail->stream_summary : [];
@@ -149,7 +117,6 @@ class Temari
         };
     }
 
-    /** Maps the runner's global vibe state to a daily-greeting mascot mood. */
     private function moodForVibe(string $vibe): string
     {
         return match ($vibe) {
@@ -163,12 +130,7 @@ class Temari
         };
     }
 
-    /**
-     * Concrete signals the speech generator can reference, packaged once
-     * so individual phrasings can pluck what they want.
-     *
-     * @return array<string, mixed>
-     */
+    /** @return array<string, mixed> */
     private function contextFor(ActivityDetail $detail, bool $hasPr): array
     {
         $summary = is_array($detail->stream_summary) ? $detail->stream_summary : [];
@@ -186,31 +148,17 @@ class Temari
         ];
     }
 
-    /**
-     * Templated Indonesian copy. Variation is seeded so the same activity
-     * always renders the same line, but different activities in the same
-     * mood pick different phrasings.
-     *
-     * Swap-point for an LLM call later: replace this method's body with an
-     * Anthropic SDK call, keep the (mood, context) → string contract.
-     *
-     * @param  array<string, mixed>  $context
-     */
+    /** @param  array<string, mixed>  $context */
     public function generateSpeech(string $mood, array $context): string
     {
         $variations = $this->speechVariations($mood, $context);
         $distance = $context['distance_km'] ?? 0;
         $zone = $context['dominant_zone'] ?? 'Z2';
-        // crc32() returns a signed int on 32-bit platforms; abs() before
-        // modulo so the index never goes negative regardless of host.
+        // crc32() can be negative on 32-bit; abs() before modulo.
         return $variations[abs(crc32($mood.':'.$distance.':'.$zone)) % count($variations)];
     }
 
     /**
-     * All templated phrasings for this mood with the activity context
-     * already substituted. Used by the tappable Temari bubble to cycle
-     * through alternatives on click.
-     *
      * @param  array<string, mixed>  $context
      * @return list<string>
      */
@@ -230,20 +178,13 @@ class Temari
         );
     }
 
-    /**
-     * Convenience for callers that have a StoryLine + ActivityDetail and
-     * just want the variation list for the bubble's cycling UI.
-     *
-     * @return list<string>
-     */
+    /** @return list<string> */
     public function variationsForActivity(ActivityDetail $detail, bool $hasPr, string $mood): array
     {
         return $this->speechVariations($mood, $this->contextFor($detail, $hasPr));
     }
 
-    /**
-     * @return list<string>
-     */
+    /** @return list<string> */
     private function templatesFor(string $mood): array
     {
         return match ($mood) {

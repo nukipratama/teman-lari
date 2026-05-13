@@ -4,25 +4,10 @@ declare(strict_types=1);
 
 namespace App\Services\Geo;
 
-/**
- * Decodes Google's polyline-encoding format (the same format Strava uses
- * for `summary_polyline`). Pure-PHP port of the algorithm — no
- * dependency, no JS interop needed. Used by [[BackfillActivityLocationsCommand]]
- * to extract the run-start lat/lng from already-stored polylines so we
- * can reverse-geocode historic rows that pre-date the `start_lat`/`start_lng`
- * columns.
- *
- * Reference: https://developers.google.com/maps/documentation/utilities/polylinealgorithm
- */
+// https://developers.google.com/maps/documentation/utilities/polylinealgorithm
 class PolylineDecoder
 {
-    /**
-     * Returns the first decoded `[lat, lng]` point, or null if the
-     * polyline is empty / malformed. We only need the start point —
-     * decoding the full trace would burn cycles for no gain.
-     *
-     * @return array{0: float, 1: float}|null
-     */
+    /** @return array{0: float, 1: float}|null */
     public function firstPoint(string $polyline): ?array
     {
         if ($polyline === '') {
@@ -49,11 +34,6 @@ class PolylineDecoder
         return [$lat / 1e5, $lng / 1e5];
     }
 
-    /**
-     * Reads one variable-length signed integer out of the polyline,
-     * advancing $index past the bytes consumed. Returns null on
-     * truncated input.
-     */
     private function decodeNext(string $polyline, int &$index, int $length): ?int
     {
         $result = 0;

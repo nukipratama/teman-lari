@@ -9,23 +9,8 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Throwable;
 
-/**
- * Reverse-geocodes a (lat, lng) pair to an Indonesian-formatted display
- * string via OpenStreetMap Nominatim. Free, but bound by their TOS:
- *
- *   - Max 1 req/sec — enforced upstream by [[ResolveActivityLocationJob]]'s
- *     `WithoutOverlapping` lock + retry backoff, not here.
- *   - Custom User-Agent identifying the app (mandatory). Includes a
- *     contact URL from config so OSM can ping if usage misbehaves.
- *   - No bulk/aggressive use. Coords are rounded to ~110m precision
- *     before caching so adjacent points share a cache entry, and an
- *     activity is only resolved once.
- *
- * Returns null when the call errors out, the response is malformed, or
- * the address fields are too thin to assemble a useful display string.
- * Callers ([[ResolveActivityLocationJob]]) interpret null as "tried but
- * missed" and stamp `location_resolved_at` accordingly so we don't retry.
- */
+// Nominatim TOS: 1 req/sec rate limit is enforced upstream by
+// ResolveActivityLocationJob's WithoutOverlapping lock, not here.
 class NominatimResolver
 {
     private const string URL = 'https://nominatim.openstreetmap.org/reverse';
@@ -38,10 +23,8 @@ class NominatimResolver
     {
         $cacheKey = $this->cacheKey($lat, $lng);
 
-        // Sentinel-cache misses too: `Cache::remember` drops null-return
-        // values, so without this every adjacent activity in a known-bad
-        // ~110m grid would hit Nominatim again. We store `false` for
-        // misses and translate it back to null on read.
+        // Sentinel-cache misses (false) so we don't re-hit Nominatim for
+        // coords that returned nothing — Cache::remember drops null values.
         $cached = Cache::get($cacheKey, '__miss__');
         if ($cached === false) {
             return null;

@@ -20,21 +20,9 @@ use Illuminate\Support\Facades\Log;
 use RuntimeException;
 use Throwable;
 
-/**
- * Per-activity ingest, end to end:
- *
- *   1. Fetch detail (mandatory)            → store onto activity_details
- *   2. Fetch streams (best-effort)         → store onto activity_streams
- *   3. Compute stream_summary              → time-in-zone, decoupling, best efforts, ...
- *   4. Compute Edwards TRIMP               → trimp_edwards column
- *   5. Look up weather (best-effort)       → weather_* columns
- *   6. Detect personal records             → personal_records ledger
- *   7. Mark analyzed_at                    → unlocks dashboards
- *
- * Idempotent: re-running on an already-analyzed activity refreshes all of
- * the above. Each compute step is best-effort — a failure in one (no
- * heartrate stream, weather API down, etc.) doesn't block the others.
- */
+// Idempotent: re-running refreshes all artifacts. Each compute step is
+// best-effort — one failure (no HR stream, weather API down) doesn't
+// block the others.
 class ActivityPipeline
 {
     private const int DETAIL_FETCH_MAX_ATTEMPTS = 5;
@@ -88,8 +76,7 @@ class ActivityPipeline
         $this->lookupWeather($detailModel, $streams);
         $this->personalRecords->detectAndStore($activity, $detailModel);
 
-        // Story layer reads the just-updated $detailModel (PR detection above
-        // may have inserted rows the card/Temari mood logic cares about).
+        // Story layer must run after PR detection — Temari mood reads PR rows.
         $this->cardFactory->build($activity, $detailModel);
         $this->temari->postRunLine($activity, $detailModel);
 
@@ -105,8 +92,7 @@ class ActivityPipeline
     private function storeDetail(Activity $activity, array $detail): ActivityDetail
     {
         $start = $detail['start_date_local'] ?? $detail['start_date'] ?? null;
-        // Strava `start_latlng` is `[lat, lng]` — null/empty when the
-        // activity wasn't GPS-recorded (treadmill, manual entry).
+        // start_latlng is null/empty for non-GPS activities (treadmill, manual).
         $latlng = is_array($detail['start_latlng'] ?? null) && count($detail['start_latlng']) === 2
             ? $detail['start_latlng']
             : null;

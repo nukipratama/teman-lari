@@ -10,15 +10,6 @@ use App\Services\Run\Metrics\TrainingLoad;
 use App\Services\Run\Story\Contracts\BriefingNarrator;
 use Illuminate\Support\Carbon;
 
-/**
- * Builds the dashboard hero "Briefing Temari" — a 2-line plan-of-the-day
- * with chips for recovery + streak. Synthesizes Vibe + TrainingLoad +
- * days-since-last-run into one render-ready DTO so the view stays dumb.
- *
- * Pre-run weather is intentionally not included: we don't know where the
- * user will run next, so current weather at any single location is a weak
- * proxy. Accessory cues come from Temari's mood, not real conditions.
- */
 class Briefing implements BriefingNarrator
 {
     public function __construct(

@@ -10,12 +10,6 @@ use App\Services\Run\Story\Contracts\BriefingNarrator;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
 
-/**
- * Caches BriefingResult per (user, date) so repeated dashboard loads
- * inside the TTL window don't re-hit the LLM. Carries the `degraded`
- * flag across cache hits — if the original generation fell back, the
- * cached copy still surfaces that signal to the UI.
- */
 final readonly class CachingBriefingNarrator implements BriefingNarrator
 {
     public function __construct(

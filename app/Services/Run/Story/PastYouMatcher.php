@@ -8,23 +8,9 @@ use Illuminate\Database\Eloquent\Collection;
 use App\Models\Activity;
 use App\Models\ActivityDetail;
 
-/**
- * "Kamu vs Kamu Dulu" comparison — finds the user's nearest historical
- * comparable run for a given activity.
- *
- * Match criteria, all required:
- *   - Same pace-band bucket (recovery / easy / threshold), derived from
- *     average pace. Until the planner ships and we have workout_type,
- *     pace-band is the cheapest stable bucket.
- *   - Distance within ±20%.
- *   - Weather temperature within ±3°C *when both runs have weather*.
- *     Missing weather on either side passes (we'd rather match without
- *     the temp filter than miss the comparison).
- *   - At least 21 days of separation. "Vs you yesterday" isn't motivating.
- *
- * Of qualifying candidates, prefer the OLDEST — the comparison "vs you
- * three months ago" is more motivating than "vs you last month".
- */
+// Match rules: same pace-band, distance ±20%, temp ±3°C (missing on
+// either side passes), ≥21 days apart. Of qualifying candidates, prefer
+// the oldest.
 class PastYouMatcher
 {
     public const string BAND_RECOVERY = 'recovery';
