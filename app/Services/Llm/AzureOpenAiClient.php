@@ -17,7 +17,7 @@ use OpenAI\Contracts\ClientContract;
  * runtime (e.g. tests overriding env). Cheap to construct — Guzzle PSR
  * client is lazy.
  */
-final class AzureOpenAiClient
+class AzureOpenAiClient
 {
     private const string DEFAULT_API_VERSION = '2024-10-21';
 
