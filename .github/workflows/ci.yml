@@ -125,7 +125,10 @@ jobs:
           REDIS_HOST: 127.0.0.1
           REDIS_PORT: ${{ job.services.redis.ports['6379'] }}
         run: |
-          ./vendor/bin/pest --mutate --everything --covered-only --parallel --min=100 \
+          # --processes=2 (half the homelab's 4 cores) leaves headroom for the
+          # runner agent + service containers; --processes=4 saturates the box
+          # and stalls runner cancellation signals.
+          ./vendor/bin/pest --mutate --everything --covered-only --parallel --processes=2 --min=100 \
             --ignore='App\Console' --ignore='App\Providers' \
             2>&1 | tee /tmp/mutate-output.txt
           exit ${PIPESTATUS[0]}
