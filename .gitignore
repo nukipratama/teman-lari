@@ -44,3 +44,4 @@ Thumbs.db
 # IS committed (the prod Docker build relies on it).
 **/caddy
 frankenphp
+.claude/
