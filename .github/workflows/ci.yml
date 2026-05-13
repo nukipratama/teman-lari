@@ -4,12 +4,6 @@ on:
   push:
   pull_request:
 
-# Cancel in-flight runs on the same branch when a new push arrives,
-# avoiding duplicate CI when a push and a pull_request event both fire.
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
-
 env:
   PHP_VERSION: '8.4'
 
