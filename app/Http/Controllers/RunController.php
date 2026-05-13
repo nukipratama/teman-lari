@@ -56,10 +56,7 @@ class RunController extends Controller
 
         $pastYou = $matcher->findMatch($activity, $detail);
 
-        // Lazy reverse-geocode: if the run has GPS coords but we haven't
-        // resolved a location for it yet (and never tried), dispatch a
-        // background job. Page renders without the location; the chip
-        // appears on next visit once the job has stamped the row.
+        // Lazy reverse-geocode — chip appears on next visit after job stamps the row.
         if ($detail->start_lat !== null && $detail->location_resolved_at === null) {
             ResolveActivityLocationJob::dispatch($detail->id);
         }

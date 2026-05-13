@@ -42,7 +42,6 @@ class RunCard extends Model
 
     public const string RARITY_LEGENDARIS = 'legendaris';
 
-    /** Display labels for the rarity ladder (Indonesian). */
     public const array RARITY_LABELS = [
         self::RARITY_BIASA => 'Biasa',
         self::RARITY_JARANG => 'Jarang',
@@ -63,7 +62,6 @@ class RunCard extends Model
 
     public const string BADGE_TAHAN_DIRI = 'tahan_diri';
 
-    /** Display labels (with emoji) for each badge key. */
     public const array BADGE_LABELS = [
         self::BADGE_HARI_PANAS => '🔥 Hari Panas',
         self::BADGE_PEJUANG_HUJAN => '🌧️ Pejuang Hujan',

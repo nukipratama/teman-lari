@@ -31,7 +31,6 @@ beforeEach(function (): void {
 function bootLlmNarrator(string $jsonContent): array
 {
     $user = User::factory()->create(['name' => 'Ada Lovelace']);
-    // Seed a run so Vibe/TrainingLoad have data to chew on.
     $activity = Activity::factory()->for($user)->analyzed()->create();
     ActivityDetail::factory()->for($activity)->create([
         'start_date_local' => Carbon::today(),

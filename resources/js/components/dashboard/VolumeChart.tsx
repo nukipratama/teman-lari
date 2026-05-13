@@ -3,7 +3,6 @@ import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Toolti
 import { formatNumericTooltip, kmAxisTick, tooltipFromTheme, useChartTheme } from '@/lib/chartTheme';
 import type { FitnessChartData } from '@/types/inertia';
 
-/** Chart.js tooltip label formatter — named for direct testability. */
 export function volumeTooltipLabel(ctx: TooltipItem<'bar'>): string {
     return formatNumericTooltip('Volume', ctx.parsed.y, 'km');
 }

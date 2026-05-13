@@ -24,8 +24,7 @@ class ProgressController extends Controller
             ->limit(26)
             ->get();
 
-        // FE only renders `activity.detail.name` — skip the heavy stream_summary
-        // / splits JSON blobs by scoping the eager-load to the columns we use.
+        // Scope eager-load to skip stream_summary/splits JSON blobs.
         $personalRecords = PersonalRecord::query()
             ->where('user_id', $user->id)
             ->orderBy('category')

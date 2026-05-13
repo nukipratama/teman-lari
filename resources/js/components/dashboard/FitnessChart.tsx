@@ -14,7 +14,6 @@ import {
 import { formatNumericTooltip, tooltipFromTheme, useChartTheme } from '@/lib/chartTheme';
 import type { FitnessChartData } from '@/types/inertia';
 
-/** Chart.js tooltip label formatter — named so it's directly testable. */
 export function fitnessTooltipLabel(ctx: TooltipItem<'line'>): string {
     return formatNumericTooltip(ctx.dataset.label ?? '', ctx.parsed.y);
 }

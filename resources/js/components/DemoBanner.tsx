@@ -2,15 +2,6 @@ import { Icon } from '@iconify/react';
 import { usePage } from '@inertiajs/react';
 import type { SharedProps } from '@/types/inertia';
 
-/**
- * Conditional banner — only renders when demoLoginEnabled is true AND the
- * authenticated user is the demo user (currently inferred via auth.user
- * being present alongside the flag, since middleware shares the flag only
- * when the demo user actually logged in via /auth/demo).
- *
- * For the bigger revamp we keep the banner deliberately simple: the demo
- * gate logic stays server-side, the FE only renders the chip.
- */
 export default function DemoBanner() {
     const { props } = usePage<SharedProps>();
     if (!props.demoLoginEnabled || props.auth.user === null) return null;

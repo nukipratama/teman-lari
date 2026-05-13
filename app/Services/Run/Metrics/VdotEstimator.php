@@ -8,22 +8,12 @@ use App\Models\PersonalRecord;
 use App\Models\User;
 
 /**
- * VDOT estimate from confirmed personal records only.
- *
- * The openclaw run-tracker computed VDOT from `best_10min_pace` of *any* run,
- * which produced VDOT≈22 for a half marathon at sustained 8:00/km — because
- * the best-10min on a 3-hour effort is its slowest zone. v1 takes the
- * opposite stance: VDOT only from a real PR at a known distance.
- *
- * Daniels' full VDOT formula (matches the published 1998 tables):
- *   v        = distance_m / time_min                                          (m/min)
- *   VO2      = -4.60 + 0.182258·v + 0.000104·v²                              (ml/kg/min)
- *   pmax     = 0.80 + 0.1894393·e^(-0.012778·t) + 0.2989558·e^(-0.1932605·t) (fraction)
- *   VDOT     = VO2 / pmax
- *
- * The pmax curve is the percentage of VO2max sustainable for `t` minutes:
- * decays smoothly from ~1.0 at a 6-min effort to ~0.79 at marathon. Without
- * this term, a marathon VDOT comes out ~10 points too low.
+ * Daniels' VDOT formula (1998 tables):
+ *   v     = distance_m / time_min                                          (m/min)
+ *   VO2   = -4.60 + 0.182258·v + 0.000104·v²                              (ml/kg/min)
+ *   pmax  = 0.80 + 0.1894393·e^(-0.012778·t) + 0.2989558·e^(-0.1932605·t) (fraction of VO2max sustainable for t min)
+ *   VDOT  = VO2 / pmax
+ * Skipping pmax underestimates marathon VDOT by ~10 points.
  */
 class VdotEstimator
 {
@@ -61,10 +51,7 @@ class VdotEstimator
             if ($vdot === null) {
                 continue;
             }
-            // Across multiple PRs, the one that yields the highest VDOT
-            // generally reflects the runner's best-trained energy system.
-            // Daniels' formula is normalized to make race times at different
-            // distances comparable, so the max is the right pick.
+            // Daniels' formula is distance-normalized; max VDOT wins.
             if ($bestVdot === null || $vdot > $bestVdot) {
                 $bestVdot = $vdot;
                 $best = $category;

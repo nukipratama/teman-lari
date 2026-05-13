@@ -14,8 +14,7 @@ use Illuminate\Support\Carbon;
 
 uses(RefreshDatabase::class);
 
-// Freeze today so the blueprint library's `Carbon::today()->subDays(...)`
-// anchors and the ISO-week math are stable across machines / weekdays.
+// Freeze today so blueprint subDays() anchors and ISO-week math are stable.
 beforeEach(fn () => Carbon::setTestNow('2026-05-12 12:00:00'));
 afterEach(fn () => Carbon::setTestNow());
 
@@ -26,9 +25,7 @@ it('creates the demo user, runs, cards, story lines, PRs, and weekly snapshots',
 
     $user = User::query()->where('email', DemoRunSeeder::DEMO_USER_EMAIL)->firstOrFail();
 
-    // Deterministic: 16 scripted blueprints + RNG-seeded fillers across
-    // ~90 days @ 65% hit rate → 63 activities. Asserting exactly so a
-    // blueprint or RNG drift fails loudly instead of slipping by.
+    // 16 scripted + RNG fillers @ 65% over ~90d = 63; exact match fails loud on drift.
     $activityCount = Activity::query()->where('user_id', $user->id)->count();
     expect($activityCount)->toBe(63);
 

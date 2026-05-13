@@ -12,8 +12,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 uses(RefreshDatabase::class);
 
 it('interpolates time at distance from splits (no walk-past inflation)', function (): void {
-    // A 25 km run that hit 21.0975 km partway through, then cooled down walking.
-    // The 22nd km is super slow (6:00 walk pace) — must NOT inflate the half PR.
+    // Half-marathon hit mid-run; later walk splits must not inflate the PR.
     $splits = [];
     for ($km = 1; $km <= 21; $km++) {
         $splits[] = ['split' => $km, 'distance' => 1000.0, 'elapsed_time' => 480.0];
@@ -23,7 +22,7 @@ it('interpolates time at distance from splits (no walk-past inflation)', functio
     $splits[] = ['split' => 24, 'distance' => 1000.0, 'elapsed_time' => 900.0];
     $splits[] = ['split' => 25, 'distance' => 1000.0, 'elapsed_time' => 900.0];
 
-    // 21 km × 480s = 10080s. + 97.5m of the 22nd km at 900s/1000m = ~87.75s. Total ~10167.75s.
+    // 21 km × 480s + 97.5m of the slow km 22 ≈ 10167.75s.
     $secs = (new PersonalRecords())->timeAtDistance($splits, 21097.5);
 
     expect($secs)->toBeFloat()->toEqualWithDelta(10167.75, 1.0);
@@ -64,11 +63,11 @@ it('does not break a PR when the new time is slower', function (): void {
     $user = User::factory()->create();
     PersonalRecord::factory()->for($user)->create([
         'category' => '5km',
-        'value_sec' => 1500.0, // existing 5km PR
+        'value_sec' => 1500.0,
     ]);
 
     $activity = Activity::factory()->for($user)->create();
-    $splits = array_fill(0, 5, ['distance' => 1000, 'elapsed_time' => 360]); // total 1800s, slower than 1500s
+    $splits = array_fill(0, 5, ['distance' => 1000, 'elapsed_time' => 360]);
     foreach ($splits as $i => &$s) {
         $s['split'] = $i + 1;
     }
@@ -95,7 +94,7 @@ it('breaks an effort PR when stream_summary has a faster best-N pace', function 
         'distance' => 5000,
         'splits_metric' => [],
         'stream_summary' => [
-            'best_5min_pace' => '5:00', // 300 sec/km — faster than 320
+            'best_5min_pace' => '5:00',
         ],
     ]);
 
@@ -115,7 +114,7 @@ it('ignores effort pace strings that do not match M:SS format', function (): voi
         'distance' => 5000,
         'splits_metric' => [],
         'stream_summary' => [
-            'best_5min_pace' => 'not-a-pace',  // malformed → parsePace returns null
+            'best_5min_pace' => 'not-a-pace',
             'best_10min_pace' => '5:00',
         ],
     ]);
@@ -149,5 +148,5 @@ it('respects per-user scoping (PR break for user A does not affect user B)', fun
 
     expect($broken)->toContain('5km')
         ->and(PersonalRecord::query()->where('user_id', $userB->id)->where('category', '5km')->value('value_sec'))
-        ->toBe(1500.0); // unchanged
+        ->toBe(1500.0);
 });

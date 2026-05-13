@@ -14,12 +14,7 @@ const FEATURES: ReadonlyArray<{ icon: string; label: string; desc: string }> = [
     { icon: 'mdi:calendar-check', label: 'Konsisten', desc: 'Bangun kebiasaan, bukan target' },
 ];
 
-/**
- * Pre-auth landing. Leads with the TemanLari brand — the mascot Temari
- * stays inside the authenticated app where users meet her on the dashboard
- * after their first sync. Strava button keeps its #FC4C02 brand orange per
- * Strava guidelines; everything else uses Hutan Pagi tokens.
- */
+// Strava button keeps #FC4C02 brand orange per Strava brand guidelines.
 export default function Login({ authStravaUrl }: Readonly<LoginProps>) {
     const { props } = usePage<SharedProps & LoginProps>();
     const demoForm = useForm({});

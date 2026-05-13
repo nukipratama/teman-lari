@@ -20,8 +20,6 @@ class ProfileController extends Controller
 
         $totalRuns = $user->activities()->whereNotNull('analyzed_at')->count();
 
-        // Single SUM over detail rows joined to user's analyzed activities.
-        // Avoid loading details into memory.
         $totalDistanceMeters = (float) ActivityDetail::query()
             ->whereHas(
                 'activity',

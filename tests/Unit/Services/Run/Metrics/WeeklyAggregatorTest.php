@@ -24,7 +24,6 @@ it('returns 0 and creates no rows when the user has no analyzed runs', function 
 
 it('upserts one snapshot per ISO week from first run through today', function (): void {
     $user = User::factory()->create();
-    // First run 21 days ago, then weekly.
     foreach ([21, 14, 7, 0] as $daysAgo) {
         $activity = Activity::factory()->for($user)->analyzed()->create();
         ActivityDetail::factory()->for($activity)->create([
@@ -38,8 +37,7 @@ it('upserts one snapshot per ISO week from first run through today', function ()
 
     $written = app(WeeklyAggregator::class)->rebuildFor($user);
 
-    // With test-now frozen at 2026-05-11 (Monday), 21 days back is 2026-04-20.
-    // Week-ending Sundays span 04-26 / 05-03 / 05-10 / 05-17 → exactly 4 weeks.
+    // Frozen at 2026-05-11 (Mon); 21 days back spans 4 ISO weeks ending Sunday.
     expect($written)->toBe(4)
         ->and(WeeklySnapshot::query()->where('user_id', $user->id)->count())->toBe(4);
 });
@@ -48,7 +46,6 @@ it('aggregates distance, runs, and avg decoupling per week', function (): void {
     $user = User::factory()->create();
     $weekEnding = Carbon::today()->endOfWeek(Carbon::SUNDAY)->startOfDay();
 
-    // Two runs in the same week, different decoupling values.
     foreach ([['distance' => 6000, 'dec' => 2.0], ['distance' => 10000, 'dec' => 5.0]] as $cfg) {
         $activity = Activity::factory()->for($user)->analyzed()->create();
         ActivityDetail::factory()->for($activity)->create([
@@ -89,9 +86,7 @@ it('writes null avg_decoupling when no runs in the week have decoupling_pct', fu
 });
 
 it('skips details without trimp_edwards when rolling the daily TRIMP map', function (): void {
-    // Real-world: a Strava activity without HR data (no zone time → no
-    // TRIMP). Should still count toward distance/runs but contribute 0
-    // to the EWMA roll.
+    // HR-less Strava run: counts toward distance/runs, contributes 0 TRIMP.
     $user = User::factory()->create();
     $activity = Activity::factory()->for($user)->analyzed()->create();
     ActivityDetail::factory()->for($activity)->create([

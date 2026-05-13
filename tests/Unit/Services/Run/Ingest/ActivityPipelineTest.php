@@ -150,8 +150,6 @@ it('skips when user has no Strava connection', function (): void {
 
 it('treats non-array Strava detail as a fetch failure', function (): void {
     $activity = makeActivityWithConnection();
-    // Strava returns a scalar (not the expected object): pipeline must
-    // treat it the same as a transient detail-fetch failure.
     Http::fake([
         'strava.com/api/v3/activities/999' => Http::response('"unexpected scalar"'),
     ]);
@@ -162,12 +160,10 @@ it('treats non-array Strava detail as a fetch failure', function (): void {
         ->and(ActivityDetail::query()->where('activity_id', $activity->id)->exists())->toBeFalse();
 });
 
-// ── Compute integration ─────────────────────────────────────────────────────
-
 it('computes stream_summary + Edwards TRIMP from the streams blob', function (): void {
     $activity = makeActivityWithConnection();
 
-    // 60 min run, mostly Z2 with a Z3 finish — should produce a believable TRIMP.
+    // 60 min: 30 min Z2 then 30 min Z3.
     $time = [];
     $hr = [];
     $velocity = [];
@@ -199,7 +195,7 @@ it('computes stream_summary + Edwards TRIMP from the streams blob', function ():
 
     $detail = ActivityDetail::query()->where('activity_id', $activity->id)->first();
 
-    // Half in Z2 (weight 2), half in Z3 (weight 3) → ~30min×2 + ~30min×3 = ~150 TRIMP
+    // ~30min×2 + ~30min×3 = ~150 TRIMP.
     expect($detail->trimp_edwards)->toBeFloat()->toBeGreaterThan(100)->toBeLessThan(200);
     expect($detail->stream_summary)->toBeArray()
         ->and($detail->stream_summary)->toHaveKey('time_in_zone_min')
@@ -292,7 +288,6 @@ it('produces a run card + post_run story line on a successful ingest', function 
 it('inserts a PR row when the activity beats the user\'s ledger', function (): void {
     $activity = makeActivityWithConnection();
 
-    // Five splits of 6:00/km — should set a fresh 5km PR (no existing one).
     $splits = [];
     for ($k = 1; $k <= 5; $k++) {
         $splits[] = ['split' => $k, 'distance' => 1000, 'elapsed_time' => 360];

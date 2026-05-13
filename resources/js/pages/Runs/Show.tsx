@@ -141,13 +141,6 @@ export default function RunsShow({ activity, detail, card, storyLine, storyVaria
                     )}
                 </div>
 
-                {/* Two-column split on lg+:
-                      LEFT  — LLM/mascot narrative pane: Temari's verdict +
-                              alt takes, "Past You" comparison story, the
-                              RunCard achievement artifact.
-                      RIGHT — raw-data pane: GPS route map, KPI metric tiles,
-                              detail-teknis (HR zones, splits, etc.).
-                    On `< lg` the columns stack so mobile reads top-to-bottom. */}
                 <div className="grid items-start gap-6 lg:grid-cols-2">
                     <div className="space-y-6">
                         <TemariBubble line={storyLine} variations={storyVariations} size="lg" />

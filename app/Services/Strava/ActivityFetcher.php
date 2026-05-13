@@ -16,14 +16,6 @@ class ActivityFetcher
     }
 
     /**
-     * Returns the external_ids of activities present on Strava but not yet
-     * recorded for this user. Sorted ascending (oldest first) so the caller
-     * can insert in chronological order — DB id ordering then matches the
-     * order activities actually happened.
-     *
-     * Stops paginating as soon as we hit an already-recorded id, which keeps
-     * routine sync cheap even when the athlete has thousands of historical runs.
-     *
      * @return list<int>
      */
     public function fetchNewExternalIds(StravaConnection $connection): array

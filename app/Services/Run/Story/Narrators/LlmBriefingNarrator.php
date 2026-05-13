@@ -20,15 +20,8 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Log;
 use JsonException;
 
-/**
- * LLM-backed briefing narrator. Talks to Azure OpenAI's Chat Completions
- * API via openai-php/laravel client (Azure baseUri + api-key header
- * configured in App\Services\Llm\AzureOpenAiClient).
- *
- * Sigil pattern + accessory are intentionally NOT LLM-generated — those
- * come from the existing rule-based moodFor* logic on the Briefing
- * service so the visual mascot stays stable per mood across runs.
- */
+// Sigil + accessory are not LLM-generated — pulled from Temari's
+// rule-based mood map so the visual mascot stays stable per mood.
 class LlmBriefingNarrator implements BriefingNarrator
 {
     private const string SYSTEM_PROMPT = <<<'PROMPT'

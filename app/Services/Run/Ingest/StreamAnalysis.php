@@ -6,20 +6,6 @@ namespace App\Services\Run\Ingest;
 
 use App\Services\Run\Metrics\PaceFormatter;
 
-/**
- * Pure stream-math. Converts Strava's per-second arrays into a compact
- * summary blob: HR zones, decoupling, cadence distribution, best-effort
- * paces, pace variability, stopped time, hr drift, negative split.
- *
- * Output is the JSON we'll persist as `activity_details.stream_summary`.
- *
- * Lifted in spirit from openclaw run-tracker's StreamSummaryService with
- * fixes baked in:
- *   - VDOT is NOT computed here — that lives in PrService and only fires
- *     against confirmed PRs (race times or 30+ min hard efforts).
- *   - Decoupling is captured as a raw percentage; no alerting threshold
- *     in v1 (saturated by heat in tropical climates).
- */
 class StreamAnalysis
 {
     /** Activity is "stopped" when velocity drops below this (m/s). */

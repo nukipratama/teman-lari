@@ -99,9 +99,7 @@ it('maps each mood to a face emoji', function (): void {
 
 it('skips story lines whose activity has no detail', function (): void {
     $user = User::factory()->create();
-    // A real StoryLine with full data — should appear.
     seedVerdict($user, Carbon::today(), Temari::MOOD_BOUNCY, 'real verdict', 5000.0);
-    // An orphaned StoryLine: activity exists but no ActivityDetail.
     $orphan = Activity::factory()->for($user)->create();
     StoryLine::query()->create([
         'user_id' => $user->id,

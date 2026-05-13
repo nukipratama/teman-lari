@@ -9,21 +9,8 @@ use App\Models\ActivityDetail;
 use App\Models\PersonalRecord;
 use Illuminate\Support\Carbon;
 
-/**
- * Detects + persists personal records for an activity.
- *
- *  - Distance PRs:  value_sec = elapsed_time at the target distance,
- *                   interpolated from per-km splits. This avoids counting
- *                   cool-down walks past the target — a 25 km run that
- *                   passed 21.0975 km at 2:47:52 gets the half PR cut
- *                   correctly even though total elapsed is much higher.
- *
- *  - Effort PRs:    value_sec = pace seconds per km for the best N-minute
- *                   window, parsed from the stream-summary best paces.
- */
 class PersonalRecords
 {
-    /** Distance PR categories. value = elapsed seconds at distance. */
     private const array DISTANCE_CATEGORIES = [
         '1km' => 1_000,
         '5km' => 5_000,
@@ -33,7 +20,7 @@ class PersonalRecords
         'marathon' => 42_195.0,
     ];
 
-    /** Effort PR categories — map of category → stream_summary key. */
+    /** category → stream_summary key */
     private const array EFFORT_CATEGORIES = [
         'best_5min' => 'best_5min_pace',
         'best_10min' => 'best_10min_pace',
@@ -43,11 +30,6 @@ class PersonalRecords
     ];
 
     /**
-     * Check the activity against the user's existing PR ledger; insert / update
-     * any rows whose value beats the current PR. Returns the list of categories
-     * that were broken on this activity (empty if none).
-     *
-     * @param  ActivityDetail  $detail  the just-stored detail row (with stream_summary populated if available)
      * @return list<string>
      */
     public function detectAndStore(Activity $activity, ActivityDetail $detail): array
@@ -138,10 +120,6 @@ class PersonalRecords
         return null;
     }
 
-    /**
-     * Returns true if the new value is faster (lower) than the existing PR
-     * and the row was upserted; false if no PR change happened.
-     */
     private function updateIfFaster(Activity $activity, string $category, float $value, Carbon $setAt): bool
     {
         $existing = PersonalRecord::query()

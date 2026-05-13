@@ -53,15 +53,15 @@ it('stops paginating as soon as it hits an existing activity', function (): void
             ->push([
                 ['id' => 200, 'sport_type' => 'Run'],
                 ['id' => 150, 'sport_type' => 'Run'],
-                ['id' => 100, 'sport_type' => 'Run'], // known stop marker
-                ['id' => 99, 'sport_type' => 'Run'],  // never reached
+                ['id' => 100, 'sport_type' => 'Run'],
+                ['id' => 99, 'sport_type' => 'Run'],
             ]),
     ]);
 
     $ids = (new ActivityFetcher(new StravaClient()))->fetchNewExternalIds($connection);
 
     expect($ids)->toBe([150, 200]);
-    Http::assertSentCount(1); // pagination short-circuited
+    Http::assertSentCount(1);
 });
 
 it('filters non-run sport types out', function (): void {
@@ -91,7 +91,6 @@ it('respects per-user scoping (other users\' activities do not act as stop marke
     ]);
     Activity::factory()->for($userA)->create(['strava_external_id' => 100]);
 
-    // User B is fetching; their list has id=100, which is User A's, not User B's
     $userB = User::factory()->create();
     $connectionB = StravaConnection::factory()->for($userB)->create([
         'access_token' => 'tokB',
@@ -128,7 +127,7 @@ it('skips items with missing or zero ids', function (): void {
     Http::fake([
         'strava.com/api/v3/athlete/activities*' => Http::sequence()
             ->push([
-                ['sport_type' => 'Run'],         // no id
+                ['sport_type' => 'Run'],
                 ['id' => 0, 'sport_type' => 'Run'],
                 ['id' => 42, 'sport_type' => 'Run'],
             ])
@@ -140,7 +139,7 @@ it('skips items with missing or zero ids', function (): void {
 
 it('paginates beyond page 1 when a full page returns', function (): void {
     $connection = makeConnection();
-    // Build 200 items so the first response is exactly PER_PAGE and forces page 2.
+    // 200 items == PER_PAGE → forces page 2.
     $firstPage = array_map(
         fn (int $i): array => ['id' => 1000 + $i, 'sport_type' => 'Run'],
         range(0, 199),
@@ -158,5 +157,5 @@ it('paginates beyond page 1 when a full page returns', function (): void {
 
     expect($ids)->toContain(500)
         ->and(count($ids))->toBe(201);
-    Http::assertSentCount(2); // page 1 + page 2
+    Http::assertSentCount(2);
 });

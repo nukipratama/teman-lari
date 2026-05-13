@@ -5,9 +5,7 @@ interface TemariBodyProps extends SVGProps<SVGSVGElement> {
     color?: string;
 }
 
-// 12 small cross-stitches scattered around the ball, biased away from
-// the face zone (centre-top). Hand-picked so the grid reads "wound
-// thread surface" not "regular checker pattern".
+// Hand-picked positions — biased away from the face zone so cross-stitches don't overlap features.
 const STITCHES: ReadonlyArray<readonly [number, number]> = [
     [22, 28],
     [38, 22],
@@ -23,13 +21,6 @@ const STITCHES: ReadonlyArray<readonly [number, number]> = [
     [50, 28],
 ];
 
-/**
- * Stitched-plushie body — the ball "surface". Two great-circle thread
- * lines (meridian + equator, dashed so they read as wound thread rather
- * than solid stripes) plus a sparse field of cross-stitches and a small
- * thread tuft at the crown. Sits behind the face inside the round
- * mascot container.
- */
 export default function TemariBody({ size = 144, color = 'currentColor', ...rest }: Readonly<TemariBodyProps>) {
     return (
         <svg viewBox="0 0 100 100" width={size} height={size} aria-hidden {...rest}>

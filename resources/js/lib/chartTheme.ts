@@ -1,15 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { ChartOptions } from 'chart.js';
 
-/**
- * Theme-aware Chart.js colors. The chart canvas can't read CSS variables
- * directly, so we resolve colors per render mode via `matchMedia`. App
- * follows system pref (no explicit toggle), matching the rest of the UI.
- *
- * Light mode tokens map to `ink-meta` / `line` from Hutan Pagi; dark
- * mode raises tick contrast above Chart.js's default mid-grey (which is
- * unreadable on `surface-dark-elev`).
- */
+// Chart.js canvas can't read CSS variables — colors resolved per scheme via matchMedia.
 export interface ChartTheme {
     isDark: boolean;
     tick: string;
@@ -76,10 +68,6 @@ function prefersDark(): boolean {
     return globalThis.matchMedia('(prefers-color-scheme: dark)').matches;
 }
 
-/**
- * Builds a Chart.js tooltip config object pre-themed. Callers add a
- * `callbacks: { label }` to format the body text per chart.
- */
 export function tooltipFromTheme(theme: ChartTheme): NonNullable<NonNullable<ChartOptions['plugins']>['tooltip']> {
     return {
         enabled: true,
@@ -96,18 +84,12 @@ export function tooltipFromTheme(theme: ChartTheme): NonNullable<NonNullable<Cha
     };
 }
 
-/**
- * Formats a single Chart.js tooltip line as `"<label>: <value>"`.
- * Extracted so it's testable without booting Chart.js — `ctx` shape
- * mirrors the slice we use (`parsed.y`, `dataset.label`).
- */
 export function formatNumericTooltip(label: string, y: number | null, unit = ''): string {
     if (y === null) return `${label}: —`;
     const suffix = unit === '' ? '' : ` ${unit}`;
     return `${label}: ${y.toFixed(1)}${suffix}`;
 }
 
-/** Y-axis tick formatter — appends "km" suffix. */
 export function kmAxisTick(value: string | number): string {
     return `${value} km`;
 }

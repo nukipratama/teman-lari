@@ -6,8 +6,7 @@ use App\Services\Geo\PolylineDecoder;
 use App\Services\Geo\PolylineEncoder;
 
 it('encodes the canonical Google example losslessly', function (): void {
-    // Three points from Google's official polyline-encoding doc — the
-    // reference encoding is `_p~iF~ps|U_ulLnnqC_mqNvxq`@`.
+    // Google's official polyline-encoding doc reference.
     $encoder = new PolylineEncoder();
     $encoded = $encoder->encode([
         [38.5, -120.2],

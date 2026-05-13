@@ -8,11 +8,7 @@ interface PaginatorLink {
     active: boolean;
 }
 
-/**
- * Renders Laravel paginator links — supports active, inactive, and disabled
- * (null url) states. The label may contain HTML entities like `&laquo;` so
- * each pill uses dangerouslySetInnerHTML.
- */
+// Laravel paginator labels contain HTML entities (e.g. `&laquo;`) → dangerouslySetInnerHTML.
 export default function Paginator({ links, className }: Readonly<{ links: PaginatorLink[]; className?: string }>) {
     return (
         <nav className={cn('mt-6 flex flex-wrap items-center justify-center gap-2', className)}>

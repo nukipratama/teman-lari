@@ -4,12 +4,6 @@ declare(strict_types=1);
 
 namespace App\Services\Run\Story;
 
-/**
- * Single source of truth for `form_status` → label/tone mapping. Both the
- * rule-based Briefing and the LlmBriefingNarrator reach for this so the
- * recovery chip is consistent regardless of which narrator generated the
- * briefing.
- */
 final class FormStatus
 {
     /**

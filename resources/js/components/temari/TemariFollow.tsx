@@ -4,24 +4,11 @@ import TemariMascot from './TemariMascot';
 import type { Mood } from '@/types/inertia';
 
 interface TemariFollowProps {
-    /** Element that, while in the viewport, keeps the follow-mascot hidden. */
     sentinelRef: RefObject<HTMLElement | null>;
     mood: Mood;
     sigilPattern?: string;
 }
 
-/**
- * Floating mini mascot pinned to the bottom-right. Hidden whenever the
- * sentinel (the dashboard hero) is on screen — only appears after the
- * user has scrolled past it. Click scrolls smoothly back to the top so
- * it doubles as a "back to briefing" affordance.
- *
- * Small (`h-12 w-12`) on purpose so it stays out of the way. Honours
- * reduced-motion via FM's internal handling on the entry transition.
- * Hidden under `lg:hidden`? No — we keep it cross-device because the
- * scroll-to-top utility is useful on mobile too. Repositioned above
- * the iOS safe area via `bottom-6`.
- */
 export default function TemariFollow({ sentinelRef, mood, sigilPattern = 'dddd' }: Readonly<TemariFollowProps>) {
     const [visible, setVisible] = useState(false);
 

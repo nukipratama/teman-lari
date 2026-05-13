@@ -10,18 +10,6 @@ use App\Models\User;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
-/**
- * Training-load math: Edwards TRIMP per session + Banister-style impulse-response
- * model for fitness/fatigue/form rolled across a user's recent runs.
- *
- * Deliberately uses Edwards (per-zone-weighted) instead of the openclaw
- * run-tracker's avg-HR Banister TRIMP. Edwards captures the *shape* of HR
- * over the run — interval sessions get a higher TRIMP than easy runs even
- * at the same average HR.
- *
- * Form-status thresholds scale with current CTL so a beginner's "fatigued"
- * isn't measured against the same baseline as a veteran's.
- */
 class TrainingLoad
 {
     /** Time constants (days) for the EWMA decay. */
@@ -33,8 +21,6 @@ class TrainingLoad
     private const int LOAD_LOOKBACK_DAYS = 90;
 
     /**
-     * Edwards TRIMP: each minute in zone N counts as N (Z1=1 ... Z5=5).
-     *
      * @param  array<string, float|int>  $timeInZoneMin  zone name → minutes
      */
     public function edwardsTrimp(array $timeInZoneMin): float
@@ -49,14 +35,6 @@ class TrainingLoad
     }
 
     /**
-     * Compute the user's training-load summary as of the given day.
-     * Returns null if the user has no analyzed runs with TRIMP yet.
-     *
-     * Output shape:
-     *   weekly_trimp, atl_7d, ctl_42d, form (float; CTL-ATL),
-     *   form_status (fresh|optimal|fatigued|overreaching),
-     *   monotony, strain
-     *
      * @return array<string, mixed>|null
      */
     public function summary(User $user, ?Carbon $asOf = null): ?array
@@ -71,11 +49,6 @@ class TrainingLoad
     }
 
     /**
-     * Same shape as `summary()` but operates on a pre-loaded daily TRIMP
-     * map keyed by `Y-m-d`. Lets callers like `WeeklyAggregator` query the
-     * source table once and compute snapshots at many as-of dates without
-     * re-querying per week.
-     *
      * @param  array<string, float>  $dailyTrimp
      * @return array<string, mixed>|null
      */
@@ -127,11 +100,6 @@ class TrainingLoad
         ])->all();
     }
 
-    /**
-     * Status thresholds are CTL-aware: a beginner with CTL=10 needs much
-     * narrower thresholds to register meaningful fatigue, while a veteran
-     * with CTL=60 can absorb wider form swings before they signal anything.
-     */
     public function formStatus(float $form, float $ctl): string
     {
         $threshold = match (true) {
@@ -154,9 +122,7 @@ class TrainingLoad
     }
 
     /**
-     * Walk the day timeline (cutoff..today) and apply EWMA decay each day.
-     * Missing days contribute zero TRIMP — important so a rest day reduces
-     * fatigue but doesn't reduce fitness.
+     * Missing days contribute zero TRIMP so a rest day reduces fatigue but doesn't reduce fitness.
      *
      * @param  array<string, float>  $dailyTrimp
      * @return array{0: float, 1: float}
@@ -181,8 +147,6 @@ class TrainingLoad
     }
 
     /**
-     * Foster's monotony/strain over the last 7 days of training.
-     *
      * @param  array<string, float>  $dailyTrimp
      * @return array{0: float, 1: float, 2: float}  weekly_trimp, monotony, strain
      */
@@ -204,10 +168,7 @@ class TrainingLoad
         $variance = array_sum(array_map(fn (float $t): float => ($t - $mean) ** 2, $week)) / 7;
         $sd = sqrt($variance);
 
-        // Foster: monotony = mean / stdev. Uniform-load weeks have sd≈0 which
-        // is the *highest*-monotony pattern (body never gets variation). Cap
-        // at 5.0 instead of dividing by zero — keeps the magnitude meaningful
-        // and well above Foster's "concerning" threshold of >2.0.
+        // Cap at 5.0 when sd≈0 (uniform-load week) instead of dividing by zero.
         $monotony = $sd > 0.01 ? min(5.0, round($mean / $sd, 2)) : 5.0;
         $strain = round($weekly * $monotony, 1);
 

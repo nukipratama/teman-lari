@@ -70,12 +70,10 @@ export default function Dashboard({
                     </div>
                 </header>
 
-                {/* KPI strip — most-checked numbers, shown first */}
                 {load !== null && (
                     <KpiSection load={load} volumeValue={volumeValue} volumeSub={volumeSub} />
                 )}
 
-                {/* Briefing — AI commentary, below the numbers */}
                 <section ref={briefingRef} className="mt-6">
                     <BriefingCard briefing={briefing} />
                 </section>
@@ -86,7 +84,6 @@ export default function Dashboard({
                     sigilPattern={briefing.sigilPattern}
                 />
 
-                {/* Kata Temari — run-by-run verdicts */}
                 {verdicts.length > 0 && (
                     <section className="mt-8">
                         <h2 className="text-lg font-bold tracking-tight text-ink dark:text-ink-dark">Kata Temari</h2>

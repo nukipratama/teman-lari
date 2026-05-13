@@ -7,25 +7,10 @@ import type { SharedProps } from '@/types/inertia';
 const STORAGE_KEY = 'tl.onboarding.dismissed';
 
 interface FirstRunTooltipProps {
-    /** Total run count on the dashboard. Tooltip only auto-shows when zero. */
     recentRunCount: number;
-    /** Verdict timeline count — second 'has data' signal. */
     verdictCount: number;
 }
 
-/**
- * First-run welcome card shown on the dashboard. Two modes:
- *
- * Normal (default): shows once when the user has zero runs/verdicts AND
- * has not previously dismissed it (localStorage flag). Dismissal is
- * persistent.
- *
- * Force-show (`onboarding.forceShow` shared prop = true): always shows
- * on every mount regardless of run count or dismissal flag. Dismiss
- * button hides it for the current page session only (React state), then
- * reload / navigation back to dashboard re-shows it. Driven by the
- * `ONBOARDING_FORCE_SHOW` env var via [config/onboarding.php].
- */
 export default function FirstRunTooltip({ recentRunCount, verdictCount }: Readonly<FirstRunTooltipProps>) {
     const { props } = usePage<SharedProps>();
     const forceShow = props.onboarding.forceShow;

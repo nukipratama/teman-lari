@@ -16,11 +16,7 @@ function defaultZones(): array
 }
 
 it('classifies seconds by HR zone and returns min + pct', function (): void {
-    // 600s total at 4 distinct HR levels:
-    //   0-180s @ 130 (Z1: 180s = 3min)
-    //   180-360s @ 148 (Z2: 180s = 3min)
-    //   360-540s @ 162 (Z3: 180s = 3min)
-    //   540-600s @ 175 (Z4: 60s = 1min)
+    // 600s split across 4 HR bands: 180s @130(Z1), 180s @148(Z2), 180s @162(Z3), 60s @175(Z4).
     $time = [];
     $hr = [];
     for ($t = 0; $t <= 600; $t += 60) {
@@ -58,7 +54,8 @@ it('returns no zone summary when streams are missing HR', function (): void {
 
 it('detects a stop when velocity drops below 0.5 m/s', function (): void {
     $time = [0, 60, 120, 180, 240, 300];
-    $velocity = [2.5, 2.5, 0.0, 0.0, 2.5, 2.5]; // 120s stopped between t=120 and t=240
+    // 120s stopped between t=120 and t=240.
+    $velocity = [2.5, 2.5, 0.0, 0.0, 2.5, 2.5];
 
     $summary = (new StreamAnalysis())->compute(
         ['time' => ['data' => $time], 'velocity_smooth' => ['data' => $velocity]],
@@ -74,8 +71,7 @@ it('detects a stop when velocity drops below 0.5 m/s', function (): void {
 });
 
 it('computes cardiac decoupling as (second-half HR/pace ratio) - 1', function (): void {
-    // First half: HR 140 at 2.5 m/s (= 400s/km). Ratio 140/400 = 0.35.
-    // Second half: HR 150 at 2.5 m/s. Ratio 150/400 = 0.375. Drift +7.1%.
+    // Half1: 140bpm/400s/km = 0.35. Half2: 150bpm/400s/km = 0.375. Drift +7.1%.
     $time = [];
     $hr = [];
     $velocity = [];
@@ -101,7 +97,7 @@ it('computes cardiac decoupling as (second-half HR/pace ratio) - 1', function ()
 });
 
 it('finds the best 5-min pace as fastest sustained window', function (): void {
-    // 30 min run mostly at 2.5 m/s (6:40/km) with a 6-minute fast block at 3.5 m/s (4:46/km)
+    // Base 2.5 m/s (6:40/km), 6-min block at 3.5 m/s (4:46/km) midway.
     $time = [];
     $velocity = [];
     for ($t = 0; $t <= 1800; $t += 30) {
@@ -111,7 +107,6 @@ it('finds the best 5-min pace as fastest sustained window', function (): void {
 
     $pace = (new StreamAnalysis())->bestEffortPace($time, $velocity, 300);
 
-    // Best 5-min should sit inside the 3.5 m/s block (4:46/km), not the slow base.
     expect($pace)->toBeString()->toBe('4:46');
 });
 
@@ -131,15 +126,14 @@ it('computes per-km splits + negative_split + hr drift + cadence drop from split
 
     expect($summary['per_km'])->toHaveCount(4)
         ->and($summary['per_km'][0])->toMatchArray(['km' => 1, 'pace' => '7:00', 'avg_hr' => 140])
-        ->and($summary['negative_split'])->toBeTrue() // pace got faster
+        ->and($summary['negative_split'])->toBeTrue()
         ->and($summary['hr_drift_bpm'])->toBeFloat()->toEqualWithDelta(15.0, 0.01)
         ->and($summary['cadence_drop_spm'])->toBeFloat()->toEqualWithDelta(4.0, 0.01);
 });
 
 it('classifies cadence into <165, 165-175, >175 buckets and optimal pct', function (): void {
     $time = [0, 60, 120, 180, 240, 300, 360, 420];
-    // cadence stream is RPM per foot → ×2 for SPM
-    // SPM 160 / 160 / 170 / 170 / 180 / 180 / 178
+    // Cadence stream is RPM per foot; ×2 → SPM 160/160/170/170/180/180/178.
     $cadence = [80, 80, 85, 85, 90, 90, 89];
 
     $summary = (new StreamAnalysis())->compute(
@@ -151,11 +145,11 @@ it('classifies cadence into <165, 165-175, >175 buckets and optimal pct', functi
 
     expect($summary['cadence_distribution_pct'])
         ->toMatchArray([
-            '<165' => 28.6, // 120s of 420s
+            '<165' => 28.6,
             '165-175' => 28.6,
             '>175' => 42.9,
         ])
-        ->and($summary['optimal_cadence_pct'])->toBeFloat(); // SPM in 170..185 range
+        ->and($summary['optimal_cadence_pct'])->toBeFloat();
 });
 
 it('returns null best-effort pace when velocity array is shorter than time', function (): void {
@@ -171,7 +165,6 @@ it('returns null best-effort pace when velocity is all zero (no distance covered
 });
 
 it('skips zone summary when no second matches any zone band', function (): void {
-    // HR values all below Z1 lower bound → total in-zone seconds = 0.
     $time = [0, 60, 120, 180];
     $hr = [80, 80, 80, 80];
     $summary = (new StreamAnalysis())->compute(
@@ -187,7 +180,7 @@ it('skips zone summary when no second matches any zone band', function (): void 
 it('omits decoupling when every sample is stopped (no moving seconds)', function (): void {
     $time = range(0, 600, 60);
     $hr = array_fill(0, count($time), 150);
-    $velocity = array_fill(0, count($time), 0.0); // all stopped
+    $velocity = array_fill(0, count($time), 0.0);
 
     $summary = (new StreamAnalysis())->compute(
         [
@@ -204,7 +197,6 @@ it('omits decoupling when every sample is stopped (no moving seconds)', function
 });
 
 it('omits decoupling when only one half has moving samples', function (): void {
-    // First half stopped, second half moving: avg helper returns null for half 1.
     $time = range(0, 600, 60);
     $hr = array_fill(0, count($time), 150);
     $velocity = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 2.5, 2.5, 2.5, 2.5, 2.5];
@@ -247,21 +239,19 @@ it('integrates altitude into ascent + descent meters', function (): void {
     );
 
     expect($summary)->toMatchArray([
-        'ascent_m' => 17, // +5, +5, +7
-        'descent_m' => 4, // -2, -2
+        'ascent_m' => 17,
+        'descent_m' => 4,
     ]);
 });
 
 /**
- * Build a 1 Hz 3 km synthetic dataset where km 1 is 85 spm, km 2 is 88 spm,
- * km 3 is 80 spm (single-leg values; the doubled output should land at
- * 170 / 176 / 160). Pace is a constant 6:00/km (10 km/h ≈ 2.778 m/s).
+ * 1 Hz 3 km dataset @ 6:00/km. Cadence per-leg: km1=85, km2=88, km3=80 (×2 → 170/176/160).
  *
  * @return array{0: array<string, array{data: list<int|float>}>, 1: list<array<string, mixed>>}
  */
 function buildCadenceTestRun(): array
 {
-    $duration = 1080; // 3 km @ 6:00/km = 1080s
+    $duration = 1080;
     $speedMs = 1000.0 / 360.0;
     $time = [];
     $distance = [];
@@ -314,8 +304,7 @@ it('skips per-km cadence when the distance stream is empty', function (): void {
 
 it('omits avg_cadence_spm for km buckets with no cadence samples', function (): void {
     [$streams, $splits] = buildCadenceTestRun();
-    // Truncate cadence stream so km 3 has no data — buckets are filled
-    // sample-by-sample, so cutting the last third drops only that km.
+    // Cut the last third → km 3 bucket stays empty.
     $streams['cadence']['data'] = array_slice($streams['cadence']['data'], 0, 720);
 
     $summary = (new StreamAnalysis())->compute($streams, defaultZones(), $splits, 170);
@@ -333,14 +322,10 @@ it('skips per-km cadence when time stream has only one sample', function (): voi
 
     $summary = (new StreamAnalysis())->compute($streams, defaultZones(), $splits, 170);
 
-    // per_km still emits rows from splits, but no avg_cadence_spm is attached
-    // because the cadence walker bails on n <= 0.
     expect($summary['per_km'][0])->not->toHaveKey('avg_cadence_spm');
 });
 
 it('ignores cadence samples where dt <= 0 (degenerate time array)', function (): void {
-    // 720 samples but time stays at 0 — every dt is 0 so every sample is
-    // discarded; no buckets get populated; rows lack avg_cadence_spm.
     [$streams, $splits] = buildCadenceTestRun();
     $streams['time']['data'] = array_fill(0, 720, 0);
     $streams['distance']['data'] = array_slice($streams['distance']['data'], 0, 720);
@@ -353,13 +338,12 @@ it('ignores cadence samples where dt <= 0 (degenerate time array)', function ():
 });
 
 it('preserves a pre-existing avg_cadence_spm from splits_metric', function (): void {
-    // Future-proof: if Strava ever ships average_cadence on splits, the
-    // value from splits wins — the stream-walker fallback only fills gaps.
+    // Splits value wins over the stream-walker fallback.
     [$streams, $splits] = buildCadenceTestRun();
-    $splits[0]['average_cadence'] = 100; // forcibly different (would yield 200 spm)
+    $splits[0]['average_cadence'] = 100;
 
     $summary = (new StreamAnalysis())->compute($streams, defaultZones(), $splits, 170);
 
-    expect($summary['per_km'][0]['avg_cadence_spm'])->toBe(200) // from splits, not stream
-        ->and($summary['per_km'][1]['avg_cadence_spm'])->toBe(176); // from stream
+    expect($summary['per_km'][0]['avg_cadence_spm'])->toBe(200)
+        ->and($summary['per_km'][1]['avg_cadence_spm'])->toBe(176);
 });

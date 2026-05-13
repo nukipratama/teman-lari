@@ -11,11 +11,6 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Log;
 use Throwable;
 
-/**
- * Tries the primary narrator first (typically LLM). If it throws,
- * logs the error and falls back to the secondary (rule-based) while
- * flipping `degraded = true` so the UI can surface a warning chip.
- */
 final readonly class FallbackBriefingNarrator implements BriefingNarrator
 {
     public function __construct(

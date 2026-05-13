@@ -2,26 +2,15 @@ import { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 
 interface TemariPeekProps {
-    /** Lines to choose from; one is picked at random on first appearance. */
     lines: ReadonlyArray<string>;
-    /** Delay before the bubble first appears (ms). Default 12s. */
     delayMs?: number;
-    /** How long the bubble stays before hiding itself (ms). Default 5s. */
     visibleMs?: number;
 }
 
 const SHOWN_THIS_SESSION_KEY = 'tl.temari.peek.shown';
 
-/**
- * Occasional one-line peek bubble next to the mascot — Temari "saying"
- * something brief without the user having to click. Fires once per
- * session storage scope (not localStorage — fresh tab = fresh peek)
- * after a delay, then hides. Skipped under `prefers-reduced-motion`.
- *
- * Anchored absolutely to the mascot container, so the parent must be
- * `position: relative`. Default tuning (12s delay, 5s visible) keeps it
- * a "huh, nice" moment rather than a Clippy-style nag.
- */
+// Absolutely positioned — parent must be `position: relative`.
+// sessionStorage (not local) so a fresh tab gets a fresh peek.
 export default function TemariPeek({ lines, delayMs = 12000, visibleMs = 5000 }: Readonly<TemariPeekProps>) {
     const [visible, setVisible] = useState(false);
     const [line] = useState(() => lines[Math.floor(Math.random() * lines.length)] ?? null);

@@ -1,10 +1,7 @@
 import type { Mood } from '@/types/inertia';
 
-/**
- * Mood ↔ Hutan Pagi token mapping. The PHP code uses original mood constants
- * (`wobble`, `dim`); the palette renames concepts (`cooked`, `hibernate`).
- * These helpers translate so components can use mood-aware Tailwind classes.
- */
+// PHP keeps original mood constants (`wobble`, `dim`); Hutan Pagi tokens rename
+// to `cooked` / `hibernate`. moodToken() bridges so Tailwind classes resolve.
 
 export const MOOD_FACE: Record<Mood, string> = {
     glow: '✨',
@@ -15,9 +12,6 @@ export const MOOD_FACE: Record<Mood, string> = {
     dim: '🌧️',
 };
 
-/**
- * Mood → mood-* token name (matches @theme vars in app.css).
- */
 export function moodToken(mood: Mood): string {
     switch (mood) {
         case 'glow':
@@ -36,9 +30,6 @@ export function moodToken(mood: Mood): string {
     }
 }
 
-/**
- * Hex stroke color for sigil per mood (Hutan Pagi swatches).
- */
 export function moodSigilColor(mood: Mood): string {
     switch (mood) {
         case 'glow':
@@ -57,16 +48,9 @@ export function moodSigilColor(mood: Mood): string {
     }
 }
 
-/**
- * Tailwind ring class per mood for the round mascot bubble.
- */
 export function moodRing(mood: Mood): string {
     const token = moodToken(mood);
     return `ring-mood-${token}/60`;
 }
 
-/**
- * Tailwind background gradient for the mascot bubble.
- * Soft cream → brand coral base, mood ring overlays it.
- */
 export const MASCOT_GRADIENT = 'bg-gradient-to-br from-brand-100 to-brand-300 dark:from-brand-700 dark:to-brand-500';

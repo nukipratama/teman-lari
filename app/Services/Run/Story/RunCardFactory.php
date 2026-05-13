@@ -12,22 +12,10 @@ use App\Services\Run\Metrics\StreamSummary;
 
 use function is_array;
 
-/**
- * Builds + persists a `run_cards` row for an activity. Each card has:
- *
- *   rarity        biasa | jarang | langka | epik | legendaris
- *   badges        flavor descriptors earned by run context (hot day,
- *                 rain, dawn start, LSD, negative split, aerobic discipline)
- *   special_move  one nominated by `SpecialMoves` based on stream summary
- *
- * Idempotent: re-running for the same activity overwrites the existing
- * card (so re-ingest after a calc bugfix produces a fresh card).
- */
 class RunCardFactory
 {
     private const int LONG_SLOW_DISTANCE_THRESHOLD_M = 12_000;
 
-    /** Total elapsed (seconds) above which a run counts as "long". */
     private const int LONG_SLOW_DISTANCE_DURATION_S = 3_600;
 
     public function __construct(private readonly SpecialMoves $specialMoves)

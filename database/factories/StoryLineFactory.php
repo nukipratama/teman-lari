@@ -22,7 +22,7 @@ class StoryLineFactory extends Factory
     {
         return [
             'activity_id' => Activity::factory(),
-            // Match the activity's owner without hydrating a full model.
+            // Resolve owner without hydrating the Activity model.
             'user_id' => fn (array $attributes): int => (int) DB::table('activities')
                 ->where('id', $attributes['activity_id'])
                 ->value('user_id'),

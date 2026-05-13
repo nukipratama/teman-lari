@@ -28,31 +28,16 @@ interface TemariMascotProps {
     sizeClass?: string;
     sigilPixels?: number;
     ringClass?: string;
-    /** Idle animation: `none` (static), `breath` (uniform pulse), `mood` (mood-aware idle). */
     idle?: 'none' | 'breath' | 'mood';
-    /** When true, tracks the cursor with the eyes (desktop only). */
     gazeTracking?: boolean;
-    /** When true, tapping the mascot plays a one-shot reaction (wave / hop / spin). */
     interactive?: boolean;
-    /** When true, container scales + tilts on hover. */
     hoverable?: boolean;
     className?: string;
     'aria-label'?: string;
 }
 
-/**
- * Full mascot composition with optional character-y behaviors:
- *
- *   - `idle="mood"` — mood-aware ambient animation (bouncy hops, dim sways, etc).
- *   - `gazeTracking` — eyes follow the cursor on desktop ([[useGaze]]).
- *   - `interactive` — tap to cycle through wave/hop/spin reactions.
- *   - `hoverable` — container scales + tilts on hover.
- *
- * Defaults are off so non-hero placements (list rows, strips) stay
- * static and cheap. The dashboard hero (BriefingCard) opts into all
- * four for a "feels like a character" effect; smaller placements
- * inherit the static look.
- */
+// All character behaviors (idle/gaze/interactive/hoverable) default off so non-hero
+// placements (list rows, strips) stay static and cheap.
 export default function TemariMascot({
     mood,
     sigilPattern = 'dddd',
@@ -103,9 +88,7 @@ export default function TemariMascot({
                 className,
             )}
         >
-            {/* Inner motion layer carries the idle + tap reaction animations so
-                the hover scale on the outer wrapper doesn't fight with the
-                inner one. Reaction takes priority over idle once triggered. */}
+            {/* Inner layer carries idle + tap reactions so outer hover scale doesn't fight inner anim. */}
             <motion.div
                 className="absolute inset-0 flex items-center justify-center"
                 variants={activeVariants ?? undefined}

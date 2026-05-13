@@ -11,31 +11,22 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Throwable;
 
-/**
- * Open-Meteo weather lookup for run-start conditions.
- *
- * The plan spec lives at /Users/nukipratama/.claude/plans/alright-you-can-learn-temporal-moth.md
- * under "Weather integration".
- */
 class OpenMeteoClient
 {
     private const string FORECAST_URL = 'https://api.open-meteo.com/v1/forecast';
 
     private const string ARCHIVE_URL = 'https://archive-api.open-meteo.com/v1/archive';
 
-    /**
-     * Open-Meteo's forecast endpoint covers up to 7 days of recent past
-     * reliably. Beyond that, hit the archive (reanalysis) endpoint.
-     */
+    /** Forecast endpoint reliably covers ~7 days of past; beyond that, use the archive endpoint. */
     private const int FORECAST_PAST_DAYS = 7;
 
     private const float RAIN_THRESHOLD_MM = 0.1;
 
     private const int TIMEOUT_SECONDS = 5;
 
-    private const int FORECAST_CACHE_TTL = 21_600;     // 6 hours
+    private const int FORECAST_CACHE_TTL = 21_600;
 
-    private const int ARCHIVE_CACHE_TTL = 2_592_000;   // 30 days
+    private const int ARCHIVE_CACHE_TTL = 2_592_000;
 
     public function fetchForActivity(
         float $latitude,
@@ -130,10 +121,7 @@ class OpenMeteoClient
         /** @var list<float|int|null> $precipitations */
         $precipitations = $hourly['precipitation'] ?? [];
 
-        // Open-Meteo's hourly bucket label is the LOCAL-time hour (because we
-        // passed timezone=auto). Strava's start_date_local is the same local
-        // wall-clock string, so we just bucket-truncate to the hour and look
-        // up the index.
+        // Open-Meteo buckets hourly by local wall-clock (timezone=auto), matching Strava's start_date_local.
         $needle = $startedAt->format('Y-m-d\TH:00');
         $index = array_search($needle, $times, strict: true);
         if ($index === false) {

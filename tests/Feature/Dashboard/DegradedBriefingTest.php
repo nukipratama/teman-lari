@@ -14,8 +14,7 @@ use Inertia\Testing\AssertableInertia as Assert;
 uses(RefreshDatabase::class);
 
 beforeEach(function (): void {
-    // Mimic prod: Azure env present so the binding wires the LLM chain
-    // instead of binding rule-based directly.
+    // Azure env present → binding wires the LLM chain (not rule-based directly).
     config()->set('azure_openai.uri', 'https://fake.openai.azure.com/openai/deployments/x/chat/completions');
     config()->set('azure_openai.api_key', 'fake-key');
     config()->set('azure_openai.deployment', 'x');
@@ -24,7 +23,6 @@ beforeEach(function (): void {
 it('shows degraded=true on the Dashboard briefing when the LLM throws and we fall back to rule-based', function (): void {
     $user = User::factory()->create();
 
-    // Force the resolver: LLM impl throws, secondary rule-based runs.
     app()->bind(BriefingNarrator::class, function ($app): BriefingNarrator {
         $llm = Mockery::mock(LlmBriefingNarrator::class);
         $llm->shouldReceive('generate')->andThrow(new RuntimeException('Azure 500'));
@@ -40,7 +38,7 @@ it('shows degraded=true on the Dashboard briefing when the LLM throws and we fal
 });
 
 it('shows degraded=false when LLM is disabled (env empty) so UI stays clean', function (): void {
-    // Re-disable LLM by clearing config; AppServiceProvider re-binds rules-only.
+    // Clearing config forces AppServiceProvider to re-bind rules-only.
     config()->set('azure_openai.uri', '');
     config()->set('azure_openai.api_key', '');
     app()->forgetInstance(BriefingNarrator::class);

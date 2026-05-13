@@ -13,11 +13,6 @@ const LINKS: ReadonlyArray<{ route: string; href: string; icon: string; label: s
     { route: 'progress', href: '/progress', icon: 'mdi:chart-line', label: 'Catatan' },
 ];
 
-/**
- * Renders twice — as a persistent `<aside>` on `lg+` and inside a native
- * `<dialog>` drawer on `< lg`. Same content (BrandMark, nav links, user
- * chip with dropdown), different containers.
- */
 export default function Sidebar() {
     const { dialogRef, close } = useSidebar();
     const { props, url } = usePage<SharedProps>();

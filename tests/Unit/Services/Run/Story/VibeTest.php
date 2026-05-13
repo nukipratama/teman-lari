@@ -12,8 +12,7 @@ use Illuminate\Support\Carbon;
 
 uses(RefreshDatabase::class);
 
-// Freeze the clock for tests that backfill activity_history with relative
-// offsets to Carbon::today(). afterEach guarantees no leak across siblings.
+// Freeze "today" so Carbon::today() math is stable; afterEach prevents leak on failure.
 beforeEach(fn () => Carbon::setTestNow('2026-05-11 12:00:00'));
 afterEach(fn () => Carbon::setTestNow());
 
@@ -37,8 +36,7 @@ it('returns hibernating when the last run is 12 days ago', function (): void {
 it('returns pumped on a recent PR with non-negative form', function (): void {
     $user = User::factory()->create();
 
-    // 80 days of steady 50 TRIMP/day so CTL catches up to ATL (form ≈ -7,
-    // within the ±15 optimal band for CTL in 20-50).
+    // 80 days of steady 50 TRIMP/day → CTL catches ATL, form ≈ -7 (within optimal).
     for ($i = 0; $i < 80; $i++) {
         $activity = Activity::factory()->for($user)->create();
         ActivityDetail::factory()->for($activity)->create([
@@ -46,7 +44,6 @@ it('returns pumped on a recent PR with non-negative form', function (): void {
             'start_date_local' => Carbon::today()->subDays(79 - $i),
         ]);
     }
-    // Fresh 5K PR 3 days ago.
     PersonalRecord::factory()->for($user)->create([
         'category' => '5km',
         'value_sec' => 1300.0,
@@ -64,7 +61,7 @@ it('averages decoupling_pct across recent runs to drive the vibe', function (): 
         ActivityDetail::factory()->for($activity)->create([
             'trimp_edwards' => 50.0,
             'start_date_local' => Carbon::today()->subDays(79 - $i),
-            // Mix: some rows have decoupling_pct, others don't (exercises the isset guard).
+            // Mix rows with/without decoupling_pct to exercise the isset guard.
             'stream_summary' => $i % 2 === 0
                 ? ['decoupling_pct' => -2.0]
                 : ['time_in_zone_min' => ['Z2' => 30]],
