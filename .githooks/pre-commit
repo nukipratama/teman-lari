@@ -6,14 +6,14 @@ set -euo pipefail
 STAGED_PHP=$(git diff --cached --name-only --diff-filter=ACMR | grep -E '\.php$' || true)
 [ -z "$STAGED_PHP" ] && exit 0
 
-if ! docker compose ps --status running --services 2>/dev/null | grep -qx 'laravel.test'; then
+if ! docker compose ps --status running --services 2>/dev/null | grep -qx 'app'; then
   echo "pre-commit: sail not running — run './vendor/bin/sail up -d'" >&2
   exit 1
 fi
 
 # shellcheck disable=SC2086  # intentional word-splitting; PHP filenames don't contain spaces
-./vendor/bin/sail exec -T laravel.test ./vendor/bin/pint $STAGED_PHP
+./vendor/bin/sail exec -T app ./vendor/bin/pint $STAGED_PHP
 # shellcheck disable=SC2086
 git add $STAGED_PHP
 
-./vendor/bin/sail exec -T laravel.test ./vendor/bin/phpstan analyse --no-progress
+./vendor/bin/sail exec -T app ./vendor/bin/phpstan analyse --no-progress
