@@ -83,6 +83,7 @@ beforeEach(() => {
         auth: { user: { id: 1, name: 'Ada Lovelace', first_name: 'Ada', avatar_url: null } },
         flash: {},
         demoLoginEnabled: false,
+        onboarding: { forceShow: false },
     });
 });
 
@@ -119,7 +120,7 @@ describe('Dashboard', () => {
         expect(screen.getByText('Rincian coach mode')).toBeInTheDocument();
     });
 
-    it('renders recent run rows when present', () => {
+    it('does not render a "recent runs" block (VerdictStrip already covers it)', () => {
         render(
             <Dashboard
                 briefing={briefing}
@@ -130,7 +131,7 @@ describe('Dashboard', () => {
                 chartData={chartData}
             />,
         );
-        expect(screen.getByText('Aktivitas Terakhir')).toBeInTheDocument();
+        expect(screen.queryByText('Aktivitas Terakhir')).not.toBeInTheDocument();
     });
 
     it.each([
@@ -163,8 +164,14 @@ describe('Dashboard', () => {
             />,
         );
         expect(screen.getByText('Tren 30 hari')).toBeInTheDocument();
-        await waitFor(() => expect(screen.getByTestId('line-chart')).toBeInTheDocument());
-        expect(screen.getByTestId('bar-chart')).toBeInTheDocument();
+        // Charts are lazy-loaded; CI under coverage instrumentation can
+        // take well past the 1s default to resolve the dynamic import.
+        await waitFor(() => expect(screen.getByTestId('line-chart')).toBeInTheDocument(), {
+            timeout: 5000,
+        });
+        await waitFor(() => expect(screen.getByTestId('bar-chart')).toBeInTheDocument(), {
+            timeout: 5000,
+        });
     });
 
     it('shows verdict strip when items present', () => {
@@ -228,6 +235,7 @@ describe('Dashboard', () => {
             auth: { user: { id: 1, name: '', first_name: '', avatar_url: null } },
             flash: {},
             demoLoginEnabled: false,
+            onboarding: { forceShow: false },
         });
         render(
             <Dashboard
@@ -243,7 +251,7 @@ describe('Dashboard', () => {
     });
 
     it('handles anonymous page state', () => {
-        setMockPage({ auth: { user: null }, flash: {}, demoLoginEnabled: false });
+        setMockPage({ auth: { user: null }, flash: {}, demoLoginEnabled: false, onboarding: { forceShow: false } });
         render(
             <Dashboard
                 briefing={briefing}
