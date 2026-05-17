@@ -25,9 +25,9 @@ interface FitnessChartProps {
 }
 
 const SERIES = [
-    { key: 'ctl', label: 'CTL', color: '#2e7d5c', desc: 'Fitness 42-hari', fill: true, dash: false, width: 2 },
-    { key: 'atl', label: 'ATL', color: '#d9a03c', desc: 'Fatigue 7-hari', fill: false, dash: false, width: 2 },
-    { key: 'form', label: 'Form', color: '#6e8aaf', desc: 'CTL − ATL', fill: false, dash: true, width: 1.8 },
+    { key: 'ctl', label: 'CTL', color: '#0e7a4c', desc: 'Fitness 42-hari', fill: true, dash: false, width: 2 },
+    { key: 'atl', label: 'ATL', color: '#d9764a', desc: 'Fatigue 7-hari', fill: true, dash: false, width: 2 },
+    { key: 'form', label: 'Form', color: '#6b4ea8', desc: 'CTL − ATL', fill: false, dash: true, width: 1.8 },
 ] as const;
 
 export default function FitnessChart({ data }: Readonly<FitnessChartProps>) {
@@ -71,8 +71,11 @@ export default function FitnessChart({ data }: Readonly<FitnessChartProps>) {
                             label: s.label,
                             data: data[s.key as keyof FitnessChartData] as (number | null)[],
                             borderColor: s.color,
-                            backgroundColor: s.fill ? `${s.color}26` : undefined,
-                            fill: s.fill,
+                            // Stack ATL (top, drawn second) over CTL so the
+                            // overlap reads as two distinct tinted regions
+                            // rather than the deeper colour erasing the lighter.
+                            backgroundColor: s.fill ? `${s.color}33` : undefined,
+                            fill: s.fill ? 'origin' : false,
                             tension: 0.4,
                             pointRadius: 0,
                             pointHoverRadius: 5,

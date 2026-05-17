@@ -67,32 +67,6 @@ export const idleByMood: Record<string, Variants> = {
     squished: breath,
 };
 
-export const wave: Variants = {
-    rest: { rotate: 0 },
-    play: {
-        rotate: [0, -12, 12, -8, 0],
-        transition: { duration: 0.6, ease: 'easeInOut' },
-    },
-};
-
-export const hop: Variants = {
-    rest: { y: 0 },
-    play: {
-        y: [0, -14, 0],
-        transition: { duration: 0.5, ease: 'easeOut' },
-    },
-};
-
-export const spin: Variants = {
-    rest: { rotate: 0 },
-    play: {
-        rotate: [0, 360],
-        transition: { duration: 0.8, ease: 'easeInOut' },
-    },
-};
-
-export const tapReactions = [wave, hop, spin] as const;
-
 export const accessoryPop: Variants = {
     hidden: { scale: 0, opacity: 0, rotate: -20 },
     visible: {

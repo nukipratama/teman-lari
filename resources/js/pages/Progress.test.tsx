@@ -39,15 +39,17 @@ describe('Progress', () => {
             />,
         );
         expect(screen.getByText('Riwayat Mingguan')).toBeInTheDocument();
-        expect(screen.getByText(/35.5 km/)).toBeInTheDocument();
+        // "35.5 km" appears in both the hero KPI tile and the weekly row.
+        expect(screen.getAllByText(/35.5 km/).length).toBeGreaterThanOrEqual(1);
+        expect(screen.getByText('Minggu ini')).toBeInTheDocument();
     });
 
     it.each([
-        { status: 'fresh' as const, klass: /text-mood-bouncy/ },
-        { status: 'fatigued' as const, klass: /text-mood-glow/ },
-        { status: 'overreaching' as const, klass: /text-mood-cooked/ },
-        { status: 'optimal' as const, klass: /text-ink/ },
-    ])('colors form_status $status', ({ status, klass }) => {
+        { status: 'fresh' as const, label: 'Fresh' },
+        { status: 'optimal' as const, label: 'Optimal' },
+        { status: 'fatigued' as const, label: 'Fatigued' },
+        { status: 'overreaching' as const, label: 'Overreaching' },
+    ])('renders form_status $status as a chip with label "$label"', ({ status, label }) => {
         render(
             <Progress
                 snapshots={[
@@ -68,10 +70,10 @@ describe('Progress', () => {
                 personalRecords={[]}
             />,
         );
-        expect(screen.getByText(status)).toHaveClass(klass);
+        expect(screen.getByText(label)).toBeInTheDocument();
     });
 
-    it('handles snapshot with null form_status (default tone branch)', () => {
+    it('handles snapshot with null form_status (dash in chip slot)', () => {
         render(
             <Progress
                 snapshots={[
@@ -95,7 +97,7 @@ describe('Progress', () => {
         expect(screen.getAllByText('—').length).toBeGreaterThan(0);
     });
 
-    it('renders PR ledger with distance value formatted as time', () => {
+    it('renders PR card with formatted distance category + time', () => {
         render(
             <Progress
                 snapshots={[]}
@@ -113,7 +115,8 @@ describe('Progress', () => {
                 ]}
             />,
         );
-        expect(screen.getByText('5km')).toBeInTheDocument();
+        // Category label is humanised: '5km' → '5 KM'
+        expect(screen.getByText('5 KM')).toBeInTheDocument();
         expect(screen.getByText('25:00')).toBeInTheDocument();
         expect(screen.getByText('5K Race')).toBeInTheDocument();
     });
@@ -139,8 +142,8 @@ describe('Progress', () => {
         expect(screen.getByText('5:00/km')).toBeInTheDocument();
     });
 
-    it('renders dash when PR has no activity', () => {
-        render(
+    it('PR card without activity_id does not wrap in a link', () => {
+        const { container } = render(
             <Progress
                 snapshots={[]}
                 personalRecords={[
@@ -156,7 +159,9 @@ describe('Progress', () => {
                 ]}
             />,
         );
-        expect(screen.getByText('—')).toBeInTheDocument();
+        // There should be no /runs/* link inside the PR card.
+        const links = container.querySelectorAll('a[href^="/runs/"]');
+        expect(links.length).toBe(0);
     });
 
     it('falls back to "Run" when PR activity has no detail name', () => {
@@ -178,5 +183,33 @@ describe('Progress', () => {
             />,
         );
         expect(screen.getByText('Run')).toBeInTheDocument();
+    });
+
+    it('renders hero KPI tiles when at least one snapshot is present', () => {
+        render(
+            <Progress
+                snapshots={[
+                    {
+                        id: 1,
+                        user_id: 1,
+                        week_ending: '2026-05-04',
+                        runs: 4,
+                        distance_km: 35.5,
+                        weekly_trimp: 320,
+                        ctl_42d: 42,
+                        atl_7d: 44.5,
+                        form: -2.5,
+                        avg_decoupling: 3.2,
+                        form_status: 'optimal',
+                    },
+                ]}
+                personalRecords={[]}
+            />,
+        );
+        expect(screen.getByText('Fitness')).toBeInTheDocument();
+        expect(screen.getByText('Fatigue')).toBeInTheDocument();
+        // "Form" also appears as the table column header — match all.
+        expect(screen.getAllByText('Form').length).toBeGreaterThanOrEqual(1);
+        expect(screen.getByText('Volume minggu ini')).toBeInTheDocument();
     });
 });

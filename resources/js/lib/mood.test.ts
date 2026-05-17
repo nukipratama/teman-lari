@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { MOOD_FACE, MASCOT_GRADIENT, moodRing, moodSigilColor, moodToken } from './mood';
+import { MOOD_FACE, moodRing, moodSigilColor, moodToken } from './mood';
 import type { Mood } from '@/types/inertia';
 
 const ALL_MOODS: Mood[] = ['glow', 'bouncy', 'wobble', 'squished', 'spinning', 'dim'];
@@ -9,10 +9,6 @@ describe('mood', () => {
         ALL_MOODS.forEach((m) => {
             expect(MOOD_FACE[m]).toBeTruthy();
         });
-    });
-
-    it('exposes a non-empty MASCOT_GRADIENT class string', () => {
-        expect(MASCOT_GRADIENT).toContain('bg-gradient');
     });
 
     describe('moodToken', () => {
@@ -39,8 +35,8 @@ describe('mood', () => {
             });
         });
 
-        it('falls back to pasir hex for unknown mood', () => {
-            expect(moodSigilColor('unknown' as Mood)).toBe('#8a8478');
+        it('falls back to hibernate grey for unknown mood', () => {
+            expect(moodSigilColor('unknown' as Mood)).toBe('#6e7b72');
         });
     });
 

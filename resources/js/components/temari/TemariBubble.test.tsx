@@ -53,11 +53,11 @@ describe('TemariBubble', () => {
 
     it('renders sm size variant', () => {
         const { container } = render(<TemariBubble line={makeLine()} size="sm" />);
-        expect(container.querySelector('.h-14')).toBeTruthy();
+        expect(container.querySelector('.h-20')).toBeTruthy();
     });
 
-    it('renders accessory glyph when provided', () => {
-        const { container } = render(<TemariBubble line={makeLine()} accessory="headband" />);
+    it('renders the mascot SVG inside the bubble', () => {
+        const { container } = render(<TemariBubble line={makeLine()} />);
         expect(container.querySelector('svg')).toBeTruthy();
     });
 });

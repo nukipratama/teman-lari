@@ -2,6 +2,7 @@ import { Head, useForm, usePage } from '@inertiajs/react';
 import { Icon } from '@iconify/react';
 import AppShell from '@/layouts/AppShell';
 import BrandMark from '@/components/BrandMark';
+import MeshBackdrop from '@/components/MeshBackdrop';
 import type { SharedProps } from '@/types/inertia';
 
 interface LoginProps {
@@ -24,10 +25,7 @@ export default function Login({ authStravaUrl }: Readonly<LoginProps>) {
         <AppShell showSidebar={false}>
             <Head title="Masuk" />
             <div className="relative min-h-screen overflow-hidden">
-                <div className="pointer-events-none absolute inset-0 -z-10">
-                    <div className="absolute -right-32 -top-40 h-[28rem] w-[28rem] rounded-full bg-brand-400 opacity-20 blur-3xl" />
-                    <div className="absolute -bottom-40 -left-32 h-[28rem] w-[28rem] rounded-full bg-accent-400 opacity-15 blur-3xl" />
-                </div>
+                <MeshBackdrop variant="dawn" className="-z-10" />
 
                 <main className="relative mx-auto flex min-h-screen w-full max-w-3xl flex-col justify-center px-6 py-12">
                     <BrandMark tagline className="mb-10" />

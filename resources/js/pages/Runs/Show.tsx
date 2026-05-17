@@ -18,11 +18,11 @@ const RouteMap = lazy(() => import('@/components/run/RouteMap'));
 
 const HR_ZONES = ['Z1', 'Z2', 'Z3', 'Z4', 'Z5'] as const;
 const HR_ZONE_COLORS: Record<(typeof HR_ZONES)[number], string> = {
-    Z1: '#5b9c7c',
-    Z2: '#a3e635',
-    Z3: '#f4a93b',
-    Z4: '#e2783c',
-    Z5: '#c84f4f',
+    Z1: '#5fb088',
+    Z2: '#2f956a',
+    Z3: '#d99a1a',
+    Z4: '#c46f1c',
+    Z5: '#b8302f',
 };
 
 interface RunsShowProps {
@@ -96,7 +96,7 @@ export default function RunsShow({ activity, detail, card, storyLine, storyVaria
                 animate="visible"
                 className="w-full px-6 py-10"
             >
-                <div className="mb-4">
+                <div className="mb-4 rounded-2xl border border-line bg-surface-elev p-5 shadow-sm">
                     <Link
                         href="/runs"
                         className="inline-flex items-center gap-1 text-sm text-ink-meta transition hover:text-brand-600 dark:text-ink-meta-dark"

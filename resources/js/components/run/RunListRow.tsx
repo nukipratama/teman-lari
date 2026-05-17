@@ -2,6 +2,7 @@ import { cn } from '@/lib/cn';
 import { formatIdDate, formatPace } from '@/lib/pace';
 import MotionLink from '@/components/MotionLink';
 import { pressShrink } from '@/lib/motion';
+import { moodFromActivity } from '@/lib/moodFromActivity';
 import TemariMascot from '@/components/temari/TemariMascot';
 import type { ActivityDetail, Mood } from '@/types/inertia';
 
@@ -19,7 +20,9 @@ export default function RunListRow({ detail, mood = null }: Readonly<RunListRowP
     const paceLabel = paceSec != null ? formatPace(paceSec) : '—';
     const hr = detail.average_heartrate != null ? Math.round(detail.average_heartrate) : null;
     const trimp = detail.trimp_edwards != null ? Math.round(detail.trimp_edwards) : null;
-    const safeMood: Mood = mood ?? 'dim';
+    // Fall back to a TRIMP-derived mood when the backend hasn't attached
+    // a mood — keeps the list visually varied instead of every row dim.
+    const safeMood: Mood = mood ?? moodFromActivity(detail);
 
     return (
         <MotionLink
@@ -29,9 +32,7 @@ export default function RunListRow({ detail, mood = null }: Readonly<RunListRowP
         >
             <TemariMascot
                 mood={safeMood}
-                sizeClass="h-10 w-10 shrink-0"
-                sigilPixels={40}
-                ringClass="ring-2"
+                sizeClass="h-16 w-16 shrink-0"
                 aria-label={`mood ${safeMood}`}
             />
             <div className="min-w-0 flex-1">

@@ -49,9 +49,9 @@ describe('BriefingCard', () => {
         'worn_down',
         'hibernating',
         'steady',
-    ])('maps vibeState %s to a background gradient class', (state) => {
+    ])('maps vibeState %s to a mood-coded left rule', (state) => {
         const { container } = render(<BriefingCard briefing={makeBriefing({ vibeState: state })} />);
-        expect(container.firstChild).toHaveClass(/bg-gradient/);
+        expect(container.firstChild).toHaveClass(/border-l-/);
     });
 
     it.each(['positive', 'warning', 'alert', 'neutral'] as const)('renders recovery tone %s', (tone) => {

@@ -79,15 +79,16 @@ describe('Cards/Index', () => {
         expect(screen.queryByText('X')).not.toBeInTheDocument();
     });
 
-    it('marks the active rarity pill', () => {
+    it('marks the active rarity pill with its rarity tint', () => {
         render(
             <CardsIndex
                 cards={{ data: [], current_page: 1, last_page: 1, per_page: 24, total: 0, links: [] }}
                 selectedRarity="epik"
             />,
         );
-        const epikPill = screen.getByText('Epik').closest('a');
-        expect(epikPill).toHaveClass(/bg-brand-500/);
+        // Active Epik now takes its rarity colour (accent), not brand.
+        const epikPill = screen.getByText('Epic').closest('a');
+        expect(epikPill).toHaveClass(/bg-accent-500/);
     });
 
     it('renders pagination links (active + inactive + disabled) when last_page > 1', () => {

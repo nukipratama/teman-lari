@@ -33,7 +33,26 @@ This application is a Laravel application and its main Laravel ecosystems packag
 
 ## Frontend Stack
 
-UI is **Inertia 2 + React 19 + TypeScript + Tailwind v4** following Laravel React Starter Kit conventions. Routes still go through controllers (`Inertia::render('PageName', $props)`); React pages live in `resources/js/pages/` and components in `resources/js/components/`. **Hutan Pagi** palette tokens live in `@theme` block of [resources/css/app.css](resources/css/app.css) — components use `brand-*`, `accent-*`, `surface*`, `ink*`, `mood-*` semantic classes, NOT raw Tailwind colors like `lime-500`. Brand color is forest green (`#2E7D5C`), intentionally far from Strava orange in hue space.
+UI is **Inertia 2 + React 19 + TypeScript + Tailwind v4** following Laravel React Starter Kit conventions. Routes still go through controllers (`Inertia::render('PageName', $props)`); React pages live in `resources/js/pages/` and components in `resources/js/components/`. Palette tokens live in the `@theme` block of [resources/css/app.css](resources/css/app.css) — components use `brand-*`, `accent-*`, `pop-*`, `surface*`, `ink*`, `mood-*` semantic classes, NOT raw Tailwind colors like `lime-500`. Brand primary is deep emerald `#0E7A4C`; co-primary accent is warm terracotta `#D9764A`; `pop-*` mustard is reserved for PR / legendaris celebrations only. App is **light-mode only** — the `dark:` modifier still appears in legacy component code but `.dark` is never applied to `<html>`; treat any new code as light-only.
+
+### Strava brand mark — hands off
+
+The "Connect with Strava" button (and any Strava brand mark in the app) is never restyled. Strava brand orange `#FC4C02` / hover `#E34402` are reserved via `--color-strava-orange` tokens. Terracotta `#D9764A` and Strava orange share a hue family, so within any card that **displays the Strava brand mark**, the surrounding `accent` color is *not* used — switch the local context to neutral (`surface-sunken` + `ink`) so the brand mark gets breathing room. Strava can revoke API access for brand-guideline violations.
+
+### CTA contrast rule (WCAG)
+
+`accent-500` `#D9764A` on white text is ~3.4:1 — passes for large text (≥18px, or 14px bold) but **fails AA for normal body text**. So:
+- Primary CTAs on `accent-500` must be `text-base font-bold` or larger.
+- Smaller / dense buttons use `brand-700` `#07492D` as bg (white text passes 12:1).
+- `accent-500` is fine for icon-only buttons and large hero CTAs.
+
+### Gradient primitives
+
+Five signature gradients live as CSS vars in `app.css` (`--gradient-subuh`, `--gradient-subuh-soft`, `--gradient-fajar`, `--gradient-thread`, `--gradient-ember`), exposed as utilities `bg-gradient-*` and `text-gradient-*`. Rule: **gradient text on numbers only**, only on `text-2xl`+, and only one per visible viewport — scarcity makes it feel premium, not Las-Vegas. Use [`<GradientNumber>`](resources/js/components/GradientNumber.tsx) as the wrapper. Backdrop atmospherics use [`<MeshBackdrop variant="dawn|night|ember" />`](resources/js/components/MeshBackdrop.tsx) inside `relative overflow-hidden` parents.
+
+### Dawn-shift theme
+
+[`useDawnShift`](resources/js/hooks/useDawnShift.ts) is mounted in [AppShell](resources/js/layouts/AppShell.tsx); it writes `data-time-of-day="dawn|morning|day|dusk|night"` on `<body>` so CSS surface tints respond to user's local time. Light mode only — never auto-flips to dark mode.
 
 ### Text contrast tiers
 

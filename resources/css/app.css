@@ -5,6 +5,13 @@
    elements unpositioned on first render. */
 @import 'leaflet/dist/leaflet.css';
 
+/* Tailwind v4 defaults `dark:` to a prefers-color-scheme media query,
+   which would hijack the UI whenever the user's OS is in dark mode.
+   App is light-only, so re-target the variant to the explicit `.dark`
+   class (which is never applied) — every legacy `dark:` modifier in
+   the codebase becomes inert. */
+@custom-variant dark (&:where(.dark, .dark *));
+
 @source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
 @source '../../storage/framework/views/*.php';
 @source '../**/*.blade.php';
@@ -15,83 +22,76 @@
     --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
         'Segoe UI Symbol', 'Noto Color Emoji';
 
-    /* Brand scale — Forest (Hutan Pagi, Temari signature)
-       Picked to sit far from Strava orange in hue space — green/teal
-       family reads "park-run morning, embun di rumput" not "race app". */
-    --color-brand-50: #e8f4ed;
-    --color-brand-100: #c9e4d2;
-    --color-brand-200: #a2d0af;
-    --color-brand-300: #76b98a;
-    --color-brand-400: #4fa670;
-    --color-brand-500: #2e7d5c;
-    --color-brand-600: #235f47;
-    --color-brand-700: #194633;
-    --color-brand-800: #122f22;
-    --color-brand-900: #0a1d14;
+    /* Brand scale — deep emerald (primary). */
+    --color-brand-50: #e6f3eb;
+    --color-brand-100: #c1e0cd;
+    --color-brand-200: #94caab;
+    --color-brand-300: #5fb088;
+    --color-brand-400: #2f956a;
+    --color-brand-500: #0e7a4c;
+    --color-brand-600: #0a623c;
+    --color-brand-700: #07492d;
+    --color-brand-800: #04311e;
+    --color-brand-900: #021a10;
 
-    /* Accent scale — Ochre (warm sunlit highlight) */
-    --color-accent-50: #fbf2dc;
-    --color-accent-100: #f5e1b0;
-    --color-accent-200: #eccb81;
-    --color-accent-300: #e2b556;
-    --color-accent-400: #dca844;
-    --color-accent-500: #d9a03c;
-    --color-accent-600: #b7842c;
-    --color-accent-700: #8e6722;
-    --color-accent-800: #644818;
-    --color-accent-900: #3f2d0e;
+    /* Accent scale — warm terracotta (co-primary, focal warmth). Same
+       hue family as Strava orange (#FC4C02) but darker / more brown;
+       Strava-coexistence rule still applies (don't put accent near the
+       Strava brand mark). */
+    --color-accent-50: #fbeee5;
+    --color-accent-100: #f3d3bf;
+    --color-accent-200: #eab397;
+    --color-accent-300: #e0936f;
+    --color-accent-400: #dc8259;
+    --color-accent-500: #d9764a;
+    --color-accent-600: #b75f37;
+    --color-accent-700: #8c4727;
+    --color-accent-800: #5f301a;
+    --color-accent-900: #371b0e;
 
-    /* Pop scale — Jambu (deep berry, reserved for rare/premium signals
-       like PRs, legendaris rarity, achievement bursts). Forest green
-       brand reads "calm/steady"; jambu breaks the green monotony when
-       something genuinely deserves attention. */
-    --color-pop-50: #fbe9ef;
-    --color-pop-100: #f5c2d2;
-    --color-pop-200: #ea93ad;
-    --color-pop-300: #d96384;
-    --color-pop-400: #c44871;
-    --color-pop-500: #b1365e;
-    --color-pop-600: #8e2749;
-    --color-pop-700: #6a1c36;
-    --color-pop-800: #461224;
-    --color-pop-900: #2b0a16;
+    /* Pop scale — mustard (reserved for PRs / legendaris). */
+    --color-pop-50: #fdf5dd;
+    --color-pop-100: #f9e6a8;
+    --color-pop-200: #f5d678;
+    --color-pop-300: #ecbf4f;
+    --color-pop-400: #e6b340;
+    --color-pop-500: #e0a639;
+    --color-pop-600: #b58427;
+    --color-pop-700: #88621c;
+    --color-pop-800: #5b4112;
+    --color-pop-900: #2e2208;
 
-    /* Surface & ink — warm-neutral paper tones (not mint-green) so the
-       brand-green doesn't bleed across the whole app. Bg + text stay
-       neutral; greens only show on intentional brand surfaces (logo chip,
-       primary CTA, fitness chart line).
-
-       Contrast tiers (3-stop, semantic):
-         ink       — primary text: body, headings, button labels, KPI values
-         ink-soft  — supporting body: subtitles, suggestion lines
-         ink-meta  — labels-above-values, timestamps, footnotes, table headers
-       Each has a *-dark counterpart for dark mode. ink-soft was bumped
-       darker (was #5c544a) after WCAG audit; ink-meta is new. */
-    --color-surface: #fafaf7;
+    /* Surface & ink — pale sage page, white card, slightly warmer
+       sunken for inset wells, ivory `warm` tier for hero / briefing
+       (primary content) so it visually separates from ambient white
+       cards. Dark-mode tokens kept for any code that still references
+       them but the app no longer flips into dark. */
+    --color-surface: #f1f4ee;
     --color-surface-elev: #ffffff;
-    --color-surface-dark: #16140f;
-    --color-surface-dark-elev: #1f1c16;
-    --color-ink: #1f1b16;
-    --color-ink-soft: #3d372e;
-    --color-ink-meta: #6f6358;
-    --color-ink-dark: #f0ebe2;
-    --color-ink-soft-dark: #d0c6b5;
-    --color-ink-meta-dark: #9a8e80;
-    --color-line: #e5ded3;
-    --color-line-dark: #2a241d;
+    --color-surface-warm: #faf3e5;
+    --color-surface-sunken: #e5ebe0;
+    --color-surface-dark: #0c1827;
+    --color-surface-dark-elev: #15233a;
+    --color-surface-dark-sunken: #0a1320;
+    --color-ink: #122218;
+    --color-ink-soft: #3b4a40;
+    --color-ink-meta: #6e7b72;
+    --color-ink-dark: #ecf2ed;
+    --color-ink-soft-dark: #c7d2c9;
+    --color-ink-meta-dark: #8a948c;
+    --color-line: #d8ddd2;
+    --color-line-dark: #1f3050;
 
-    /* Mood swatches — Temari accent overlay. Spread across hue space so
-       mood cards/chips don't all read green. Bouncy = coral (clearly
-       separate from the forest brand) gives the palette warm energy when
-       the user is in good shape. */
-    --color-mood-glow: #f4a93b;
-    --color-mood-bouncy: #f08a6a;
-    --color-mood-cooked: #c84f4f;
-    --color-mood-squished: #e2783c;
-    --color-mood-hibernate: #8a8478;
-    --color-mood-spinning: #6e8aaf;
+    /* Mood swatches — readable on the pale sage surface. Each mood
+       sits at ≥4.5:1 vs the surface so chips don't fade. */
+    --color-mood-glow: #d99a1a;
+    --color-mood-bouncy: #c83a76;
+    --color-mood-cooked: #b8302f;
+    --color-mood-squished: #c46f1c;
+    --color-mood-hibernate: #6e7b72;
+    --color-mood-spinning: #6b4ea8;
 
-    /* Strava brand (untouched, do not reskin) */
+    /* Strava brand (untouched, never themed). */
     --color-strava-orange: #fc4c02;
     --color-strava-orange-hover: #e34402;
 }
@@ -107,6 +107,7 @@
     .scrollbar-hide::-webkit-scrollbar {
         display: none;
     }
+
 }
 
 /* Mobile sidebar drawer — overrides default `<dialog>` centered-modal
@@ -123,5 +124,22 @@
     }
     dialog.sidebar-drawer::backdrop {
         background: rgba(15, 12, 9, 0.45);
+    }
+}
+
+/* Dawn-shift theme — subtle page-bg tint based on user's local
+   time-of-day. Overrides --color-surface so it drifts across the day. */
+@layer base {
+    body[data-time-of-day='dawn'] {
+        --color-surface: #ebeee5;
+    }
+    body[data-time-of-day='morning'] {
+        --color-surface: #f3f1de;
+    }
+    body[data-time-of-day='dusk'] {
+        --color-surface: #f4ece2;
+    }
+    body[data-time-of-day='night'] {
+        --color-surface: #e8ece3;
     }
 }

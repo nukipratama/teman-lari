@@ -7,11 +7,8 @@ const LottiePlayer = lazy(() => import('./LottiePlayer'));
 
 interface TemariLottieProps {
     mood: Mood;
-    sigilPattern?: string;
-    accessory?: string | null;
     src?: string | null;
     sizeClass?: string;
-    sigilPixels?: number;
     className?: string;
 }
 
@@ -19,11 +16,8 @@ interface TemariLottieProps {
 // bundle out of the graph until a real rigged asset ships.
 export default function TemariLottie({
     mood,
-    sigilPattern = 'dddd',
-    accessory = null,
     src = null,
     sizeClass = 'h-32 w-32',
-    sigilPixels = 128,
     className,
 }: Readonly<TemariLottieProps>) {
     const [data, setData] = useState<unknown | null>(null);
@@ -53,32 +47,12 @@ export default function TemariLottie({
     }, [src]);
 
     if (src === null || src === undefined || src.length === 0 || errored || data === null) {
-        return (
-            <TemariMascot
-                mood={mood}
-                sigilPattern={sigilPattern}
-                accessory={accessory}
-                sizeClass={sizeClass}
-                sigilPixels={sigilPixels}
-                idle="mood"
-                className={className}
-            />
-        );
+        return <TemariMascot mood={mood} sizeClass={sizeClass} idle="mood" className={className} />;
     }
 
     return (
         <div className={cn('relative', sizeClass, className)}>
-            <Suspense
-                fallback={
-                    <TemariMascot
-                        mood={mood}
-                        sigilPattern={sigilPattern}
-                        accessory={accessory}
-                        sizeClass={sizeClass}
-                        sigilPixels={sigilPixels}
-                    />
-                }
-            >
+            <Suspense fallback={<TemariMascot mood={mood} sizeClass={sizeClass} />}>
                 <LottiePlayer animationData={data} />
             </Suspense>
         </div>

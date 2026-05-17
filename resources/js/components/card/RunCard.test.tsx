@@ -32,7 +32,7 @@ describe('RunCard', () => {
     it('renders special move + rarity label', () => {
         render(<RunCard card={card()} detail={detail()} />);
         expect(screen.getByText('Paru-paru Baja')).toBeInTheDocument();
-        expect(screen.getByText('Epik')).toBeInTheDocument();
+        expect(screen.getByText('Epic')).toBeInTheDocument();
     });
 
     it('renders detail name when present', () => {
@@ -51,7 +51,7 @@ describe('RunCard', () => {
 
     it('renders badge labels when present', () => {
         render(<RunCard card={card()} detail={detail()} />);
-        expect(screen.getByText(/Hari Panas/)).toBeInTheDocument();
+        expect(screen.getByText(/Heat Beater/)).toBeInTheDocument();
         expect(screen.getByText(/Negative Split/)).toBeInTheDocument();
     });
 

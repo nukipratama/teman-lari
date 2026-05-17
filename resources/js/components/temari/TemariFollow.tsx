@@ -6,10 +6,9 @@ import type { Mood } from '@/types/inertia';
 interface TemariFollowProps {
     sentinelRef: RefObject<HTMLElement | null>;
     mood: Mood;
-    sigilPattern?: string;
 }
 
-export default function TemariFollow({ sentinelRef, mood, sigilPattern = 'dddd' }: Readonly<TemariFollowProps>) {
+export default function TemariFollow({ sentinelRef, mood }: Readonly<TemariFollowProps>) {
     const [visible, setVisible] = useState(false);
 
     useEffect(() => {
@@ -44,10 +43,7 @@ export default function TemariFollow({ sentinelRef, mood, sigilPattern = 'dddd' 
                 >
                     <TemariMascot
                         mood={mood}
-                        sigilPattern={sigilPattern}
-                        sizeClass="h-12 w-12"
-                        sigilPixels={48}
-                        ringClass="ring-2 ring-offset-2 ring-offset-surface dark:ring-offset-surface-dark"
+                        sizeClass="h-20 w-20"
                         idle="breath"
                     />
                 </motion.button>

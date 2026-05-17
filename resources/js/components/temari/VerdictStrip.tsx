@@ -39,9 +39,7 @@ export default function VerdictStrip({ items }: Readonly<VerdictStripProps>) {
                         <div className="flex items-center gap-2">
                             <TemariMascot
                                 mood={item.mood}
-                                sizeClass="h-9 w-9 shrink-0"
-                                sigilPixels={36}
-                                ringClass="ring-2"
+                                sizeClass="h-16 w-16 shrink-0"
                             />
                             <div className="min-w-0 flex-1">
                                 <div className="truncate text-xs font-semibold text-ink dark:text-ink-dark">

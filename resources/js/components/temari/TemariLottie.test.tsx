@@ -10,14 +10,14 @@ import TemariLottie from './TemariLottie';
 describe('TemariLottie', () => {
     it('falls back to the SVG mascot when src is null', () => {
         const { container } = render(<TemariLottie mood="glow" src={null} />);
-        // SVG mascot composes 3 svgs (body, face, sigil) — check at least one
-        // is rendered, confirming we took the fallback path.
-        expect(container.querySelectorAll('svg').length).toBeGreaterThanOrEqual(3);
+        // Confirm we took the SVG fallback path (TemariCharacter renders
+        // a single SVG; old composition rendered three).
+        expect(container.querySelectorAll('svg').length).toBeGreaterThanOrEqual(1);
     });
 
     it('falls back when src is an empty string', () => {
         const { container } = render(<TemariLottie mood="dim" src="" />);
-        expect(container.querySelectorAll('svg').length).toBeGreaterThanOrEqual(3);
+        expect(container.querySelectorAll('svg').length).toBeGreaterThanOrEqual(1);
     });
 
     it('fetches the Lottie JSON when src is set', async () => {
@@ -38,9 +38,9 @@ describe('TemariLottie', () => {
         // Reject with a non-AbortError so the catch branch sets errored=true.
         vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('network')));
         const { container } = render(<TemariLottie mood="bouncy" src="/lottie/bad.json" />);
-        // Even after error, fallback path renders 3 SVGs (body/face/sigil).
+        // Even after error, fallback path renders the SVG character.
         await new Promise((r) => setTimeout(r, 0));
-        expect(container.querySelectorAll('svg').length).toBeGreaterThanOrEqual(3);
+        expect(container.querySelectorAll('svg').length).toBeGreaterThanOrEqual(1);
         vi.unstubAllGlobals();
     });
 
@@ -48,7 +48,7 @@ describe('TemariLottie', () => {
         vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, status: 404 }));
         const { container } = render(<TemariLottie mood="wobble" src="/lottie/missing.json" />);
         await new Promise((r) => setTimeout(r, 0));
-        expect(container.querySelectorAll('svg').length).toBeGreaterThanOrEqual(3);
+        expect(container.querySelectorAll('svg').length).toBeGreaterThanOrEqual(1);
         vi.unstubAllGlobals();
     });
 
