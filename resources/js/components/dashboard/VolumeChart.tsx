@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { Bar } from 'react-chartjs-2';
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, type TooltipItem } from 'chart.js';
 import { formatNumericTooltip, kmAxisTick, tooltipFromTheme, useChartTheme } from '@/lib/chartTheme';
@@ -13,13 +14,41 @@ interface VolumeChartProps {
     data: FitnessChartData;
 }
 
-const BAR_FILL = '#d9a03c';
+const BAR_FILL = '#d9764a';
+const BAR_FILL_DARK = '#8c4727';
+const BAR_FILL_LIGHT = '#eab397';
+
+// Intensity-coded fill — fades from lighter accent on the lowest week
+// to deeper terracotta on the heaviest. Adds a second visual encoding
+// beyond bar height, so a tall+dark bar reads "heavy week" at a glance.
+function intensityFill(value: number | null, max: number | null): string {
+    if (value === null || max === null || max === 0) return `${BAR_FILL}66`;
+    const ratio = value / max;
+    if (ratio >= 0.85) return BAR_FILL_DARK;
+    if (ratio >= 0.6) return BAR_FILL;
+    if (ratio >= 0.3) return `${BAR_FILL}AA`;
+    return BAR_FILL_LIGHT;
+}
 
 export default function VolumeChart({ data }: Readonly<VolumeChartProps>) {
     const theme = useChartTheme();
-    const numericVolume = data.volume.filter((v): v is number => v !== null);
-    const total = numericVolume.reduce((sum, v) => sum + v, 0);
-    const max = numericVolume.length === 0 ? null : Math.max(...numericVolume);
+    const { total, max, intensityFills, sampleCount } = useMemo(() => {
+        let totalSum = 0;
+        let maxV: number | null = null;
+        let count = 0;
+        for (const v of data.volume) {
+            if (v === null) continue;
+            totalSum += v;
+            count += 1;
+            if (maxV === null || v > maxV) maxV = v;
+        }
+        return {
+            total: totalSum,
+            max: maxV,
+            sampleCount: count,
+            intensityFills: data.volume.map((v) => intensityFill(v, maxV)),
+        };
+    }, [data.volume]);
 
     return (
         <div className="rounded-2xl border border-line bg-surface-elev p-5 dark:border-line-dark dark:bg-surface-dark-elev">
@@ -31,7 +60,7 @@ export default function VolumeChart({ data }: Readonly<VolumeChartProps>) {
             </div>
 
             <dl className="mt-3 grid grid-cols-2 gap-3">
-                <Stat label="Total" value={`${total.toFixed(1)} km`} desc={`${numericVolume.length} minggu`} />
+                <Stat label="Total" value={`${total.toFixed(1)} km`} desc={`${sampleCount} minggu`} />
                 <Stat label="Puncak" value={max === null ? '—' : `${max.toFixed(1)} km`} desc="minggu terberat" />
             </dl>
 
@@ -43,9 +72,9 @@ export default function VolumeChart({ data }: Readonly<VolumeChartProps>) {
                             {
                                 label: 'Volume',
                                 data: data.volume,
-                                backgroundColor: `${BAR_FILL}66`,
-                                hoverBackgroundColor: BAR_FILL,
-                                borderColor: BAR_FILL,
+                                backgroundColor: intensityFills,
+                                hoverBackgroundColor: BAR_FILL_DARK,
+                                borderColor: BAR_FILL_DARK,
                                 borderWidth: 1,
                                 borderRadius: 4,
                             },

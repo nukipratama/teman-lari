@@ -1,7 +1,8 @@
 import type { Mood } from '@/types/inertia';
 
-// PHP keeps original mood constants (`wobble`, `dim`); Hutan Pagi tokens rename
-// to `cooked` / `hibernate`. moodToken() bridges so Tailwind classes resolve.
+// PHP keeps original mood constants (`wobble`, `dim`); current Tailwind
+// tokens use `cooked` / `hibernate`. moodToken() bridges so the class
+// names resolve.
 
 export const MOOD_FACE: Record<Mood, string> = {
     glow: '✨',
@@ -33,18 +34,18 @@ export function moodToken(mood: Mood): string {
 export function moodSigilColor(mood: Mood): string {
     switch (mood) {
         case 'glow':
-            return '#f4a93b';
+            return '#d99a1a';
         case 'bouncy':
-            return '#f08a6a';
+            return '#c83a76';
         case 'wobble':
-            return '#c84f4f';
+            return '#b8302f';
         case 'squished':
-            return '#e2783c';
+            return '#c46f1c';
         case 'spinning':
-            return '#6e8aaf';
+            return '#6b4ea8';
         case 'dim':
         default:
-            return '#8a8478';
+            return '#6e7b72';
     }
 }
 
@@ -53,4 +54,3 @@ export function moodRing(mood: Mood): string {
     return `ring-mood-${token}/60`;
 }
 
-export const MASCOT_GRADIENT = 'bg-gradient-to-br from-brand-100 to-brand-300 dark:from-brand-700 dark:to-brand-500';

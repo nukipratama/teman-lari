@@ -4,6 +4,7 @@ import DemoBanner from '@/components/DemoBanner';
 import Sidebar from '@/components/Sidebar';
 import SidebarTrigger from '@/components/SidebarTrigger';
 import { SidebarProvider } from '@/contexts/SidebarContext';
+import { useDawnShift } from '@/hooks/useDawnShift';
 
 interface AppShellProps {
     children: ReactNode;
@@ -11,6 +12,8 @@ interface AppShellProps {
 }
 
 export default function AppShell({ children, showSidebar = true }: Readonly<AppShellProps>) {
+    useDawnShift();
+
     if (!showSidebar) {
         return (
             <div className="min-h-screen bg-surface text-ink dark:bg-surface-dark dark:text-ink-dark">

@@ -1,4 +1,5 @@
 import { Head } from '@inertiajs/react';
+import { Icon } from '@iconify/react';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/cn';
 import AppShell from '@/layouts/AppShell';
@@ -7,7 +8,13 @@ import Paginator from '@/components/Paginator';
 import RunCard from '@/components/card/RunCard';
 import { fadeInUp, pressShrink } from '@/lib/motion';
 import { RARITY_LABELS, RARITY_ORDER } from '@/lib/runcard';
-import type { PaginatedResponse, RunCard as RunCardModel, Activity, ActivityDetail } from '@/types/inertia';
+import type {
+    Activity,
+    ActivityDetail,
+    PaginatedResponse,
+    Rarity,
+    RunCard as RunCardModel,
+} from '@/types/inertia';
 
 type CardWithRel = RunCardModel & {
     activity: Activity & { detail: ActivityDetail };
@@ -18,7 +25,32 @@ interface CardsIndexProps {
     selectedRarity: string | null;
 }
 
+function pickFeatured(items: CardWithRel[]): CardWithRel | null {
+    let best: CardWithRel | null = null;
+    let bestRank = -1;
+    let bestDate = '';
+    for (const c of items) {
+        if (!c.activity?.detail) continue;
+        const rank = RARITY_ORDER.indexOf(c.rarity);
+        const date = c.activity.detail.start_date_local ?? '';
+        if (rank > bestRank || (rank === bestRank && date > bestDate)) {
+            best = c;
+            bestRank = rank;
+            bestDate = date;
+        }
+    }
+    return best;
+}
+
 export default function CardsIndex({ cards, selectedRarity }: Readonly<CardsIndexProps>) {
+    const totalLabel =
+        selectedRarity === null
+            ? `${cards.total} kartu total`
+            : `${cards.total} kartu ${RARITY_LABELS[selectedRarity as Rarity] ?? selectedRarity}`;
+
+    const featured = selectedRarity === null && cards.current_page === 1 ? pickFeatured(cards.data) : null;
+    const gridItems = featured === null ? cards.data : cards.data.filter((c) => c.id !== featured.id);
+
     return (
         <AppShell>
             <Head title="Kartu Aktivitas" />
@@ -26,47 +58,92 @@ export default function CardsIndex({ cards, selectedRarity }: Readonly<CardsInde
                 variants={fadeInUp}
                 initial="hidden"
                 animate="visible"
-                className="mx-auto max-w-6xl px-6 py-10"
+                className="w-full px-6 py-10"
             >
-                <div className="mb-6">
-                    <h1 className="text-2xl font-semibold tracking-tight text-ink dark:text-ink-dark">Kartu Aktivitas</h1>
-                    <p className="mt-1 text-base leading-relaxed text-ink dark:text-ink-dark">
-                        Setiap aktivitas dapat satu kartu. Rarity naik untuk PR, negative split, atau aktivitas terjauh.
-                    </p>
-                </div>
+                <header className="rounded-3xl border border-line bg-surface-warm p-6 shadow-sm">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                        <div>
+                            <p className="text-xs font-semibold uppercase tracking-wider text-ink-meta">
+                                Koleksi
+                            </p>
+                            <h1 className="mt-1 text-3xl font-semibold tracking-tight text-ink">
+                                Kartu Aktivitas
+                            </h1>
+                            <p className="mt-2 max-w-2xl text-sm leading-relaxed text-ink-soft">
+                                Setiap lari dapat satu kartu. Rarity naik untuk PR, negative split,
+                                atau aktivitas terjauh.
+                            </p>
+                        </div>
+                        <span className="inline-flex items-center gap-1.5 self-start rounded-full bg-pop-100 px-3 py-1 text-sm font-semibold text-pop-700">
+                            <Icon icon="mdi:cards" width={14} height={14} aria-hidden />
+                            {totalLabel}
+                        </span>
+                    </div>
+                </header>
 
-                <nav className="mb-6 flex flex-wrap gap-2 text-sm">
-                    <RarityPill href="/cards" label="Semua" active={selectedRarity === null} />
+                <nav aria-label="Filter rarity" className="mt-6 flex flex-wrap items-center gap-2">
+                    <span className="mr-1 text-xs font-semibold uppercase tracking-wider text-ink-meta">
+                        Rarity
+                    </span>
+                    <RarityPill href="/cards" label="Semua" rarity={null} active={selectedRarity === null} />
                     {RARITY_ORDER.map((r) => (
                         <RarityPill
                             key={r}
                             href={`/cards?rarity=${r}`}
                             label={RARITY_LABELS[r]}
+                            rarity={r}
                             active={selectedRarity === r}
                         />
                     ))}
                 </nav>
 
-                {cards.data.length === 0 ? (
-                    <div className="rounded-2xl border border-dashed border-line bg-surface-elev/40 p-10 text-center dark:border-line-dark dark:bg-surface-dark-elev/40">
-                        <p className="text-base leading-relaxed text-ink dark:text-ink-dark">Belum ada kartu di rarity ini.</p>
+                {featured?.activity?.detail && (
+                    <section className="mt-6">
+                        <div className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-ink-meta">
+                            <Icon icon="mdi:star-shooting" width={14} height={14} className="text-pop-500" aria-hidden />
+                            Spotlight kartu
+                        </div>
+                        <MotionLink
+                            href={`/runs/${featured.activity_id}`}
+                            whileTap={pressShrink}
+                            className="block transition hover:-translate-y-0.5"
+                        >
+                            <RunCard card={featured} detail={featured.activity.detail} size="hero" />
+                        </MotionLink>
+                    </section>
+                )}
+
+                {gridItems.length === 0 && featured === null ? (
+                    <div className="mt-6 rounded-2xl border border-dashed border-line bg-surface-elev/40 p-10 text-center">
+                        <Icon
+                            icon="mdi:cards-outline"
+                            width={32}
+                            height={32}
+                            className="mx-auto text-ink-meta"
+                            aria-hidden
+                        />
+                        <p className="mt-3 text-sm leading-relaxed text-ink-soft">
+                            Belum ada kartu di rarity ini. Coba filter lain atau sinkronkan lari terbaru.
+                        </p>
                     </div>
                 ) : (
                     <>
-                        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                            {cards.data.map((card) =>
-                                card.activity?.detail ? (
-                                    <MotionLink
-                                        key={card.id}
-                                        href={`/runs/${card.activity_id}`}
-                                        whileTap={pressShrink}
-                                        className="block h-full transition hover:-translate-y-0.5"
-                                    >
-                                        <RunCard card={card} detail={card.activity.detail} />
-                                    </MotionLink>
-                                ) : null,
-                            )}
-                        </div>
+                        {gridItems.length > 0 && (
+                            <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                                {gridItems.map((card) =>
+                                    card.activity?.detail ? (
+                                        <MotionLink
+                                            key={card.id}
+                                            href={`/runs/${card.activity_id}`}
+                                            whileTap={pressShrink}
+                                            className="block h-full transition hover:-translate-y-0.5"
+                                        >
+                                            <RunCard card={card} detail={card.activity.detail} />
+                                        </MotionLink>
+                                    ) : null,
+                                )}
+                            </div>
+                        )}
                         {cards.last_page > 1 && <Paginator links={cards.links} />}
                     </>
                 )}
@@ -75,16 +152,62 @@ export default function CardsIndex({ cards, selectedRarity }: Readonly<CardsInde
     );
 }
 
-function RarityPill({ href, label, active }: Readonly<{ href: string; label: string; active: boolean }>) {
+interface RarityPillProps {
+    href: string;
+    label: string;
+    rarity: Rarity | null;
+    active: boolean;
+}
+
+function rarityToneClasses(rarity: Rarity | null, active: boolean): string {
+    if (!active) {
+        return 'border border-line bg-surface-elev text-ink-soft hover:border-brand-300 hover:text-ink';
+    }
+    switch (rarity) {
+        case 'legendaris':
+            return 'border border-pop-500 bg-pop-500 text-white shadow-sm';
+        case 'epik':
+            return 'border border-accent-500 bg-accent-500 text-white shadow-sm';
+        case 'langka':
+            return 'border border-mood-spinning bg-mood-spinning text-white shadow-sm';
+        case 'jarang':
+            return 'border border-brand-400 bg-brand-400 text-white shadow-sm';
+        case 'biasa':
+            return 'border border-ink-meta bg-ink-meta text-white shadow-sm';
+        default:
+            return 'border border-brand-500 bg-brand-500 text-white shadow-sm';
+    }
+}
+
+function rarityIcon(rarity: Rarity | null): string | null {
+    switch (rarity) {
+        case 'legendaris':
+            return 'mdi:crown';
+        case 'epik':
+            return 'mdi:star-four-points';
+        case 'langka':
+            return 'mdi:star';
+        case 'jarang':
+            return 'mdi:star-outline';
+        case 'biasa':
+            return 'mdi:circle-outline';
+        default:
+            return null;
+    }
+}
+
+function RarityPill({ href, label, rarity, active }: Readonly<RarityPillProps>) {
+    const icon = rarityIcon(rarity);
     return (
         <MotionLink
             href={href}
             whileTap={pressShrink}
             className={cn(
-                'rounded-full border border-line px-4 py-2 text-sm text-ink dark:border-line-dark dark:text-ink-dark',
-                active && 'bg-brand-500/15 text-brand-700 dark:text-brand-300',
+                'inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-sm font-medium transition',
+                rarityToneClasses(rarity, active),
             )}
         >
+            {icon !== null && <Icon icon={icon} width={14} height={14} aria-hidden />}
             {label}
         </MotionLink>
     );

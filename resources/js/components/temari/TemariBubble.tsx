@@ -6,7 +6,6 @@ interface TemariBubbleProps {
     line: StoryLine | null;
     size?: 'sm' | 'lg';
     variations?: string[];
-    accessory?: string | null;
     className?: string;
 }
 
@@ -14,20 +13,17 @@ export default function TemariBubble({
     line,
     size = 'lg',
     variations = [],
-    accessory = null,
     className,
 }: Readonly<TemariBubbleProps>) {
     const mood: Mood = line?.mood ?? 'dim';
     const primary = line?.speech ?? 'Hai! Temari belum punya cerita untuk aktivitas ini.';
-    const sigil = line?.sigil_pattern ?? 'dddd';
     // BE sometimes seeds the first variation with the primary speech — dedupe to avoid duplicates.
     const altTakes = variations.filter((v) => v !== primary);
 
-    const mascotSizeClass = size === 'lg' ? 'h-24 w-24 shrink-0' : 'h-14 w-14 shrink-0';
-    const sigilSize = size === 'lg' ? 96 : 56;
-    const bodyPad = size === 'lg' ? 'p-5' : 'p-3';
-    const bodyText = size === 'lg' ? 'text-base' : 'text-sm';
-    const interactive = size === 'lg';
+    const isLarge = size === 'lg';
+    const mascotSizeClass = isLarge ? 'h-36 w-36 shrink-0' : 'h-20 w-20 shrink-0';
+    const bodyPad = isLarge ? 'p-5' : 'p-3';
+    const bodyText = isLarge ? 'text-base' : 'text-sm';
 
     return (
         <div
@@ -39,15 +35,10 @@ export default function TemariBubble({
         >
             <TemariMascot
                 mood={mood}
-                sigilPattern={sigil}
-                accessory={accessory}
                 sizeClass={mascotSizeClass}
-                sigilPixels={sigilSize}
-                idle={interactive ? 'mood' : 'breath'}
-                gazeTracking={interactive}
-                hoverable={interactive}
-                interactive={interactive}
-                aria-label="Temari"
+                idle={isLarge ? 'mood' : 'breath'}
+                gazeTracking={isLarge}
+                aria-label={`Temari mood ${mood}`}
             />
             <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">

@@ -19,7 +19,7 @@ export default function RunsIndex({ runs }: Readonly<RunsIndexProps>) {
                 variants={fadeInUp}
                 initial="hidden"
                 animate="visible"
-                className="mx-auto max-w-6xl px-6 py-10"
+                className="w-full px-6 py-10"
             >
                 <header className="mb-6 flex items-end justify-between">
                     <div>

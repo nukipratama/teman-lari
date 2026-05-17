@@ -43,13 +43,19 @@ describe('RunListRow', () => {
         expect(screen.getAllByText('—').length).toBeGreaterThan(0);
     });
 
-    it('uses dim mood when not provided', () => {
+    it('derives a mood from TRIMP when none is provided', () => {
+        // TRIMP=70 (default fixture) falls in the `glow` aerobic bucket.
         render(<RunListRow detail={detail()} />);
+        expect(screen.getByLabelText('mood glow')).toBeInTheDocument();
+    });
+
+    it('uses passed mood when provided (overrides derivation)', () => {
+        render(<RunListRow detail={detail()} mood="dim" />);
         expect(screen.getByLabelText('mood dim')).toBeInTheDocument();
     });
 
-    it('uses passed mood when provided', () => {
-        render(<RunListRow detail={detail()} mood="glow" />);
-        expect(screen.getByLabelText('mood glow')).toBeInTheDocument();
+    it('derives wobble for a crushing TRIMP', () => {
+        render(<RunListRow detail={detail({ trimp_edwards: 220 })} />);
+        expect(screen.getByLabelText('mood wobble')).toBeInTheDocument();
     });
 });

@@ -46,7 +46,7 @@ export default function RouteMap({ polyline }: Readonly<RouteMapProps>) {
                             console.warn('[RouteMap] tile load failed', e.tile?.src ?? '(no src)'),
                     }}
                 />
-                <Polyline positions={positions} pathOptions={{ color: '#2e7d5c', weight: 4, opacity: 0.9 }} />
+                <Polyline positions={positions} pathOptions={{ color: '#0e7a4c', weight: 4, opacity: 0.9 }} />
             </MapContainer>
         </div>
     );

@@ -32,7 +32,7 @@ describe('RunCard', () => {
     it('renders special move + rarity label', () => {
         render(<RunCard card={card()} detail={detail()} />);
         expect(screen.getByText('Paru-paru Baja')).toBeInTheDocument();
-        expect(screen.getByText('Epik')).toBeInTheDocument();
+        expect(screen.getByText('Epic')).toBeInTheDocument();
     });
 
     it('renders detail name when present', () => {
@@ -51,7 +51,7 @@ describe('RunCard', () => {
 
     it('renders badge labels when present', () => {
         render(<RunCard card={card()} detail={detail()} />);
-        expect(screen.getByText(/Hari Panas/)).toBeInTheDocument();
+        expect(screen.getByText(/Heat Beater/)).toBeInTheDocument();
         expect(screen.getByText(/Negative Split/)).toBeInTheDocument();
     });
 
@@ -68,5 +68,15 @@ describe('RunCard', () => {
     it('falls back chip styling for unknown rarity', () => {
         // @ts-expect-error - intentionally pass an unknown rarity to hit default branch
         render(<RunCard card={card({ rarity: 'mythic' })} detail={detail()} />);
+    });
+
+    it('renders the raw badge key when no label is defined', () => {
+        render(<RunCard card={card({ badges: ['custom_badge'] })} detail={detail()} />);
+        expect(screen.getByText('custom_badge')).toBeInTheDocument();
+    });
+
+    it('renders at hero size when size="hero"', () => {
+        const { container } = render(<RunCard card={card()} detail={detail()} size="hero" />);
+        expect(container.firstElementChild?.className).toContain('ring-4');
     });
 });

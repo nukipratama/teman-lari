@@ -3,20 +3,9 @@ import { describe, expect, it } from 'vitest';
 import TemariMascot from './TemariMascot';
 
 describe('TemariMascot', () => {
-    it('composes body + face + sigil inside a ringed gradient bubble', () => {
+    it('renders the TemariCharacter SVG inside the motion wrapper', () => {
         const { container } = render(<TemariMascot mood="glow" />);
-        // 3 SVG children: body, face, sigil
-        expect(container.querySelectorAll('svg').length).toBe(3);
-        const wrapper = container.firstElementChild as HTMLElement;
-        expect(wrapper.className).toContain('rounded-full');
-        expect(wrapper.className).toContain('ring-4');
-    });
-
-    it('honors ringClass override', () => {
-        const { container } = render(<TemariMascot mood="dim" ringClass="ring-2" />);
-        const wrapper = container.firstElementChild as HTMLElement;
-        expect(wrapper.className).toContain('ring-2');
-        expect(wrapper.className).not.toContain('ring-4');
+        expect(container.querySelectorAll('svg').length).toBe(1);
     });
 
     it('forwards aria-label to the wrapper', () => {
@@ -25,7 +14,6 @@ describe('TemariMascot', () => {
     });
 
     it('renders without crash under mood-aware idle', () => {
-        // Smoke — visual animation can't be asserted in jsdom.
         const { container } = render(<TemariMascot mood="wobble" idle="mood" />);
         expect(container.firstElementChild).toBeTruthy();
     });
@@ -35,30 +23,17 @@ describe('TemariMascot', () => {
         expect(container.firstElementChild).toBeTruthy();
     });
 
-    it('renders as a button when interactive', () => {
-        const { container } = render(<TemariMascot mood="bouncy" interactive aria-label="poke" />);
-        const wrapper = container.firstElementChild;
-        expect(wrapper?.getAttribute('role')).toBe('button');
-        expect(wrapper?.getAttribute('aria-label')).toBe('poke');
+    it('renders without idle when idle is "none"', () => {
+        const { container } = render(<TemariMascot mood="glow" idle="none" />);
+        expect(container.firstElementChild).toBeTruthy();
     });
 
-    it('applies hoverable affordance classes when hoverable', () => {
-        const { container } = render(<TemariMascot mood="glow" hoverable />);
-        expect(container.firstElementChild?.className).toContain('rounded-full');
+    it('respects sizeClass override', () => {
+        const { container } = render(<TemariMascot mood="dim" sizeClass="h-9 w-9" />);
+        expect(container.firstElementChild?.className).toContain('h-9');
     });
 
-    it('plays a tap reaction when the interactive mascot is clicked', () => {
-        const { container } = render(<TemariMascot mood="spinning" interactive idle="none" />);
-        const button = container.firstElementChild as HTMLElement;
-        // We can't observe FM's runtime variant state from outside in jsdom,
-        // but the click handler should be wired (no throw, role=button).
-        button.click();
-        expect(button.getAttribute('role')).toBe('button');
-    });
-
-    it('falls through to mood idle when given an unknown mood (default mapping)', () => {
-        // Cast forces the resolveIdle('mood') branch to take its `?? breath`
-        // fallback path for moods not in the idleByMood map.
+    it('falls through to breath when given an unknown mood with idle="mood"', () => {
         const { container } = render(
             <TemariMascot mood={'mystery' as unknown as 'glow'} idle="mood" />,
         );

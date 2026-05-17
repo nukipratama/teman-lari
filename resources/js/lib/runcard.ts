@@ -1,21 +1,20 @@
 import type { Rarity } from '@/types/inertia';
 
-// Mirrors App\Models\RunCard::RARITY_LABELS / BADGE_LABELS.
 export const RARITY_LABELS: Record<Rarity, string> = {
-    biasa: 'Biasa',
-    jarang: 'Jarang',
-    langka: 'Langka',
-    epik: 'Epik',
-    legendaris: 'Legendaris',
+    biasa: 'Common',
+    jarang: 'Uncommon',
+    langka: 'Rare',
+    epik: 'Epic',
+    legendaris: 'Legendary',
 };
 
 export const RARITY_ORDER: Rarity[] = ['biasa', 'jarang', 'langka', 'epik', 'legendaris'];
 
 export const BADGE_LABELS: Record<string, string> = {
-    hari_panas: '🔥 Hari Panas',
-    pejuang_hujan: '🌧️ Pejuang Hujan',
-    anak_pagi: '🌅 Anak Pagi',
-    long_slow_distance: '🐢 Long Slow Distance',
+    hari_panas: '🔥 Heat Beater',
+    pejuang_hujan: '🌧️ Rainmaker',
+    anak_pagi: '🌅 Early Bird',
+    long_slow_distance: '🐢 Long Haul',
     negative_split: '👻 Negative Split',
-    tahan_diri: '🧘 Tahan Diri',
+    tahan_diri: '🧘 Hold Back',
 };

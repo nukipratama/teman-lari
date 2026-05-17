@@ -20,7 +20,7 @@ interface BriefingCardProps {
 }
 
 export default function BriefingCard({ briefing }: Readonly<BriefingCardProps>) {
-    const vibeBg = vibeBackground(briefing.vibeState);
+    const ruleClass = vibeLeftRule(briefing.vibeState);
     const recoveryClass = recoveryChipClass(briefing.recoveryTone);
 
     return (
@@ -28,21 +28,21 @@ export default function BriefingCard({ briefing }: Readonly<BriefingCardProps>) 
             variants={fadeInUp}
             initial="hidden"
             animate="visible"
-            className={cn('rounded-2xl border border-line p-4 shadow-sm transition-colors duration-300 dark:border-line-dark sm:p-5', vibeBg)}
+            className={cn(
+                'rounded-2xl border border-line bg-surface-warm p-4 shadow-sm sm:p-5',
+                // Mood-coded 3px left rule replaces the old pastel swirl.
+                'border-l-[3px]',
+                ruleClass,
+            )}
         >
             <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:gap-5">
                 <div className="relative shrink-0">
                     <TemariMascot
                         mood={briefing.mood}
-                        sigilPattern={briefing.sigilPattern}
-                        accessory={briefing.accessory}
-                        sizeClass="h-24 w-24"
-                        sigilPixels={96}
+                        sizeClass="h-44 w-44"
                         idle="mood"
                         gazeTracking
-                        interactive
-                        hoverable
-                        aria-label="Temari — tap untuk reaksi"
+                        aria-label={`Temari — mood ${briefing.mood}`}
                     />
                     <TemariPeek lines={PEEK_LINES} />
                 </div>
@@ -82,21 +82,21 @@ export default function BriefingCard({ briefing }: Readonly<BriefingCardProps>) 
     );
 }
 
-function vibeBackground(state: string): string {
+function vibeLeftRule(state: string): string {
     switch (state) {
         case 'pumped':
         case 'fresh':
         case 'bouncy':
-            return 'bg-gradient-to-br from-brand-50 via-accent-50/60 to-brand-100 dark:from-brand-900/40 dark:via-accent-900/20 dark:to-brand-800/40';
+            return 'border-l-brand-500';
         case 'cooked':
         case 'stretched_thin':
-            return 'bg-gradient-to-br from-mood-cooked/10 via-pop-50/40 to-mood-cooked/20 dark:from-mood-cooked/30 dark:to-mood-cooked/20';
+            return 'border-l-mood-cooked';
         case 'worn_down':
-            return 'bg-gradient-to-br from-accent-50 via-mood-glow/10 to-accent-100 dark:from-accent-900/40 dark:to-accent-800/40';
+            return 'border-l-accent-500';
         case 'hibernating':
-            return 'bg-gradient-to-br from-surface via-mood-hibernate/10 to-mood-hibernate/20 dark:from-surface-dark-elev dark:to-mood-hibernate/30';
+            return 'border-l-mood-hibernate';
         default:
-            return 'bg-gradient-to-br from-mood-spinning/10 via-brand-50/40 to-mood-spinning/20 dark:from-mood-spinning/30 dark:to-mood-spinning/20';
+            return 'border-l-mood-spinning';
     }
 }
 

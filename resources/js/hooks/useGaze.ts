@@ -14,6 +14,8 @@ interface Options {
     range?: number;
     /** Distance (px) past `range` over which the gaze fades to zero. */
     falloff?: number;
+    /** When false, skip listener install + RAF entirely. Defaults true. */
+    enabled?: boolean;
 }
 
 /**
@@ -28,12 +30,13 @@ interface Options {
  * cursor as it approaches).
  */
 export function useGaze(ref: RefObject<HTMLElement | null>, options: Options = {}): Gaze {
-    const { range = 220, falloff = 160 } = options;
+    const { range = 220, falloff = 160, enabled = true } = options;
     const [gaze, setGaze] = useState<Gaze>(ZERO);
     const rafRef = useRef(0);
     const latestRef = useRef<MouseEvent | null>(null);
 
     useEffect(() => {
+        if (!enabled) return;
         if (typeof window === 'undefined') return;
         // Honour reduced-motion: no live tracking, stay neutral.
         if (globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;
@@ -76,7 +79,7 @@ export function useGaze(ref: RefObject<HTMLElement | null>, options: Options = {
             cancelAnimationFrame(rafRef.current);
             document.removeEventListener('mousemove', onMove);
         };
-    }, [ref, range, falloff]);
+    }, [ref, range, falloff, enabled]);
 
     return gaze;
 }

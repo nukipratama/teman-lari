@@ -4,24 +4,27 @@ import { motion } from 'framer-motion';
 import { lazy, Suspense, useRef } from 'react';
 import AppShell from '@/layouts/AppShell';
 import BriefingCard from '@/components/temari/BriefingCard';
+import SectionHeading from '@/components/SectionHeading';
 import TemariFollow from '@/components/temari/TemariFollow';
 import VerdictStrip from '@/components/temari/VerdictStrip';
-import KpiTile from '@/components/dashboard/KpiTile';
 import FirstRunTooltip from '@/components/onboarding/FirstRunTooltip';
-import { formStatusLabel, formStatusTone } from '@/lib/formStatus';
+import { formStatusLabel } from '@/lib/formStatus';
 import { fadeInUp } from '@/lib/motion';
+import { formatIdDate } from '@/lib/pace';
+import { cn } from '@/lib/cn';
+import { ICON_TONE, type Tone } from '@/lib/tones';
 import type {
     ActivityDetail,
     BriefingResult,
     FitnessChartData,
+    FormStatus,
     SharedProps,
-    Tone,
     TrainingLoad,
     VerdictTimelineItem,
     WeeklySnapshot,
 } from '@/types/inertia';
 
-// Chart.js is ~150KB. Defer it until "Tren 30 hari" disclosure expands.
+// Chart.js is ~150KB — lazy-loaded.
 const FitnessChart = lazy(() => import('@/components/dashboard/FitnessChart'));
 const VolumeChart = lazy(() => import('@/components/dashboard/VolumeChart'));
 
@@ -47,9 +50,6 @@ export default function Dashboard({
     const briefingRef = useRef<HTMLElement>(null);
 
     const hasCharts = chartData.labels.length > 1;
-
-    const volumeValue = snapshot?.distance_km != null ? `${snapshot.distance_km.toFixed(1)} km` : '—';
-    const volumeSub = snapshot?.runs != null ? `${snapshot.runs} run` : null;
     const decouplingValue = formatDecoupling(snapshot?.avg_decoupling ?? null);
 
     return (
@@ -59,136 +59,302 @@ export default function Dashboard({
                 variants={fadeInUp}
                 initial="hidden"
                 animate="visible"
-                className="mx-auto max-w-7xl px-6 py-10"
+                className="w-full px-6 py-10"
             >
                 <FirstRunTooltip recentRunCount={recentRuns.length} verdictCount={verdicts.length} />
 
-                <header className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
-                    <div>
-                        <h1 className="text-2xl font-semibold tracking-tight text-ink dark:text-ink-dark">Halo, {firstName}.</h1>
-                        <p className="mt-1 text-sm leading-relaxed text-ink-soft dark:text-ink-soft-dark">Berikut ringkasan lari kamu.</p>
-                    </div>
-                </header>
+                <HeroHeader firstName={firstName} briefing={briefing} snapshot={snapshot} />
 
-                {load !== null && (
-                    <KpiSection load={load} volumeValue={volumeValue} volumeSub={volumeSub} />
-                )}
-
-                <section ref={briefingRef} className="mt-6">
-                    <BriefingCard briefing={briefing} />
-                </section>
-
-                <TemariFollow
-                    sentinelRef={briefingRef}
-                    mood={briefing.mood}
-                    sigilPattern={briefing.sigilPattern}
-                />
-
-                {verdicts.length > 0 && (
-                    <section className="mt-8">
-                        <h2 className="text-lg font-bold tracking-tight text-ink dark:text-ink-dark">Kata Temari</h2>
-                        <p className="mt-1 text-sm text-ink-soft leading-relaxed dark:text-ink-soft-dark">
-                            Komentar Temari tiap kelar lari.
-                        </p>
-                        <VerdictStrip items={verdicts} />
+                <div className="mt-6 grid gap-6 lg:grid-cols-3">
+                    <section ref={briefingRef} className="lg:col-span-2">
+                        <BriefingCard briefing={briefing} />
                     </section>
-                )}
+                    <AtGlance load={load} decouplingValue={decouplingValue} />
+                </div>
 
-                {load === null ? (
-                    <EmptyState />
-                ) : (
-                    <Disclosure icon="mdi:chart-bell-curve" label="Rincian coach mode" className="mt-6">
-                        <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-4">
-                            <KpiTile label="Fitness (CTL)" value={load.ctl_42d.toFixed(1)} sub="42 hari" />
-                            <KpiTile label="Fatigue (ATL)" value={load.atl_7d.toFixed(1)} sub="7 hari" tone="warning" />
-                            <KpiTile label="Strain" value={Math.round(load.strain).toString()} sub="TRIMP × monotony" />
-                            <KpiTile label="Avg decoupling" value={decouplingValue} sub="aerobic drift" />
-                        </div>
-                    </Disclosure>
-                )}
+                <TemariFollow sentinelRef={briefingRef} mood={briefing.mood} />
 
                 {hasCharts && (
-                    <Disclosure icon="mdi:chart-line" label="Tren 30 hari" className="mt-4" defaultOpen>
-                        <Suspense fallback={<div className="mt-4 h-56 animate-pulse rounded-2xl bg-line/40 dark:bg-line-dark" />}>
+                    <section className="mt-10">
+                        <SectionHeading
+                            icon="mdi:chart-line"
+                            title="Tren 30 Hari"
+                            subtitle="Beban, fitness, dan volume mingguan."
+                            tone="brand"
+                        />
+                        {load !== null && <CoachStatStrip load={load} />}
+                        <Suspense
+                            fallback={
+                                <div className="mt-4 h-56 animate-pulse rounded-2xl bg-line/40" />
+                            }
+                        >
                             <div className="mt-4 grid gap-4 md:grid-cols-2">
                                 <FitnessChart data={chartData} />
                                 <VolumeChart data={chartData} />
                             </div>
                         </Suspense>
-                    </Disclosure>
+                    </section>
                 )}
+
+                {verdicts.length > 0 && (
+                    <section className="mt-10">
+                        <SectionHeading
+                            icon="mdi:comment-quote-outline"
+                            title="Kata Temari"
+                            subtitle="Komentar Temari tiap kelar lari."
+                            tone="brand"
+                        />
+                        <VerdictStrip items={verdicts} />
+                    </section>
+                )}
+
+                {load === null && <EmptyState />}
             </motion.main>
         </AppShell>
     );
 }
 
-function KpiSection({
-    load,
-    volumeValue,
-    volumeSub,
-}: Readonly<{ load: TrainingLoad; volumeValue: string; volumeSub: string | null }>) {
-    const monotony = monotonySignal(load.monotony);
+// === Hero header ====================================================
+
+interface HeroHeaderProps {
+    firstName: string;
+    briefing: BriefingResult;
+    snapshot: WeeklySnapshot | null;
+}
+
+function HeroHeader({ firstName, briefing, snapshot }: Readonly<HeroHeaderProps>) {
     return (
-        <section className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-3">
-            <KpiTile
-                label="Vibe"
-                value={load.form.toFixed(1)}
-                sub={formStatusLabel(load.form_status)}
-                tone={formStatusTone(load.form_status)}
-            />
-            <KpiTile
-                label="Beban minggu ini"
-                value={Math.round(load.weekly_trimp).toString()}
-                sub={`Monotony ${load.monotony.toFixed(2)} ${monotony.emoji}`}
-                tone={monotony.tone}
-            />
-            <KpiTile label="Volume minggu ini" value={volumeValue} sub={volumeSub} />
+        <section className="rounded-3xl border border-line bg-surface-warm p-6 shadow-sm">
+            <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+                <div>
+                    <p className="text-xs font-semibold uppercase tracking-wider text-ink-meta">
+                        {formatIdDate(new Date().toISOString(), 'long')}
+                    </p>
+                    <h1 className="mt-1 text-3xl font-semibold tracking-tight text-ink">
+                        Halo, {firstName}.
+                    </h1>
+                    <div className="mt-2 flex flex-wrap items-center gap-2">
+                        <p className="text-sm leading-relaxed text-ink-soft">
+                            Berikut ringkasan lari kamu.
+                        </p>
+                        {briefing.streakLabel !== null && (
+                            <span className="inline-flex items-center gap-1 rounded-full bg-brand-100 px-2.5 py-0.5 text-xs font-semibold text-brand-700">
+                                <Icon icon="mdi:fire" width={12} height={12} aria-hidden />
+                                {briefing.streakLabel}
+                            </span>
+                        )}
+                    </div>
+                </div>
+                {snapshot?.distance_km != null && (
+                    <div className="text-right">
+                        <div className="text-xs font-semibold uppercase tracking-wider text-ink-meta">
+                            Minggu ini
+                        </div>
+                        <div className="mt-1 text-5xl font-black leading-none text-accent-600 tabular-nums">
+                            {snapshot.distance_km.toFixed(1)}
+                            <span className="ml-1 text-xl font-semibold text-ink-soft">km</span>
+                        </div>
+                        {snapshot.runs != null && (
+                            <p className="mt-1 text-xs text-ink-meta">{snapshot.runs} run minggu ini</p>
+                        )}
+                    </div>
+                )}
+            </header>
         </section>
     );
 }
 
-function Disclosure({
-    icon,
-    label,
-    className,
-    defaultOpen = false,
-    children,
-}: Readonly<{ icon: string; label: string; className: string; defaultOpen?: boolean; children: React.ReactNode }>) {
+// === At-a-glance sidebar (3 stacked KPI rows in one card) ===========
+
+interface AtGlanceProps {
+    load: TrainingLoad | null;
+    decouplingValue: string;
+}
+
+function AtGlance({ load, decouplingValue }: Readonly<AtGlanceProps>) {
+    if (load === null) {
+        return (
+            <aside className="rounded-3xl border border-dashed border-line bg-surface-elev/40 p-5 text-sm text-ink-meta">
+                Belum cukup data untuk ringkasan kondisi. Sync lari terbaru dulu.
+            </aside>
+        );
+    }
+    const monotony = monotonySignal(load.monotony);
     return (
-        <details
-            open={defaultOpen}
-            className={`group rounded-2xl bg-line/20 p-4 transition hover:bg-line/30 dark:bg-line-dark/40 dark:hover:bg-line-dark/60 ${className}`}
-        >
-            <summary className="flex cursor-pointer items-center justify-between text-xs font-semibold uppercase tracking-wider text-ink-meta dark:text-ink-meta-dark">
-                <span className="flex items-center gap-2">
-                    <Icon icon={icon} width={14} height={14} aria-hidden />
+        <aside className="rounded-3xl border border-line bg-surface-elev p-5 shadow-sm">
+            <div className="text-xs font-semibold uppercase tracking-wider text-ink-meta">
+                Kondisi
+            </div>
+            <div className="mt-3 divide-y divide-line">
+                <StatRow
+                    icon="mdi:scale-balance"
+                    iconTone="brand"
+                    label="Vibe"
+                    value={load.form.toFixed(1)}
+                    hint={formStatusLabel(load.form_status)}
+                    hintTone={statusHintTone(load.form_status)}
+                />
+                <StatRow
+                    icon="mdi:lightning-bolt"
+                    iconTone="accent"
+                    label="Beban minggu ini"
+                    value={Math.round(load.weekly_trimp).toString()}
+                    hint={`Monotony ${load.monotony.toFixed(2)} ${monotony.emoji}`}
+                    hintTone={monotonyHintTone(monotony.tone)}
+                />
+                <StatRow
+                    icon="mdi:waves"
+                    iconTone="brand"
+                    label="Decoupling"
+                    value={decouplingValue}
+                    hint="aerobic drift"
+                    hintTone="meta"
+                />
+            </div>
+        </aside>
+    );
+}
+
+interface StatRowProps {
+    icon: string;
+    iconTone: Tone;
+    label: string;
+    value: string;
+    hint: string;
+    hintTone: 'meta' | 'cooked' | 'glow' | 'bouncy';
+}
+
+const HINT_TONE_CLASSES: Record<StatRowProps['hintTone'], string> = {
+    meta: 'text-ink-meta',
+    cooked: 'text-mood-cooked',
+    glow: 'text-pop-600',
+    bouncy: 'text-mood-bouncy',
+};
+
+function StatRow({ icon, iconTone, label, value, hint, hintTone }: Readonly<StatRowProps>) {
+    return (
+        <div className="flex items-center gap-3 py-3 first:pt-0 last:pb-0">
+            <span
+                aria-hidden
+                className={cn('flex h-9 w-9 shrink-0 items-center justify-center rounded-xl', ICON_TONE[iconTone])}
+            >
+                <Icon icon={icon} width={16} height={16} />
+            </span>
+            <div className="min-w-0 flex-1">
+                <div className="text-[10px] font-semibold uppercase tracking-wider text-ink-meta">
                     {label}
+                </div>
+                <div className="mt-0.5 flex items-baseline gap-2">
+                    <span className="text-2xl font-black tabular-nums text-ink">{value}</span>
+                    <span className={cn('truncate text-xs font-medium', HINT_TONE_CLASSES[hintTone])}>{hint}</span>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+// === Coach stat strip (4-tile row at top of Tren 30 Hari section) ===
+
+function CoachStatStrip({ load }: Readonly<{ load: TrainingLoad }>) {
+    return (
+        <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <CoachStat
+                icon="mdi:lightning-bolt"
+                iconTone="brand"
+                label="Fitness (CTL)"
+                value={load.ctl_42d.toFixed(1)}
+                hint="42 hari"
+            />
+            <CoachStat
+                icon="mdi:battery-low"
+                iconTone="accent"
+                label="Fatigue (ATL)"
+                value={load.atl_7d.toFixed(1)}
+                hint="7 hari"
+            />
+            <CoachStat
+                icon="mdi:fire"
+                iconTone="pop"
+                label="Strain"
+                value={Math.round(load.strain).toString()}
+                hint="TRIMP × monotony"
+            />
+            <CoachStat
+                icon="mdi:repeat-variant"
+                iconTone="brand"
+                label="Monotony"
+                value={load.monotony.toFixed(2)}
+                hint="≥ 2 = terlalu seragam"
+            />
+        </div>
+    );
+}
+
+interface CoachStatProps {
+    icon: string;
+    iconTone: Tone;
+    label: string;
+    value: string;
+    hint: string;
+}
+
+function CoachStat({ icon, iconTone, label, value, hint }: Readonly<CoachStatProps>) {
+    return (
+        <div className="rounded-2xl border border-line bg-surface-elev p-4 shadow-sm">
+            <div className="flex items-center justify-between">
+                <div className="text-[10px] font-semibold uppercase tracking-wider text-ink-meta">
+                    {label}
+                </div>
+                <span
+                    aria-hidden
+                    className={cn('flex h-7 w-7 items-center justify-center rounded-lg', ICON_TONE[iconTone])}
+                >
+                    <Icon icon={icon} width={14} height={14} />
                 </span>
-                <Icon icon="mdi:chevron-down" width={16} height={16} className="transition group-open:rotate-180" aria-hidden />
-            </summary>
-            {children}
-        </details>
+            </div>
+            <div className="mt-2 text-2xl font-black tabular-nums text-ink">{value}</div>
+            <div className="text-[10px] text-ink-meta">{hint}</div>
+        </div>
     );
 }
 
 function EmptyState() {
     return (
-        <section className="mt-10 rounded-2xl border border-dashed border-line bg-surface-elev/40 p-10 text-center dark:border-line-dark dark:bg-surface-dark-elev/40">
-            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-brand-500/15 text-brand-600 dark:text-brand-400">
+        <section className="mt-10 rounded-2xl border border-dashed border-line bg-surface-elev/40 p-10 text-center">
+            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-brand-500/15 text-brand-600">
                 <Icon icon="mdi:run-fast" width={28} height={28} aria-hidden />
             </div>
-            <h2 className="mt-4 text-base font-semibold text-ink dark:text-ink-dark">Belum ada aktivitas tersinkron</h2>
-            <p className="mx-auto mt-2 max-w-sm text-base leading-relaxed text-ink dark:text-ink-dark">
-                Jalankan <code className="rounded bg-line/40 px-1 py-0.5 text-xs dark:bg-line-dark">php artisan strava:sync</code> atau tunggu sync terjadwal untuk mengisi dashboard.
+            <h2 className="mt-4 text-base font-semibold text-ink">Belum ada aktivitas tersinkron</h2>
+            <p className="mx-auto mt-2 max-w-sm text-base leading-relaxed text-ink">
+                Jalankan <code className="rounded bg-line/40 px-1 py-0.5 text-xs">php artisan strava:sync</code> atau tunggu sync terjadwal untuk mengisi dashboard.
             </p>
         </section>
     );
 }
 
-function monotonySignal(m: number): { emoji: string; tone: Tone } {
+function monotonySignal(m: number): { emoji: string; tone: 'alert' | 'warning' | 'neutral' } {
     if (m >= 2) return { emoji: '🚨', tone: 'alert' };
     if (m >= 1.5) return { emoji: '⚠️', tone: 'warning' };
     return { emoji: 'ok', tone: 'neutral' };
+}
+
+function monotonyHintTone(tone: 'alert' | 'warning' | 'neutral'): 'meta' | 'cooked' | 'glow' {
+    if (tone === 'alert') return 'cooked';
+    if (tone === 'warning') return 'glow';
+    return 'meta';
+}
+
+function statusHintTone(status: FormStatus): 'meta' | 'cooked' | 'glow' | 'bouncy' {
+    switch (status) {
+        case 'fresh':
+            return 'bouncy';
+        case 'fatigued':
+            return 'glow';
+        case 'overreaching':
+            return 'cooked';
+        default:
+            return 'meta';
+    }
 }
 
 function formatDecoupling(value: number | null): string {

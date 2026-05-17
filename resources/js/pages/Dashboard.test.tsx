@@ -114,10 +114,30 @@ describe('Dashboard', () => {
                 chartData={chartData}
             />,
         );
+        // AtGlance sidebar lists Vibe / Beban / Decoupling stacked.
         expect(screen.getByText('Vibe')).toBeInTheDocument();
         expect(screen.getByText('Beban minggu ini')).toBeInTheDocument();
-        expect(screen.getByText('Volume minggu ini')).toBeInTheDocument();
-        expect(screen.getByText('Rincian coach mode')).toBeInTheDocument();
+        expect(screen.getByText('Decoupling')).toBeInTheDocument();
+        // Coach raw metrics now live inline at the top of Tren 30 Hari
+        // (no more disclosure). When there's no chart data the strip
+        // is also hidden, so this assertion needs chart data to fire.
+    });
+
+    it('renders CoachStatStrip raw metrics inside Tren 30 Hari when chart data exists', () => {
+        render(
+            <Dashboard
+                briefing={briefing}
+                verdicts={[]}
+                load={load}
+                snapshot={snapshot}
+                recentRuns={[]}
+                chartData={chartDataMany}
+            />,
+        );
+        expect(screen.getByText('Fitness (CTL)')).toBeInTheDocument();
+        expect(screen.getByText('Fatigue (ATL)')).toBeInTheDocument();
+        expect(screen.getByText('Strain')).toBeInTheDocument();
+        expect(screen.getByText('Monotony')).toBeInTheDocument();
     });
 
     it('does not render a "recent runs" block (VerdictStrip already covers it)', () => {
@@ -163,7 +183,7 @@ describe('Dashboard', () => {
                 chartData={chartDataMany}
             />,
         );
-        expect(screen.getByText('Tren 30 hari')).toBeInTheDocument();
+        expect(screen.getByText('Tren 30 Hari')).toBeInTheDocument();
         // Charts are lazy-loaded; CI under coverage instrumentation can
         // take well past the 1s default to resolve the dynamic import.
         await waitFor(() => expect(screen.getByTestId('line-chart')).toBeInTheDocument(), {
@@ -188,7 +208,9 @@ describe('Dashboard', () => {
         expect(screen.getByText('Kata Temari')).toBeInTheDocument();
     });
 
-    it('renders dash for missing volume snapshot', () => {
+    it('omits the hero week-volume KPI when snapshot is null', () => {
+        // Volume now lives only in the hero header (no duplicate tile).
+        // With snapshot=null the hero's "Minggu ini" block is skipped.
         render(
             <Dashboard
                 briefing={briefing}
@@ -199,7 +221,7 @@ describe('Dashboard', () => {
                 chartData={chartData}
             />,
         );
-        expect(screen.getByText('Volume minggu ini')).toBeInTheDocument();
+        expect(screen.queryByText('Minggu ini')).not.toBeInTheDocument();
     });
 
     it('renders negative decoupling with no leading +', () => {
@@ -228,6 +250,41 @@ describe('Dashboard', () => {
             />,
         );
         expect(screen.getAllByText('—').length).toBeGreaterThan(0);
+    });
+
+    it.each(['fresh', 'fatigued', 'overreaching', 'optimal'] as const)(
+        'renders the AtGlance Vibe hint for form_status %s',
+        (status) => {
+            render(
+                <Dashboard
+                    briefing={briefing}
+                    verdicts={[]}
+                    load={{ ...load, form_status: status }}
+                    snapshot={snapshot}
+                    recentRuns={[]}
+                    chartData={chartData}
+                />,
+            );
+            expect(screen.getByText('Vibe')).toBeInTheDocument();
+        },
+    );
+
+    it.each([
+        [2.5, 'Monotony 2.50 🚨'],
+        [1.7, 'Monotony 1.70 ⚠️'],
+        [1.2, 'Monotony 1.20 ok'],
+    ] as const)('colors AtGlance Beban hint for monotony=%s', (monotony, expected) => {
+        render(
+            <Dashboard
+                briefing={briefing}
+                verdicts={[]}
+                load={{ ...load, monotony }}
+                snapshot={snapshot}
+                recentRuns={[]}
+                chartData={chartData}
+            />,
+        );
+        expect(screen.getByText(expected)).toBeInTheDocument();
     });
 
     it('renders empty first_name when user has no name', () => {
