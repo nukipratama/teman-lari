@@ -21,7 +21,6 @@ class GenerateStoryLineJob implements ShouldQueue
 
     public function handle(Temari $temari): void
     {
-        /** @var Activity|null $activity */
         $activity = Activity::query()->with('detail')->find($this->activityId);
         if ($activity === null || $activity->detail === null) {
             return;

@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Jobs\AI;
 
 use App\Exceptions\AI\UnavailableException;
-use App\Models\Activity;
 use App\Models\AI\Analysis;
 use App\Models\StoryLine;
 use App\Services\AI\Narrators\PostRunSpeechNarrator;
@@ -16,10 +15,7 @@ class AnalyzePostRunSpeechJob extends AnalyzeAbstractJob
     #[Override]
     protected function generateContent(Analysis $row): string
     {
-        $activity = Activity::query()->with('detail')->find($row->subject_id);
-        if ($activity === null || $activity->detail === null) {
-            throw new UnavailableException("Activity {$row->subject_id} not analyzed yet");
-        }
+        [$activity, $detail] = $this->loadAnalyzedActivity($row);
 
         $storyLine = StoryLine::query()
             ->where('activity_id', $activity->id)
@@ -31,6 +27,6 @@ class AnalyzePostRunSpeechJob extends AnalyzeAbstractJob
         }
 
         return app(PostRunSpeechNarrator::class)
-            ->generate($activity, $activity->detail, $storyLine->mood);
+            ->generate($activity, $detail, $storyLine->mood);
     }
 }

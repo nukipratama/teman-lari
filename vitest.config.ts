@@ -25,8 +25,8 @@ export default defineConfig({
                 'resources/js/app.tsx',
             ],
             thresholds: {
-                lines: 95,
-                functions: 95,
+                lines: 100,
+                functions: 100,
             },
         },
     },

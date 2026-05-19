@@ -12,8 +12,6 @@ use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Queue\Middleware\WithoutOverlapping;
 use Illuminate\Support\Carbon;
 
-// Stamps location_resolved_at even on miss so we don't retry forever.
-// WithoutOverlapping serialises to honor Nominatim's 1 req/sec TOS.
 class ResolveActivityLocationJob implements ShouldBeUnique, ShouldQueue
 {
     use Queueable;
@@ -22,7 +20,6 @@ class ResolveActivityLocationJob implements ShouldBeUnique, ShouldQueue
 
     public int $backoff = 60;
 
-    /** 10-minute uniqueness window — duplicate dispatches within this gap drop at enqueue time. */
     public int $uniqueFor = 600;
 
     public function __construct(public readonly int $activityDetailId)
@@ -48,15 +45,8 @@ class ResolveActivityLocationJob implements ShouldBeUnique, ShouldQueue
 
     public function handle(NominatimResolver $resolver): void
     {
-        /** @var ActivityDetail|null $detail */
         $detail = ActivityDetail::query()->find($this->activityDetailId);
-        if ($detail === null) {
-            return;
-        }
-
-        // Already resolved (or already known-missing). Re-running would
-        // just waste a Nominatim quota slot.
-        if ($detail->location_resolved_at !== null) {
+        if ($detail === null || $detail->location_resolved_at !== null) {
             return;
         }
 

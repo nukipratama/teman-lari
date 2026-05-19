@@ -12,23 +12,24 @@ interface WeatherHeroProps {
     detail: WeatherDetail;
 }
 
-function tempTone(temp: number | null | undefined): string {
-    if (temp == null) return 'text-ink';
+type WeatherKind = 'rain' | 'hot' | 'normal';
+
+function weatherKind(temp: number | null | undefined, rain: boolean): WeatherKind {
+    if (rain) return 'rain';
+    if (temp != null && temp >= 31) return 'hot';
+    return 'normal';
+}
+
+const KIND_STYLES: Record<WeatherKind, { gradient: string; icon: string }> = {
+    rain: { gradient: 'from-mood-spinning/15 via-surface-elev to-brand-50', icon: 'mdi:weather-rainy' },
+    hot: { gradient: 'from-mood-cooked/15 via-surface-elev to-accent-50', icon: 'mdi:weather-sunny-alert' },
+    normal: { gradient: 'from-brand-50 via-surface-elev to-accent-50/60', icon: 'mdi:weather-partly-cloudy' },
+};
+
+function tempTone(temp: number): string {
     if (temp >= 31) return 'text-mood-cooked';
     if (temp >= 27) return 'text-mood-squished';
     return 'text-brand-700';
-}
-
-function weatherGradient(temp: number | null | undefined, rain: boolean): string {
-    if (rain) return 'from-mood-spinning/15 via-surface-elev to-brand-50';
-    if (temp != null && temp >= 31) return 'from-mood-cooked/15 via-surface-elev to-accent-50';
-    return 'from-brand-50 via-surface-elev to-accent-50/60';
-}
-
-function weatherIcon(temp: number | null | undefined, rain: boolean): string {
-    if (rain) return 'mdi:weather-rainy';
-    if (temp != null && temp >= 31) return 'mdi:weather-sunny-alert';
-    return 'mdi:weather-partly-cloudy';
 }
 
 export default function WeatherHero({ detail }: Readonly<WeatherHeroProps>) {
@@ -41,8 +42,10 @@ export default function WeatherHero({ detail }: Readonly<WeatherHeroProps>) {
         return null;
     }
 
+    const style = KIND_STYLES[weatherKind(temp, rain)];
+
     return (
-        <section className={cn('relative overflow-hidden rounded-2xl border border-line p-5 shadow-sm bg-gradient-to-br', weatherGradient(temp, rain))}>
+        <section className={cn('relative overflow-hidden rounded-2xl border border-line p-5 shadow-sm bg-gradient-to-br', style.gradient)}>
             <div className="flex items-start justify-between gap-4">
                 <div>
                     <p className="text-[10px] font-semibold uppercase tracking-wider text-ink-meta">Cuaca lari</p>
@@ -59,7 +62,7 @@ export default function WeatherHero({ detail }: Readonly<WeatherHeroProps>) {
                     </p>
                 </div>
                 <span aria-hidden className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/80 text-ink shadow-sm ring-1 ring-line">
-                    <Icon icon={weatherIcon(temp, rain)} width={24} height={24} />
+                    <Icon icon={style.icon} width={24} height={24} />
                 </span>
             </div>
             {location != null && (

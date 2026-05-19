@@ -1,8 +1,5 @@
 import type { Transition, Variants } from 'framer-motion';
 
-// FM handles reduced-motion automatically for motion.* components; useReducedMotion()
-// is only needed for opt-in effects (count-up animations) that don't route through FM.
-
 const enterEase: Transition = {
     duration: 0.32,
     ease: [0.22, 1, 0.36, 1],
@@ -10,18 +7,6 @@ const enterEase: Transition = {
 
 export const fadeInUp: Variants = {
     hidden: { opacity: 0, y: 8 },
-    visible: { opacity: 1, y: 0, transition: enterEase },
-};
-
-export const staggerChildren: Variants = {
-    hidden: {},
-    visible: {
-        transition: { staggerChildren: 0.06, delayChildren: 0.04 },
-    },
-};
-
-export const staggerItem: Variants = {
-    hidden: { opacity: 0, y: 6 },
     visible: { opacity: 1, y: 0, transition: enterEase },
 };
 
@@ -67,19 +52,4 @@ export const idleByMood: Record<string, Variants> = {
     squished: breath,
 };
 
-export const accessoryPop: Variants = {
-    hidden: { scale: 0, opacity: 0, rotate: -20 },
-    visible: {
-        scale: 1,
-        opacity: 1,
-        rotate: 0,
-        transition: { duration: 0.45, ease: 'backOut' },
-    },
-};
-
 export const pressShrink = { scale: 0.97 };
-
-export const drawerSlide: Variants = {
-    closed: { x: '-100%', transition: { duration: 0.22, ease: 'easeIn' } },
-    open: { x: 0, transition: { duration: 0.28, ease: 'easeOut' } },
-};

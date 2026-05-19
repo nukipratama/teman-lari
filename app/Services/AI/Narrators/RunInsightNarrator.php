@@ -4,14 +4,11 @@ declare(strict_types=1);
 
 namespace App\Services\AI\Narrators;
 
-use App\Exceptions\AI\UnavailableException;
 use App\Models\Activity;
 use App\Models\ActivityDetail;
 use App\Services\AI\AzureOpenAIClient;
+use App\Services\AI\StructuredChatCaller;
 use App\Services\Run\Metrics\StreamSummary;
-use Illuminate\Support\Facades\Log;
-use JsonException;
-use Throwable;
 
 use function is_array;
 
@@ -37,9 +34,11 @@ Z1-Z5, easy, tempo, long run, negative split).
 JANGAN preachy, JANGAN data dump tanpa konteks. Jangan judging.
 PROMPT;
 
-    public function __construct(
-        private readonly AzureOpenAIClient $azure,
-    ) {
+    private readonly StructuredChatCaller $caller;
+
+    public function __construct(AzureOpenAIClient $azure)
+    {
+        $this->caller = new StructuredChatCaller($azure);
     }
 
     /**
@@ -47,70 +46,19 @@ PROMPT;
      */
     public function generate(Activity $activity, ActivityDetail $detail): array
     {
-        return $this->call($this->buildContext($detail));
-    }
-
-    /**
-     * @param  array<string, mixed>  $ctx
-     * @return array{technical: string, splits: string, zones: string}
-     */
-    private function call(array $ctx): array
-    {
-        $startedAt = microtime(true);
-
-        try {
-            $response = $this->azure->client()->chat()->create([
-                'model' => (string) config('azure_openai.deployment'),
-                'messages' => [
-                    ['role' => 'system', 'content' => self::SYSTEM_PROMPT],
-                    ['role' => 'user', 'content' => json_encode($ctx, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE)],
-                ],
-                'max_tokens' => (int) config('azure_openai.max_tokens'),
-                'temperature' => 0.7,
-                'response_format' => $this->responseFormat(),
-            ]);
-        } catch (Throwable $e) {
-            Log::warning('narrator.ai.call', [
-                'kind' => 'run_insight',
-                'status' => 'fail',
-                'error' => $e->getMessage(),
-                'latency_ms' => (int) ((microtime(true) - $startedAt) * 1000),
-            ]);
-            throw new UnavailableException('Azure OpenAI call failed: '.$e->getMessage(), previous: $e);
-        }
-
-        $content = (string) ($response->choices[0]->message->content ?? '');
-
-        try {
-            $decoded = json_decode($content, true, 16, JSON_THROW_ON_ERROR);
-        } catch (JsonException $e) {
-            throw new UnavailableException('Azure OpenAI returned non-JSON: '.$e->getMessage());
-        }
-
-        if (! is_array($decoded)
-            || ! isset($decoded['technical'], $decoded['splits'], $decoded['zones'])
-            || ! is_string($decoded['technical'])
-            || ! is_string($decoded['splits'])
-            || ! is_string($decoded['zones'])
-        ) {
-            throw new UnavailableException('Azure OpenAI structured output missing required fields');
-        }
-
-        Log::info('narrator.ai.call', [
-            'kind' => 'run_insight',
-            'status' => 'ok',
-            'latency_ms' => (int) ((microtime(true) - $startedAt) * 1000),
-            'usage' => [
-                'prompt' => $response->usage->promptTokens ?? null,
-                'completion' => $response->usage->completionTokens ?? null,
-                'total' => $response->usage->totalTokens ?? null,
-            ],
-        ]);
+        $decoded = $this->caller->call(
+            kind: 'run_insight',
+            systemPrompt: self::SYSTEM_PROMPT,
+            context: $this->buildContext($detail),
+            schemaName: 'TemariRunInsight',
+            requiredKeys: ['technical', 'splits', 'zones'],
+            temperature: 0.7,
+        );
 
         return [
-            'technical' => $decoded['technical'],
-            'splits' => $decoded['splits'],
-            'zones' => $decoded['zones'],
+            'technical' => (string) $decoded['technical'],
+            'splits' => (string) $decoded['splits'],
+            'zones' => (string) $decoded['zones'],
         ];
     }
 
@@ -135,28 +83,6 @@ PROMPT;
             'ascent_m' => $summary['ascent_m'] ?? null,
             'weather_temp_c' => $detail->weather_temp_c,
             'weather_humidity_pct' => $detail->weather_humidity_pct,
-        ];
-    }
-
-    /** @return array{type: string, json_schema: array<string, mixed>} */
-    private function responseFormat(): array
-    {
-        return [
-            'type' => 'json_schema',
-            'json_schema' => [
-                'name' => 'TemariRunInsight',
-                'strict' => true,
-                'schema' => [
-                    'type' => 'object',
-                    'additionalProperties' => false,
-                    'properties' => [
-                        'technical' => ['type' => 'string'],
-                        'splits' => ['type' => 'string'],
-                        'zones' => ['type' => 'string'],
-                    ],
-                    'required' => ['technical', 'splits', 'zones'],
-                ],
-            ],
         ];
     }
 }

@@ -25,9 +25,7 @@ class AnalysisService
         ?string $discriminator = null,
         bool $force = false,
     ): Analysis {
-        $subjectType = $subjectOrType instanceof Model
-            ? $subjectOrType::class
-            : $subjectOrType;
+        $subjectType = $subjectOrType instanceof Model ? $subjectOrType::class : $subjectOrType;
         $jobClass ??= $type->jobClass();
 
         $now = Carbon::now();
@@ -74,20 +72,6 @@ class AnalysisService
         return $row;
     }
 
-    private function autoDispatchEnabled(): bool
-    {
-        if (! (bool) config('ai.auto_dispatch', true)) {
-            return false;
-        }
-
-        return filled(config('azure_openai.uri')) && filled(config('azure_openai.api_key'));
-    }
-
-    private function queueName(): string
-    {
-        return (string) config('ai.queue', 'default');
-    }
-
     public function markProcessing(Analysis $row): void
     {
         $row->update([
@@ -113,5 +97,17 @@ class AnalysisService
             'status' => AnalysisStatus::Failed,
             'error' => $error,
         ]);
+    }
+
+    private function autoDispatchEnabled(): bool
+    {
+        return (bool) config('ai.auto_dispatch', true)
+            && filled(config('azure_openai.uri'))
+            && filled(config('azure_openai.api_key'));
+    }
+
+    private function queueName(): string
+    {
+        return (string) config('ai.queue', 'default');
     }
 }

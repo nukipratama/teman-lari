@@ -17,6 +17,13 @@ use Inertia\Response;
 
 class RunController extends Controller
 {
+    private const array RUN_INSIGHT_TYPES = [
+        AnalysisType::PostRunSpeech,
+        AnalysisType::RunInsightTechnical,
+        AnalysisType::RunInsightSplits,
+        AnalysisType::RunInsightZones,
+    ];
+
     public function index(Request $request): Response
     {
         /** @var User $user */
@@ -51,12 +58,7 @@ class RunController extends Controller
         $analyses = Analysis::query()
             ->where('subject_type', Activity::class)
             ->where('subject_id', $activity->id)
-            ->whereIn('analysis_type', [
-                AnalysisType::PostRunSpeech,
-                AnalysisType::RunInsightTechnical,
-                AnalysisType::RunInsightSplits,
-                AnalysisType::RunInsightZones,
-            ])
+            ->whereIn('analysis_type', self::RUN_INSIGHT_TYPES)
             ->get()
             ->keyBy(fn (Analysis $row): string => $row->analysis_type->value);
 

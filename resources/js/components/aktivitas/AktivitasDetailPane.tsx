@@ -56,7 +56,6 @@ interface AktivitasDetailPaneProps {
     insightZones: AnalysisPayload;
     pastYou: PastYouMatch | null;
     inertiaReloadProps?: string[];
-    showHeader?: boolean;
 }
 
 const DEFAULT_RELOAD_PROPS = ['speechAnalysis', 'insightTechnical', 'insightSplits', 'insightZones'];
@@ -72,7 +71,6 @@ export default function AktivitasDetailPane({
     insightZones,
     pastYou,
     inertiaReloadProps = DEFAULT_RELOAD_PROPS,
-    showHeader = true,
 }: Readonly<AktivitasDetailPaneProps>) {
     const summary = (detail.stream_summary ?? {}) as Record<string, unknown>;
     const zonePct = (summary.zone_pct as ZonePct | undefined) ?? {};
@@ -124,23 +122,21 @@ export default function AktivitasDetailPane({
 
     return (
         <div className="space-y-6">
-            {showHeader && (
-                <div className="grid gap-4 lg:grid-cols-5 lg:items-stretch">
-                    <div className="lg:col-span-2">
-                        <DetailHeader detail={detail} />
-                    </div>
-                    <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:col-span-3">
-                        <KpiTile label="Jarak" value={km} sub="km" />
-                        <KpiTile label="Pace" value={paceLabel} sub="per km" />
-                        <KpiTile label="Durasi" value={durationLabel} sub="moving" />
-                        <KpiTile
-                            label="TRIMP"
-                            value={detail.trimp_edwards != null ? Math.round(detail.trimp_edwards) : '—'}
-                            sub="Edwards"
-                        />
-                    </div>
+            <div className="grid gap-4 lg:grid-cols-5 lg:items-stretch">
+                <div className="lg:col-span-2">
+                    <DetailHeader detail={detail} />
                 </div>
-            )}
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:col-span-3">
+                    <KpiTile label="Jarak" value={km} sub="km" />
+                    <KpiTile label="Pace" value={paceLabel} sub="per km" />
+                    <KpiTile label="Durasi" value={durationLabel} sub="moving" />
+                    <KpiTile
+                        label="TRIMP"
+                        value={detail.trimp_edwards != null ? Math.round(detail.trimp_edwards) : '—'}
+                        sub="Edwards"
+                    />
+                </div>
+            </div>
 
             <div className="grid items-start gap-6 lg:grid-cols-5">
                 <div className="space-y-6 lg:col-span-2">

@@ -4,18 +4,10 @@ export type TimeOfDay = 'dawn' | 'morning' | 'day' | 'dusk' | 'night';
 
 export function timeOfDayFor(date: Date): TimeOfDay {
     const hour = date.getHours();
-    if (hour >= 4 && hour < 7) {
-        return 'dawn';
-    }
-    if (hour >= 7 && hour < 10) {
-        return 'morning';
-    }
-    if (hour >= 10 && hour < 17) {
-        return 'day';
-    }
-    if (hour >= 17 && hour < 20) {
-        return 'dusk';
-    }
+    if (hour >= 4 && hour < 7) return 'dawn';
+    if (hour >= 7 && hour < 10) return 'morning';
+    if (hour >= 10 && hour < 17) return 'day';
+    if (hour >= 17 && hour < 20) return 'dusk';
     return 'night';
 }
 
@@ -26,23 +18,18 @@ export function useDawnShift(): TimeOfDay {
     const [tod, setTod] = useState<TimeOfDay>(() => timeOfDayFor(new Date()));
 
     useEffect(() => {
-        const interval = window.setInterval(() => {
+        document.body.dataset.timeOfDay = tod;
+    }, [tod]);
+
+    useEffect(() => {
+        const interval = globalThis.setInterval(() => {
             setTod((prev) => {
                 const next = timeOfDayFor(new Date());
                 return prev === next ? prev : next;
             });
         }, 5 * 60 * 1000);
-        return () => window.clearInterval(interval);
-    }, []);
-
-    // Write the attribute on every change; only clear it on unmount so
-    // long-lived sessions don't briefly drop the attribute on each tick.
-    useEffect(() => {
-        document.body.dataset.timeOfDay = tod;
-    }, [tod]);
-
-    useEffect(() => {
         return () => {
+            globalThis.clearInterval(interval);
             delete document.body.dataset.timeOfDay;
         };
     }, []);

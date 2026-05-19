@@ -13,13 +13,14 @@ interface TriggerResult {
     trigger: () => Promise<void>;
 }
 
+function csrfToken(): string {
+    return document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ?? '';
+}
+
 /**
  * POST `/api/analyses/{type}/{subjectId}/trigger?discriminator=...` to enqueue
  * (or re-enqueue) an analysis. Optimistically flips local status to `queued`
- * while the request is in flight; falls back to `failed` if the request errors.
- *
- * Inertia partial reload happens via `router.reload({ only: [...] })` so the
- * caller's page can refetch just the props it cares about.
+ * while the request is in flight; falls back to `failed` on error.
  */
 export function useAnalysisTrigger(
     payload: AnalysisPayload,
@@ -36,11 +37,13 @@ export function useAnalysisTrigger(
         setError(null);
         setStatus('queued');
 
-        const url = `/api/analyses/${payload.type}/${payload.subject_id}/trigger`;
-        const query = payload.discriminator ? `?discriminator=${encodeURIComponent(payload.discriminator)}` : '';
+        const base = `/api/analyses/${payload.type}/${payload.subject_id}/trigger`;
+        const url = payload.discriminator
+            ? `${base}?discriminator=${encodeURIComponent(payload.discriminator)}`
+            : base;
 
         try {
-            const response = await fetch(url + query, {
+            const response = await fetch(url, {
                 method: 'POST',
                 credentials: 'same-origin',
                 headers: {
@@ -70,9 +73,4 @@ export function useAnalysisTrigger(
     }, [pending, payload.type, payload.subject_id, payload.discriminator, inertiaReloadProps, options]);
 
     return { status, pending, error, trigger };
-}
-
-function csrfToken(): string {
-    const meta = document.querySelector('meta[name="csrf-token"]');
-    return meta?.getAttribute('content') ?? '';
 }

@@ -133,33 +133,27 @@ function BriefingPending({ headline }: Readonly<{ headline: AnalysisPayload }>) 
     );
 }
 
+const VIBE_RULES: Record<string, string> = {
+    pumped: 'border-l-brand-500',
+    fresh: 'border-l-brand-500',
+    bouncy: 'border-l-brand-500',
+    cooked: 'border-l-mood-cooked',
+    stretched_thin: 'border-l-mood-cooked',
+    worn_down: 'border-l-accent-500',
+    hibernating: 'border-l-mood-hibernate',
+};
+
 function vibeLeftRule(state: string): string {
-    switch (state) {
-        case 'pumped':
-        case 'fresh':
-        case 'bouncy':
-            return 'border-l-brand-500';
-        case 'cooked':
-        case 'stretched_thin':
-            return 'border-l-mood-cooked';
-        case 'worn_down':
-            return 'border-l-accent-500';
-        case 'hibernating':
-            return 'border-l-mood-hibernate';
-        default:
-            return 'border-l-mood-spinning';
-    }
+    return VIBE_RULES[state] ?? 'border-l-mood-spinning';
 }
 
+const RECOVERY_CHIP: Record<RecoveryTone, string> = {
+    positive: 'bg-mood-bouncy/15 text-mood-bouncy',
+    warning: 'bg-mood-glow/15 text-mood-glow',
+    alert: 'bg-mood-cooked/15 text-mood-cooked',
+    neutral: 'bg-surface-elev/70 text-ink',
+};
+
 function recoveryChipClass(tone: RecoveryTone): string {
-    switch (tone) {
-        case 'positive':
-            return 'bg-mood-bouncy/15 text-mood-bouncy';
-        case 'warning':
-            return 'bg-mood-glow/15 text-mood-glow';
-        case 'alert':
-            return 'bg-mood-cooked/15 text-mood-cooked';
-        default:
-            return 'bg-surface-elev/70 text-ink';
-    }
+    return RECOVERY_CHIP[tone];
 }

@@ -1,4 +1,5 @@
 import { Icon } from '@iconify/react';
+import { cn } from '@/lib/cn';
 
 export type UnavailableNoteSize = 'sm' | 'md';
 
@@ -15,10 +16,10 @@ const SIZE_CLASSES: Record<UnavailableNoteSize, string> = {
 export default function UnavailableNote({
     message = 'Narasi Temari belum tersedia, coba lagi nanti.',
     size = 'md',
-}: Props) {
+}: Readonly<Props>) {
     return (
         <span
-            className={`inline-flex items-center rounded-full bg-surface-sunken text-ink-meta ${SIZE_CLASSES[size]}`}
+            className={cn('inline-flex items-center rounded-full bg-surface-sunken text-ink-meta', SIZE_CLASSES[size])}
             role="status"
         >
             <Icon icon="mdi:clock-alert-outline" aria-hidden />

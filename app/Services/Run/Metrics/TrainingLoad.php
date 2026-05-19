@@ -108,17 +108,12 @@ class TrainingLoad
             default => 20.0,
         };
 
-        if ($form > $threshold) {
-            return 'fresh';
-        }
-        if ($form > -$threshold) {
-            return 'optimal';
-        }
-        if ($form > -$threshold * 2) {
-            return 'fatigued';
-        }
-
-        return 'overreaching';
+        return match (true) {
+            $form > $threshold => 'fresh',
+            $form > -$threshold => 'optimal',
+            $form > -$threshold * 2 => 'fatigued',
+            default => 'overreaching',
+        };
     }
 
     /**
@@ -152,13 +147,11 @@ class TrainingLoad
      */
     private function weekStats(array $dailyTrimp, Carbon $today): array
     {
-        $cutoff = $today->copy()->subDays(6)->toDateString();
         $week = [];
         for ($i = 6; $i >= 0; $i--) {
             $date = $today->copy()->subDays($i)->toDateString();
             $week[] = $dailyTrimp[$date] ?? 0.0;
         }
-        unset($cutoff);
 
         $weekly = array_sum($week);
         if ($weekly <= 0) {

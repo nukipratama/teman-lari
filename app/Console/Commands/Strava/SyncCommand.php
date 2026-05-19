@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace App\Console\Commands\Strava;
 
-use Illuminate\Database\Eloquent\Collection;
 use App\Models\User;
 use App\Services\Run\Ingest\SyncOrchestrator;
 use Illuminate\Console\Attributes\Description;
 use Illuminate\Console\Attributes\Signature;
 use Illuminate\Console\Command;
+use Illuminate\Database\Eloquent\Collection;
 
 #[Signature('strava:sync {--user= : Sync only this user id; otherwise all connected users}')]
 #[Description('Fetch new Strava activities and queue them for ingestion.')]
@@ -26,7 +26,7 @@ class SyncCommand extends Command
 
         foreach ($users as $user) {
             $queued = $orchestrator->syncUser($user);
-            $this->line(sprintf('user %d: %d new activities queued', $user->id, $queued));
+            $this->line("user {$user->id}: {$queued} new activities queued");
         }
 
         return self::SUCCESS;
@@ -37,16 +37,10 @@ class SyncCommand extends Command
      */
     private function resolveUsers(): Collection
     {
-        $userIdOption = $this->option('user');
-
-        $query = User::query()
+        return User::query()
             ->whereHas('stravaConnection')
-            ->with('stravaConnection');
-
-        if ($userIdOption !== null) {
-            $query->whereKey($userIdOption);
-        }
-
-        return $query->get();
+            ->with('stravaConnection')
+            ->when($this->option('user'), fn ($query, $userId) => $query->whereKey($userId))
+            ->get();
     }
 }

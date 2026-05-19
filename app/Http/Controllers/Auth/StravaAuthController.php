@@ -44,9 +44,7 @@ class StravaAuthController extends Controller
             ]);
         }
 
-        $user = $this->upsertUser($stravaUser);
-
-        Auth::login($user, remember: true);
+        Auth::login($this->upsertUser($stravaUser), remember: true);
 
         return redirect()->intended(route('dashboard'));
     }
@@ -69,7 +67,6 @@ class StravaAuthController extends Controller
 
     private function upsertUser(SocialiteUser $stravaUser): User
     {
-        $athleteId = $stravaUser->getId();
         $userAttributes = [
             'name' => $stravaUser->getName() ?: 'Strava Athlete',
             'email' => $stravaUser->getEmail(),
@@ -82,7 +79,7 @@ class StravaAuthController extends Controller
             'scopes' => implode(',', self::SCOPES),
         ];
 
-        $connection = StravaConnection::where('strava_athlete_id', $athleteId)->first();
+        $connection = StravaConnection::where('strava_athlete_id', $stravaUser->getId())->first();
 
         if ($connection !== null) {
             $connection->user->fill($userAttributes)->save();
@@ -93,7 +90,7 @@ class StravaAuthController extends Controller
 
         $user = User::create($userAttributes);
         $user->stravaConnection()->create([
-            'strava_athlete_id' => $athleteId,
+            'strava_athlete_id' => $stravaUser->getId(),
             ...$connectionAttributes,
         ]);
 

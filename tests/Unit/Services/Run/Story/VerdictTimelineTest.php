@@ -178,3 +178,17 @@ it('does not leak verdicts across users', function (): void {
 
     expect(app(VerdictTimeline::class)->recent($b))->toBe([]);
 });
+
+it('maps each mood to a face emoji via the private helper', function (string $mood, string $face): void {
+    $method = new ReflectionMethod(VerdictTimeline::class, 'moodFace');
+
+    expect($method->invoke(app(VerdictTimeline::class), $mood))->toBe($face);
+})->with([
+    [Temari::MOOD_GLOW, '✨'],
+    [Temari::MOOD_BOUNCY, '🦘'],
+    [Temari::MOOD_WOBBLE, '🥵'],
+    [Temari::MOOD_SQUISHED, '🍳'],
+    [Temari::MOOD_SPINNING, '💫'],
+    [Temari::MOOD_DIM, '🌧️'],
+    ['unknown_mood', '🌧️'],
+]);

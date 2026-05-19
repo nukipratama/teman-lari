@@ -1,6 +1,5 @@
 import { Link } from '@inertiajs/react';
 import { Icon } from '@iconify/react';
-import type { ReactNode } from 'react';
 import { cn } from '@/lib/cn';
 import { formatIdDate } from '@/lib/pace';
 
@@ -22,6 +21,7 @@ interface PastYouStripProps {
 }
 
 const CARD_BASE = 'block rounded-2xl border border-line bg-surface-elev p-5 dark:border-line-dark dark:bg-surface-dark-elev';
+const HEADING_CLASS = 'text-xs font-semibold uppercase tracking-wider text-ink-meta dark:text-ink-meta-dark';
 
 export default function PastYouStrip({ match, currentDistance, className }: Readonly<PastYouStripProps>) {
     const distanceLabel = currentDistance ? `${(currentDistance / 1000).toFixed(1)} km` : 'jarak ini';
@@ -29,17 +29,18 @@ export default function PastYouStrip({ match, currentDistance, className }: Read
     if (match === null) {
         return (
             <div className={cn(CARD_BASE, className)}>
-                <Heading />
+                <h3 className={HEADING_CLASS}>Kamu vs Kamu Dulu</h3>
                 <p className="mt-2 text-sm text-ink dark:text-ink-dark">Pertama kali di {distanceLabel}!</p>
             </div>
         );
     }
 
+    const linkable = match.past.activity_id != null;
     const body = (
         <>
             <div className="flex items-start justify-between gap-3">
-                <Heading />
-                {match.past.activity_id != null && (
+                <h3 className={HEADING_CLASS}>Kamu vs Kamu Dulu</h3>
+                {linkable && (
                     <Icon icon="mdi:arrow-top-right" width={16} height={16} aria-hidden className="text-ink-meta" />
                 )}
             </div>
@@ -47,12 +48,12 @@ export default function PastYouStrip({ match, currentDistance, className }: Read
                 vs kamu <span className="font-semibold">{match.days_ago} hari lalu</span> di {distanceLabel}
             </p>
             <div className="mt-3 flex flex-wrap gap-x-6 gap-y-2 text-sm">
-                <span className={cn('font-bold tabular-nums', paceTone(match.pace_diff_sec))}>
+                <span className={cn('font-bold tabular-nums', diffTone(match.pace_diff_sec, 'pace'))}>
                     {Math.abs(Math.round(match.pace_diff_sec))} detik/km{' '}
                     {match.pace_diff_sec > 0 ? 'lebih cepat' : 'lebih lambat'}
                 </span>
                 {match.hr_diff_bpm !== null && (
-                    <span className={cn('font-bold tabular-nums', hrTone(match.hr_diff_bpm))}>
+                    <span className={cn('font-bold tabular-nums', diffTone(match.hr_diff_bpm, 'hr'))}>
                         {Math.abs(Math.round(match.hr_diff_bpm))} bpm {match.hr_diff_bpm < 0 ? 'lebih rendah' : 'lebih tinggi'}
                     </span>
                 )}
@@ -66,7 +67,7 @@ export default function PastYouStrip({ match, currentDistance, className }: Read
         </>
     );
 
-    if (match.past.activity_id != null) {
+    if (linkable) {
         return (
             <Link
                 href={`/aktivitas/${match.past.activity_id}`}
@@ -80,18 +81,8 @@ export default function PastYouStrip({ match, currentDistance, className }: Read
     return <div className={cn(CARD_BASE, className)}>{body}</div>;
 }
 
-function Heading(): ReactNode {
-    return (
-        <h3 className="text-xs font-semibold uppercase tracking-wider text-ink-meta dark:text-ink-meta-dark">
-            Kamu vs Kamu Dulu
-        </h3>
-    );
-}
-
-function paceTone(diff: number): string {
-    return diff > 0 ? 'text-mood-bouncy' : 'text-mood-cooked';
-}
-
-function hrTone(diff: number): string {
-    return diff < 0 ? 'text-mood-bouncy' : 'text-mood-cooked';
+// Pace: positive diff = faster (good); HR: negative diff = lower (good).
+function diffTone(diff: number, kind: 'pace' | 'hr'): string {
+    const good = kind === 'pace' ? diff > 0 : diff < 0;
+    return good ? 'text-mood-bouncy' : 'text-mood-cooked';
 }

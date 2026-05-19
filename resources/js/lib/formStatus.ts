@@ -1,30 +1,25 @@
 import type { FormStatus, Tone } from '@/types/inertia';
 
 // Mirrors App\Services\Run\Story\FormStatus::label/tone.
+
+const LABELS: Record<FormStatus, string> = {
+    fresh: 'Lagi seger',
+    optimal: 'Pas banget',
+    fatigued: 'Mulai capek',
+    overreaching: 'Kelewatan',
+};
+
+const TONES: Record<FormStatus, Tone> = {
+    fresh: 'positive',
+    optimal: 'neutral',
+    fatigued: 'warning',
+    overreaching: 'alert',
+};
+
 export function formStatusLabel(status: FormStatus | null): string {
-    switch (status) {
-        case 'fresh':
-            return 'Lagi seger';
-        case 'optimal':
-            return 'Pas banget';
-        case 'fatigued':
-            return 'Mulai capek';
-        case 'overreaching':
-            return 'Kelewatan';
-        default:
-            return '—';
-    }
+    return status === null ? '—' : LABELS[status];
 }
 
 export function formStatusTone(status: FormStatus | null): Tone {
-    switch (status) {
-        case 'fresh':
-            return 'positive';
-        case 'fatigued':
-            return 'warning';
-        case 'overreaching':
-            return 'alert';
-        default:
-            return 'neutral';
-    }
+    return status === null ? 'neutral' : TONES[status];
 }

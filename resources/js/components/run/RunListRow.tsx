@@ -49,24 +49,30 @@ export default function RunListRow({ detail, mood = null }: Readonly<RunListRowP
     );
 }
 
-function Cell({
-    value,
-    unit,
-    emphasize = false,
-    hideOnNarrow,
-    tone,
-}: Readonly<{
+interface CellProps {
     value: string | number;
     unit: string;
     emphasize?: boolean;
     hideOnNarrow?: 'sm' | 'md';
     tone?: 'alert';
-}>) {
-    const hideClass = hideOnNarrow === 'sm' ? 'hidden sm:block' : hideOnNarrow === 'md' ? 'hidden md:block' : '';
-    const toneClass = tone === 'alert' ? 'text-mood-cooked' : '';
+}
+
+const HIDE_CLASSES = {
+    sm: 'hidden sm:block',
+    md: 'hidden md:block',
+} as const;
+
+function Cell({ value, unit, emphasize = false, hideOnNarrow, tone }: Readonly<CellProps>) {
     return (
-        <div className={cn('text-center', hideClass)}>
-            <div className={cn(emphasize ? 'font-bold text-ink dark:text-ink-dark' : '', toneClass)}>{value}</div>
+        <div className={cn('text-center', hideOnNarrow && HIDE_CLASSES[hideOnNarrow])}>
+            <div
+                className={cn(
+                    emphasize && 'font-bold text-ink dark:text-ink-dark',
+                    tone === 'alert' && 'text-mood-cooked',
+                )}
+            >
+                {value}
+            </div>
             <div className="text-[10px] uppercase tracking-wide text-ink-meta dark:text-ink-meta-dark">{unit}</div>
         </div>
     );

@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 
 interface Particle {
@@ -29,17 +29,17 @@ interface ConfettiBurstProps {
  */
 export default function ConfettiBurst({ burstKey, count = 30, durationMs = 2500 }: Readonly<ConfettiBurstProps>) {
     const [visible, setVisible] = useState(false);
-    const [activeKey, setActiveKey] = useState<string | number | null>(null);
+    const activeKeyRef = useRef<string | number | null>(null);
     const reduced = useReducedMotion();
 
     useEffect(() => {
-        if (burstKey === null || burstKey === activeKey) return;
-        setActiveKey(burstKey);
+        if (burstKey === null || burstKey === activeKeyRef.current) return;
+        activeKeyRef.current = burstKey;
         if (reduced) return;
         setVisible(true);
         const t = globalThis.setTimeout(() => setVisible(false), durationMs);
         return () => globalThis.clearTimeout(t);
-    }, [burstKey, activeKey, durationMs, reduced]);
+    }, [burstKey, durationMs, reduced]);
 
     const particles = useMemo<Particle[]>(() => {
         if (!visible) return [];

@@ -18,16 +18,18 @@ interface Options {
     enabled?: boolean;
 }
 
+function canTrackGaze(): boolean {
+    if (typeof globalThis.matchMedia !== 'function') return false;
+    if (globalThis.matchMedia('(prefers-reduced-motion: reduce)').matches) return false;
+    return globalThis.matchMedia('(pointer: fine)').matches;
+}
+
 /**
  * Tracks the cursor's position relative to the centre of the referenced
  * element and returns a normalised `[-1, 1]` gaze vector. Used to drive
  * mascot eye-tracking. Returns `{x: 0, y: 0}` on touch-only devices, when
  * the cursor is outside `range + falloff`, or when `prefers-reduced-motion`
  * is set.
- *
- * Listens at the document level so the gaze updates even when the mouse is
- * not over the mascot — that's the whole point (eyes turn *toward* the
- * cursor as it approaches).
  */
 export function useGaze(ref: RefObject<HTMLElement | null>, options: Options = {}): Gaze {
     const { range = 220, falloff = 160, enabled = true } = options;
@@ -36,14 +38,7 @@ export function useGaze(ref: RefObject<HTMLElement | null>, options: Options = {
     const latestRef = useRef<MouseEvent | null>(null);
 
     useEffect(() => {
-        if (!enabled) return;
-        if (typeof window === 'undefined') return;
-        // Honour reduced-motion: no live tracking, stay neutral.
-        if (globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;
-        // Pointer-fine check filters out touch-only devices where there's no
-        // ambient cursor to track.
-        if (!globalThis.matchMedia?.('(pointer: fine)').matches) return;
-
+        if (!enabled || !canTrackGaze()) return;
         const el = ref.current;
         if (el === null) return;
 
@@ -56,15 +51,16 @@ export function useGaze(ref: RefObject<HTMLElement | null>, options: Options = {
             const dx = e.clientX - cx;
             const dy = e.clientY - cy;
             const dist = Math.hypot(dx, dy);
+            if (dist === 0) {
+                setGaze((prev) => (prev.x === 0 && prev.y === 0 ? prev : ZERO));
+                return;
+            }
 
-            let strength = 1;
-            if (dist > range) strength = Math.max(0, 1 - (dist - range) / falloff);
-
-            // Quantize to 2 decimals so sub-pixel cursor jitter doesn't
-            // produce a unique `{x,y}` every frame — that was triggering a
-            // re-render of the whole mascot tree on each mousemove.
-            const nx = dist === 0 ? 0 : Math.round((dx / dist) * strength * 100) / 100;
-            const ny = dist === 0 ? 0 : Math.round((dy / dist) * strength * 100) / 100;
+            const strength = dist > range ? Math.max(0, 1 - (dist - range) / falloff) : 1;
+            // Quantize to 2 decimals so sub-pixel cursor jitter doesn't trigger
+            // a re-render of the whole mascot tree on each mousemove.
+            const nx = Math.round((dx / dist) * strength * 100) / 100;
+            const ny = Math.round((dy / dist) * strength * 100) / 100;
             setGaze((prev) => (prev.x === nx && prev.y === ny ? prev : { x: nx, y: ny }));
         };
 

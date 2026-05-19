@@ -9,7 +9,6 @@ use App\Models\AI\Analysis;
 use App\Models\User;
 use App\Services\AI\AnalysisType;
 use App\Services\AI\Narrators\BriefingNarrator;
-use Illuminate\Support\Carbon;
 use Override;
 
 class AnalyzeBriefingJob extends AnalyzeAbstractJob
@@ -22,10 +21,7 @@ class AnalyzeBriefingJob extends AnalyzeAbstractJob
             throw new UnavailableException("User {$row->subject_id} not found");
         }
 
-        $asOf = $row->discriminator !== null
-            ? Carbon::parse($row->discriminator)
-            : Carbon::today();
-
+        $asOf = $this->discriminatorDate($row);
         $narrator = app(BriefingNarrator::class);
         $cacheKey = sprintf('briefing-llm:%d:%s', $user->id, $asOf->toDateString());
 
