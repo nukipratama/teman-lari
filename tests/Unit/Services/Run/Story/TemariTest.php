@@ -166,6 +166,19 @@ it('maps each mood to its public accessory token', function (): void {
         ->and(Temari::accessoryForMoodPublic(Temari::MOOD_SQUISHED))->toBeNull();
 });
 
+it('maps each vibe to a mood', function (): void {
+    $temari = app(Temari::class);
+
+    expect($temari->moodForVibe(Vibe::PUMPED))->toBe(Temari::MOOD_GLOW)
+        ->and($temari->moodForVibe(Vibe::FRESH))->toBe(Temari::MOOD_GLOW)
+        ->and($temari->moodForVibe(Vibe::BOUNCY))->toBe(Temari::MOOD_BOUNCY)
+        ->and($temari->moodForVibe(Vibe::WORN_DOWN))->toBe(Temari::MOOD_WOBBLE)
+        ->and($temari->moodForVibe(Vibe::COOKED))->toBe(Temari::MOOD_SQUISHED)
+        ->and($temari->moodForVibe(Vibe::STRETCHED_THIN))->toBe(Temari::MOOD_SPINNING)
+        ->and($temari->moodForVibe(Vibe::HIBERNATING))->toBe(Temari::MOOD_DIM)
+        ->and($temari->moodForVibe('unknown'))->toBe(Temari::MOOD_DIM);
+});
+
 it('picks bouncy mood when the run had a negative split', function (): void {
     $activity = Activity::factory()->create();
     $detail = ActivityDetail::factory()->for($activity)->create([

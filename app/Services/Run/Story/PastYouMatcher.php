@@ -89,16 +89,15 @@ class PastYouMatcher
         $currentKm = $currentDistance / 1000;
 
         foreach ($candidates as $past) {
+            // The SQL above filters distance > 0 AND moving_time > 0, so
+            // paceSecPerKm cannot return null here — assert narrows for PHPStan.
             $pastPace = $this->paceSecPerKm($past);
-            if ($pastPace === null) {
-                continue;
-            }
+            assert($pastPace !== null);
+
             if (! $this->isWithinTempTolerance($detail, $past)) {
                 continue;
             }
 
-            // The SQL above filters whereNotNull('start_date_local') — assert
-            // narrows the type for PHPStan without a misleading runtime guard.
             assert($past->start_date_local !== null);
 
             $paceDiffSec = $pastPace - $currentPaceSec;
