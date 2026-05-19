@@ -144,11 +144,13 @@ class DemoRunSeeder
 
     private function dispatchPendingAnalyses(User $user): int
     {
-        $activityIds = Activity::query()->where('user_id', $user->id)->pluck('id');
-        $weeklyIds = WeeklySnapshot::query()->where('user_id', $user->id)->pluck('id');
-        $prIds = PersonalRecord::query()->where('user_id', $user->id)->pluck('id');
-        $cardIds = RunCard::query()->whereIn('activity_id', $activityIds)->pluck('id');
+        $activityIds = Activity::query()->where('user_id', $user->id)->pluck('id')->all();
+        $weeklyIds = WeeklySnapshot::query()->where('user_id', $user->id)->pluck('id')->all();
+        $prIds = PersonalRecord::query()->where('user_id', $user->id)->pluck('id')->all();
+        $cardIds = RunCard::query()->whereIn('activity_id', $activityIds)->pluck('id')->all();
 
+        // 1) Re-dispatch any analysis that was created during seeding but
+        // left Pending (e.g. PostRunSpeech via Temari).
         $pending = Analysis::query()
             ->where('status', AnalysisStatus::Pending)
             ->where(function ($q) use ($user, $activityIds, $weeklyIds, $prIds, $cardIds): void {
@@ -164,6 +166,9 @@ class DemoRunSeeder
             })
             ->get();
 
+        $count = 0;
+        $stagger = 10;
+
         foreach ($pending as $row) {
             $this->analysisService->request(
                 subjectOrType: $row->subject_type,
@@ -171,10 +176,53 @@ class DemoRunSeeder
                 type: $row->analysis_type,
                 discriminator: $row->discriminator,
                 force: true,
+                delaySeconds: $count * $stagger,
             );
+            $count++;
         }
 
-        return $pending->count();
+        // 2) Pre-warm insights that are normally created lazily on the UI side
+        // (RunInsight technical/splits/zones per activity, CardFlavor per card,
+        // PrContext per PR). request() is idempotent — existing rows are skipped.
+        $perActivityTypes = [
+            [Activity::class, AnalysisType::RunInsightTechnical],
+            [Activity::class, AnalysisType::RunInsightSplits],
+            [Activity::class, AnalysisType::RunInsightZones],
+        ];
+        foreach ($activityIds as $activityId) {
+            foreach ($perActivityTypes as [$subjectType, $type]) {
+                $this->analysisService->request(
+                    subjectOrType: $subjectType,
+                    subjectId: $activityId,
+                    type: $type,
+                    force: true,
+                    delaySeconds: $count * $stagger,
+                );
+                $count++;
+            }
+        }
+        foreach ($cardIds as $cardId) {
+            $this->analysisService->request(
+                subjectOrType: RunCard::class,
+                subjectId: $cardId,
+                type: AnalysisType::CardFlavor,
+                force: true,
+                delaySeconds: $count * $stagger,
+            );
+            $count++;
+        }
+        foreach ($prIds as $prId) {
+            $this->analysisService->request(
+                subjectOrType: PersonalRecord::class,
+                subjectId: $prId,
+                type: AnalysisType::PrContext,
+                force: true,
+                delaySeconds: $count * $stagger,
+            );
+            $count++;
+        }
+
+        return $count;
     }
 
     private function ensureDemoUser(Closure $log): User
