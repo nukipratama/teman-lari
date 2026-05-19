@@ -47,29 +47,18 @@ describe('ConfettiBurst', () => {
         expect(container.querySelectorAll('span').length).toBe(7);
     });
 
-    it('invokes the scheduled unmount callback', async () => {
+    it('auto-unmounts particles after durationMs', () => {
         vi.mocked(useFmReducedMotion).mockReturnValue(false);
-        const captured: Array<() => void> = [];
-        const realSetTimeout = globalThis.setTimeout;
-        const spy = vi.spyOn(globalThis, 'setTimeout').mockImplementation(((
-            handler: TimerHandler,
-            timeout?: number,
-        ) => {
-            if (typeof handler === 'function') captured.push(handler as () => void);
-            return realSetTimeout(() => {}, timeout);
-        }) as unknown as typeof globalThis.setTimeout);
-
+        vi.useFakeTimers();
         try {
-            const { container } = render(<ConfettiBurst burstKey="z" count={1} durationMs={9999} />);
+            const { container } = render(<ConfettiBurst burstKey="z" count={1} durationMs={1000} />);
             expect(container.querySelectorAll('span').length).toBe(1);
-            const cb = captured.at(-1);
-            expect(cb).toBeTypeOf('function');
-            await act(async () => {
-                cb?.();
+            act(() => {
+                vi.advanceTimersByTime(1000);
             });
             expect(container.firstChild).toBeNull();
         } finally {
-            spy.mockRestore();
+            vi.useRealTimers();
         }
     });
 });
