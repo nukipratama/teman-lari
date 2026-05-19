@@ -100,6 +100,13 @@ it('DailyGreetingNarrator throws on missing speech key', function (): void {
     $narrator->generate($user, 'membara');
 })->throws(UnavailableException::class);
 
+it('DailyGreetingNarrator throws on non-JSON response', function (): void {
+    $user = User::factory()->create();
+    $azure = fakeAzureClient('not json');
+    $narrator = new DailyGreetingNarrator($azure);
+    $narrator->generate($user, 'membara');
+})->throws(UnavailableException::class, 'non-JSON');
+
 // ── RunInsightNarrator ────────────────────────────────────────────────
 
 it('RunInsightNarrator returns 3-string payload on valid JSON', function (): void {
@@ -122,6 +129,13 @@ it('RunInsightNarrator throws on missing keys', function (): void {
     $narrator = new RunInsightNarrator($azure);
     $narrator->generate($a, $d);
 })->throws(UnavailableException::class);
+
+it('RunInsightNarrator throws on non-JSON', function (): void {
+    ['activity' => $a, 'detail' => $d] = postRunFixture();
+    $azure = fakeAzureClient('not json');
+    $narrator = new RunInsightNarrator($azure);
+    $narrator->generate($a, $d);
+})->throws(UnavailableException::class, 'non-JSON');
 
 // ── WeeklyRecapNarrator ───────────────────────────────────────────────
 
@@ -147,6 +161,16 @@ it('WeeklyRecapNarrator throws on missing narrative key', function (): void {
     $narrator->generate($snap);
 })->throws(UnavailableException::class);
 
+it('WeeklyRecapNarrator throws on non-JSON', function (): void {
+    $user = User::factory()->create();
+    $snap = WeeklySnapshot::factory()->for($user)->create([
+        'week_ending' => Carbon::today()->endOfWeek()->toDateString(),
+    ]);
+    $azure = fakeAzureClient('not json');
+    $narrator = new WeeklyRecapNarrator($azure);
+    $narrator->generate($snap);
+})->throws(UnavailableException::class, 'non-JSON');
+
 // ── PrContextNarrator ─────────────────────────────────────────────────
 
 it('PrContextNarrator returns flavor on valid JSON', function (): void {
@@ -168,6 +192,14 @@ it('PrContextNarrator throws on missing flavor key', function (): void {
     $narrator->generate($pr);
 })->throws(UnavailableException::class);
 
+it('PrContextNarrator throws on non-JSON', function (): void {
+    $user = User::factory()->create();
+    $pr = PersonalRecord::factory()->for($user)->create();
+    $azure = fakeAzureClient('not json');
+    $narrator = new PrContextNarrator($azure);
+    $narrator->generate($pr);
+})->throws(UnavailableException::class, 'non-JSON');
+
 // ── TrendCaptionNarrator ──────────────────────────────────────────────
 
 it('TrendCaptionNarrator returns caption on valid JSON', function (): void {
@@ -188,6 +220,13 @@ it('TrendCaptionNarrator throws on missing caption key', function (): void {
     $narrator = new TrendCaptionNarrator($azure, app(TrainingLoad::class));
     $narrator->generate($user, Carbon::today());
 })->throws(UnavailableException::class);
+
+it('TrendCaptionNarrator throws on non-JSON', function (): void {
+    $user = User::factory()->create();
+    $azure = fakeAzureClient('not json');
+    $narrator = new TrendCaptionNarrator($azure, app(TrainingLoad::class));
+    $narrator->generate($user, Carbon::today());
+})->throws(UnavailableException::class, 'non-JSON');
 
 // ── CardFlavorNarrator ────────────────────────────────────────────────
 
@@ -221,3 +260,10 @@ it('CardFlavorNarrator throws on missing flavor key', function (): void {
     $narrator = new CardFlavorNarrator($azure);
     $narrator->generate($card);
 })->throws(UnavailableException::class);
+
+it('CardFlavorNarrator throws on non-JSON', function (): void {
+    $card = cardFixture();
+    $azure = fakeAzureClient('not json');
+    $narrator = new CardFlavorNarrator($azure);
+    $narrator->generate($card);
+})->throws(UnavailableException::class, 'non-JSON');

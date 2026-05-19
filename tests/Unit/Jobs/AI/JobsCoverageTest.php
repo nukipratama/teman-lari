@@ -267,3 +267,19 @@ it('AnalyzeDailyGreetingJob throws when user missing', function (): void {
     (new AnalyzeDailyGreetingJob($row->id))->handle(app(AnalysisService::class));
     expect($row->fresh()->status)->toBe(AnalysisStatus::Failed);
 });
+
+it('AnalyzeDailyGreetingJob falls back to today when discriminator is null', function (): void {
+    $user = User::factory()->create();
+    mockNarrator(DailyGreetingNarrator::class, 'today halo');
+    $row = rowOf(AnalysisType::DAILY_GREETING_SUBJECT_TYPE, $user->id, AnalysisType::DailyGreeting, null);
+    (new AnalyzeDailyGreetingJob($row->id))->handle(app(AnalysisService::class));
+    expect($row->fresh()->content)->toBe('today halo');
+});
+
+it('AnalyzeBriefingJob falls back to today when discriminator is null', function (): void {
+    $user = User::factory()->create();
+    mockNarrator(BriefingNarrator::class, ['headline' => 'H', 'suggestion' => 'S']);
+    $row = rowOf(BriefingComposer::SUBJECT_TYPE, $user->id, AnalysisType::BriefingHeadline, null);
+    (new AnalyzeBriefingJob($row->id))->handle(app(AnalysisService::class));
+    expect($row->fresh()->content)->toBe('H');
+});
