@@ -8,7 +8,6 @@ use App\Exceptions\AI\UnavailableException;
 use App\Models\AI\Analysis;
 use App\Models\User;
 use App\Services\AI\Narrators\TrendCaptionNarrator;
-use Illuminate\Support\Carbon;
 use Override;
 
 class AnalyzeTrendCaptionJob extends AnalyzeAbstractJob
@@ -21,10 +20,6 @@ class AnalyzeTrendCaptionJob extends AnalyzeAbstractJob
             throw new UnavailableException("User {$row->subject_id} not found");
         }
 
-        $asOf = $row->discriminator !== null
-            ? Carbon::parse($row->discriminator)
-            : Carbon::today();
-
-        return app(TrendCaptionNarrator::class)->generate($user, $asOf);
+        return app(TrendCaptionNarrator::class)->generate($user, $this->discriminatorDate($row));
     }
 }

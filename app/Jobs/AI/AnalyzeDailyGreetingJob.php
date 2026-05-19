@@ -9,7 +9,6 @@ use App\Models\AI\Analysis;
 use App\Models\User;
 use App\Services\AI\Narrators\DailyGreetingNarrator;
 use App\Services\Run\Story\Vibe;
-use Illuminate\Support\Carbon;
 use Override;
 
 class AnalyzeDailyGreetingJob extends AnalyzeAbstractJob
@@ -22,10 +21,7 @@ class AnalyzeDailyGreetingJob extends AnalyzeAbstractJob
             throw new UnavailableException("User {$row->subject_id} not found");
         }
 
-        $forDate = $row->discriminator !== null
-            ? Carbon::parse($row->discriminator)
-            : Carbon::today();
-        $vibeState = app(Vibe::class)->current($user, $forDate);
+        $vibeState = app(Vibe::class)->current($user, $this->discriminatorDate($row));
 
         return app(DailyGreetingNarrator::class)->generate($user, $vibeState);
     }

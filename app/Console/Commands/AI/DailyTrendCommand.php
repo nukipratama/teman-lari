@@ -19,33 +19,25 @@ class DailyTrendCommand extends Command
 {
     public function handle(AnalysisService $service): int
     {
-        $cutoff = Carbon::today()->subDays(7);
         $today = Carbon::today()->toDateString();
 
         $activeUserIds = Activity::query()
-            ->where('analyzed_at', '>=', $cutoff)
+            ->where('analyzed_at', '>=', Carbon::today()->subDays(7))
+            ->whereIn('user_id', User::query()->select('id'))
             ->distinct()
-            ->pluck('user_id')
-            ->all();
+            ->pluck('user_id');
 
-        $count = 0;
         foreach ($activeUserIds as $userId) {
-            $userIdInt = (int) $userId;
-            if (! User::query()->whereKey($userIdInt)->exists()) {
-                continue;
-            }
-
             $service->request(
                 subjectOrType: AnalysisType::TREND_CAPTION_SUBJECT_TYPE,
-                subjectId: $userIdInt,
+                subjectId: (int) $userId,
                 type: AnalysisType::TrendCaption,
                 discriminator: $today,
                 force: true,
             );
-            $count++;
         }
 
-        $this->info("Dispatched trend caption analysis for {$count} active users.");
+        $this->info("Dispatched trend caption analysis for {$activeUserIds->count()} active users.");
 
         return self::SUCCESS;
     }

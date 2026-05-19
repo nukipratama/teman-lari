@@ -5,12 +5,15 @@ declare(strict_types=1);
 namespace App\Jobs\AI;
 
 use App\Exceptions\AI\UnavailableException;
+use App\Models\Activity;
+use App\Models\ActivityDetail;
 use App\Models\AI\Analysis;
 use App\Services\AI\AnalysisService;
 use App\Services\AI\AnalysisStatus;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Queue\Middleware\RateLimited;
+use Illuminate\Support\Carbon;
 use Throwable;
 
 abstract class AnalyzeAbstractJob implements ShouldQueue
@@ -35,11 +38,7 @@ abstract class AnalyzeAbstractJob implements ShouldQueue
     final public function handle(AnalysisService $service): void
     {
         $row = Analysis::query()->find($this->analysisId);
-        if ($row === null) {
-            return;
-        }
-
-        if ($row->status === AnalysisStatus::Done) {
+        if ($row === null || $row->status === AnalysisStatus::Done) {
             return;
         }
 
@@ -48,11 +47,12 @@ abstract class AnalyzeAbstractJob implements ShouldQueue
         try {
             $content = $this->generateContent($row);
             $service->markDone($row, $content, $this->modelVersion());
-        } catch (UnavailableException $e) {
-            $service->markFailed($row, $e->getMessage());
         } catch (Throwable $e) {
             $service->markFailed($row, $e->getMessage());
-            throw $e;
+
+            if (! $e instanceof UnavailableException) {
+                throw $e;
+            }
         }
     }
 
@@ -63,5 +63,25 @@ abstract class AnalyzeAbstractJob implements ShouldQueue
         $deployment = config('azure_openai.deployment');
 
         return is_string($deployment) && $deployment !== '' ? $deployment : null;
+    }
+
+    protected function discriminatorDate(Analysis $row): Carbon
+    {
+        return $row->discriminator !== null
+            ? Carbon::parse($row->discriminator)
+            : Carbon::today();
+    }
+
+    /**
+     * @return array{Activity, ActivityDetail}
+     */
+    protected function loadAnalyzedActivity(Analysis $row): array
+    {
+        $activity = Activity::query()->with('detail')->find($row->subject_id);
+        if ($activity === null || $activity->detail === null) {
+            throw new UnavailableException("Activity {$row->subject_id} not analyzed yet");
+        }
+
+        return [$activity, $activity->detail];
     }
 }

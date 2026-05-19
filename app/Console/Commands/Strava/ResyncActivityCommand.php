@@ -16,10 +16,10 @@ class ResyncActivityCommand extends Command
 {
     public function handle(ActivityPipeline $pipeline): int
     {
-        /** @var Activity|null $activity */
-        $activity = Activity::query()->find($this->argument('activity'));
+        $activityId = $this->argument('activity');
+        $activity = Activity::query()->find($activityId);
         if ($activity === null) {
-            $this->error("Activity {$this->argument('activity')} not found.");
+            $this->error("Activity {$activityId} not found.");
 
             return self::FAILURE;
         }
