@@ -32,14 +32,15 @@ class CatatanController extends Controller
             ->get()
             ->keyBy('subject_id');
 
-        $payload = $snapshots->map(fn (WeeklySnapshot $row): array => array_merge($row->toArray(), [
+        $payload = $snapshots->map(fn (WeeklySnapshot $row): array => [
+            ...$row->toArray(),
             'recap_analysis' => Analysis::toPayload(
                 $analyses->get($row->id),
                 AnalysisType::WeeklyRecap,
                 WeeklySnapshot::class,
                 $row->id,
             ),
-        ]))->all();
+        ])->all();
 
         return Inertia::render('Catatan', [
             'snapshots' => $payload,

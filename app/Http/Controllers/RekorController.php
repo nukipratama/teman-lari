@@ -32,14 +32,15 @@ class RekorController extends Controller
             ->get()
             ->keyBy('subject_id');
 
-        $payload = $personalRecords->map(fn (PersonalRecord $row): array => array_merge($row->toArray(), [
+        $payload = $personalRecords->map(fn (PersonalRecord $row): array => [
+            ...$row->toArray(),
             'context_analysis' => Analysis::toPayload(
                 $analyses->get($row->id),
                 AnalysisType::PrContext,
                 PersonalRecord::class,
                 $row->id,
             ),
-        ]))->all();
+        ])->all();
 
         return Inertia::render('Rekor', [
             'personalRecords' => $payload,

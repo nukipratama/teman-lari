@@ -13,12 +13,25 @@ use App\Models\UserUnlock;
 use App\Models\WeeklySnapshot;
 use App\Services\AI\AnalysisStatus;
 use App\Services\AI\AnalysisType;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 use Override;
 
 class HandleInertiaRequests extends Middleware
 {
+    private const array IN_FLIGHT_STATUSES = [
+        AnalysisStatus::Pending,
+        AnalysisStatus::Queued,
+        AnalysisStatus::Processing,
+    ];
+
+    private const array USER_DAY_SUBJECT_TYPES = [
+        AnalysisType::BRIEFING_SUBJECT_TYPE,
+        AnalysisType::DAILY_GREETING_SUBJECT_TYPE,
+        AnalysisType::TREND_CAPTION_SUBJECT_TYPE,
+    ];
+
     protected $rootView = 'app';
 
     /**
@@ -65,43 +78,9 @@ class HandleInertiaRequests extends Middleware
             return ['pending' => 0, 'queued' => 0, 'processing' => 0];
         }
 
-        $userDaySubjectTypes = [
-            AnalysisType::BRIEFING_SUBJECT_TYPE,
-            AnalysisType::DAILY_GREETING_SUBJECT_TYPE,
-            AnalysisType::TREND_CAPTION_SUBJECT_TYPE,
-        ];
-
-        $base = Analysis::query()
-            ->whereIn('status', [AnalysisStatus::Pending, AnalysisStatus::Queued, AnalysisStatus::Processing])
-            ->where(function ($q) use ($user, $userDaySubjectTypes): void {
-                $q->where(function ($q2) use ($user, $userDaySubjectTypes): void {
-                    $q2->whereIn('subject_type', $userDaySubjectTypes)
-                        ->where('subject_id', $user->id);
-                })
-                    ->orWhere(function ($q2) use ($user): void {
-                        $q2->where('subject_type', Activity::class)
-                            ->whereIn('subject_id', Activity::query()->where('user_id', $user->id)->select('id'));
-                    })
-                    ->orWhere(function ($q2) use ($user): void {
-                        $q2->where('subject_type', PersonalRecord::class)
-                            ->whereIn('subject_id', PersonalRecord::query()->where('user_id', $user->id)->select('id'));
-                    })
-                    ->orWhere(function ($q2) use ($user): void {
-                        $q2->where('subject_type', WeeklySnapshot::class)
-                            ->whereIn('subject_id', WeeklySnapshot::query()->where('user_id', $user->id)->select('id'));
-                    })
-                    ->orWhere(function ($q2) use ($user): void {
-                        $q2->where('subject_type', RunCard::class)
-                            ->whereIn(
-                                'subject_id',
-                                RunCard::query()
-                                    ->whereHas('activity', fn ($a) => $a->where('user_id', $user->id))
-                                    ->select('id'),
-                            );
-                    });
-            });
-
-        $rows = (clone $base)
+        $rows = Analysis::query()
+            ->whereIn('status', self::IN_FLIGHT_STATUSES)
+            ->where(fn (Builder $q) => $this->scopeToUser($q, $user))
             ->selectRaw('status, COUNT(*) as c')
             ->groupBy('status')
             ->pluck('c', 'status');
@@ -111,5 +90,30 @@ class HandleInertiaRequests extends Middleware
             'queued' => (int) ($rows[AnalysisStatus::Queued->value] ?? 0),
             'processing' => (int) ($rows[AnalysisStatus::Processing->value] ?? 0),
         ];
+    }
+
+    /**
+     * @param  Builder<Analysis>  $query
+     */
+    private function scopeToUser(Builder $query, User $user): void
+    {
+        $userOwnedIds = [
+            Activity::class => Activity::query()->where('user_id', $user->id)->select('id'),
+            PersonalRecord::class => PersonalRecord::query()->where('user_id', $user->id)->select('id'),
+            WeeklySnapshot::class => WeeklySnapshot::query()->where('user_id', $user->id)->select('id'),
+            RunCard::class => RunCard::query()
+                ->whereHas('activity', fn ($a) => $a->where('user_id', $user->id))
+                ->select('id'),
+        ];
+
+        $query->where(fn (Builder $q) => $q
+            ->whereIn('subject_type', self::USER_DAY_SUBJECT_TYPES)
+            ->where('subject_id', $user->id));
+
+        foreach ($userOwnedIds as $subjectType => $idQuery) {
+            $query->orWhere(fn (Builder $q) => $q
+                ->where('subject_type', $subjectType)
+                ->whereIn('subject_id', $idQuery));
+        }
     }
 }
