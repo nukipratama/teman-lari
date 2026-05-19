@@ -186,14 +186,14 @@ it.each([
         // Charts are lazy-loaded; CI under coverage instrumentation can
         // take well past the 1s default to resolve the dynamic import.
         await waitFor(() => expect(screen.getByTestId('line-chart')).toBeInTheDocument(), {
-            timeout: 5000,
+            timeout: 10000,
         });
         await waitFor(() => expect(screen.getByTestId('bar-chart')).toBeInTheDocument(), {
-            timeout: 5000,
+            timeout: 10000,
         });
-    });
+    }, 20000);
 
-it('omits the hero week-volume KPI when snapshot is null', () => {
+    it('omits the hero week-volume KPI when snapshot is null', () => {
         // Volume now lives only in the hero header (no duplicate tile).
         // With snapshot=null the hero's "Minggu ini" block is skipped.
         render(
