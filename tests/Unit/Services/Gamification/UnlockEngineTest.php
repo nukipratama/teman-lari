@@ -120,9 +120,7 @@ it('grants weekly_streak_4 after four weekly snapshots with runs', function (): 
 it('flashes a toast payload to the session when a session is active', function (): void {
     Session::start();
     config()->set('temari_unlocks', [
-        'accessory' => [
-            'medal_first_pr' => ['name' => 'Medali Custom', 'icon' => 'mdi:trophy'],
-        ],
+        'accessory.medal_first_pr' => ['name' => 'Medali Custom', 'icon' => 'mdi:trophy'],
     ]);
 
     $user = User::factory()->create();
@@ -152,9 +150,7 @@ it('skips the flash when the unlock has no config entry', function (): void {
 it('falls back to the key + default icon when the config entry omits name and icon', function (): void {
     Session::start();
     config()->set('temari_unlocks', [
-        'accessory' => [
-            'medal_first_pr' => ['description' => 'x'],
-        ],
+        'accessory.medal_first_pr' => ['description' => 'x'],
     ]);
 
     $user = User::factory()->create();

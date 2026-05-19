@@ -67,7 +67,8 @@ class UnlockEngine
         // don't have one and would crash here.
         if (Session::isStarted()) {
             $firstKey = $new[0];
-            $def = config("temari_unlocks.{$firstKey}");
+            $catalog = config('temari_unlocks', []);
+            $def = is_array($catalog) ? ($catalog[$firstKey] ?? null) : null;
             if (is_array($def)) {
                 Session::flash('unlock', [
                     'unlock_key' => $firstKey,
