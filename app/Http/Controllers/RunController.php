@@ -9,7 +9,6 @@ use App\Models\Activity;
 use App\Models\AI\Analysis;
 use App\Models\StoryLine;
 use App\Models\User;
-use App\Services\AI\AnalysisService;
 use App\Services\AI\AnalysisStatus;
 use App\Services\AI\AnalysisType;
 use App\Services\Run\Story\PastYouMatcher;
@@ -82,7 +81,7 @@ class RunController extends Controller
         return $notes;
     }
 
-    public function show(Request $request, Activity $activity, PastYouMatcher $matcher, AnalysisService $analysisService): Response
+    public function show(Request $request, Activity $activity, PastYouMatcher $matcher): Response
     {
         /** @var User $user */
         $user = $request->user();
@@ -103,16 +102,6 @@ class RunController extends Controller
             ->whereIn('analysis_type', self::RUN_INSIGHT_TYPES)
             ->get()
             ->keyBy(fn (Analysis $row): string => $row->analysis_type->value);
-
-        // Auto-dispatch any insight that's missing or stuck in Pending/Failed
-        // so the page comes alive without the user clicking "Analisis sekarang".
-        foreach (self::RUN_INSIGHT_TYPES as $type) {
-            $row = $analyses->get($type->value);
-            if ($row === null || in_array($row->status, [AnalysisStatus::Pending, AnalysisStatus::Failed], strict: true)) {
-                $fresh = $analysisService->request(Activity::class, $activity->id, $type);
-                $analyses->put($type->value, $fresh);
-            }
-        }
 
         if ($detail->start_lat !== null && $detail->location_resolved_at === null) {
             ResolveActivityLocationJob::dispatch($detail->id);

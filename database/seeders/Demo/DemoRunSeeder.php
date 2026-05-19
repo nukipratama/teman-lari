@@ -7,12 +7,16 @@ namespace Database\Seeders\Demo;
 use App\Models\Activity;
 use App\Models\ActivityDetail;
 use App\Models\ActivityStream;
+use App\Models\AI\Analysis;
 use App\Models\PersonalRecord;
 use App\Models\RunCard;
 use App\Models\StoryLine;
 use App\Models\StravaConnection;
 use App\Models\User;
 use App\Models\WeeklySnapshot;
+use App\Services\AI\AnalysisService;
+use App\Services\AI\AnalysisStatus;
+use App\Services\AI\AnalysisType;
 use App\Services\Geo\PolylineEncoder;
 use App\Services\Run\Ingest\StreamAnalysis;
 use App\Services\Run\Metrics\PersonalRecords;
@@ -54,6 +58,7 @@ class DemoRunSeeder
         private readonly Temari $temari,
         private readonly Vibe $vibe,
         private readonly WeeklyAggregator $weeklyAggregator,
+        private readonly AnalysisService $analysisService,
         private readonly PolylineEncoder $polylineEncoder = new PolylineEncoder(),
     ) {
     }
@@ -128,10 +133,48 @@ class DemoRunSeeder
             $this->temari->dailyGreeting($user, $vibeState);
             $log("  Today's vibe: {$vibeState}");
 
+            $dispatched = $this->dispatchPendingAnalyses($user);
+            $log(sprintf('  %d AI analyses dispatched to Horizon (narasi akan muncul saat job selesai).', $dispatched));
+
             return $count;
         } finally {
             config(['ai.auto_dispatch' => $previousAutoDispatch]);
         }
+    }
+
+    private function dispatchPendingAnalyses(User $user): int
+    {
+        $activityIds = Activity::query()->where('user_id', $user->id)->pluck('id');
+        $weeklyIds = WeeklySnapshot::query()->where('user_id', $user->id)->pluck('id');
+        $prIds = PersonalRecord::query()->where('user_id', $user->id)->pluck('id');
+        $cardIds = RunCard::query()->whereIn('activity_id', $activityIds)->pluck('id');
+
+        $pending = Analysis::query()
+            ->where('status', AnalysisStatus::Pending)
+            ->where(function ($q) use ($user, $activityIds, $weeklyIds, $prIds, $cardIds): void {
+                $q->where(fn ($qq) => $qq->where('subject_type', Activity::class)->whereIn('subject_id', $activityIds))
+                    ->orWhere(fn ($qq) => $qq->where('subject_type', WeeklySnapshot::class)->whereIn('subject_id', $weeklyIds))
+                    ->orWhere(fn ($qq) => $qq->where('subject_type', PersonalRecord::class)->whereIn('subject_id', $prIds))
+                    ->orWhere(fn ($qq) => $qq->where('subject_type', RunCard::class)->whereIn('subject_id', $cardIds))
+                    ->orWhere(fn ($qq) => $qq->whereIn('subject_type', [
+                        AnalysisType::BRIEFING_SUBJECT_TYPE,
+                        AnalysisType::DAILY_GREETING_SUBJECT_TYPE,
+                        AnalysisType::TREND_CAPTION_SUBJECT_TYPE,
+                    ])->where('subject_id', $user->id));
+            })
+            ->get();
+
+        foreach ($pending as $row) {
+            $this->analysisService->request(
+                subjectOrType: $row->subject_type,
+                subjectId: $row->subject_id,
+                type: $row->analysis_type,
+                discriminator: $row->discriminator,
+                force: true,
+            );
+        }
+
+        return $pending->count();
     }
 
     private function ensureDemoUser(Closure $log): User
