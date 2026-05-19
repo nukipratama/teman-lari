@@ -24,6 +24,7 @@ class AnalysisService
         ?string $jobClass = null,
         ?string $discriminator = null,
         bool $force = false,
+        ?int $delaySeconds = null,
     ): Analysis {
         $subjectType = $subjectOrType instanceof Model ? $subjectOrType::class : $subjectOrType;
         $jobClass ??= $type->jobClass();
@@ -67,7 +68,11 @@ class AnalysisService
             ]);
         }
 
-        $this->bus->dispatch((new $jobClass($row->id))->onQueue($this->queueName()));
+        $job = (new $jobClass($row->id))->onQueue($this->queueName());
+        if ($delaySeconds !== null && $delaySeconds > 0) {
+            $job = $job->delay(Carbon::now()->addSeconds($delaySeconds));
+        }
+        $this->bus->dispatch($job);
 
         return $row;
     }

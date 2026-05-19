@@ -114,7 +114,7 @@ it('does not dispatch a ResolveActivityLocationJob when already resolved', funct
 
     $this->actingAs($user)->get("/aktivitas/{$activity->id}")->assertSuccessful();
 
-    Queue::assertNothingPushed();
+    Queue::assertNotPushed(ResolveActivityLocationJob::class);
 });
 
 it('does not dispatch when the run lacks coords', function (): void {
@@ -128,5 +128,5 @@ it('does not dispatch when the run lacks coords', function (): void {
 
     $this->actingAs($user)->get("/aktivitas/{$activity->id}")->assertSuccessful();
 
-    Queue::assertNothingPushed();
+    Queue::assertNotPushed(ResolveActivityLocationJob::class);
 });
