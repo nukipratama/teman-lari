@@ -7,9 +7,9 @@ namespace App\Support;
 use App\Models\User;
 
 /**
- * Shared predicate for the devtools gates (Horizon, Telescope, Pulse,
- * AI Usage). A user is considered an admin when their connected Strava
- * athlete id appears in `config('devtools.admin_strava_ids')`.
+ * Shared predicate for the devtools gates (Horizon, Pulse, AI Usage).
+ * A user is considered an admin when their connected Strava athlete id
+ * appears in `config('devtools.admin_strava_ids')`.
  */
 class Devtools
 {
