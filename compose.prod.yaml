@@ -26,7 +26,9 @@ x-app-env: &app-env
   SESSION_CONNECTION: cache
   CACHE_STORE: redis
   TRUSTED_PROXIES: "127.0.0.1"
-  TELESCOPE_ENABLED: "true"
+  # Telescope in prod records only failures (filter in TelescopeServiceProvider) —
+  # not worth the package overhead vs Horizon (queues) + Pulse (ops metrics).
+  TELESCOPE_ENABLED: "false"
   PULSE_ENABLED: "true"
   OCTANE_SERVER: frankenphp
   OCTANE_MAX_REQUESTS: "500"
