@@ -75,15 +75,19 @@ class VerdictTimeline implements VerdictNarrator
         return array_slice($items, 0, $limit);
     }
 
+    /**
+     * @var array<string, string>
+     */
+    private const array MOOD_FACES = [
+        Temari::MOOD_GLOW => '✨',
+        Temari::MOOD_BOUNCY => '🦘',
+        Temari::MOOD_WOBBLE => '🥵',
+        Temari::MOOD_SQUISHED => '🍳',
+        Temari::MOOD_SPINNING => '💫',
+    ];
+
     private function moodFace(string $mood): string
     {
-        return match ($mood) {
-            Temari::MOOD_GLOW => '✨',
-            Temari::MOOD_BOUNCY => '🦘',
-            Temari::MOOD_WOBBLE => '🥵',
-            Temari::MOOD_SQUISHED => '🍳',
-            Temari::MOOD_SPINNING => '💫',
-            default => '🌧️',
-        };
+        return self::MOOD_FACES[$mood] ?? '🌧️';
     }
 }
