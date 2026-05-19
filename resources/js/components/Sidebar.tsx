@@ -6,7 +6,14 @@ import { useSidebar } from '@/contexts/SidebarContext';
 import { cn } from '@/lib/cn';
 import type { AuthUser, SharedProps } from '@/types/inertia';
 
-const LINKS: ReadonlyArray<{ route: string; href: string; icon: string; label: string }> = [
+interface NavLink {
+    route: string;
+    href: string;
+    icon: string;
+    label: string;
+}
+
+const LINKS: ReadonlyArray<NavLink> = [
     { route: 'dashboard', href: '/', icon: 'mdi:home-outline', label: 'Beranda' },
     { route: 'aktivitas.index', href: '/aktivitas', icon: 'mdi:run-fast', label: 'Aktivitas' },
     { route: 'kartu.index', href: '/kartu', icon: 'mdi:cards-outline', label: 'Kartu' },
@@ -48,7 +55,7 @@ function SidebarContent({
     return (
         <div className="flex h-full flex-col">
             <div className="border-b border-line px-5 py-5 dark:border-line-dark">
-                <Link href='/' onClick={onNavigate} aria-label="Beranda">
+                <Link href="/" onClick={onNavigate} aria-label="Beranda">
                     <BrandMark size="compact" />
                 </Link>
             </div>
@@ -140,9 +147,9 @@ function UserChip({ user, onNavigate }: Readonly<{ user: AuthUser; onNavigate: (
 
             {open && (
                 <MenuList>
-                    <MenuItem href="/profil" icon="mdi:account-outline" label="Profil" onSelect={onNavigate} />
-                    <MenuItem href="/pengaturan" icon="mdi:cog-outline" label="Pengaturan" onSelect={onNavigate} />
-                    <MenuButton onClick={logout} icon="mdi:logout" label="Keluar" />
+                    <MenuRow href="/profil" icon="mdi:account-outline" label="Profil" onSelect={onNavigate} />
+                    <MenuRow href="/pengaturan" icon="mdi:cog-outline" label="Pengaturan" onSelect={onNavigate} />
+                    <MenuRow icon="mdi:logout" label="Keluar" onSelect={logout} divided />
                 </MenuList>
             )}
         </div>
@@ -160,35 +167,35 @@ function MenuList({ children }: Readonly<{ children: ReactNode }>) {
     );
 }
 
-function MenuItem({
-    href,
-    icon,
-    label,
-    onSelect,
-}: Readonly<{ href: string; icon: string; label: string; onSelect: () => void }>) {
-    return (
-        <Link
-            href={href}
-            role="menuitem"
-            onClick={onSelect}
-            className="flex items-center gap-3 px-3 py-2.5 text-sm text-ink transition hover:bg-line/40 focus-visible:bg-line/40 focus-visible:outline-none dark:text-ink-dark dark:hover:bg-line-dark"
-        >
-            <Icon icon={icon} width={18} height={18} aria-hidden />
-            {label}
-        </Link>
-    );
+interface MenuRowProps {
+    icon: string;
+    label: string;
+    onSelect: () => void;
+    href?: string;
+    divided?: boolean;
 }
 
-function MenuButton({ onClick, icon, label }: Readonly<{ onClick: () => void; icon: string; label: string }>) {
-    return (
-        <button
-            type="button"
-            role="menuitem"
-            onClick={onClick}
-            className="flex w-full items-center gap-3 border-t border-line px-3 py-2.5 text-left text-sm text-ink transition hover:bg-line/40 focus-visible:bg-line/40 focus-visible:outline-none dark:border-line-dark dark:text-ink-dark dark:hover:bg-line-dark"
-        >
+function MenuRow({ icon, label, onSelect, href, divided = false }: Readonly<MenuRowProps>) {
+    const className = cn(
+        'flex w-full items-center gap-3 px-3 py-2.5 text-left text-sm text-ink transition hover:bg-line/40 focus-visible:bg-line/40 focus-visible:outline-none dark:text-ink-dark dark:hover:bg-line-dark',
+        divided && 'border-t border-line dark:border-line-dark',
+    );
+    const body = (
+        <>
             <Icon icon={icon} width={18} height={18} aria-hidden />
             {label}
+        </>
+    );
+    if (href !== undefined) {
+        return (
+            <Link href={href} role="menuitem" onClick={onSelect} className={className}>
+                {body}
+            </Link>
+        );
+    }
+    return (
+        <button type="button" role="menuitem" onClick={onSelect} className={className}>
+            {body}
         </button>
     );
 }

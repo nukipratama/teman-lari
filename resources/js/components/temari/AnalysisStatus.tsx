@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { Icon } from '@iconify/react';
 import { useAnalysisTrigger } from '@/hooks/useAnalysisTrigger';
 import type { AnalysisPayload } from '@/types/inertia';
@@ -10,7 +11,7 @@ interface Props {
     inertiaReloadProps?: string[];
     size?: AnalysisStatusSize;
     /** Render the LLM content. Receives the resolved narrative string. */
-    renderContent?: (content: string) => React.ReactNode;
+    renderContent?: (content: string) => ReactNode;
     /** Whether to show the manual trigger button when status is `done`. */
     allowReanalyze?: boolean;
 }
@@ -26,7 +27,7 @@ export default function AnalysisStatus({
     size = 'md',
     renderContent,
     allowReanalyze = true,
-}: Props) {
+}: Readonly<Props>) {
     const { status, pending, trigger } = useAnalysisTrigger(analysis, inertiaReloadProps);
     const effectiveStatus = pending ? 'queued' : status;
     const content = analysis.content;

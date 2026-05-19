@@ -18,9 +18,9 @@ export interface ChartTheme {
 
 const LIGHT: ChartTheme = {
     isDark: false,
-    tick: '#6f6358', // ink-meta
-    grid: 'rgba(31, 27, 22, 0.08)', // ink @ 8%
-    legend: '#1f1b16', // ink
+    tick: '#6f6358',
+    grid: 'rgba(31, 27, 22, 0.08)',
+    legend: '#1f1b16',
     tooltip: {
         backgroundColor: '#ffffff',
         titleColor: '#1f1b16',
@@ -32,9 +32,9 @@ const LIGHT: ChartTheme = {
 
 const DARK: ChartTheme = {
     isDark: true,
-    tick: '#d0c6b5', // ink-soft-dark — readable on surface-dark-elev
-    grid: 'rgba(240, 235, 226, 0.12)', // ink-dark @ 12%
-    legend: '#f0ebe2', // ink-dark
+    tick: '#d0c6b5',
+    grid: 'rgba(240, 235, 226, 0.12)',
+    legend: '#f0ebe2',
     tooltip: {
         backgroundColor: '#1f1c16',
         titleColor: '#f0ebe2',
@@ -44,28 +44,24 @@ const DARK: ChartTheme = {
     },
 };
 
+function prefersDark(): boolean {
+    return typeof globalThis.matchMedia === 'function'
+        && globalThis.matchMedia('(prefers-color-scheme: dark)').matches;
+}
+
 export function useChartTheme(): ChartTheme {
-    const [isDark, setIsDark] = useState(() => prefersDark());
+    const [isDark, setIsDark] = useState(prefersDark);
 
     useEffect(() => {
-        const mq = typeof globalThis.matchMedia === 'function'
-            ? globalThis.matchMedia('(prefers-color-scheme: dark)')
-            : null;
-        if (mq === null) return;
-        /* v8 ignore next 3 — change event fires when the OS / browser
-           flips colour scheme; not deterministically reproducible in
-           jsdom. Verified by manual smoke. */
+        if (typeof globalThis.matchMedia !== 'function') return;
+        const mq = globalThis.matchMedia('(prefers-color-scheme: dark)');
+        /* v8 ignore next 2 — change event fires on OS theme flip; jsdom can't reproduce. */
         const handler = (e: MediaQueryListEvent) => setIsDark(e.matches);
         mq.addEventListener('change', handler);
         return () => mq.removeEventListener('change', handler);
     }, []);
 
     return isDark ? DARK : LIGHT;
-}
-
-function prefersDark(): boolean {
-    if (typeof globalThis.matchMedia !== 'function') return false;
-    return globalThis.matchMedia('(prefers-color-scheme: dark)').matches;
 }
 
 export function tooltipFromTheme(theme: ChartTheme): NonNullable<NonNullable<ChartOptions['plugins']>['tooltip']> {

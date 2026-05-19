@@ -8,12 +8,17 @@ interface PaginatorLink {
     active: boolean;
 }
 
+interface PaginatorProps {
+    links: PaginatorLink[];
+    className?: string;
+}
+
 // Laravel paginator labels contain HTML entities (e.g. `&laquo;`) → dangerouslySetInnerHTML.
-export default function Paginator({ links, className }: Readonly<{ links: PaginatorLink[]; className?: string }>) {
+export default function Paginator({ links, className }: Readonly<PaginatorProps>) {
     return (
         <nav className={cn('mt-6 flex flex-wrap items-center justify-center gap-2', className)}>
             {links.map((link, i) => (
-                <PaginatorPill key={i} link={link} />
+                <PaginatorPill key={`${i}-${link.label}`} link={link} />
             ))}
         </nav>
     );

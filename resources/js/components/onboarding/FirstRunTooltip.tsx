@@ -21,16 +21,15 @@ export default function FirstRunTooltip({ recentRunCount, verdictCount }: Readon
             setVisible(true);
             return;
         }
-        const hasData = recentRunCount > 0 || verdictCount > 0;
-        if (hasData) return;
-        const dismissed = typeof window === 'undefined' ? false : globalThis.localStorage?.getItem(STORAGE_KEY) === '1';
+        if (recentRunCount > 0 || verdictCount > 0) return;
+        const dismissed = globalThis.localStorage?.getItem(STORAGE_KEY) === '1';
         if (!dismissed) setVisible(true);
     }, [forceShow, recentRunCount, verdictCount]);
 
     const dismiss = () => {
         setVisible(false);
         // In force mode, dismissal is session-only — don't persist.
-        if (!forceShow && typeof window !== 'undefined') {
+        if (!forceShow) {
             globalThis.localStorage?.setItem(STORAGE_KEY, '1');
         }
     };
