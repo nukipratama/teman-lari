@@ -90,13 +90,11 @@ jobs:
           REDIS_HOST: 127.0.0.1
           REDIS_PORT: ${{ job.services.redis.ports['6379'] }}
         run: |
-          # Bake the framework caches with the test step's env in scope —
-          # config:cache freezes env() values, so it has to run *after* the
-          # dynamic service ports are exported.
-          php artisan key:generate --no-interaction --force
-          php artisan config:cache
-          php artisan event:cache
-          php artisan route:cache
+          # config:cache is intentionally NOT used here. phpunit.xml's <env>
+          # tags (QUEUE_CONNECTION=sync, fake AZURE_OPENAI_*, etc.) only get
+          # applied when PHPUnit boots — caching config beforehand freezes
+          # .env.example values and AnalysisService::autoDispatchEnabled()
+          # silently returns false, breaking every dispatch-assertion test.
           # Scale paratest to runner cores. Falls back to 4 on weird hosts.
           PROCS=$(nproc 2>/dev/null || echo 4)
           ./vendor/bin/pest --parallel --processes="$PROCS" --coverage --min=100 \
