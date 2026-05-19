@@ -41,7 +41,8 @@ FROM composer:2 AS vendor
 WORKDIR /app
 
 COPY composer.json composer.lock ./
-RUN composer install \
+RUN --mount=type=cache,target=/tmp/composer-cache,sharing=locked \
+    COMPOSER_CACHE_DIR=/tmp/composer-cache composer install \
         --no-dev --no-scripts --no-autoloader \
         --prefer-dist --no-interaction --no-progress \
         --ignore-platform-req=ext-pcntl
@@ -60,7 +61,8 @@ FROM node:22-alpine AS assets
 WORKDIR /app
 
 COPY package.json package-lock.json vite.config.ts tsconfig.json ./
-RUN npm ci --no-audit --no-fund
+RUN --mount=type=cache,target=/root/.npm,sharing=locked \
+    npm ci --no-audit --no-fund
 
 COPY resources ./resources
 COPY public ./public
@@ -86,10 +88,18 @@ RUN install-php-extensions \
 
 COPY --from=vendor /app /app
 COPY --from=assets /app/public/build /app/public/build
-# Run the package:discover hook the vendor stage deferred. Writes
-# bootstrap/cache/packages.php. CACHE_STORE=array because no redis is
-# reachable at build time — runtime config still resolves to redis.
-RUN CACHE_STORE=array php artisan package:discover --ansi
+# Run the package:discover hook the vendor stage deferred (writes
+# bootstrap/cache/packages.php) and bake config/route/event/view caches
+# into the image so the first request after rollout doesn't pay the boot
+# cost. CACHE_STORE=array keeps the build offline; runtime env resolves
+# CACHE_STORE=redis from compose. APP_ENV=production forces the
+# production config branch into the cache.
+RUN CACHE_STORE=array APP_ENV=production APP_DEBUG=false \
+    sh -c 'php artisan package:discover --ansi \
+        && php artisan config:cache \
+        && php artisan event:cache \
+        && php artisan route:cache \
+        && php artisan view:cache'
 # FrankenPHP loads /etc/frankenphp/Caddyfile, NOT /etc/caddy/Caddyfile.
 # Copying to the wrong path silently falls back to the image's default
 # Caddyfile (no Cache-Control headers, no worker directive, etc.).
