@@ -4,17 +4,12 @@ declare(strict_types=1);
 
 namespace App\Services\AI\Narrators;
 
-use App\Exceptions\AI\UnavailableException;
 use App\Models\User;
 use App\Models\WeeklySnapshot;
 use App\Services\AI\AzureOpenAIClient;
+use App\Services\AI\StructuredChatCaller;
 use App\Services\Run\Metrics\TrainingLoad;
 use Illuminate\Support\Carbon;
-use Illuminate\Support\Facades\Log;
-use JsonException;
-use Throwable;
-
-use function is_array;
 
 class TrendCaptionNarrator
 {
@@ -29,10 +24,13 @@ recovery week, taper).
 JANGAN preachy, JANGAN data dump.
 PROMPT;
 
+    private readonly StructuredChatCaller $caller;
+
     public function __construct(
-        private readonly AzureOpenAIClient $azure,
+        AzureOpenAIClient $azure,
         private readonly TrainingLoad $trainingLoad,
     ) {
+        $this->caller = new StructuredChatCaller($azure);
     }
 
     public function generate(User $user, Carbon $asOf): string
@@ -45,79 +43,27 @@ PROMPT;
             ->reverse()
             ->values();
 
-        return $this->call([
-            'as_of' => $asOf->toDateString(),
-            'load_today' => $this->trainingLoad->summary($user, $asOf),
-            'weeks' => $weeks->map(fn (WeeklySnapshot $w): array => [
-                'ending' => $w->week_ending->toDateString(),
-                'distance_km' => $w->distance_km,
-                'trimp' => $w->weekly_trimp,
-                'ctl_42d' => $w->ctl_42d,
-                'atl_7d' => $w->atl_7d,
-                'form' => $w->form,
-                'status' => $w->form_status,
-            ])->all(),
-        ]);
-    }
-
-    /** @param  array<string, mixed>  $ctx */
-    private function call(array $ctx): string
-    {
-        $startedAt = microtime(true);
-
-        try {
-            $response = $this->azure->client()->chat()->create([
-                'model' => (string) config('azure_openai.deployment'),
-                'messages' => [
-                    ['role' => 'system', 'content' => self::SYSTEM_PROMPT],
-                    ['role' => 'user', 'content' => json_encode($ctx, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE)],
-                ],
-                'max_tokens' => (int) config('azure_openai.max_tokens'),
-                'temperature' => 0.7,
-                'response_format' => $this->responseFormat(),
-            ]);
-        } catch (Throwable $e) {
-            Log::warning('narrator.ai.call', [
-                'kind' => 'trend_caption',
-                'status' => 'fail',
-                'error' => $e->getMessage(),
-                'latency_ms' => (int) ((microtime(true) - $startedAt) * 1000),
-            ]);
-            throw new UnavailableException('Azure OpenAI call failed: '.$e->getMessage(), previous: $e);
-        }
-
-        $content = (string) ($response->choices[0]->message->content ?? '');
-
-        try {
-            $decoded = json_decode($content, true, 16, JSON_THROW_ON_ERROR);
-        } catch (JsonException $e) {
-            throw new UnavailableException('Azure OpenAI returned non-JSON: '.$e->getMessage());
-        }
-
-        if (! is_array($decoded) || ! isset($decoded['caption']) || ! is_string($decoded['caption'])) {
-            throw new UnavailableException('Azure OpenAI structured output missing caption');
-        }
-
-        return $decoded['caption'];
-    }
-
-    /** @return array{type: string, json_schema: array<string, mixed>} */
-    private function responseFormat(): array
-    {
-        return [
-            'type' => 'json_schema',
-            'json_schema' => [
-                'name' => 'TemariTrendCaption',
-                'strict' => true,
-                'schema' => [
-                    'type' => 'object',
-                    'additionalProperties' => false,
-                    'properties' => [
-                        'caption' => ['type' => 'string'],
-                    ],
-                    'required' => ['caption'],
-                ],
+        $decoded = $this->caller->call(
+            kind: 'trend_caption',
+            systemPrompt: self::SYSTEM_PROMPT,
+            context: [
+                'as_of' => $asOf->toDateString(),
+                'load_today' => $this->trainingLoad->summary($user, $asOf),
+                'weeks' => $weeks->map(fn (WeeklySnapshot $w): array => [
+                    'ending' => $w->week_ending->toDateString(),
+                    'distance_km' => $w->distance_km,
+                    'trimp' => $w->weekly_trimp,
+                    'ctl_42d' => $w->ctl_42d,
+                    'atl_7d' => $w->atl_7d,
+                    'form' => $w->form,
+                    'status' => $w->form_status,
+                ])->all(),
             ],
-        ];
+            schemaName: 'TemariTrendCaption',
+            requiredKeys: ['caption'],
+            temperature: 0.7,
+        );
+
+        return (string) $decoded['caption'];
     }
 }

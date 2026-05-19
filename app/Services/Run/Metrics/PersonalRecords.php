@@ -43,11 +43,11 @@ class PersonalRecords
      */
     public function detectAndStore(Activity $activity, ActivityDetail $detail): array
     {
-        $broken = [];
         $setAt = $detail->start_date_local ?? Carbon::now();
-
-        $broken = array_merge($broken, $this->checkDistancePrs($activity, $detail, $setAt));
-        $broken = array_merge($broken, $this->checkEffortPrs($activity, $detail, $setAt));
+        $broken = [
+            ...$this->checkDistancePrs($activity, $detail, $setAt),
+            ...$this->checkEffortPrs($activity, $detail, $setAt),
+        ];
 
         if ($broken !== []) {
             $this->unlockEngine->grantEligible($activity->user);

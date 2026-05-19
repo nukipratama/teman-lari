@@ -21,6 +21,7 @@ class BriefingComposer
         private readonly Vibe $vibe,
         private readonly TrainingLoad $trainingLoad,
         private readonly AnalysisService $analysisService,
+        private readonly Temari $temari,
     ) {
     }
 
@@ -31,7 +32,7 @@ class BriefingComposer
         $load = $this->trainingLoad->summary($user, $asOf);
         $daysSince = $this->daysSinceLastRun($user, $asOf);
 
-        $mood = $this->moodForVibe($vibeState);
+        $mood = $this->temari->moodForVibe($vibeState);
         $discriminator = $asOf->toDateString();
         $subjectType = AnalysisType::BRIEFING_SUBJECT_TYPE;
 
@@ -84,28 +85,12 @@ class BriefingComposer
 
     private function streakLabel(?int $daysSince): ?string
     {
-        if ($daysSince === null) {
-            return null;
-        }
-
         return match (true) {
+            $daysSince === null => null,
             $daysSince === 0 => 'Lari hari ini',
             $daysSince === 1 => 'Kemarin lari',
             $daysSince <= 3 => "Sudah {$daysSince} hari",
             default => "Sudah {$daysSince} hari nih",
-        };
-    }
-
-    private function moodForVibe(string $vibe): string
-    {
-        return match ($vibe) {
-            Vibe::PUMPED, Vibe::FRESH => Temari::MOOD_GLOW,
-            Vibe::BOUNCY => Temari::MOOD_BOUNCY,
-            Vibe::WORN_DOWN => Temari::MOOD_WOBBLE,
-            Vibe::COOKED => Temari::MOOD_SQUISHED,
-            Vibe::STRETCHED_THIN => Temari::MOOD_SPINNING,
-            Vibe::HIBERNATING => Temari::MOOD_DIM,
-            default => Temari::MOOD_DIM,
         };
     }
 }

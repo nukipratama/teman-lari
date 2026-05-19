@@ -62,7 +62,7 @@ class Temari
                 'for_date' => null,
                 'mood' => $mood,
                 'speech' => null,
-                'sigil_pattern' => $this->sigilFor($mood),
+                'sigil_pattern' => self::sigilForMoodPublic($mood),
             ],
         );
 
@@ -90,7 +90,7 @@ class Temari
                 'activity_id' => null,
                 'mood' => $mood,
                 'speech' => null,
-                'sigil_pattern' => $this->sigilFor($mood),
+                'sigil_pattern' => self::sigilForMoodPublic($mood),
             ],
         );
 
@@ -102,11 +102,6 @@ class Temari
         );
 
         return $line;
-    }
-
-    private function sigilFor(string $mood): string
-    {
-        return self::sigilForMoodPublic($mood);
     }
 
     public static function sigilForMoodPublic(string $mood): string
