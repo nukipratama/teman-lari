@@ -36,6 +36,9 @@ Thumbs.db
 # Infection log
 /storage/infection.log
 
+# Pest HTML coverage report (regenerated on every coverage run)
+/storage/coverage-html
+
 # Vitest coverage reports (regenerated on every test run)
 /coverage
 

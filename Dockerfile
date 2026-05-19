@@ -47,7 +47,11 @@ RUN composer install \
         --ignore-platform-req=ext-pcntl
 
 COPY . .
-RUN composer dump-autoload --optimize --classmap-authoritative
+# --no-scripts skips the post-autoload-dump hook (package:discover). The
+# composer:2 image has no redis ext, and a provider boot under the new
+# redis-default cache would crash here. package:discover runs in the
+# runtime stage instead, where every PHP extension is installed.
+RUN composer dump-autoload --optimize --classmap-authoritative --no-scripts
 
 # ─── Stage 2: assets ────────────────────────────────────────────────────────
 # Build Vite bundle (tailwind via @tailwindcss/vite). Vendor dir is needed
@@ -82,6 +86,10 @@ RUN install-php-extensions \
 
 COPY --from=vendor /app /app
 COPY --from=assets /app/public/build /app/public/build
+# Run the package:discover hook the vendor stage deferred. Writes
+# bootstrap/cache/packages.php. CACHE_STORE=array because no redis is
+# reachable at build time — runtime config still resolves to redis.
+RUN CACHE_STORE=array php artisan package:discover --ansi
 # FrankenPHP loads /etc/frankenphp/Caddyfile, NOT /etc/caddy/Caddyfile.
 # Copying to the wrong path silently falls back to the image's default
 # Caddyfile (no Cache-Control headers, no worker directive, etc.).
