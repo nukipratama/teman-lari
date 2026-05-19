@@ -23,13 +23,15 @@ x-app-env: &app-env
   REDIS_PORT: "6379"
   QUEUE_CONNECTION: redis
   SESSION_DRIVER: redis
-  SESSION_CONNECTION: cache
+  # Sessions live on the durable (noeviction) Redis. The cache connection has
+  # allkeys-lru and would silently log users out under cache pressure.
+  SESSION_CONNECTION: default
   CACHE_STORE: redis
   TRUSTED_PROXIES: "127.0.0.1"
   PULSE_ENABLED: "true"
   OCTANE_SERVER: frankenphp
-  OCTANE_MAX_REQUESTS: "500"
-  FRANKENPHP_NUM_WORKERS: "4"
+  OCTANE_MAX_REQUESTS: "2000"
+  FRANKENPHP_NUM_WORKERS: "2"
 
 x-app-base: &app-base
   image: *app-image
@@ -95,11 +97,16 @@ services:
     restart: unless-stopped
     env_file: *app-env-file
     command:
-      - "--innodb-buffer-pool-size=512M"
+      - "--innodb-buffer-pool-size=768M"
       - "--innodb-flush-log-at-trx-commit=2"
+      - "--innodb-flush-method=O_DIRECT"
       - "--innodb-log-file-size=256M"
-      - "--max-connections=100"
+      # app workers + horizon (≤10) + scheduler + adhoc artisan ≈ 25 peak.
+      - "--max-connections=40"
       - "--performance-schema=OFF"
+      # Skip reverse-DNS on every TCP connect — every connection from the
+      # Octane workers is a hot path.
+      - "--skip-name-resolve"
     volumes:
       - mysql_data:/var/lib/mysql
     networks: [internal]

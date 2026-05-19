@@ -12,34 +12,42 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 
 uses(RefreshDatabase::class);
 
-class FakeSuccessRowJob extends AnalyzeRowJob
+// Named subclasses live in a *Test.php file would trip the
+// `Tests\ => ./tests` PSR-4 rule and trigger composer warnings. Anonymous
+// classes don't, and the test never refers to them by name.
+function fakeSuccessRowJob(int $id): AnalyzeRowJob
 {
-    protected function generateContent(Analysis $row): string
-    {
-        return 'generated';
-    }
+    return new class ($id) extends AnalyzeRowJob {
+        protected function generateContent(Analysis $row): string
+        {
+            return 'generated';
+        }
 
-    #[Override]
-    protected function modelVersion(): ?string
-    {
-        return 'test-model';
-    }
+        protected function modelVersion(): ?string
+        {
+            return 'test-model';
+        }
+    };
 }
 
-class FakeUnavailableRowJob extends AnalyzeRowJob
+function fakeUnavailableRowJob(int $id): AnalyzeRowJob
 {
-    protected function generateContent(Analysis $row): string
-    {
-        throw new UnavailableException('Azure down');
-    }
+    return new class ($id) extends AnalyzeRowJob {
+        protected function generateContent(Analysis $row): string
+        {
+            throw new UnavailableException('Azure down');
+        }
+    };
 }
 
-class FakeBoomRowJob extends AnalyzeRowJob
+function fakeBoomRowJob(int $id): AnalyzeRowJob
 {
-    protected function generateContent(Analysis $row): string
-    {
-        throw new RuntimeException('boom');
-    }
+    return new class ($id) extends AnalyzeRowJob {
+        protected function generateContent(Analysis $row): string
+        {
+            throw new RuntimeException('boom');
+        }
+    };
 }
 
 function makeRowForRowJobTest(): Analysis
@@ -55,7 +63,7 @@ function makeRowForRowJobTest(): Analysis
 it('marks row Done with content + model_version on successful generation', function (): void {
     $row = makeRowForRowJobTest();
 
-    (new FakeSuccessRowJob($row->id))->handle(app(AnalysisService::class));
+    fakeSuccessRowJob($row->id)->handle(app(AnalysisService::class));
 
     $fresh = $row->fresh();
     expect($fresh->status)->toBe(AnalysisStatus::Done)
@@ -67,7 +75,7 @@ it('marks row Done with content + model_version on successful generation', funct
 it('marks row Failed without rethrowing for UnavailableException', function (): void {
     $row = makeRowForRowJobTest();
 
-    (new FakeUnavailableRowJob($row->id))->handle(app(AnalysisService::class));
+    fakeUnavailableRowJob($row->id)->handle(app(AnalysisService::class));
 
     expect($row->fresh()->status)->toBe(AnalysisStatus::Failed)
         ->and($row->fresh()->error)->toBe('Azure down');
@@ -76,14 +84,14 @@ it('marks row Failed without rethrowing for UnavailableException', function (): 
 it('re-raises unexpected throwables so the queue can apply retry policy', function (): void {
     $row = makeRowForRowJobTest();
 
-    expect(fn () => (new FakeBoomRowJob($row->id))->handle(app(AnalysisService::class)))
+    expect(fn () => fakeBoomRowJob($row->id)->handle(app(AnalysisService::class)))
         ->toThrow(RuntimeException::class, 'boom');
 
     expect($row->fresh()->status)->toBe(AnalysisStatus::Failed);
 });
 
 it('no-ops when the row id no longer exists', function (): void {
-    (new FakeSuccessRowJob(99999))->handle(app(AnalysisService::class));
+    fakeSuccessRowJob(99999)->handle(app(AnalysisService::class));
 
     expect(Analysis::query()->count())->toBe(0);
 });
@@ -92,13 +100,13 @@ it('skips re-execution when status is already Done (idempotent)', function (): v
     $row = makeRowForRowJobTest();
     $row->update(['status' => AnalysisStatus::Done, 'content' => 'previous']);
 
-    (new FakeSuccessRowJob($row->id))->handle(app(AnalysisService::class));
+    fakeSuccessRowJob($row->id)->handle(app(AnalysisService::class));
 
     expect($row->fresh()->content)->toBe('previous');
 });
 
 it('shared retry config: tries=3, backoff=[10, 60]', function (): void {
-    $job = new FakeSuccessRowJob(1);
+    $job = fakeSuccessRowJob(1);
     expect($job->tries)->toBe(3)
         ->and($job->backoff)->toBe([10, 60]);
 });

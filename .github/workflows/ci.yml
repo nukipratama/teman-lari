@@ -43,6 +43,16 @@ jobs:
         with:
           php-version: ${{ env.PHP_VERSION }}
           coverage: pcov
+          # Enable opcache + tracing JIT for the CLI run. Pest workers are long-
+          # lived PHP processes, so the JIT trace cache amortizes across tests.
+          ini-values: >-
+            opcache.enable=1,
+            opcache.enable_cli=1,
+            opcache.jit=tracing,
+            opcache.jit_buffer_size=64M,
+            opcache.memory_consumption=256,
+            opcache.max_accelerated_files=20000,
+            opcache.validate_timestamps=0
 
       - name: Cache composer vendor
         uses: actions/cache@v5
@@ -52,7 +62,10 @@ jobs:
           restore-keys: composer-${{ runner.os }}-php${{ env.PHP_VERSION }}-
 
       - name: Install composer deps
-        run: composer install --prefer-dist --no-interaction --no-progress
+        # classmap-authoritative bakes a static classmap into vendor/composer/.
+        # Pest autoloads ~10k classes during a run; without this every class
+        # load does a filesystem stat per PSR-4 path.
+        run: composer install --prefer-dist --no-interaction --no-progress --classmap-authoritative
 
       - name: Stub .env so Laravel doesn't warn on bootstrap
         run: cp .env.example .env
@@ -64,6 +77,7 @@ jobs:
       - name: Tests + 100% line coverage
         id: pest
         env:
+          APP_ENV: testing
           DB_CONNECTION: mysql
           DB_HOST: 127.0.0.1
           DB_PORT: ${{ job.services.mysql.ports['3306'] }}
@@ -76,7 +90,16 @@ jobs:
           REDIS_HOST: 127.0.0.1
           REDIS_PORT: ${{ job.services.redis.ports['6379'] }}
         run: |
-          ./vendor/bin/pest --parallel --processes=4 --coverage --min=100 \
+          # Bake the framework caches with the test step's env in scope —
+          # config:cache freezes env() values, so it has to run *after* the
+          # dynamic service ports are exported.
+          php artisan key:generate --no-interaction --force
+          php artisan config:cache
+          php artisan event:cache
+          php artisan route:cache
+          # Scale paratest to runner cores. Falls back to 4 on weird hosts.
+          PROCS=$(nproc 2>/dev/null || echo 4)
+          ./vendor/bin/pest --parallel --processes="$PROCS" --coverage --min=100 \
             --fail-on-warning --fail-on-notice \
             --fail-on-deprecation --fail-on-risky \
             --fail-on-phpunit-warning --fail-on-phpunit-notice \
@@ -110,7 +133,17 @@ jobs:
           node-version: '22'
           cache: npm
 
+      # Cache node_modules itself, not just the npm download cache. With a
+      # hit, `npm ci` is skipped entirely (the download cache is a fallback).
+      - name: Cache node_modules
+        id: node_modules_cache
+        uses: actions/cache@v5
+        with:
+          path: node_modules
+          key: node_modules-${{ runner.os }}-node22-${{ hashFiles('package-lock.json') }}
+
       - name: Install npm deps
+        if: steps.node_modules_cache.outputs.cache-hit != 'true'
         run: npm ci --prefer-offline --no-audit --no-fund
 
       - name: Vitest + 100% line/function coverage
@@ -186,10 +219,9 @@ jobs:
         run: $COMPOSE run --rm app php artisan migrate --force
 
       - name: Roll app, horizon, scheduler onto the new image
+        # config/route/event/view caches are baked into the image at build
+        # time — no post-rollout `artisan optimize` step needed.
         run: $COMPOSE up -d --no-deps app horizon scheduler
-
-      - name: Optimize caches
-        run: $COMPOSE exec -T app php artisan optimize
 
       - name: Recycle Horizon workers onto new code
         run: $COMPOSE exec -T app php artisan horizon:terminate
