@@ -36,7 +36,7 @@ export default function Sidebar() {
                 aria-label="Main navigation"
                 className="hidden lg:fixed lg:inset-y-0 lg:left-0 lg:z-20 lg:flex lg:w-64 lg:flex-col lg:border-r lg:border-line lg:bg-surface-elev dark:lg:border-line-dark dark:lg:bg-surface-dark-elev"
             >
-                <SidebarContent url={url} user={user} onNavigate={() => {}} />
+                <SidebarContent url={url} user={user} />
             </aside>
 
             <dialog
@@ -55,7 +55,7 @@ function SidebarContent({
     url,
     user,
     onNavigate,
-}: Readonly<{ url: string; user: AuthUser | null; onNavigate: () => void }>) {
+}: Readonly<{ url: string; user: AuthUser | null; onNavigate?: () => void }>) {
     return (
         <div className="flex h-full flex-col">
             <div className="border-b border-line px-5 py-5 dark:border-line-dark">
@@ -84,7 +84,7 @@ function NavList({
     url,
     onNavigate,
     className,
-}: Readonly<{ links: ReadonlyArray<NavLink>; url: string; onNavigate: () => void; className?: string }>) {
+}: Readonly<{ links: ReadonlyArray<NavLink>; url: string; onNavigate?: () => void; className?: string }>) {
     return (
         <ul className={cn('space-y-1', className)}>
             {links.map((link) => {
