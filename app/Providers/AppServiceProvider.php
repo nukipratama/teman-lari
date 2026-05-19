@@ -37,7 +37,9 @@ class AppServiceProvider extends ServiceProvider
             fn () => Limit::perMinute((int) config('ai.rate_limit_per_minute', 20)),
         );
 
-        Gate::define('viewPulse', fn (User $user): bool => ($id = $user->stravaConnection?->strava_athlete_id)
-            && in_array((int) $id, config('devtools.admin_strava_ids'), true));
+        Gate::define('viewPulse', fn (?User $user = null): bool => $this->app->environment('local')
+            || ($user
+                && ($id = $user->stravaConnection?->strava_athlete_id)
+                && in_array((int) $id, config('devtools.admin_strava_ids'), true)));
     }
 }
