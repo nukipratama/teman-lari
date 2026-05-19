@@ -41,11 +41,12 @@ it('creates the demo user, runs, cards, story lines, PRs, and weekly snapshots',
 
 it('is idempotent — re-running with --fresh produces a consistent row count', function (): void {
     $this->artisan('demo:seed', ['--fresh' => true])->assertSuccessful();
-    $user = User::query()->where('email', DemoRunSeeder::DEMO_USER_EMAIL)->firstOrFail();
-    $first = Activity::query()->where('user_id', $user->id)->count();
+    $firstUser = User::query()->where('email', DemoRunSeeder::DEMO_USER_EMAIL)->firstOrFail();
+    $first = Activity::query()->where('user_id', $firstUser->id)->count();
 
     $this->artisan('demo:seed', ['--fresh' => true])->assertSuccessful();
-    $second = Activity::query()->where('user_id', $user->id)->count();
+    $secondUser = User::query()->where('email', DemoRunSeeder::DEMO_USER_EMAIL)->firstOrFail();
+    $second = Activity::query()->where('user_id', $secondUser->id)->count();
 
     expect($second)->toBe($first);
 });

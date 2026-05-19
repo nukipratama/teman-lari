@@ -10,7 +10,6 @@ use App\Models\ActivityStream;
 use App\Models\AI\Analysis;
 use App\Models\PersonalRecord;
 use App\Models\RunCard;
-use App\Models\StoryLine;
 use App\Models\StravaConnection;
 use App\Models\User;
 use App\Models\WeeklySnapshot;
@@ -36,6 +35,10 @@ use function is_array;
 class DemoRunSeeder
 {
     public const string DEMO_USER_EMAIL = 'demo@teman-lari.local';
+
+    // Stagger between dispatched LLM jobs so Horizon doesn't slam Azure all at
+    // once. Demo dispatches a few hundred jobs; 30s lets workers drip through.
+    private const int DISPATCH_STAGGER_SECONDS = 30;
 
     // Senayan / SCBD, Jakarta — must agree with DEMO_LOCATION_NAME below.
     private const float DEMO_START_LAT = -6.2253;
@@ -105,10 +108,10 @@ class DemoRunSeeder
         config(['ai.auto_dispatch' => false]);
 
         try {
-            $user = $this->ensureDemoUser($log);
             if ($fresh) {
-                $this->wipeDemoData($user, $log);
+                $this->nukeDemoUser($log);
             }
+            $user = $this->ensureDemoUser($log);
 
             $blueprints = $this->library->all();
             usort($blueprints, fn (RunBlueprint $a, RunBlueprint $b): int => $a->startsAt <=> $b->startsAt);
@@ -167,7 +170,6 @@ class DemoRunSeeder
             ->get();
 
         $count = 0;
-        $stagger = 10;
 
         foreach ($pending as $row) {
             $this->analysisService->request(
@@ -176,7 +178,7 @@ class DemoRunSeeder
                 type: $row->analysis_type,
                 discriminator: $row->discriminator,
                 force: true,
-                delaySeconds: $count * $stagger,
+                delaySeconds: $count * self::DISPATCH_STAGGER_SECONDS,
             );
             $count++;
         }
@@ -196,7 +198,7 @@ class DemoRunSeeder
                     subjectId: $activityId,
                     type: $type,
                     force: true,
-                    delaySeconds: $count * $stagger,
+                    delaySeconds: $count * self::DISPATCH_STAGGER_SECONDS,
                 );
                 $count++;
             }
@@ -207,7 +209,7 @@ class DemoRunSeeder
                 subjectId: $cardId,
                 type: AnalysisType::CardFlavor,
                 force: true,
-                delaySeconds: $count * $stagger,
+                delaySeconds: $count * self::DISPATCH_STAGGER_SECONDS,
             );
             $count++;
         }
@@ -217,7 +219,7 @@ class DemoRunSeeder
                 subjectId: $prId,
                 type: AnalysisType::PrContext,
                 force: true,
-                delaySeconds: $count * $stagger,
+                delaySeconds: $count * self::DISPATCH_STAGGER_SECONDS,
             );
             $count++;
         }
@@ -251,24 +253,36 @@ class DemoRunSeeder
         return $user;
     }
 
-    private function wipeDemoData(User $user, Closure $log): void
+    private function nukeDemoUser(Closure $log): void
     {
-        $activityIds = Activity::query()->where('user_id', $user->id)->pluck('id');
-
-        if ($activityIds->isNotEmpty()) {
-            ActivityStream::query()->whereIn('activity_id', $activityIds)->delete();
-            ActivityDetail::query()->whereIn('activity_id', $activityIds)->delete();
-            RunCard::query()->whereIn('activity_id', $activityIds)->delete();
-            StoryLine::query()->whereIn('activity_id', $activityIds)->delete();
+        $user = User::query()->where('email', self::DEMO_USER_EMAIL)->first();
+        if ($user === null) {
+            return;
         }
 
-        PersonalRecord::query()->where('user_id', $user->id)->delete();
-        // Second pass: deletes daily greetings whose activity_id is null.
-        StoryLine::query()->where('user_id', $user->id)->delete();
-        WeeklySnapshot::query()->where('user_id', $user->id)->delete();
-        Activity::query()->where('user_id', $user->id)->delete();
+        // ai_analyses is polymorphic (no FK), so cascade-on-delete from `users`
+        // doesn't catch it — wipe it explicitly before the user goes away.
+        $activityIds = Activity::query()->where('user_id', $user->id)->pluck('id');
+        $weeklyIds = WeeklySnapshot::query()->where('user_id', $user->id)->pluck('id');
+        $prIds = PersonalRecord::query()->where('user_id', $user->id)->pluck('id');
+        $cardIds = RunCard::query()->whereIn('activity_id', $activityIds)->pluck('id');
 
-        $log('Wiped prior demo activities / cards / story lines / PRs / snapshots');
+        Analysis::query()
+            ->where(function ($q) use ($user, $activityIds, $weeklyIds, $prIds, $cardIds): void {
+                $q->where(fn ($qq) => $qq->where('subject_type', Activity::class)->whereIn('subject_id', $activityIds))
+                    ->orWhere(fn ($qq) => $qq->where('subject_type', WeeklySnapshot::class)->whereIn('subject_id', $weeklyIds))
+                    ->orWhere(fn ($qq) => $qq->where('subject_type', PersonalRecord::class)->whereIn('subject_id', $prIds))
+                    ->orWhere(fn ($qq) => $qq->where('subject_type', RunCard::class)->whereIn('subject_id', $cardIds))
+                    ->orWhere(fn ($qq) => $qq->whereIn('subject_type', [
+                        AnalysisType::BRIEFING_SUBJECT_TYPE,
+                        AnalysisType::DAILY_GREETING_SUBJECT_TYPE,
+                        AnalysisType::TREND_CAPTION_SUBJECT_TYPE,
+                    ])->where('subject_id', $user->id));
+            })
+            ->delete();
+
+        $user->delete();
+        $log("Nuked prior demo user (id={$user->id}) + all related analyses/activities/cards/story lines/PRs/snapshots");
     }
 
     private function seedOne(User $user, RunBlueprint $blueprint): void
