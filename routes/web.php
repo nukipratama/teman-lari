@@ -52,6 +52,7 @@ Route::middleware('auth')->group(function (): void {
         ->name('api.analyses.show');
     Route::post('/api/analyses/{type}/{subjectId}/trigger', [AnalysisController::class, 'trigger'])
         ->whereNumber('subjectId')
+        ->middleware('throttle:analysis-trigger')
         ->name('api.analyses.trigger');
 
 });

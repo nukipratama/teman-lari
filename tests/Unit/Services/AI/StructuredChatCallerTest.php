@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Models\User;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 use App\Exceptions\AI\UnavailableException;
@@ -23,11 +24,11 @@ beforeEach(function (): void {
 /**
  * @param  array<string, int>|null  $usage  ['prompt_tokens' => …, 'completion_tokens' => …, 'total_tokens' => …]
  */
-function structuredCaller(string $content, ?array $usage = null): StructuredChatCaller
+function structuredCaller(string $content, ?array $usage = null, string $finishReason = 'stop'): StructuredChatCaller
 {
     $fakeArgs = [
         'choices' => [
-            ['message' => ['role' => 'assistant', 'content' => $content]],
+            ['message' => ['role' => 'assistant', 'content' => $content], 'finish_reason' => $finishReason],
         ],
     ];
     if ($usage !== null) {
@@ -64,7 +65,35 @@ it('records a token-usage row on successful call', function (): void {
         ->and($row->prompt_tokens)->toBe(120)
         ->and($row->completion_tokens)->toBe(45)
         ->and($row->total_tokens)->toBe(165)
-        ->and($row->model)->toBe('gpt-test');
+        ->and($row->model)->toBe('gpt-test')
+        ->and($row->truncated)->toBeFalse()
+        ->and($row->latency_ms)->toBeGreaterThanOrEqual(0)
+        ->and($row->user_id)->toBeNull();
+});
+
+it('records user_id when passed by the narrator', function (): void {
+    $user = User::factory()->create();
+
+    structuredCaller(
+        json_encode(['headline' => 'hi'], JSON_THROW_ON_ERROR),
+        ['prompt_tokens' => 10, 'completion_tokens' => 5, 'total_tokens' => 15],
+    )->call('briefing', 'sys', [], 'schema', ['headline'], userId: $user->id);
+
+    expect(TokenUsage::query()->first()->user_id)->toBe($user->id);
+});
+
+it('flags truncated=true when finish_reason is length', function (): void {
+    Log::spy();
+
+    structuredCaller(
+        json_encode(['headline' => 'hi'], JSON_THROW_ON_ERROR),
+        ['prompt_tokens' => 80, 'completion_tokens' => 200, 'total_tokens' => 280],
+        finishReason: 'length',
+    )->call('briefing', 'sys', [], 'schema', ['headline']);
+
+    $row = TokenUsage::query()->first();
+    expect($row->truncated)->toBeTrue();
+    Log::shouldHaveReceived('warning')->once()->with('narrator.ai.truncated', Mockery::any());
 });
 
 it('does not record usage when Azure call fails', function (): void {

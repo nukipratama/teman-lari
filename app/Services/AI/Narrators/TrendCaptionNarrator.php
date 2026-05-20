@@ -58,6 +58,7 @@ PROMPT;
             schemaName: 'TemariTrendCaption',
             requiredKeys: ['caption'],
             temperature: 0.7,
+            userId: $user->id,
         );
 
         return (string) $decoded['caption'];

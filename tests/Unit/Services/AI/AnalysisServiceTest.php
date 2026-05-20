@@ -86,6 +86,53 @@ it('invalidate=true flips a done row back to queued and re-dispatches', function
     expect(Analysis::query()->first()->status)->toBe(AnalysisStatus::Queued);
 });
 
+it('resets attempts to 0 when invalidating a previously-done row (row + group paths)', function (): void {
+    $service = app(AnalysisService::class);
+
+    // Row path (WeeklyRecap is non-grouped).
+    $snap = WeeklySnapshot::factory()->create();
+    Analysis::factory()->done('old')->create([
+        'subject_type' => WeeklySnapshot::class,
+        'subject_id' => $snap->id,
+        'analysis_type' => AnalysisType::WeeklyRecap,
+        'discriminator' => null,
+        'attempts' => 3,
+    ]);
+
+    $service->request(
+        subjectOrType: WeeklySnapshot::class,
+        subjectId: $snap->id,
+        type: AnalysisType::WeeklyRecap,
+        invalidate: true,
+    );
+
+    expect(Analysis::query()->first()->attempts)->toBe(0);
+
+    // Group path (PostRunSpeech is grouped under AnalyzeActivityJob).
+    $activity = Activity::factory()->create();
+    ActivityDetail::factory()->for($activity)->create();
+    Analysis::factory()->done('old speech')->create([
+        'subject_type' => Activity::class,
+        'subject_id' => $activity->id,
+        'analysis_type' => AnalysisType::PostRunSpeech,
+        'discriminator' => null,
+        'attempts' => 2,
+    ]);
+
+    $service->request(
+        subjectOrType: Activity::class,
+        subjectId: $activity->id,
+        type: AnalysisType::PostRunSpeech,
+        invalidate: true,
+    );
+
+    $speechRow = Analysis::query()
+        ->where('subject_id', $activity->id)
+        ->where('analysis_type', AnalysisType::PostRunSpeech)
+        ->first();
+    expect($speechRow->attempts)->toBe(0);
+});
+
 it('re-dispatches when status is failed', function (): void {
     $service = app(AnalysisService::class);
     $snap = WeeklySnapshot::factory()->create();

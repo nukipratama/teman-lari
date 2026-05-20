@@ -26,6 +26,26 @@ export function formatDurationHMS(seconds: number | null | undefined): string {
     return `${m}:${s.toString().padStart(2, '0')}`;
 }
 
+// "5 menit lalu", "2 jam lalu", "kemarin", "3 hari lalu". Falls back to '—' on null/invalid.
+export function formatRelativeId(iso: string | null | undefined, now: Date = new Date()): string {
+    if (!iso) return '—';
+    const d = new Date(iso);
+    const ms = now.getTime() - d.getTime();
+    if (!Number.isFinite(ms)) return '—';
+    const sec = Math.round(ms / 1000);
+    if (sec < 60) return 'baru aja';
+    const min = Math.floor(sec / 60);
+    if (min < 60) return `${min} menit lalu`;
+    const h = Math.floor(min / 60);
+    if (h < 24) return `${h} jam lalu`;
+    const day = Math.floor(h / 24);
+    if (day === 1) return 'kemarin';
+    if (day < 7) return `${day} hari lalu`;
+    const week = Math.floor(day / 7);
+    if (week < 5) return `${week} minggu lalu`;
+    return formatIdDate(iso, 'short');
+}
+
 export function formatIdDate(iso: string | null, format: 'short' | 'long' = 'short'): string {
     if (!iso) return '—';
     const d = new Date(iso);

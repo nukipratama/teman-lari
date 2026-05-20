@@ -1,4 +1,4 @@
-import { motion } from 'framer-motion';
+import { AnimatePresence, motion } from 'framer-motion';
 import { Icon } from '@iconify/react';
 import { cn } from '@/lib/cn';
 import { fadeInUp } from '@/lib/motion';
@@ -125,7 +125,7 @@ export default function TemariThread({
 
             {grouped && (
                 <GroupedReanalyzeButton
-                    analysis={entries[0].analysis}
+                    entries={entries}
                     inertiaReloadProps={inertiaReloadProps}
                 />
             )}
@@ -134,21 +134,42 @@ export default function TemariThread({
 }
 
 function GroupedReanalyzeButton({
-    analysis,
+    entries,
     inertiaReloadProps,
-}: Readonly<{ analysis: AnalysisPayload; inertiaReloadProps: string[] }>) {
-    const { trigger, pending } = useAnalysisTrigger(analysis, inertiaReloadProps);
+}: Readonly<{ entries: ReadonlyArray<ThreadEntry>; inertiaReloadProps: string[] }>) {
+    const { trigger, pending } = useAnalysisTrigger(entries[0].analysis, inertiaReloadProps);
+    // Hide is driven by *prop* status, not the local `pending` flag, so the
+    // button disappears at the same Inertia-reload frame the per-row spinners
+    // appear. Tying both transitions to one source kills the "button gone but
+    // content still done" intermediate flicker. The local `pending` keeps the
+    // button disabled in the meantime for click feedback.
+    const anyRowInFlight = entries.some((entry) => {
+        const status = entry.analysis.status;
+        return status === 'queued' || status === 'processing';
+    });
+
     return (
-        <div className="relative z-10 mt-5 flex justify-end">
-            <button
-                type="button"
-                onClick={trigger}
-                disabled={pending}
-                className="inline-flex items-center gap-1 text-xs text-ink-meta hover:text-brand-700 transition-colors disabled:opacity-50"
-            >
-                <Icon icon="mdi:refresh" aria-hidden />
-                <span>Analisis ulang</span>
-            </button>
-        </div>
+        <AnimatePresence initial={false}>
+            {!anyRowInFlight && (
+                <motion.div
+                    key="grouped-reanalyze"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.18 }}
+                    className="relative z-10 mt-5 flex justify-end"
+                >
+                    <button
+                        type="button"
+                        onClick={trigger}
+                        disabled={pending}
+                        className="inline-flex items-center gap-1 text-xs text-ink-meta hover:text-brand-700 transition-colors disabled:opacity-50 disabled:cursor-wait"
+                    >
+                        <Icon icon="mdi:refresh" aria-hidden />
+                        <span>Analisis ulang</span>
+                    </button>
+                </motion.div>
+            )}
+        </AnimatePresence>
     );
 }

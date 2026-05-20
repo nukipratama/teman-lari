@@ -17,14 +17,20 @@ class TokenUsageRecorder
         int $completionTokens,
         int $totalTokens,
         ?string $model,
+        ?int $latencyMs = null,
+        bool $truncated = false,
+        ?int $userId = null,
     ): void {
         try {
             TokenUsage::query()->create([
+                'user_id' => $userId,
                 'kind' => $kind,
                 'prompt_tokens' => $promptTokens,
                 'completion_tokens' => $completionTokens,
                 'total_tokens' => $totalTokens,
                 'model' => $model,
+                'latency_ms' => $latencyMs,
+                'truncated' => $truncated,
                 'created_at' => Carbon::now(),
             ]);
         } catch (Throwable $e) {

@@ -64,13 +64,55 @@ it('triggers a briefing headline analysis for the authenticated user', function 
     Bus::assertDispatched(AnalyzeBriefingJob::class);
 });
 
-it('force re-triggers a briefing even when status is done', function (): void {
+it('force re-triggers a briefing when the previous one is older than the cooldown', function (): void {
     $user = User::factory()->create();
     Analysis::factory()->done('old')->create([
         'subject_type' => BriefingComposer::SUBJECT_TYPE,
         'subject_id' => $user->id,
         'analysis_type' => AnalysisType::BriefingHeadline,
         'discriminator' => '2026-05-18',
+        'generated_at' => Carbon::now()->subHour(),
+    ]);
+
+    $this->actingAs($user)
+        ->postJson("/api/analyses/briefing_headline/{$user->id}/trigger?discriminator=2026-05-18")
+        ->assertSuccessful()
+        ->assertJsonPath('status', AnalysisStatus::Queued->value)
+        ->assertJsonPath('retry_after_seconds', null);
+
+    Bus::assertDispatched(AnalyzeBriefingJob::class);
+});
+
+it('returns the cached payload with retry_after_seconds when within cooldown', function (): void {
+    config()->set('ai.cooldown_seconds', 300);
+    $user = User::factory()->create();
+    Analysis::factory()->done('fresh content')->create([
+        'subject_type' => BriefingComposer::SUBJECT_TYPE,
+        'subject_id' => $user->id,
+        'analysis_type' => AnalysisType::BriefingHeadline,
+        'discriminator' => '2026-05-18',
+        'generated_at' => Carbon::now()->subSeconds(30),
+    ]);
+
+    $response = $this->actingAs($user)
+        ->postJson("/api/analyses/briefing_headline/{$user->id}/trigger?discriminator=2026-05-18")
+        ->assertSuccessful()
+        ->assertJsonPath('status', AnalysisStatus::Done->value)
+        ->assertJsonPath('content', 'fresh content');
+
+    expect($response->json('retry_after_seconds'))->toBeGreaterThan(0)->toBeLessThanOrEqual(300);
+    Bus::assertNotDispatched(AnalyzeBriefingJob::class);
+});
+
+it('skips the cooldown gate when cooldown_seconds is 0', function (): void {
+    config()->set('ai.cooldown_seconds', 0);
+    $user = User::factory()->create();
+    Analysis::factory()->done('recent')->create([
+        'subject_type' => BriefingComposer::SUBJECT_TYPE,
+        'subject_id' => $user->id,
+        'analysis_type' => AnalysisType::BriefingHeadline,
+        'discriminator' => '2026-05-18',
+        'generated_at' => Carbon::now()->subSeconds(5),
     ]);
 
     $this->actingAs($user)
@@ -178,6 +220,38 @@ it('authorizes card_flavor only for the card activity owner', function (): void 
     $this->actingAs($owner)
         ->postJson("/api/analyses/card_flavor/{$card->id}/trigger")
         ->assertOk();
+});
+
+it('returns 429 when the per-user rate limit is exceeded', function (): void {
+    config()->set('ai.rate_limit_per_minute', 3);
+    $user = User::factory()->create();
+    $activity = Activity::factory()->for($user)->create();
+
+    for ($i = 0; $i < 3; $i++) {
+        $this->actingAs($user)
+            ->postJson("/api/analyses/post_run_speech/{$activity->id}/trigger")
+            ->assertSuccessful();
+    }
+
+    $this->actingAs($user)
+        ->postJson("/api/analyses/post_run_speech/{$activity->id}/trigger")
+        ->assertStatus(429);
+});
+
+it('isolates rate limits per user', function (): void {
+    config()->set('ai.rate_limit_per_minute', 2);
+    $a = User::factory()->create();
+    $b = User::factory()->create();
+    $activityA = Activity::factory()->for($a)->create();
+    $activityB = Activity::factory()->for($b)->create();
+
+    for ($i = 0; $i < 2; $i++) {
+        $this->actingAs($a)->postJson("/api/analyses/post_run_speech/{$activityA->id}/trigger")->assertSuccessful();
+    }
+    $this->actingAs($a)->postJson("/api/analyses/post_run_speech/{$activityA->id}/trigger")->assertStatus(429);
+
+    // user $b is untouched by user $a's bucket
+    $this->actingAs($b)->postJson("/api/analyses/post_run_speech/{$activityB->id}/trigger")->assertSuccessful();
 });
 
 it('throws Unauthenticated when the request has no user (defensive guard)', function (): void {

@@ -38,6 +38,7 @@ PROMPT;
             ],
             schemaName: 'TemariDailyGreeting',
             requiredKeys: ['speech'],
+            userId: $user->id,
         );
 
         return (string) $decoded['speech'];

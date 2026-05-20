@@ -43,6 +43,9 @@ export interface AnalysisPayload {
     subject_type: string;
     subject_id: number;
     discriminator: string | null;
+    attempts?: number;
+    generated_at?: string | null;
+    retry_after_seconds?: number | null;
 }
 
 export interface BriefingResult {

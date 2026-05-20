@@ -59,6 +59,39 @@ describe('Rekor', () => {
         expect(screen.getByText('5:00/km')).toBeInTheDocument();
     });
 
+    it('wraps only the activity-name area in the link, not the whole card', () => {
+        const { container } = render(
+            <Rekor
+                personalRecords={[
+                    {
+                        id: 1,
+                        user_id: 1,
+                        activity_id: 99,
+                        category: '5km',
+                        value: 1500,
+                        value_sec: 1500,
+                        set_at: '2026-05-01',
+                        activity: { detail: { name: '5K Race' } },
+                        context_analysis: {
+                            id: 1,
+                            status: 'done',
+                            content: 'PR mantap!',
+                            type: 'pr_context',
+                            subject_type: 'personal_record',
+                            subject_id: 1,
+                            discriminator: null,
+                        },
+                    },
+                ]}
+            />,
+        );
+        const link = container.querySelector('a[href="/aktivitas/99"]');
+        expect(link).not.toBeNull();
+        // The activity name lives inside the link, the analysis content does not.
+        expect(link!.textContent).toContain('5K Race');
+        expect(link!.textContent).not.toContain('PR mantap!');
+    });
+
     it('PR card without activity_id does not wrap in a link', () => {
         const { container } = render(
             <Rekor

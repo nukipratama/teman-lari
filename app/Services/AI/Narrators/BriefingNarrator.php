@@ -55,6 +55,7 @@ PROMPT;
             context: $this->buildContext($ctx),
             schemaName: 'TemariBriefing',
             requiredKeys: ['headline', 'suggestion'],
+            userId: $user->id,
         );
 
         return [

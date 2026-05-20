@@ -126,7 +126,7 @@ export default function Rekor({ personalRecords }: Readonly<RekorProps>) {
                 <PageHero
                     icon="mdi:trophy-variant"
                     title="Rekor"
-                    subtitle="Catatan terbaik kamu — sentuh kartunya buat lihat run aslinya."
+                    subtitle="Catatan terbaik kamu. Tap nama run-nya buat lihat detail."
                     tone="pop"
                     className="mb-6"
                 />
@@ -158,8 +158,16 @@ function EmptyState() {
 
 function PrCard({ pr }: Readonly<{ pr: ExtendedPR }>) {
     const v = PR_VARIANT[toneForCategory(pr.category)];
-    const card = (
-        <div className={cn('group relative h-full overflow-hidden rounded-2xl border bg-gradient-to-br p-5 shadow-md transition hover:-translate-y-0.5 hover:shadow-lg', v.border, v.bg)}>
+    const activityName = pr.activity?.detail?.name ?? 'Run';
+    const meta = (
+        <>
+            <div className="truncate text-sm font-medium text-ink-soft group-hover/link:text-ink">{activityName}</div>
+            <div className="mt-0.5 text-xs text-ink-meta">{formatIdDate(pr.set_at, 'long')}</div>
+        </>
+    );
+
+    return (
+        <div className={cn('relative h-full overflow-hidden rounded-2xl border bg-gradient-to-br p-5 shadow-md transition hover:shadow-lg', v.border, v.bg)}>
             <span aria-hidden className={cn('absolute inset-x-0 top-0 h-1 bg-gradient-to-r', v.topRule)} />
             <DecorativeBlur className={cn('-right-8 -top-8 h-24 w-24', v.blob)} />
             <div className="relative flex items-start justify-between">
@@ -178,10 +186,16 @@ function PrCard({ pr }: Readonly<{ pr: ExtendedPR }>) {
                     <Icon icon={v.icon} width={20} height={20} />
                 </span>
             </div>
-            <div className="relative mt-4 truncate text-sm font-medium text-ink-soft">
-                {pr.activity?.detail?.name ?? 'Run'}
-            </div>
-            <div className="relative mt-0.5 text-xs text-ink-meta">{formatIdDate(pr.set_at, 'long')}</div>
+            {pr.activity_id === null ? (
+                <div className="relative mt-4">{meta}</div>
+            ) : (
+                <Link
+                    href={`/aktivitas/${pr.activity_id}`}
+                    className={cn('group/link relative mt-4 block rounded-md focus:outline-none focus-visible:ring-2', v.focusRing)}
+                >
+                    {meta}
+                </Link>
+            )}
             {pr.context_analysis && (
                 <div className="relative mt-3">
                     <AnalysisStatus
@@ -192,15 +206,6 @@ function PrCard({ pr }: Readonly<{ pr: ExtendedPR }>) {
                 </div>
             )}
         </div>
-    );
-
-    if (pr.activity_id === null) {
-        return card;
-    }
-    return (
-        <Link href={`/aktivitas/${pr.activity_id}`} className={cn('block rounded-2xl focus:outline-none focus-visible:ring-2', v.focusRing)}>
-            {card}
-        </Link>
     );
 }
 

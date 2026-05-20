@@ -16,12 +16,6 @@ use Throwable;
  */
 final readonly class StructuredChatCaller
 {
-    private const string GLOBAL_STYLE_RULES = <<<'RULES'
-
-Aturan gaya tulisan (WAJIB):
-- JANGAN PERNAH pakai em dash (—) atau en dash (–) di output. Kalau mau jeda, pakai koma, titik, atau kata sambung biasa.
-RULES;
-
     public function __construct(
         private AzureOpenAIClient $azure,
         private TokenUsageRecorder $usageRecorder,
@@ -40,6 +34,7 @@ RULES;
         string $schemaName,
         array $requiredKeys,
         float $temperature = 0.8,
+        ?int $userId = null,
     ): array {
         $startedAt = microtime(true);
 
@@ -47,7 +42,7 @@ RULES;
             $response = $this->azure->client()->chat()->create([
                 'model' => (string) config('azure_openai.deployment'),
                 'messages' => [
-                    ['role' => 'system', 'content' => $systemPrompt.self::GLOBAL_STYLE_RULES],
+                    ['role' => 'system', 'content' => $systemPrompt.TemariPersona::STYLE_RULES],
                     ['role' => 'user', 'content' => json_encode($context, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE)],
                 ],
                 'max_completion_tokens' => (int) config('azure_openai.max_completion_tokens'),
@@ -84,11 +79,23 @@ RULES;
         $promptTokens = (int) ($response->usage->promptTokens ?? 0);
         $completionTokens = (int) ($response->usage->completionTokens ?? 0);
         $totalTokens = (int) ($response->usage->totalTokens ?? 0);
+        $finishReason = (string) ($response->choices[0]->finishReason ?? '');
+        $truncated = $finishReason === 'length';
+        $latencyMs = self::latencyMs($startedAt);
+
+        if ($truncated) {
+            Log::warning('narrator.ai.truncated', [
+                'kind' => $kind,
+                'completion_tokens' => $completionTokens,
+                'max_completion_tokens' => (int) config('azure_openai.max_completion_tokens'),
+            ]);
+        }
 
         Log::info('narrator.ai.call', [
             'kind' => $kind,
             'status' => 'ok',
-            'latency_ms' => self::latencyMs($startedAt),
+            'latency_ms' => $latencyMs,
+            'truncated' => $truncated,
             'usage' => [
                 'prompt' => $promptTokens,
                 'completion' => $completionTokens,
@@ -102,6 +109,9 @@ RULES;
             $completionTokens,
             $totalTokens,
             (string) config('azure_openai.deployment') ?: null,
+            $latencyMs,
+            $truncated,
+            $userId,
         );
 
         return $decoded;

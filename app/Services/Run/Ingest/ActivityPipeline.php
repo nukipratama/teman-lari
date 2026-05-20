@@ -20,6 +20,7 @@ use App\Services\Strava\StravaClient;
 use App\Services\Weather\OpenMeteoClient;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use RuntimeException;
 use Throwable;
@@ -30,6 +31,10 @@ use Throwable;
 class ActivityPipeline
 {
     private const int DETAIL_FETCH_MAX_ATTEMPTS = 5;
+
+    private const string BACKFILL_SLOT_CACHE_PREFIX = 'ai.backfill.next-slot:';
+
+    private const int BACKFILL_SLOT_CACHE_TTL_HOURS = 2;
 
     public function __construct(
         private readonly StravaClient $client,
@@ -97,14 +102,16 @@ class ActivityPipeline
     {
         $user = $activity->user;
         $today = Carbon::today()->toDateString();
+        $delaySec = $this->backfillDelaySeconds($activity, $detail);
 
-        $this->analysisService->requestActivityGroup($activity);
-        $this->analysisService->requestBriefingGroup($user, $today, invalidate: true);
+        $this->analysisService->requestActivityGroup($activity, delaySeconds: $delaySec);
+        $this->analysisService->requestBriefingGroup($user, $today, invalidate: true, delaySeconds: $delaySec);
         $this->analysisService->request(
             subjectOrType: AnalysisType::DAILY_GREETING_SUBJECT_TYPE,
             subjectId: $user->id,
             type: AnalysisType::DailyGreeting,
             discriminator: $today,
+            delaySeconds: $delaySec,
             invalidate: true,
         );
         $this->analysisService->request(
@@ -112,6 +119,7 @@ class ActivityPipeline
             subjectId: $user->id,
             type: AnalysisType::TrendCaption,
             discriminator: $today,
+            delaySeconds: $delaySec,
             invalidate: true,
         );
 
@@ -124,9 +132,51 @@ class ActivityPipeline
                 subjectOrType: WeeklySnapshot::class,
                 subjectId: $snapshot->id,
                 type: AnalysisType::WeeklyRecap,
+                delaySeconds: $delaySec,
                 invalidate: true,
             );
         }
+    }
+
+    /**
+     * Activities started more than `ai.backfill_threshold_hours` ago are
+     * treated as backfill — their cascade gets staggered behind any other
+     * backfilled cascades queued in the last 2 hours for this user. Fresh
+     * runs (or activities with no start timestamp) bypass the cache and
+     * dispatch immediately at delay=0.
+     */
+    private function backfillDelaySeconds(Activity $activity, ActivityDetail $detail): int
+    {
+        $startedAt = $detail->start_date_local;
+        if ($startedAt === null) {
+            return 0;
+        }
+
+        $thresholdHours = (int) config('ai.backfill_threshold_hours', 24);
+        if (Carbon::now()->diffInHours($startedAt, absolute: true) < $thresholdHours) {
+            return 0;
+        }
+
+        $staggerSec = max(1, (int) config('ai.backfill_stagger_seconds', 360));
+        $key = self::BACKFILL_SLOT_CACHE_PREFIX.$activity->user_id;
+        $now = Carbon::now();
+
+        $cached = Cache::get($key);
+        $slotAt = ($cached instanceof Carbon && $cached->gt($now)) ? $cached : $now->copy();
+        $delaySec = (int) $now->diffInSeconds($slotAt, absolute: true);
+
+        Cache::put($key, $slotAt->copy()->addSeconds($staggerSec), $now->copy()->addHours(self::BACKFILL_SLOT_CACHE_TTL_HOURS));
+
+        if ($delaySec > 0) {
+            Log::info('ai.backfill.queued', [
+                'activity_id' => $activity->id,
+                'user_id' => $activity->user_id,
+                'delay_sec' => $delaySec,
+                'slot_at' => $slotAt->toIso8601String(),
+            ]);
+        }
+
+        return $delaySec;
     }
 
     /**

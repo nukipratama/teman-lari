@@ -12,9 +12,22 @@ interface UsageRow {
     completion: number;
     total: number;
     calls: number;
+    truncated_calls: number;
+    avg_latency_ms: number | null;
+    max_latency_ms: number | null;
 }
 
 interface UsageTotals {
+    prompt: number;
+    completion: number;
+    total: number;
+    calls: number;
+    truncated_calls: number;
+}
+
+interface UserRow {
+    user_id: number | null;
+    user_name: string | null;
     prompt: number;
     completion: number;
     total: number;
@@ -26,9 +39,11 @@ interface AiUsageProps {
     to: string;
     totals: UsageTotals;
     byKind: UsageRow[];
+    byUser: UserRow[];
 }
 
-const COLUMNS = ['Jenis', 'Panggilan', 'Prompt', 'Completion', 'Total', 'Rata-rata'] as const;
+const COLUMNS = ['Jenis', 'Panggilan', 'Prompt', 'Completion', 'Total', 'Rata-rata', 'Latency (avg/max)', 'Terpotong'] as const;
+const USER_COLUMNS = ['User', 'Panggilan', 'Prompt', 'Completion', 'Total', 'Rata-rata'] as const;
 
 const numberFmt = new Intl.NumberFormat('id-ID');
 
@@ -55,7 +70,7 @@ function isoStartOfMonth(): string {
     return new Date(d.getFullYear(), d.getMonth(), 1).toISOString().slice(0, 10);
 }
 
-export default function AiUsage({ from, to, totals, byKind }: Readonly<AiUsageProps>) {
+export default function AiUsage({ from, to, totals, byKind, byUser }: Readonly<AiUsageProps>) {
     const [fromInput, setFromInput] = useState<string>(from);
     const [toInput, setToInput] = useState<string>(to);
 
@@ -67,6 +82,7 @@ export default function AiUsage({ from, to, totals, byKind }: Readonly<AiUsagePr
 
     const promptShare = totals.total > 0 ? Math.round((totals.prompt / totals.total) * 100) : 0;
     const avgPerCall = totals.calls > 0 ? Math.round(totals.total / totals.calls) : 0;
+    const truncatedShare = totals.calls > 0 ? Math.round((totals.truncated_calls / totals.calls) * 100) : 0;
 
     return (
         <div className="min-h-screen bg-surface text-ink">
@@ -141,8 +157,17 @@ export default function AiUsage({ from, to, totals, byKind }: Readonly<AiUsagePr
                     <KpiTile label="Total Tokens" value={fmt(totals.total)} sub={`${totals.calls} call`} />
                     <KpiTile label="Prompt" value={fmt(totals.prompt)} sub={`${promptShare}% dari total`} />
                     <KpiTile label="Completion" value={fmt(totals.completion)} sub={`${100 - promptShare}% dari total`} />
-                    <KpiTile label="Avg / Call" value={fmt(avgPerCall)} sub="token" />
+                    <KpiTile
+                        label="Terpotong"
+                        value={`${truncatedShare}%`}
+                        sub={`${totals.truncated_calls} dari ${totals.calls} call`}
+                        tone={truncatedShare > 1 ? 'alert' : 'neutral'}
+                    />
                 </section>
+
+                <p className="mt-2 text-xs text-ink-meta">
+                    Rata-rata per call: <span className="font-semibold text-ink">{fmt(avgPerCall)}</span> token.
+                </p>
 
                 <section className="mt-10">
                     <SectionHeading
@@ -175,8 +200,66 @@ export default function AiUsage({ from, to, totals, byKind }: Readonly<AiUsagePr
                         </div>
                     )}
                 </section>
+
+                <section className="mt-10">
+                    <SectionHeading
+                        icon="mdi:account-multiple"
+                        title="Breakdown per User"
+                        subtitle="Siapa yang paling banyak ngajakin Temari ngobrol."
+                        tone="accent"
+                    />
+
+                    {byUser.length === 0 ? (
+                        <EmptyState />
+                    ) : (
+                        <div className="mt-4 overflow-x-auto rounded-2xl border border-line bg-surface-elev shadow-sm">
+                            <table className="w-full text-sm tabular-nums">
+                                <thead>
+                                    <tr className="border-b border-line text-left text-xs text-ink-meta">
+                                        {USER_COLUMNS.map((label) => (
+                                            <th key={label} className="px-5 py-3 font-semibold">
+                                                {label}
+                                            </th>
+                                        ))}
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {byUser.map((row) => (
+                                        <UserRowView key={`${row.user_id ?? 'system'}`} row={row} grandTotal={totals.total} />
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    )}
+                </section>
             </motion.main>
         </div>
+    );
+}
+
+function UserRowView({ row, grandTotal }: Readonly<{ row: UserRow; grandTotal: number }>) {
+    const share = grandTotal > 0 ? (row.total / grandTotal) * 100 : 0;
+    const avg = row.calls > 0 ? Math.round(row.total / row.calls) : 0;
+    const label = row.user_name ?? (row.user_id === null ? 'tanpa user' : `User #${row.user_id}`);
+
+    return (
+        <tr className="border-b border-line last:border-b-0">
+            <td className="px-5 py-3 font-medium text-ink">
+                <div>{label}</div>
+                <div className="mt-1 h-1.5 w-full max-w-[160px] rounded-full bg-line/40">
+                    <div
+                        className="h-full rounded-full bg-accent-500"
+                        style={{ width: `${share.toFixed(1)}%` }}
+                        aria-label={`${share.toFixed(1)}% dari total`}
+                    />
+                </div>
+            </td>
+            <td className="px-5 py-3 text-ink-soft">{fmt(row.calls)}</td>
+            <td className="px-5 py-3 text-ink-soft">{fmt(row.prompt)}</td>
+            <td className="px-5 py-3 text-ink-soft">{fmt(row.completion)}</td>
+            <td className="px-5 py-3 font-semibold text-ink">{fmt(row.total)}</td>
+            <td className="px-5 py-3 text-ink-soft">{fmt(avg)}</td>
+        </tr>
     );
 }
 
@@ -215,6 +298,11 @@ function PresetButton({ label, onClick }: Readonly<{ label: string; onClick: () 
 function KindRow({ row, grandTotal }: Readonly<{ row: UsageRow; grandTotal: number }>) {
     const share = grandTotal > 0 ? (row.total / grandTotal) * 100 : 0;
     const avg = row.calls > 0 ? Math.round(row.total / row.calls) : 0;
+    const truncatedRate = row.calls > 0 ? (row.truncated_calls / row.calls) * 100 : 0;
+    const latencyLabel =
+        row.avg_latency_ms === null
+            ? '—'
+            : `${fmt(row.avg_latency_ms)} / ${fmt(row.max_latency_ms ?? row.avg_latency_ms)} ms`;
 
     return (
         <tr className="border-b border-line last:border-b-0">
@@ -233,6 +321,10 @@ function KindRow({ row, grandTotal }: Readonly<{ row: UsageRow; grandTotal: numb
             <td className="px-5 py-3 text-ink-soft">{fmt(row.completion)}</td>
             <td className="px-5 py-3 font-semibold text-ink">{fmt(row.total)}</td>
             <td className="px-5 py-3 text-ink-soft">{fmt(avg)}</td>
+            <td className="px-5 py-3 text-ink-soft">{latencyLabel}</td>
+            <td className={`px-5 py-3 font-medium ${truncatedRate > 1 ? 'text-accent-700' : 'text-ink-soft'}`}>
+                {row.truncated_calls > 0 ? `${row.truncated_calls} (${truncatedRate.toFixed(1)}%)` : '—'}
+            </td>
         </tr>
     );
 }
