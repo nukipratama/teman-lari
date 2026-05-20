@@ -153,6 +153,28 @@ describe('useAnalysisTrigger', () => {
         expect(result.current.status).toBe('done');
     });
 
+    it('retires the poll slot after POLL_MAX_ATTEMPTS ticks, releasing listener + Map entry', async () => {
+        vi.useFakeTimers();
+        const { unmount } = renderHook(() =>
+            useAnalysisTrigger(payload({ status: 'queued' }), ['briefing']),
+        );
+
+        // 60 attempts = the max; the 61st tick should retire the slot instead
+        // of firing a reload. POLL_INTERVAL_MS = 3000.
+        await act(async () => {
+            vi.advanceTimersByTime(60 * 3000);
+        });
+        expect(router.reload).toHaveBeenCalledTimes(60);
+
+        await act(async () => {
+            vi.advanceTimersByTime(3000 * 3);
+        });
+        // No more reload calls after retirement.
+        expect(router.reload).toHaveBeenCalledTimes(60);
+
+        unmount();
+    });
+
     it('shares a single polling interval across multiple hook instances with the same reload set', async () => {
         vi.useFakeTimers();
         const { unmount: unmountA } = renderHook(() =>

@@ -84,16 +84,24 @@ function subscribePoll(only: string[]): () => void {
     const key = only.join('|');
     let slot = pollSlots.get(key);
     if (slot === undefined) {
-        slot = { key, refs: 0, only, interval: null, attempts: 0, onVisibility: () => {} };
-        const created = slot;
-        created.onVisibility = () => {
-            if (globalThis.document.hidden) {
-                stopSlot(created);
-            } else {
-                router.reload({ only: created.only });
-                startSlot(created);
-            }
+        // The onVisibility closure references `slot` lazily — it isn't called
+        // until the listener fires, by which point `slot` is fully initialized.
+        const created: PollSlot = {
+            key,
+            refs: 0,
+            only,
+            interval: null,
+            attempts: 0,
+            onVisibility: () => {
+                if (globalThis.document.hidden) {
+                    stopSlot(created);
+                } else {
+                    router.reload({ only: created.only });
+                    startSlot(created);
+                }
+            },
         };
+        slot = created;
         pollSlots.set(key, created);
         globalThis.document.addEventListener('visibilitychange', created.onVisibility);
         startSlot(created);

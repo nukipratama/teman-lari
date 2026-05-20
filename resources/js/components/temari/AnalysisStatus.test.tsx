@@ -1,5 +1,5 @@
-import { render, screen } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { describe, expect, it, vi } from 'vitest';
 import AnalysisStatus from './AnalysisStatus';
 import type { AnalysisPayload } from '@/types/inertia';
 
@@ -86,6 +86,58 @@ describe('AnalysisStatus', () => {
         );
         const button = screen.getByRole('button', { name: /Bisa diulang dalam 2:05/ });
         expect(button).toBeDisabled();
+    });
+
+    it('decrements the cooldown countdown each second', async () => {
+        vi.useFakeTimers();
+        try {
+            render(
+                <AnalysisStatus
+                    analysis={payload({ status: 'done', content: 'x', retry_after_seconds: 4 })}
+                />,
+            );
+
+            expect(screen.getByRole('button', { name: /Bisa diulang dalam 0:04/ })).toBeInTheDocument();
+
+            await act(async () => {
+                vi.advanceTimersByTime(1000);
+            });
+            expect(screen.getByRole('button', { name: /Bisa diulang dalam 0:03/ })).toBeInTheDocument();
+
+            await act(async () => {
+                vi.advanceTimersByTime(4000);
+            });
+            // Countdown reaches 0 → button re-enables to "Analisis ulang".
+            expect(screen.getByRole('button', { name: /^Analisis ulang$/ })).not.toBeDisabled();
+        } finally {
+            vi.useRealTimers();
+        }
+    });
+
+    it('renders the rate-limited note after a 429 response', async () => {
+        const fetchMock = vi.fn().mockResolvedValue({ ok: false, status: 429, json: async () => ({}) });
+        const original = globalThis.fetch;
+        globalThis.fetch = fetchMock as unknown as typeof fetch;
+        document.head.innerHTML = '<meta name="csrf-token" content="t" />';
+
+        try {
+            render(
+                <AnalysisStatus
+                    analysis={payload({ status: 'done', content: 'x' })}
+                />,
+            );
+
+            await act(async () => {
+                fireEvent.click(screen.getByRole('button', { name: /Analisis ulang/ }));
+            });
+
+            await waitFor(() => {
+                expect(screen.getByText(/Pelan-pelan, Temari kewalahan/)).toBeInTheDocument();
+            });
+        } finally {
+            globalThis.fetch = original;
+            document.head.innerHTML = '';
+        }
     });
 
     it('respects the sm size class on done content', () => {

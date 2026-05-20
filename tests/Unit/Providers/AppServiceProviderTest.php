@@ -2,6 +2,10 @@
 
 declare(strict_types=1);
 
+use App\Models\User;
+use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\RateLimiter;
 use Laravel\Socialite\Facades\Socialite;
 use SocialiteProviders\Strava\Provider as StravaProvider;
 
@@ -13,4 +17,29 @@ it('registers the Strava socialite provider via the SocialiteWasCalled listener'
     ]);
 
     expect(Socialite::driver('strava'))->toBeInstanceOf(StravaProvider::class);
+});
+
+it('analysis-trigger limiter keys by user id when authenticated', function (): void {
+    config()->set('ai.rate_limit_per_minute', 5);
+    $user = User::factory()->make(['id' => 99]);
+
+    $request = Request::create('/api/analyses/foo/1/trigger', 'POST');
+    $request->setUserResolver(fn () => $user);
+
+    $limit = RateLimiter::limiter('analysis-trigger')($request);
+
+    expect($limit)->toBeInstanceOf(Limit::class)
+        ->and($limit->key)->toBe('99')
+        ->and($limit->maxAttempts)->toBe(5);
+});
+
+it('analysis-trigger limiter falls back to IP when unauthenticated', function (): void {
+    config()->set('ai.rate_limit_per_minute', 3);
+
+    $request = Request::create('/api/analyses/foo/1/trigger', 'POST', server: ['REMOTE_ADDR' => '203.0.113.7']);
+
+    $limit = RateLimiter::limiter('analysis-trigger')($request);
+
+    expect($limit->key)->toBe('203.0.113.7')
+        ->and($limit->maxAttempts)->toBe(3);
 });
