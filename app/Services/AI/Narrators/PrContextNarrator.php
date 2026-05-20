@@ -47,6 +47,7 @@ PROMPT;
             schemaName: 'TemariPrContext',
             requiredKeys: ['flavor'],
             temperature: 0.7,
+            userId: $pr->user_id,
         );
 
         return (string) $decoded['flavor'];

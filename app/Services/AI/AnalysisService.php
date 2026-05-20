@@ -61,14 +61,14 @@ class AnalysisService
         return $this->dispatchRow($subjectType, $subjectId, $type, $discriminator, $invalidate, $delaySeconds);
     }
 
-    public function requestActivityGroup(Activity $activity, bool $invalidate = false): void
+    public function requestActivityGroup(Activity $activity, bool $invalidate = false, ?int $delaySeconds = null): void
     {
-        $this->dispatchGroup(AnalyzeActivityJob::class, $activity->id, null, $invalidate, null);
+        $this->dispatchGroup(AnalyzeActivityJob::class, $activity->id, null, $invalidate, $delaySeconds);
     }
 
-    public function requestBriefingGroup(User $user, string $discriminator, bool $invalidate = false): void
+    public function requestBriefingGroup(User $user, string $discriminator, bool $invalidate = false, ?int $delaySeconds = null): void
     {
-        $this->dispatchGroup(AnalyzeBriefingJob::class, $user->id, $discriminator, $invalidate, null);
+        $this->dispatchGroup(AnalyzeBriefingJob::class, $user->id, $discriminator, $invalidate, $delaySeconds);
     }
 
     /**
@@ -130,7 +130,7 @@ class AnalysisService
 
         if (! $justCreated) {
             if ($invalidate && $row->status === AnalysisStatus::Done) {
-                $row->update(['status' => AnalysisStatus::Pending, 'error' => null]);
+                $row->update(['status' => AnalysisStatus::Pending, 'error' => null, 'attempts' => 0]);
                 $row->refresh();
             }
 
@@ -254,7 +254,7 @@ class AnalysisService
     {
         foreach ($rows as $row) {
             if ($row->status === AnalysisStatus::Done) {
-                $row->update(['status' => AnalysisStatus::Pending, 'error' => null]);
+                $row->update(['status' => AnalysisStatus::Pending, 'error' => null, 'attempts' => 0]);
                 $row->refresh();
             }
         }

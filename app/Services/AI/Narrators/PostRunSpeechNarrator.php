@@ -44,6 +44,7 @@ PROMPT;
             context: $this->buildContext($detail, $mood, $hasPr),
             schemaName: 'TemariPostRunSpeech',
             requiredKeys: ['speech'],
+            userId: $activity->user_id,
         );
 
         return (string) $decoded['speech'];

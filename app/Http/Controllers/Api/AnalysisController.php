@@ -34,6 +34,14 @@ class AnalysisController extends Controller
         $discriminator = $this->discriminator($request);
         $this->authorizeSubject($this->user($request), $analysisType, $subjectId);
 
+        $existing = Analysis::query()
+            ->forSubject($analysisType->subjectType(), $subjectId, $analysisType, $discriminator)
+            ->first();
+
+        if ($existing?->cooldownRemaining() !== null) {
+            return $this->payload($existing, $analysisType, $subjectId, $discriminator);
+        }
+
         $row = $service->request(
             subjectOrType: $analysisType->subjectType(),
             subjectId: $subjectId,

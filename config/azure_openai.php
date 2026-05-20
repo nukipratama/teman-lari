@@ -12,7 +12,7 @@ preg_match('#/deployments/([^/]+)/#', $uri, $matches);
 return [
     'uri' => $uri,
     'api_key' => (string) env('AZURE_OPENAI_API_KEY', ''),
-    'timeout' => (int) env('AZURE_OPENAI_TIMEOUT', 8),
-    'max_completion_tokens' => 400,
+    'timeout' => (int) env('AZURE_OPENAI_TIMEOUT', 15),
+    'max_completion_tokens' => 700,
     'deployment' => $matches[1] ?? '',
 ];

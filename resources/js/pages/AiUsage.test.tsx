@@ -14,10 +14,14 @@ vi.mock('@inertiajs/react', () => ({
 const baseProps = {
     from: '2026-05-01',
     to: '2026-05-19',
-    totals: { prompt: 600, completion: 280, total: 880, calls: 3 },
+    totals: { prompt: 600, completion: 280, total: 880, calls: 3, truncated_calls: 0 },
     byKind: [
-        { kind: 'run-insight', prompt: 300, completion: 150, total: 450, calls: 1 },
-        { kind: 'briefing', prompt: 300, completion: 130, total: 430, calls: 2 },
+        { kind: 'run-insight', prompt: 300, completion: 150, total: 450, calls: 1, truncated_calls: 0, avg_latency_ms: 800, max_latency_ms: 800 },
+        { kind: 'briefing', prompt: 300, completion: 130, total: 430, calls: 2, truncated_calls: 0, avg_latency_ms: 1000, max_latency_ms: 1200 },
+    ],
+    byUser: [
+        { user_id: 1, user_name: 'Alice', prompt: 500, completion: 230, total: 730, calls: 2 },
+        { user_id: 2, user_name: 'Bob', prompt: 100, completion: 50, total: 150, calls: 1 },
     ],
 };
 
@@ -43,12 +47,40 @@ describe('AiUsage page', () => {
         render(
             <AiUsage
                 {...baseProps}
-                totals={{ prompt: 0, completion: 0, total: 0, calls: 0 }}
+                totals={{ prompt: 0, completion: 0, total: 0, calls: 0, truncated_calls: 0 }}
                 byKind={[]}
+                byUser={[]}
             />,
         );
 
-        expect(screen.getByText('Belum ada token tercatat di rentang ini.')).toBeInTheDocument();
+        expect(screen.getAllByText('Belum ada token tercatat di rentang ini.')).toHaveLength(2);
+    });
+
+    it('renders a per-user table with named users + share bar + null-user fallback', () => {
+        render(
+            <AiUsage
+                {...baseProps}
+                byUser={[
+                    { user_id: 1, user_name: 'Alice', prompt: 500, completion: 230, total: 730, calls: 2 },
+                    { user_id: null, user_name: null, prompt: 50, completion: 25, total: 75, calls: 1 },
+                ]}
+            />,
+        );
+
+        expect(screen.getByText('Alice')).toBeInTheDocument();
+        expect(screen.getByText('tanpa user')).toBeInTheDocument();
+        expect(screen.getByText('Breakdown per User')).toBeInTheDocument();
+    });
+
+    it('falls back to "User #ID" when user_name is null but user_id is present', () => {
+        render(
+            <AiUsage
+                {...baseProps}
+                byUser={[{ user_id: 99, user_name: null, prompt: 10, completion: 5, total: 15, calls: 1 }]}
+            />,
+        );
+
+        expect(screen.getByText('User #99')).toBeInTheDocument();
     });
 
     it('navigates with form submit', () => {

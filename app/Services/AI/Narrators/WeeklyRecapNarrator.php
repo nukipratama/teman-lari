@@ -44,6 +44,7 @@ PROMPT;
             schemaName: 'TemariWeeklyRecap',
             requiredKeys: ['narrative'],
             temperature: 0.7,
+            userId: $snapshot->user_id,
         );
 
         return (string) $decoded['narrative'];

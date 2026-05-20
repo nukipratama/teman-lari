@@ -3,20 +3,31 @@
 declare(strict_types=1);
 
 use App\Models\AI\TokenUsage;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
 use Inertia\Testing\AssertableInertia;
 
 uses(RefreshDatabase::class);
 
-function seedUsage(string $kind, int $prompt, int $completion, Carbon $when): void
-{
+function seedUsage(
+    string $kind,
+    int $prompt,
+    int $completion,
+    Carbon $when,
+    ?int $latencyMs = null,
+    bool $truncated = false,
+    ?int $userId = null,
+): void {
     TokenUsage::query()->create([
+        'user_id' => $userId,
         'kind' => $kind,
         'prompt_tokens' => $prompt,
         'completion_tokens' => $completion,
         'total_tokens' => $prompt + $completion,
         'model' => 'gpt-test',
+        'latency_ms' => $latencyMs,
+        'truncated' => $truncated,
         'created_at' => $when,
     ]);
 }
@@ -26,9 +37,9 @@ it('is reachable without a Laravel session (edge auth handles access in prod)', 
 });
 
 it('renders the AiUsage page with totals + per-kind breakdown filtered by date', function (): void {
-    seedUsage('briefing', 100, 50, Carbon::parse('2026-05-10 09:00:00'));
-    seedUsage('briefing', 200, 80, Carbon::parse('2026-05-15 11:00:00'));
-    seedUsage('run-insight', 300, 150, Carbon::parse('2026-05-12 13:00:00'));
+    seedUsage('briefing', 100, 50, Carbon::parse('2026-05-10 09:00:00'), latencyMs: 800);
+    seedUsage('briefing', 200, 80, Carbon::parse('2026-05-15 11:00:00'), latencyMs: 1200, truncated: true);
+    seedUsage('run-insight', 300, 150, Carbon::parse('2026-05-12 13:00:00'), latencyMs: 2400);
     seedUsage('briefing', 999, 999, Carbon::parse('2026-04-30 23:00:00')); // outside range
 
     $this->get('/ai-usage?from=2026-05-01&to=2026-05-19')
@@ -43,6 +54,7 @@ it('renders the AiUsage page with totals + per-kind breakdown filtered by date',
                     'completion' => 280,
                     'total' => 880,
                     'calls' => 3,
+                    'truncated_calls' => 1,
                 ])
                 ->has('byKind', 2)
                 ->where('byKind.0', [
@@ -51,6 +63,9 @@ it('renders the AiUsage page with totals + per-kind breakdown filtered by date',
                     'completion' => 150,
                     'total' => 450,
                     'calls' => 1,
+                    'truncated_calls' => 0,
+                    'avg_latency_ms' => 2400,
+                    'max_latency_ms' => 2400,
                 ])
                 ->where('byKind.1', [
                     'kind' => 'briefing',
@@ -58,6 +73,9 @@ it('renders the AiUsage page with totals + per-kind breakdown filtered by date',
                     'completion' => 130,
                     'total' => 430,
                     'calls' => 2,
+                    'truncated_calls' => 1,
+                    'avg_latency_ms' => 1000,
+                    'max_latency_ms' => 1200,
                 ]),
         );
 });
@@ -92,7 +110,50 @@ it('returns zeroed totals and empty breakdown when no rows fall within range', f
                     'completion' => 0,
                     'total' => 0,
                     'calls' => 0,
+                    'truncated_calls' => 0,
                 ])
-                ->has('byKind', 0),
+                ->has('byKind', 0)
+                ->has('byUser', 0),
+        );
+});
+
+it('renders a byUser breakdown joined to users.name', function (): void {
+    $alice = User::factory()->create(['name' => 'Alice']);
+    $bob = User::factory()->create(['name' => 'Bob']);
+
+    seedUsage('briefing', 100, 50, Carbon::parse('2026-05-10'), userId: $alice->id);
+    seedUsage('briefing', 200, 80, Carbon::parse('2026-05-12'), userId: $alice->id);
+    seedUsage('run-insight', 50, 25, Carbon::parse('2026-05-11'), userId: $bob->id);
+    seedUsage('briefing', 10, 5, Carbon::parse('2026-05-13')); // user_id null — represents system call
+
+    $this->get('/ai-usage?from=2026-05-01&to=2026-05-19')
+        ->assertSuccessful()
+        ->assertInertia(
+            fn (AssertableInertia $page) => $page
+                ->has('byUser', 3)
+                ->where('byUser.0', [
+                    'user_id' => $alice->id,
+                    'user_name' => 'Alice',
+                    'prompt' => 300,
+                    'completion' => 130,
+                    'total' => 430,
+                    'calls' => 2,
+                ])
+                ->where('byUser.1', [
+                    'user_id' => $bob->id,
+                    'user_name' => 'Bob',
+                    'prompt' => 50,
+                    'completion' => 25,
+                    'total' => 75,
+                    'calls' => 1,
+                ])
+                ->where('byUser.2', [
+                    'user_id' => null,
+                    'user_name' => null,
+                    'prompt' => 10,
+                    'completion' => 5,
+                    'total' => 15,
+                    'calls' => 1,
+                ]),
         );
 });

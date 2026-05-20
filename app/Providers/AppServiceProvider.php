@@ -6,8 +6,11 @@ namespace App\Providers;
 
 use App\Services\Run\Story\Contracts\VerdictNarrator;
 use App\Services\Run\Story\VerdictTimeline;
+use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 use Override;
 use SocialiteProviders\Manager\SocialiteWasCalled;
@@ -31,5 +34,14 @@ class AppServiceProvider extends ServiceProvider
         // it through — re-gating in-app would just block local dev.
         Gate::define('viewPulse', fn (): bool => true);
         Gate::define('viewAiUsage', fn (): bool => true);
+
+        RateLimiter::for('analysis-trigger', function (Request $request): Limit {
+            $perMinute = max(1, (int) config('ai.rate_limit_per_minute', 8));
+            $key = $request->user()?->id !== null
+                ? (string) $request->user()->id
+                : (string) $request->ip();
+
+            return Limit::perMinute($perMinute)->by($key);
+        });
     }
 }

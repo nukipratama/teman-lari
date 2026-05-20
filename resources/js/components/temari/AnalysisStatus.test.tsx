@@ -63,6 +63,31 @@ describe('AnalysisStatus', () => {
         expect(screen.getByRole('button', { name: /Analisis sekarang/ })).toBeInTheDocument();
     });
 
+    it('shows "Dibuat X lalu" hint when generated_at is present on done content', () => {
+        const ts = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+        render(
+            <AnalysisStatus
+                analysis={payload({ status: 'done', content: 'ok', generated_at: ts })}
+            />,
+        );
+        expect(screen.getByText(/Dibuat 5 menit lalu/)).toBeInTheDocument();
+    });
+
+    it('appends "(percobaan N)" when attempts > 1 on queued/processing', () => {
+        render(<AnalysisStatus analysis={payload({ status: 'processing', attempts: 3 })} />);
+        expect(screen.getByRole('status').textContent).toMatch(/percobaan 3/);
+    });
+
+    it('disables Analisis ulang and shows countdown when retry_after_seconds > 0', () => {
+        render(
+            <AnalysisStatus
+                analysis={payload({ status: 'done', content: 'x', retry_after_seconds: 125 })}
+            />,
+        );
+        const button = screen.getByRole('button', { name: /Bisa diulang dalam 2:05/ });
+        expect(button).toBeDisabled();
+    });
+
     it('respects the sm size class on done content', () => {
         const { container } = render(
             <AnalysisStatus analysis={payload({ status: 'done', content: 'mini' })} size="sm" />,

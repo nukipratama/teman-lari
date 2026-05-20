@@ -44,6 +44,7 @@ PROMPT;
             schemaName: 'TemariRunInsight',
             requiredKeys: ['technical', 'splits', 'zones'],
             temperature: 0.7,
+            userId: $activity->user_id,
         );
 
         return [

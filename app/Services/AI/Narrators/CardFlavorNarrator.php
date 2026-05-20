@@ -50,6 +50,7 @@ PROMPT;
             context: $context,
             schemaName: 'TemariCardFlavor',
             requiredKeys: ['flavor'],
+            userId: $card->activity->user_id,
         );
 
         return (string) $decoded['flavor'];

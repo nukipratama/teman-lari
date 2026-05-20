@@ -83,6 +83,28 @@ class Analysis extends Model
     }
 
     /**
+     * Seconds left before this row may be re-triggered, or null if no cooldown
+     * applies. A row is cooling when its status is Done, it has a
+     * `generated_at`, and that timestamp is within `ai.cooldown_seconds`.
+     */
+    public function cooldownRemaining(): ?int
+    {
+        if ($this->status !== AnalysisStatus::Done || $this->generated_at === null) {
+            return null;
+        }
+
+        $cooldown = (int) config('ai.cooldown_seconds', 300);
+        if ($cooldown <= 0) {
+            return null;
+        }
+
+        $unlocksAt = $this->generated_at->copy()->addSeconds($cooldown);
+        $remaining = (int) Carbon::now()->diffInSeconds($unlocksAt, absolute: false);
+
+        return $remaining > 0 ? $remaining : null;
+    }
+
+    /**
      * @return array{
      *     id: int|null,
      *     status: string,
@@ -91,6 +113,9 @@ class Analysis extends Model
      *     subject_type: string,
      *     subject_id: int,
      *     discriminator: string|null,
+     *     attempts: int,
+     *     generated_at: string|null,
+     *     retry_after_seconds: int|null,
      * }
      */
     public static function toPayload(
@@ -108,6 +133,9 @@ class Analysis extends Model
             'subject_type' => $subjectType,
             'subject_id' => $subjectId,
             'discriminator' => $discriminator,
+            'attempts' => $row === null ? 0 : $row->attempts,
+            'generated_at' => $row?->generated_at?->toIso8601String(),
+            'retry_after_seconds' => $row?->cooldownRemaining(),
         ];
     }
 }

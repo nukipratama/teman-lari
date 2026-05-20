@@ -1,6 +1,7 @@
-import type { ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { Icon } from '@iconify/react';
-import { useAnalysisTrigger } from '@/hooks/useAnalysisTrigger';
+import { RATE_LIMITED_ERROR, useAnalysisTrigger } from '@/hooks/useAnalysisTrigger';
+import { formatDurationHMS, formatRelativeId } from '@/lib/pace';
 import type { AnalysisPayload } from '@/types/inertia';
 import UnavailableNote from './UnavailableNote';
 
@@ -21,6 +22,33 @@ const TEXT_SIZE: Record<AnalysisStatusSize, string> = {
     md: 'text-base leading-relaxed',
 };
 
+function RateLimitedNote() {
+    return (
+        <span className="text-xs text-accent-700">
+            Pelan-pelan, Temari kewalahan. Coba lagi sebentar.
+        </span>
+    );
+}
+
+function useCooldownCountdown(initialSeconds: number | null | undefined): number {
+    const [remaining, setRemaining] = useState(() => Math.max(0, initialSeconds ?? 0));
+
+    useEffect(() => {
+        setRemaining(Math.max(0, initialSeconds ?? 0));
+    }, [initialSeconds]);
+
+    const ticking = remaining > 0;
+    useEffect(() => {
+        if (!ticking) return;
+        const id = globalThis.setInterval(() => {
+            setRemaining((r) => (r <= 1 ? 0 : r - 1));
+        }, 1000);
+        return () => globalThis.clearInterval(id);
+    }, [ticking]);
+
+    return remaining;
+}
+
 export default function AnalysisStatus({
     analysis,
     inertiaReloadProps = [],
@@ -28,26 +56,41 @@ export default function AnalysisStatus({
     renderContent,
     allowReanalyze = true,
 }: Readonly<Props>) {
-    const { status, pending, trigger } = useAnalysisTrigger(analysis, inertiaReloadProps);
+    const { status, pending, error, retryAfterSeconds, trigger } = useAnalysisTrigger(analysis, inertiaReloadProps);
     const effectiveStatus = pending ? 'queued' : status;
     const content = analysis.content;
+    const attempts = analysis.attempts ?? 0;
+    const cooldownRemaining = useCooldownCountdown(retryAfterSeconds);
+    const rateLimited = error === RATE_LIMITED_ERROR;
 
     if (effectiveStatus === 'done' && content !== null) {
+        const cooling = cooldownRemaining > 0;
         return (
             <div className="flex flex-col gap-1">
                 <div className={`${TEXT_SIZE[size]} text-ink`}>
                     {renderContent ? renderContent(content) : content}
                 </div>
+                {analysis.generated_at && (
+                    <span className="text-xs text-ink-meta">
+                        Dibuat {formatRelativeId(analysis.generated_at)}
+                    </span>
+                )}
                 {allowReanalyze && (
                     <button
                         type="button"
                         onClick={trigger}
-                        className="inline-flex items-center self-start gap-1 text-xs text-ink-meta hover:text-brand-700 transition-colors"
+                        disabled={cooling || pending}
+                        className="inline-flex items-center self-start gap-1 text-xs text-ink-meta hover:text-brand-700 transition-colors disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:text-ink-meta"
                     >
                         <Icon icon="mdi:refresh" aria-hidden />
-                        <span>Analisis ulang</span>
+                        <span>
+                            {cooling
+                                ? `Bisa diulang dalam ${formatDurationHMS(cooldownRemaining)}`
+                                : 'Analisis ulang'}
+                        </span>
                     </button>
                 )}
+                {rateLimited && <RateLimitedNote />}
             </div>
         );
     }
@@ -60,7 +103,10 @@ export default function AnalysisStatus({
                 aria-live="polite"
             >
                 <Icon icon="mdi:loading" className="animate-spin" aria-hidden />
-                <span>Lagi dipikirin Temari…</span>
+                <span>
+                    Lagi dipikirin Temari…
+                    {attempts > 1 && ` (percobaan ${attempts})`}
+                </span>
             </span>
         );
     }
@@ -69,6 +115,7 @@ export default function AnalysisStatus({
         return (
             <div className="flex flex-col gap-1.5">
                 <UnavailableNote size={size} />
+                {rateLimited && <RateLimitedNote />}
                 {allowReanalyze && (
                     <button
                         type="button"
