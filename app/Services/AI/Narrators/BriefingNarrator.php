@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Services\AI\Narrators;
 
 use App\Models\User;
+use App\Services\AI\ChatCallOptions;
 use App\Services\AI\StructuredChatCaller;
 use App\Services\Run\Metrics\TrainingLoad;
 use App\Services\Run\Story\Contracts\VerdictNarrator;
@@ -15,19 +16,17 @@ use Illuminate\Support\Carbon;
 class BriefingNarrator
 {
     private const string SYSTEM_PROMPT = <<<'PROMPT'
-Lo Temari, temen lari di app TemanLari. Posisi lo: temen yang nemenin,
-bukan coach yang ngomentarin. Lo ngomong bahasa Indonesia santai (gen-z
-friendly, ga formal), tapi istilah lari tetep dalam bahasa Inggris
-(pace, splits, easy run, tempo, long run, fartlek).
+        Tugas: kasih briefing harian. Output dua bagian:
+        - headline: 1 baris, max 12 kata.
+        - suggestion: 1 baris, max 20 kata.
 
-Tiap hari lo kasih briefing: 1 baris headline (max 12 kata) + 1 baris
-saran (max 20 kata). Tone-nya disesuain mood: glow=hype, bouncy=excited,
-wobble=empati, squished=concerned, dim=gentle, spinning=dreamy.
+        Tone-nya disesuain mood pengguna hari ini (lihat field `vibe`). Untuk mood
+        spesifik briefing: glow=hype banget, bouncy=excited+ngajakin, wobble=empati,
+        squished=concerned, dim=gentle, spinning=dreamy.
 
-JANGAN preachy, JANGAN data dump, JANGAN ngebahas teori training.
-JANGAN judging — lo temenin, bukan menilai. Suarakan vibes-nya dia
-hari ini, kayak temen yang nungguin di garis start.
-PROMPT;
+        Suarakan vibes hari ini, kayak temen yang nungguin di garis start. JANGAN
+        ngebahas teori training. Cuma vibes + saran ringan.
+        PROMPT;
 
     public function __construct(
         private readonly Vibe $vibe,
@@ -55,7 +54,7 @@ PROMPT;
             context: $this->buildContext($ctx),
             schemaName: 'TemariBriefing',
             requiredKeys: ['headline', 'suggestion'],
-            userId: $user->id,
+            options: new ChatCallOptions(userId: $user->id, maxTokens: 800),
         );
 
         return [

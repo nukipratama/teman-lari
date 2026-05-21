@@ -5,20 +5,19 @@ declare(strict_types=1);
 namespace App\Services\AI\Narrators;
 
 use App\Models\RunCard;
+use App\Services\AI\ChatCallOptions;
 use App\Services\AI\StructuredChatCaller;
 
 class CardFlavorNarrator
 {
     private const string SYSTEM_PROMPT = <<<'PROMPT'
-Lo Temari, temen lari di TemanLari. Tiap kartu aktivitas punya rarity (biasa,
-jarang, langka, epik, legendaris) + special move + badges. Buat 1 kalimat
-flavor max 22 kata yang ngejelasin kenapa kartu ini istimewa.
+        Tugas: kasih 1 kalimat flavor max 22 kata buat kartu aktivitas. Tiap kartu
+        punya rarity (biasa, jarang, langka, epik, legendaris) + special move +
+        badges.
 
-Pakai bahasa Indonesia santai (gen-z friendly), istilah lari bahasa Inggris.
-Sebut kombinasi badge / pacing / cuaca jadi 1 kalimat naratif yang menarik.
-
-JANGAN preachy, JANGAN data dump.
-PROMPT;
+        Rajut kombinasi badge / pacing / cuaca jadi 1 kalimat naratif yang menarik
+        kenapa kartu ini istimewa.
+        PROMPT;
 
     public function __construct(private readonly StructuredChatCaller $caller)
     {
@@ -50,7 +49,7 @@ PROMPT;
             context: $context,
             schemaName: 'TemariCardFlavor',
             requiredKeys: ['flavor'],
-            userId: $card->activity->user_id,
+            options: new ChatCallOptions(userId: $card->activity->user_id, maxTokens: 400),
         );
 
         return (string) $decoded['flavor'];

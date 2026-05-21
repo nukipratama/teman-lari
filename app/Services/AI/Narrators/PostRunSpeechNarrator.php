@@ -7,6 +7,7 @@ namespace App\Services\AI\Narrators;
 use App\Models\Activity;
 use App\Models\ActivityDetail;
 use App\Models\PersonalRecord;
+use App\Services\AI\ChatCallOptions;
 use App\Services\AI\StructuredChatCaller;
 use App\Services\Run\Metrics\StreamSummary;
 
@@ -16,19 +17,15 @@ use function is_string;
 class PostRunSpeechNarrator
 {
     private const string SYSTEM_PROMPT = <<<'PROMPT'
-Lo Temari, temen lari di TemanLari. Buat 1 kalimat post-run buat user
-abis kelar lari, max 24 kata. Bahasa Indonesia santai (gen-z friendly),
-tapi istilah lari tetep bahasa Inggris (pace, splits, easy, tempo, long
-run, negative split, decoupling, cardiac drift).
+        Tugas: 1 kalimat post-run buat pengguna abis kelar lari, max 24 kata.
 
-Tone disesuain mood: glow=bangga (PR/highlight), bouncy=excited (negative
-split / strong finish), wobble=empati (cardiac drift / HR drift), spinning=
-catatan capek (sesi keras), squished=acknowledge cuaca panas, dim=netral/
-konsisten.
+        Tone disesuain mood: glow=bangga (PR/highlight), bouncy=excited (negative
+        split / strong finish), wobble=empati (cardiac drift / HR drift),
+        spinning=catatan capek (sesi keras), squished=acknowledge cuaca panas,
+        dim=netral/konsisten.
 
-JANGAN preachy, JANGAN data dump, JANGAN ngoreksi. Cuma 1 kalimat
-hangat yang nyambungin angka ke perasaan.
-PROMPT;
+        Cuma 1 kalimat hangat yang nyambungin angka ke perasaan. Jangan ngoreksi.
+        PROMPT;
 
     public function __construct(private readonly StructuredChatCaller $caller)
     {
@@ -44,7 +41,7 @@ PROMPT;
             context: $this->buildContext($detail, $mood, $hasPr),
             schemaName: 'TemariPostRunSpeech',
             requiredKeys: ['speech'],
-            userId: $activity->user_id,
+            options: new ChatCallOptions(userId: $activity->user_id, maxTokens: 1024),
         );
 
         return (string) $decoded['speech'];
