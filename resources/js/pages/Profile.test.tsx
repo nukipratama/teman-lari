@@ -85,6 +85,35 @@ describe('Profile', () => {
         expect(screen.queryByRole('heading', { name: /Rekor terbaru/i })).not.toBeInTheDocument();
     });
 
+    it.each([
+        { days: 3, expected: /Mulai berlari/i },
+        { days: 28, expected: /4 minggu lalu/i },
+        { days: 180, expected: /6 bulan lalu/i },
+        { days: 800, expected: /2 tahun lalu/i },
+    ])('renders running-since label for first_run_at $days days ago', ({ days, expected }) => {
+        setup();
+        const isoDaysAgo = new Date(Date.now() - days * 86_400_000).toISOString();
+        render(<Profile identity={{ ...baseIdentity, first_run_at: isoDaysAgo }} stats={baseStats} />);
+        expect(screen.getByText(expected)).toBeInTheDocument();
+    });
+
+    it('omits the running-since line when first_run_at and member_since are both null', () => {
+        setup();
+        const { container } = render(
+            <Profile identity={{ ...baseIdentity, first_run_at: null, member_since: null }} stats={baseStats} />,
+        );
+        // Neither "Mulai berlari" nor "Berlari sejak" appears.
+        expect(container).not.toHaveTextContent(/Mulai berlari|Berlari sejak/);
+    });
+
+    it('handles invalid date strings by skipping the running-since line', () => {
+        setup();
+        const { container } = render(
+            <Profile identity={{ ...baseIdentity, first_run_at: 'not-a-date', member_since: null }} stats={baseStats} />,
+        );
+        expect(container).not.toHaveTextContent(/Berlari sejak|Mulai berlari/);
+    });
+
     it('renders Koleksi section with unlocked + locked items', () => {
         setup();
         render(

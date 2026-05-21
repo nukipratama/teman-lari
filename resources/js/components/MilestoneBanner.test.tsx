@@ -37,6 +37,21 @@ describe('MilestoneBanner', () => {
         expect(screen.getByText('Sub-5 pertama')).toBeInTheDocument();
     });
 
+    it.each(['pr', 'longest_ever', 'first_ever_distance', 'first_ever_pace'] as const)(
+        'renders the banner for the %s milestone kind',
+        (kind) => {
+            const pending: PendingMilestone = {
+                activity_id: 1,
+                milestones: [{ kind, label: `${kind} label`, body: `${kind} body` }],
+            };
+            render(<MilestoneBanner pending={pending} />);
+            // Each kind hits a different switch branch in iconFor + iconBgFor;
+            // visible content proves the branch ran without throwing.
+            expect(screen.getByText(`${kind} label`)).toBeInTheDocument();
+            expect(screen.getByText(`${kind} body`)).toBeInTheDocument();
+        },
+    );
+
     it('POSTs to the dismiss endpoint and hides itself when "Tutup" is clicked', async () => {
         const spy = vi.spyOn(router, 'post').mockImplementation(() => {});
         const pending: PendingMilestone = {

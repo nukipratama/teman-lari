@@ -322,26 +322,19 @@ function UnlockTile({ def, unlocked }: Readonly<{ def: UnlockCatalogEntry; unloc
 
 function runningSinceLabel(iso: string | null): string | null {
     if (iso === null) return null;
-    try {
-        const first = new Date(iso);
-        if (Number.isNaN(first.getTime())) return null;
-        const now = new Date();
-        const diffMs = now.getTime() - first.getTime();
-        const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-        if (diffDays < 7) {
-            return `Mulai berlari ${formatIdDate(iso, 'long')}`;
-        }
-        if (diffDays < 60) {
-            const weeks = Math.floor(diffDays / 7);
-            return `Berlari sejak ${weeks} minggu lalu`;
-        }
-        const months = Math.floor(diffDays / 30);
-        if (months < 24) {
-            return `Berlari sejak ${months} bulan lalu`;
-        }
-        const years = Math.floor(months / 12);
-        return `Berlari sejak ${years} tahun lalu`;
-    } catch {
-        return null;
+    const first = new Date(iso);
+    if (Number.isNaN(first.getTime())) return null;
+
+    const diffDays = Math.floor((Date.now() - first.getTime()) / (1000 * 60 * 60 * 24));
+    if (diffDays < 7) {
+        return `Mulai berlari ${formatIdDate(iso, 'long')}`;
     }
+    if (diffDays < 60) {
+        return `Berlari sejak ${Math.floor(diffDays / 7)} minggu lalu`;
+    }
+    const months = Math.floor(diffDays / 30);
+    if (months < 24) {
+        return `Berlari sejak ${months} bulan lalu`;
+    }
+    return `Berlari sejak ${Math.floor(months / 12)} tahun lalu`;
 }

@@ -1,5 +1,5 @@
 import { render, screen } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import JourneyStrip from './JourneyStrip';
 
 describe('JourneyStrip', () => {
@@ -24,6 +24,27 @@ describe('JourneyStrip', () => {
         expect(screen.getByText(/80\.4 km/)).toBeInTheDocument();
         expect(screen.getByText(/60 detik\/km lebih cepat/)).toBeInTheDocument();
         expect(screen.getByText(/15 bpm lebih rendah/)).toBeInTheDocument();
+    });
+
+    it('falls back to the raw iso when formatDate cannot parse it', () => {
+        // toLocaleDateString on an invalid Date silently returns 'Invalid Date',
+        // it doesn't throw — so we exercise the catch by spying on the prototype.
+        const spy = vi.spyOn(Date.prototype, 'toLocaleDateString').mockImplementation(() => {
+            throw new Error('locale unavailable');
+        });
+        render(
+            <JourneyStrip
+                match={{
+                    first: { date: 'not-a-date', name: null, distance_km: null, pace_sec_per_km: null, avg_hr: null },
+                    current: { date: null, name: null, distance_km: null, pace_sec_per_km: null, avg_hr: null },
+                    pace_improvement_sec: null,
+                    hr_improvement_bpm: null,
+                    total_km: 0,
+                }}
+            />,
+        );
+        expect(screen.getByText(/not-a-date/)).toBeInTheDocument();
+        spy.mockRestore();
     });
 
     it('skips the hr line when no HR data on either side', () => {
