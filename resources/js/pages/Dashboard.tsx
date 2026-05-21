@@ -8,6 +8,7 @@ import BriefingCard from '@/components/temari/BriefingCard';
 import ConfettiBurst from '@/components/ConfettiBurst';
 import DecorativeBlur from '@/components/DecorativeBlur';
 import MetricExplainer from '@/components/MetricExplainer';
+import MilestoneBanner, { type PendingMilestone } from '@/components/MilestoneBanner';
 import SectionHeading from '@/components/SectionHeading';
 import TemariFollow from '@/components/temari/TemariFollow';
 import FirstRunTooltip from '@/components/onboarding/FirstRunTooltip';
@@ -40,6 +41,7 @@ interface DashboardProps {
     chartData: FitnessChartData;
     trendAnalysis?: AnalysisPayload;
     hasNewPr?: boolean;
+    pendingMilestone?: PendingMilestone | null;
 }
 
 export default function Dashboard({
@@ -50,6 +52,7 @@ export default function Dashboard({
     chartData,
     trendAnalysis,
     hasNewPr = false,
+    pendingMilestone = null,
 }: Readonly<DashboardProps>) {
     const { props } = usePage<SharedProps & DashboardProps>();
     const firstName = props.auth.user?.first_name ?? '';
@@ -69,6 +72,8 @@ export default function Dashboard({
                 className="w-full px-4 py-6 sm:px-6 sm:py-10"
             >
                 <FirstRunTooltip recentRunCount={recentRuns.length} />
+
+                <MilestoneBanner pending={pendingMilestone} />
 
                 <HeroHeader firstName={firstName} briefing={briefing} snapshot={snapshot} />
 

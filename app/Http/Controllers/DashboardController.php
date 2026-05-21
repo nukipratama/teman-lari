@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\Models\Activity;
 use App\Models\ActivityDetail;
 use App\Models\AI\Analysis;
 use App\Models\PersonalRecord;
@@ -64,7 +65,38 @@ class DashboardController extends Controller
             'chartData' => $this->fitnessChartData($weeks),
             'trendAnalysis' => $this->resolveTrendCaption($user, $today, $analysisService),
             'hasNewPr' => $this->detectNewPr($user),
+            'pendingMilestone' => $this->resolvePendingMilestone($user),
         ]);
+    }
+
+    /**
+     * Most-recent activity with un-dismissed milestone payload. Returns the
+     * activity id so the frontend can POST a dismiss back; the payload
+     * itself is the cached MilestoneDetector output.
+     *
+     * @return array{activity_id: int, milestones: list<array<string, mixed>>}|null
+     */
+    private function resolvePendingMilestone(User $user): ?array
+    {
+        $activity = Activity::query()
+            ->where('user_id', $user->id)
+            ->whereNotNull('milestone_payload')
+            ->orderByDesc('id')
+            ->first();
+
+        if ($activity === null) {
+            return null;
+        }
+
+        $payload = $activity->milestone_payload;
+        if (! is_array($payload) || $payload === []) {
+            return null;
+        }
+
+        return [
+            'activity_id' => $activity->id,
+            'milestones' => array_values($payload),
+        ];
     }
 
     private function detectNewPr(User $user): bool

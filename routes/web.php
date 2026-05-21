@@ -8,6 +8,7 @@ use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\StravaAuthController;
 use App\Http\Controllers\CardController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\MilestoneController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\RekorController;
 use App\Http\Controllers\RunController;
@@ -47,6 +48,9 @@ Route::middleware('auth')->group(function (): void {
     Route::permanentRedirect('/progress', '/aktivitas');
     Route::permanentRedirect('/settings', '/pengaturan');
     Route::permanentRedirect('/profile', '/profil');
+
+    Route::post('/api/milestones/{activity}/dismiss', [MilestoneController::class, 'dismiss'])
+        ->name('api.milestones.dismiss');
 
     Route::get('/api/analyses/{type}/{subjectId}', [AnalysisController::class, 'show'])
         ->whereNumber('subjectId')
