@@ -37,6 +37,14 @@ it('falls back to today\'s month when ?month is invalid', function (): void {
         ->assertInertia(fn (Assert $page) => $page->where('month', Carbon::today()->format('Y-m')));
 });
 
+it('falls back to today\'s month when ?month parses but is impossible (Carbon throws)', function (): void {
+    // 9999-99 passes the YYYY-MM regex but Carbon::parse refuses month 99.
+    $user = User::factory()->create();
+
+    $this->actingAs($user)->get('/kalender?month=9999-99')
+        ->assertInertia(fn (Assert $page) => $page->where('month', Carbon::today()->format('Y-m')));
+});
+
 it('exposes prev / next month strings for navigation', function (): void {
     $user = User::factory()->create();
 

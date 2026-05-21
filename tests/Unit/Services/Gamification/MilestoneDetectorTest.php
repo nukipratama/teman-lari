@@ -110,6 +110,65 @@ it('is idempotent — re-running the detector on the same activity returns the c
     Carbon::setTestNow();
 });
 
+it('skips the first-ever-distance milestone when the run is below the smallest threshold (1km)', function (): void {
+    $user = User::factory()->create();
+    [$activity, $detail] = buildActivity($user, '2026-05-21', 500); // 0.5 km
+
+    $milestones = app(MilestoneDetector::class)->detect($activity, $detail);
+
+    expect(array_column($milestones, 'kind'))->not->toContain('first_ever_distance');
+});
+
+it('skips the first-ever-pace milestone for slow pace above all thresholds', function (): void {
+    $user = User::factory()->create();
+    // 5 km in 50 minutes = 10:00/km, slower than slowest threshold (7:00).
+    [$activity, $detail] = buildActivity($user, '2026-05-21', 5_000, 3_000);
+
+    $milestones = app(MilestoneDetector::class)->detect($activity, $detail);
+
+    expect(array_column($milestones, 'kind'))->not->toContain('first_ever_pace');
+});
+
+it('labels half marathon and marathon distance milestones with their named forms', function (): void {
+    $user = User::factory()->create();
+
+    [$half, $halfDetail] = buildActivity($user, '2026-05-21', 21_200); // just over 21.1 km
+    $halfMilestones = app(MilestoneDetector::class)->detect($half, $halfDetail);
+    $halfDistance = collect($halfMilestones)->firstWhere('kind', 'first_ever_distance');
+    expect($halfDistance['label'])->toContain('Half Marathon');
+
+    [$marathon, $marathonDetail] = buildActivity($user, '2026-05-22', 42_300); // just over 42.2 km
+    $marathonMilestones = app(MilestoneDetector::class)->detect($marathon, $marathonDetail);
+    $marathonDistance = collect($marathonMilestones)->firstWhere('kind', 'first_ever_distance');
+    expect($marathonDistance['label'])->toContain('Marathon');
+});
+
+it('returns the cached payload as a plain array when re-detected', function (): void {
+    $user = User::factory()->create();
+    [$activity, $detail] = buildActivity($user, '2026-05-21', 5_500);
+    app(MilestoneDetector::class)->detect($activity, $detail);
+
+    // Simulate dismissal: payload nulled but detected_at stays.
+    $activity->update(['milestone_payload' => null]);
+
+    $milestones = app(MilestoneDetector::class)->detect($activity, $detail);
+
+    expect($milestones)->toBe([]);
+});
+
+it('formats PR category labels for half_marathon and marathon distance PRs', function (): void {
+    $user = User::factory()->create();
+    [$activity, $detail] = buildActivity($user, '2026-05-21', 21_200);
+
+    $milestones = app(MilestoneDetector::class)->detect($activity, $detail, ['half_marathon', 'marathon', '15km']);
+
+    $prMilestones = collect($milestones)->where('kind', 'pr');
+    $bodies = $prMilestones->pluck('body')->all();
+    expect($bodies)->toContain('Kamu baru saja memecahkan PR di Half Marathon. Aku catat.')
+        ->and($bodies)->toContain('Kamu baru saja memecahkan PR di Marathon. Aku catat.')
+        ->and($bodies)->toContain('Kamu baru saja memecahkan PR di 15 km. Aku catat.');
+});
+
 it('treats older activities synced later as not setting a new "first ever" for younger rows', function (): void {
     $user = User::factory()->create();
     // The "new" activity dated 2026-05-21, detected first.

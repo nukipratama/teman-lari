@@ -98,6 +98,31 @@ it('returns null journeyMatch when the user has less than 2 activities', functio
         ->assertInertia(fn (Assert $page) => $page->where('journeyMatch', null));
 });
 
+it('returns null pace + hr improvement when either activity lacks the underlying data', function (): void {
+    $user = User::factory()->create();
+    $first = Activity::factory()->for($user)->analyzed()->create();
+    ActivityDetail::factory()->for($first)->create([
+        'start_date_local' => Carbon::today()->subDays(60),
+        'distance' => null, // missing distance → paceSecPerKm returns null
+        'moving_time' => 2100,
+        'average_heartrate' => null, // missing HR
+        'name' => 'First Ever',
+    ]);
+    $latest = Activity::factory()->for($user)->analyzed()->create();
+    ActivityDetail::factory()->for($latest)->create([
+        'start_date_local' => Carbon::today()->subDays(1),
+        'distance' => 5000,
+        'moving_time' => 1800,
+        'average_heartrate' => 150,
+        'name' => 'Latest',
+    ]);
+
+    $this->actingAs($user)->get('/aktivitas?range=1y')
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('journeyMatch.pace_improvement_sec', null)
+            ->where('journeyMatch.hr_improvement_bpm', null));
+});
+
 it('builds journeyMatch comparing first-ever and most-recent activities', function (): void {
     $user = User::factory()->create();
     $first = Activity::factory()->for($user)->analyzed()->create();

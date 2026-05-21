@@ -62,6 +62,22 @@ it('computes recovery hours from the most recent activity start', function (): v
     expect($ctx->recoveryHours)->toBe(36);
 });
 
+it('falls back to last-week form_status when this week has no snapshot yet', function (): void {
+    $user = User::factory()->create();
+    $asOf = Carbon::create(2026, 5, 21, 8); // week ending 2026-05-24
+
+    // Only the prior week has a snapshot; this week hasn't been aggregated yet.
+    WeeklySnapshot::factory()->for($user)->create([
+        'week_ending' => '2026-05-17',
+        'form_status' => 'fatigued',
+        'runs' => 2,
+    ]);
+
+    $ctx = BriefingContext::forUser($user, $asOf);
+
+    expect($ctx->formStatus)->toBe('fatigued');
+});
+
 it('counts consecutive active weeks back from the current week', function (): void {
     $user = User::factory()->create();
     $asOf = Carbon::create(2026, 5, 21, 8); // week ending 2026-05-24

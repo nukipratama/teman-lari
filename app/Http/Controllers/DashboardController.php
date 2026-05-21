@@ -80,12 +80,11 @@ class DashboardController extends Controller
             return null;
         }
 
+        // Both are non-null because count >= 2 (guarded above).
+        /** @var WeeklySnapshot $thisWeek */
         $thisWeek = $weeks->last();
+        /** @var WeeklySnapshot $lastWeek */
         $lastWeek = $weeks->slice(-2, 1)->first();
-
-        if ($thisWeek === null || $lastWeek === null) {
-            return null;
-        }
 
         $paceDelta = null;
         $thisPace = self::weekPaceSecPerKm($thisWeek);
@@ -144,10 +143,10 @@ class DashboardController extends Controller
             return null;
         }
 
+        // `milestone_payload` cast as array; query above filtered nulls.
+        // Frontend MilestoneBanner short-circuits when `milestones` is empty.
+        /** @var array<int, array<string, mixed>> $payload */
         $payload = $activity->milestone_payload;
-        if (! is_array($payload) || $payload === []) {
-            return null;
-        }
 
         return [
             'activity_id' => $activity->id,
