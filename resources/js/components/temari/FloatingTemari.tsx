@@ -8,11 +8,11 @@ const POLL_MS = 5000;
 
 const PAGE_TIPS: Record<string, string> = {
     '/': 'Tap aku kalau penasaran sama vibe hari ini ✨',
-    '/aktivitas': 'Pilih satu run buat lihat ceritanya 🏃‍♀️',
+    '/aktivitas': 'Geser range filter buat liat heatmap lari lo 🗓️',
     '/kartu': 'Tap kartu Epic/Legendaris buat efek konfeti 🎉',
-    '/catatan': 'Riwayat mingguan + PR ledger lo ada di sini 📒',
+    '/rekor': 'Rekor lo per kategori, tap buat lihat lari aslinya 🏆',
     '/profil': 'Statistik singkat akun Strava 🧾',
-    '/pengaturan': 'Atur preferensi & Temari di sini ⚙️',
+    '/pengaturan': 'Atur preferensi + Temari di sini ⚙️',
 };
 
 function tipForPath(path: string): string {

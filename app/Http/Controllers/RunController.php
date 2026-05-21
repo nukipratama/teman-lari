@@ -6,13 +6,16 @@ namespace App\Http\Controllers;
 
 use App\Jobs\Geo\ResolveActivityLocationJob;
 use App\Models\Activity;
+use App\Models\ActivityDetail;
 use App\Models\AI\Analysis;
 use App\Models\StoryLine;
 use App\Models\User;
+use App\Models\WeeklySnapshot;
 use App\Services\AI\AnalysisStatus;
 use App\Services\AI\AnalysisType;
 use App\Services\Run\Story\PastYouMatcher;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -25,25 +28,73 @@ class RunController extends Controller
         AnalysisType::RunInsightZones,
     ];
 
+    /**
+     * Range chip → days back from today. Default `8w` keeps the page snappy
+     * for typical browsing while letting users pull up to a year on demand.
+     */
+    private const array RANGE_DAYS = [
+        '8w' => 56,
+        '12w' => 84,
+        '6m' => 182,
+        '1y' => 365,
+    ];
+
+    private const int HISTORICAL_TABLE_ROWS = 14;
+
     public function index(Request $request): Response
     {
         /** @var User $user */
         $user = $request->user();
 
+        $range = $this->resolveRange($request->query('range'));
+        $rangeStart = Carbon::today()->subDays(self::RANGE_DAYS[$range] - 1);
+
         $runs = Activity::query()
             ->where('user_id', $user->id)
             ->whereNotNull('analyzed_at')
+            ->whereHas('detail', fn ($q) => $q->where('start_date_local', '>=', $rangeStart))
             ->with(['detail' => fn ($q) => $q->select(['id', 'activity_id', 'name', 'start_date_local', 'distance', 'moving_time', 'average_heartrate', 'trimp_edwards'])])
             ->orderByDesc('id')
-            ->paginate(20)
-            ->withQueryString();
+            ->get();
 
-        $activityIds = collect($runs->items())->pluck('id')->all();
+        $weeklySnapshots = WeeklySnapshot::query()
+            ->where('user_id', $user->id)
+            ->where('week_ending', '>=', $rangeStart)
+            ->orderByDesc('week_ending')
+            ->get();
+
+        $historicalSnapshots = WeeklySnapshot::query()
+            ->where('user_id', $user->id)
+            ->orderByDesc('week_ending')
+            ->limit(self::HISTORICAL_TABLE_ROWS)
+            ->get();
+
+        $recapAnalyses = $this->recapAnalysesFor(
+            $weeklySnapshots->merge($historicalSnapshots)->unique('id')->all(),
+        );
 
         return Inertia::render('Runs/Index', [
-            'runs' => $runs,
-            'notes' => $this->notesForActivities($activityIds),
+            'runs' => $runs->values(),
+            'notes' => $this->notesForActivities($runs->pluck('id')->all()),
+            'rangeFilter' => $range,
+            'rangeStart' => $rangeStart->toDateString(),
+            'heatmap' => $this->buildHeatmap($user, $rangeStart),
+            'weeklySnapshots' => $weeklySnapshots->map(fn (WeeklySnapshot $row): array => [
+                ...$row->toArray(),
+                'recap_analysis' => $recapAnalyses[$row->id] ?? Analysis::toPayload(null, AnalysisType::WeeklyRecap, WeeklySnapshot::class, $row->id),
+            ])->values(),
+            'historicalSnapshots' => $historicalSnapshots->map(fn (WeeklySnapshot $row): array => [
+                ...$row->toArray(),
+                'recap_analysis' => $recapAnalyses[$row->id] ?? Analysis::toPayload(null, AnalysisType::WeeklyRecap, WeeklySnapshot::class, $row->id),
+            ])->values(),
         ]);
+    }
+
+    private function resolveRange(mixed $raw): string
+    {
+        $candidate = is_string($raw) ? $raw : '';
+
+        return array_key_exists($candidate, self::RANGE_DAYS) ? $candidate : '8w';
     }
 
     /**
@@ -79,6 +130,89 @@ class RunController extends Controller
         }
 
         return $notes;
+    }
+
+    /**
+     * @param  array<int, WeeklySnapshot>  $snapshots
+     * @return array<int, array<string, mixed>>  Keyed by snapshot id.
+     */
+    private function recapAnalysesFor(array $snapshots): array
+    {
+        if ($snapshots === []) {
+            return [];
+        }
+
+        $ids = collect($snapshots)->pluck('id')->all();
+
+        $analyses = Analysis::query()
+            ->where('subject_type', WeeklySnapshot::class)
+            ->where('analysis_type', AnalysisType::WeeklyRecap)
+            ->whereIn('subject_id', $ids)
+            ->get()
+            ->keyBy('subject_id');
+
+        $payloads = [];
+        foreach ($snapshots as $snapshot) {
+            $payloads[$snapshot->id] = Analysis::toPayload(
+                $analyses->get($snapshot->id),
+                AnalysisType::WeeklyRecap,
+                WeeklySnapshot::class,
+                $snapshot->id,
+            );
+        }
+
+        return $payloads;
+    }
+
+    /**
+     * One row per day in the range — light enough to JSON-encode even at 1y
+     * (365 rows). The frontend grids these by ISO week for a GitHub-style
+     * contribution heatmap.
+     *
+     * @return array<int, array{date: string, trimp: float|null, distance_km: float|null, activity_id: int|null}>
+     */
+    private function buildHeatmap(User $user, Carbon $rangeStart): array
+    {
+        $rows = ActivityDetail::query()
+            ->join('activities', 'activities.id', '=', 'activity_details.activity_id')
+            ->where('activities.user_id', $user->id)
+            ->whereNotNull('activities.analyzed_at')
+            ->where('activity_details.start_date_local', '>=', $rangeStart)
+            ->select([
+                'activities.id as activity_id',
+                'activity_details.start_date_local',
+                'activity_details.distance',
+                'activity_details.trimp_edwards',
+            ])
+            ->get();
+
+        $byDay = $rows->groupBy(fn ($row): string => Carbon::parse($row->start_date_local)->toDateString())
+            ->map(function ($dayRows): array {
+                $first = $dayRows->first();
+
+                return [
+                    'trimp' => (float) $dayRows->sum(fn ($r) => (float) ($r->trimp_edwards ?? 0)),
+                    'distance' => (float) $dayRows->sum(fn ($r) => (float) ($r->distance ?? 0)),
+                    'activity_id' => $dayRows->count() === 1 && $first !== null ? (int) $first->getAttribute('activity_id') : null,
+                ];
+            });
+
+        $cells = [];
+        $cursor = $rangeStart->copy();
+        $today = Carbon::today();
+        while ($cursor->lessThanOrEqualTo($today)) {
+            $dateKey = $cursor->toDateString();
+            $entry = $byDay->get($dateKey);
+            $cells[] = [
+                'date' => $dateKey,
+                'trimp' => $entry !== null ? round($entry['trimp'], 1) : null,
+                'distance_km' => $entry !== null ? round($entry['distance'] / 1000, 2) : null,
+                'activity_id' => $entry['activity_id'] ?? null,
+            ];
+            $cursor->addDay();
+        }
+
+        return $cells;
     }
 
     public function show(Request $request, Activity $activity, PastYouMatcher $matcher): Response

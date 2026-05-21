@@ -7,7 +7,6 @@ use App\Http\Controllers\Auth\DemoAuthController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\StravaAuthController;
 use App\Http\Controllers\CardController;
-use App\Http\Controllers\CatatanController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\RekorController;
@@ -31,7 +30,9 @@ Route::middleware('auth')->group(function (): void {
 
     Route::get('/kartu', [CardController::class, 'index'])->name('kartu.index');
 
-    Route::get('/catatan', CatatanController::class)->name('catatan');
+    // Catatan merged into Aktivitas — keep deep links working.
+    Route::permanentRedirect('/catatan', '/aktivitas');
+
     Route::get('/rekor', RekorController::class)->name('rekor');
 
     Route::get('/pengaturan', SettingsController::class)->name('pengaturan');
@@ -43,7 +44,7 @@ Route::middleware('auth')->group(function (): void {
     Route::permanentRedirect('/runs', '/aktivitas');
     Route::redirect('/runs/{activity}', '/aktivitas/{activity}', 301);
     Route::permanentRedirect('/cards', '/kartu');
-    Route::permanentRedirect('/progress', '/catatan');
+    Route::permanentRedirect('/progress', '/aktivitas');
     Route::permanentRedirect('/settings', '/pengaturan');
     Route::permanentRedirect('/profile', '/profil');
 
