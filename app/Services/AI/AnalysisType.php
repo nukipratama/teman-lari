@@ -21,6 +21,7 @@ enum AnalysisType: string
 {
     case BriefingHeadline = 'briefing_headline';
     case BriefingSuggestion = 'briefing_suggestion';
+    case BriefingMascotVoice = 'briefing_mascot_voice';
     case PostRunSpeech = 'post_run_speech';
     case DailyGreeting = 'daily_greeting';
     case RunInsightTechnical = 'run_insight_technical';
@@ -39,7 +40,9 @@ enum AnalysisType: string
     public function jobClass(): string
     {
         return match ($this) {
-            self::BriefingHeadline, self::BriefingSuggestion => AnalyzeBriefingJob::class,
+            self::BriefingHeadline,
+            self::BriefingSuggestion,
+            self::BriefingMascotVoice => AnalyzeBriefingJob::class,
             self::PostRunSpeech,
             self::RunInsightTechnical,
             self::RunInsightSplits,
@@ -55,7 +58,9 @@ enum AnalysisType: string
     public function subjectType(): string
     {
         return match ($this) {
-            self::BriefingHeadline, self::BriefingSuggestion => self::BRIEFING_SUBJECT_TYPE,
+            self::BriefingHeadline,
+            self::BriefingSuggestion,
+            self::BriefingMascotVoice => self::BRIEFING_SUBJECT_TYPE,
             self::TrendCaption => self::TREND_CAPTION_SUBJECT_TYPE,
             self::DailyGreeting => self::DAILY_GREETING_SUBJECT_TYPE,
             self::PostRunSpeech,

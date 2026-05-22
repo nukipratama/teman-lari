@@ -107,6 +107,7 @@ class AnalysisController extends Controller
         $authorized = match ($type) {
             AnalysisType::BriefingHeadline,
             AnalysisType::BriefingSuggestion,
+            AnalysisType::BriefingMascotVoice,
             AnalysisType::DailyGreeting,
             AnalysisType::TrendCaption => $subjectId === $user->id,
             AnalysisType::PostRunSpeech,

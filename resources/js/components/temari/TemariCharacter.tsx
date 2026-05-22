@@ -7,7 +7,6 @@ import {
     type MoodVariant,
     variantFor,
 } from '@/lib/temariMoodVariants';
-import { useReducedMotion } from '@/hooks/useReducedMotion';
 
 interface TemariCharacterProps {
     mood: Mood;
@@ -47,6 +46,21 @@ const GAZE_PX = 1.6;
 const SHOULDER_LEFT = { x: 28, y: 55 };
 const SHOULDER_RIGHT = { x: 72, y: 55 };
 const EAR_LEFT_PIVOT = { x: 35, y: 19 };
+
+// Per-mood gait — every mood runs/walks, but tone differs by mood:
+// glow = standard running, bouncy = high-energy, wobble = unsteady,
+// spinning = dizzy-but-keeps-running, dim/squished = tired walking shuffle.
+type GaitConfig = { dur: string; armAngle: number; legStep: number };
+const GAIT_DEFAULT: GaitConfig = { dur: '0.7s', armAngle: 22, legStep: 5 };
+const GAIT_BY_MOOD: Record<Mood, GaitConfig> = {
+    glow: { dur: '0.7s', armAngle: 22, legStep: 5 },
+    bouncy: { dur: '0.55s', armAngle: 26, legStep: 6 },
+    wobble: { dur: '0.85s', armAngle: 18, legStep: 4 },
+    spinning: { dur: '0.65s', armAngle: 24, legStep: 5 },
+    dim: { dur: '1.4s', armAngle: 10, legStep: 2.5 },
+    squished: { dur: '1.6s', armAngle: 8, legStep: 2 },
+};
+const gaitFor = (mood: Mood): GaitConfig => GAIT_BY_MOOD[mood] ?? GAIT_DEFAULT;
 const EAR_RIGHT_PIVOT = { x: 65, y: 19 };
 
 function useBlinking(paused: boolean): boolean {
@@ -91,9 +105,12 @@ function TemariCharacterImpl({
     className,
 }: Readonly<TemariCharacterProps>) {
     const v = variantFor(mood);
-    const reduced = useReducedMotion();
-    const motionOff = paused || reduced;
+    // Character animation is brand motion, not UI transition — we don't gate
+    // it on prefers-reduced-motion. Callers can still freeze a frame via the
+    // `paused` prop.
+    const motionOff = paused;
     const blinking = useBlinking(motionOff);
+    const running = !motionOff;
 
     const dx = gaze.x * GAZE_PX;
     const dy = gaze.y * GAZE_PX;
@@ -116,7 +133,7 @@ function TemariCharacterImpl({
           };
 
     return (
-        <svg viewBox="0 0 100 100" width={size} height={size} className={className} aria-hidden>
+        <svg viewBox="-4 -10 108 110" width={size} height={size} className={className} aria-hidden>
             <ellipse cx={50} cy={95} rx={24} ry={2} fill={INK_DARK} opacity={0.14} />
 
             {/* Tail pom-pom — wagging */}
@@ -127,29 +144,11 @@ function TemariCharacterImpl({
                 </motion.g>
             </g>
 
-            {/* Sneakers */}
-            <g stroke={OUTLINE} strokeWidth={OUTLINE_W} strokeLinejoin="round">
-                <path
-                    d="M 33 84 L 49 84 Q 50 87 49 90 Q 49 93 47 93 L 35 93 Q 32 93 32 90 Q 31 86 33 84 Z"
-                    fill={SNEAKER_COLOR}
-                />
-                <path d="M 33 84 L 49 84 L 49 87 L 33 87 Z" fill={SNEAKER_SHADE} opacity={0.6} stroke="none" />
-                <rect x={32} y={90} width={18} height={3} rx={1.4} fill={SNEAKER_SOLE} />
-                <line x1={38} y1={87} x2={45} y2={87} stroke={SNEAKER_SOLE} strokeWidth={0.7} />
-                <path
-                    d="M 51 84 L 65 84 Q 69 86 68 90 Q 68 93 65 93 L 53 93 Q 51 93 51 90 Q 50 87 51 84 Z"
-                    fill={SNEAKER_COLOR}
-                />
-                <path d="M 51 84 L 65 84 L 65 87 L 51 87 Z" fill={SNEAKER_SHADE} opacity={0.6} stroke="none" />
-                <rect x={50} y={90} width={18} height={3} rx={1.4} fill={SNEAKER_SOLE} />
-                <line x1={55} y1={87} x2={62} y2={87} stroke={SNEAKER_SOLE} strokeWidth={0.7} />
-            </g>
-
-            {/* Leg stubs */}
-            <g stroke={OUTLINE} strokeWidth={OUTLINE_W}>
-                <rect x={40} y={76} width={6} height={9} rx={2.5} fill={BODY_COLOR} />
-                <rect x={54} y={76} width={6} height={9} rx={2.5} fill={BODY_COLOR} />
-            </g>
+            {/* Legs (stub + sneaker per side) — animated alternately during
+                running stride. Each side lifts ~4 units when its arm swings
+                back, matching cross-pattern of human gait. */}
+            <Leg side="left" mood={mood} running={running} motionOff={motionOff} />
+            <Leg side="right" mood={mood} running={running} motionOff={motionOff} />
 
             {/* Body group — per-mood transform, breath scales vertical */}
             <motion.g
@@ -204,9 +203,24 @@ function TemariCharacterImpl({
                 </g>
             </motion.g>
 
-            {/* Arms — rotated at the shoulder via SVG transform attribute */}
-            <Arm side="left" rotate={v.armLeftRotate} moodColor={v.moodColor} />
-            <Arm side="right" rotate={v.armRightRotate} moodColor={v.moodColor} />
+            {/* Arms — rotated at the shoulder via SVG transform attribute.
+                Every mood swings; amplitude + speed via GAIT_BY_MOOD. */}
+            <Arm
+                side="left"
+                rotate={v.armLeftRotate}
+                moodColor={v.moodColor}
+                mood={mood}
+                swing={running}
+                motionOff={motionOff}
+            />
+            <Arm
+                side="right"
+                rotate={v.armRightRotate}
+                moodColor={v.moodColor}
+                mood={mood}
+                swing={running}
+                motionOff={motionOff}
+            />
 
             {/* === HEAD === */}
             <g transform={headTransform}>
@@ -274,12 +288,35 @@ interface ArmProps {
     side: 'left' | 'right';
     rotate: number;
     moodColor: string;
+    mood: Mood;
+    /** When true, animate the arm with a running-cadence swing offset (alternating L/R). */
+    swing?: boolean;
+    motionOff?: boolean;
 }
 
-function Arm({ side, rotate, moodColor }: Readonly<ArmProps>) {
+function Arm({ side, rotate, moodColor, mood, swing = false, motionOff = false }: Readonly<ArmProps>) {
     const pivot = side === 'left' ? SHOULDER_LEFT : SHOULDER_RIGHT;
+    // SMIL `additive="sum"` appends rotate(angle) to the outer translate,
+    // pivoting around local (0,0) = the shoulder. L/R counter-phased.
+    const swingActive = swing && !motionOff;
+    const gait = gaitFor(mood);
+    const a = gait.armAngle;
+    const leftValues = `-${a}; -${a}; 0; 0; ${a}; ${a}; 0; 0; -${a}`;
+    const rightValues = `${a}; ${a}; 0; 0; -${a}; -${a}; 0; 0; ${a}`;
     return (
         <g transform={`translate(${pivot.x} ${pivot.y}) rotate(${rotate})`}>
+            {swingActive && (
+                <animateTransform
+                    attributeName="transform"
+                    attributeType="XML"
+                    type="rotate"
+                    values={side === 'left' ? leftValues : rightValues}
+                    keyTimes="0; 0.24; 0.25; 0.49; 0.5; 0.74; 0.75; 0.99; 1"
+                    dur={gait.dur}
+                    repeatCount="indefinite"
+                    additive="sum"
+                />
+            )}
             <ellipse
                 cx={0}
                 cy={7}
@@ -300,6 +337,78 @@ function Arm({ side, rotate, moodColor }: Readonly<ArmProps>) {
                     strokeWidth={0.6}
                 />
             )}
+        </g>
+    );
+}
+
+// === Leg ============================================================
+
+interface LegProps {
+    side: 'left' | 'right';
+    mood: Mood;
+    running: boolean;
+    motionOff: boolean;
+}
+
+// Leg = stub rect + sneaker, grouped so the pair lifts together during stride.
+// SVG paths are intentionally identical to the previous flat layout — only the
+// wrapping motion.g is new, so the visual rest pose is preserved.
+function Leg({ side, mood, running, motionOff }: Readonly<LegProps>) {
+    // Each foot alternately steps right (translate X) and back. L/R cross-phased
+    // so one foot is ahead while the other rests, reading as walking rightward.
+    const strideActive = running && !motionOff;
+    const hipX = side === 'left' ? 43 : 57;
+    const hipY = 76;
+    const isLeft = side === 'left';
+    const gait = gaitFor(mood);
+    const s = gait.legStep;
+    const half = s / 2;
+    const leftValues = `${s} 0; ${s} 0; ${half} 0; ${half} 0; 0 0; 0 0; ${half} 0; ${half} 0; ${s} 0`;
+    const rightValues = `0 0; 0 0; ${half} 0; ${half} 0; ${s} 0; ${s} 0; ${half} 0; ${half} 0; 0 0`;
+    return (
+        <g transform={`translate(${hipX} ${hipY})`}>
+            {strideActive && (
+                <animateTransform
+                    attributeName="transform"
+                    attributeType="XML"
+                    type="translate"
+                    values={isLeft ? leftValues : rightValues}
+                    keyTimes="0; 0.24; 0.25; 0.49; 0.5; 0.74; 0.75; 0.99; 1"
+                    dur={gait.dur}
+                    repeatCount="indefinite"
+                    additive="sum"
+                />
+            )}
+            {/* Leg stub */}
+            <rect
+                x={-3}
+                y={0}
+                width={6}
+                height={9}
+                rx={2.5}
+                fill={BODY_COLOR}
+                stroke={OUTLINE}
+                strokeWidth={OUTLINE_W}
+            />
+            {/* Sneaker — geometry shifted so its hip-relative position
+                matches the original viewBox-absolute layout. */}
+            <g stroke={OUTLINE} strokeWidth={OUTLINE_W} strokeLinejoin="round">
+                {isLeft ? (
+                    <>
+                        <path d="M -10 8 L 6 8 Q 7 11 6 14 Q 6 17 4 17 L -8 17 Q -11 17 -11 14 Q -12 10 -10 8 Z" fill={SNEAKER_COLOR} />
+                        <path d="M -10 8 L 6 8 L 6 11 L -10 11 Z" fill={SNEAKER_SHADE} opacity={0.6} stroke="none" />
+                        <rect x={-11} y={14} width={18} height={3} rx={1.4} fill={SNEAKER_SOLE} />
+                        <line x1={-5} y1={11} x2={2} y2={11} stroke={SNEAKER_SOLE} strokeWidth={0.7} />
+                    </>
+                ) : (
+                    <>
+                        <path d="M -6 8 L 8 8 Q 12 10 11 14 Q 11 17 8 17 L -4 17 Q -6 17 -6 14 Q -7 11 -6 8 Z" fill={SNEAKER_COLOR} />
+                        <path d="M -6 8 L 8 8 L 8 11 L -6 11 Z" fill={SNEAKER_SHADE} opacity={0.6} stroke="none" />
+                        <rect x={-7} y={14} width={18} height={3} rx={1.4} fill={SNEAKER_SOLE} />
+                        <line x1={-2} y1={11} x2={5} y2={11} stroke={SNEAKER_SOLE} strokeWidth={0.7} />
+                    </>
+                )}
+            </g>
         </g>
     );
 }

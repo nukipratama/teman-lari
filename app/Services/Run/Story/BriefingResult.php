@@ -25,6 +25,7 @@ final readonly class BriefingResult implements Arrayable
     /**
      * @param  AnalysisPayload  $headline
      * @param  AnalysisPayload  $suggestion
+     * @param  AnalysisPayload  $mascotVoice
      */
     public function __construct(
         public string $vibeState,
@@ -32,6 +33,7 @@ final readonly class BriefingResult implements Arrayable
         public string $vibeEmoji,
         public array $headline,
         public array $suggestion,
+        public array $mascotVoice,
         public string $recoveryLabel,
         public string $recoveryTone,
         public ?string $streakLabel,
@@ -51,6 +53,7 @@ final readonly class BriefingResult implements Arrayable
             'vibeEmoji' => $this->vibeEmoji,
             'headline' => $this->headline,
             'suggestion' => $this->suggestion,
+            'mascotVoice' => $this->mascotVoice,
             'recoveryLabel' => $this->recoveryLabel,
             'recoveryTone' => $this->recoveryTone,
             'streakLabel' => $this->streakLabel,

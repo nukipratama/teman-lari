@@ -15,6 +15,8 @@ interface Props {
     renderContent?: (content: string) => ReactNode;
     /** Whether to show the manual trigger button when status is `done`. */
     allowReanalyze?: boolean;
+    /** Whether to render the "Dibuat …" relative timestamp when status is `done`. */
+    showTimestamp?: boolean;
 }
 
 const TEXT_SIZE: Record<AnalysisStatusSize, string> = {
@@ -55,6 +57,7 @@ export default function AnalysisStatus({
     size = 'md',
     renderContent,
     allowReanalyze = true,
+    showTimestamp = true,
 }: Readonly<Props>) {
     const { status, pending, error, retryAfterSeconds, trigger } = useAnalysisTrigger(analysis, inertiaReloadProps);
     const effectiveStatus = pending ? 'queued' : status;
@@ -70,7 +73,7 @@ export default function AnalysisStatus({
                 <div className={`${TEXT_SIZE[size]} text-ink`}>
                     {renderContent ? renderContent(content) : content}
                 </div>
-                {analysis.generated_at && (
+                {showTimestamp && analysis.generated_at && (
                     <span className="text-xs text-ink-meta">
                         Dibuat {formatRelativeId(analysis.generated_at)}
                     </span>

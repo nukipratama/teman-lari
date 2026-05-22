@@ -19,6 +19,7 @@ class AnalyzeBriefingJob extends AnalyzeGroupJob
         return [
             AnalysisType::BriefingHeadline,
             AnalysisType::BriefingSuggestion,
+            AnalysisType::BriefingMascotVoice,
         ];
     }
 
@@ -49,6 +50,7 @@ class AnalyzeBriefingJob extends AnalyzeGroupJob
         return [
             AnalysisType::BriefingHeadline->value => $payload['headline'],
             AnalysisType::BriefingSuggestion->value => $payload['suggestion'],
+            AnalysisType::BriefingMascotVoice->value => $payload['mascot_voice'],
         ];
     }
 }

@@ -1,7 +1,10 @@
 import { motion } from 'framer-motion';
 import { Icon } from '@iconify/react';
+import { useEffect, useState } from 'react';
 import { cn } from '@/lib/cn';
+import { useAnalysisTrigger } from '@/hooks/useAnalysisTrigger';
 import { fadeInUp } from '@/lib/motion';
+import { formatDurationHMS, formatIdDate } from '@/lib/pace';
 import AnalysisStatus from './AnalysisStatus';
 import TemariMascot from './TemariMascot';
 import TemariPeek from './TemariPeek';
@@ -17,10 +20,15 @@ const PEEK_LINES = [
 
 interface BriefingCardProps {
     briefing: BriefingResult;
+    firstName?: string;
     className?: string;
 }
 
-export default function BriefingCard({ briefing, className }: Readonly<BriefingCardProps>) {
+export default function BriefingCard({
+    briefing,
+    firstName,
+    className,
+}: Readonly<BriefingCardProps>) {
     const ruleClass = vibeLeftRule(briefing.vibeState);
     const recoveryClass = recoveryChipClass(briefing.recoveryTone);
     const bothDone =
@@ -35,44 +43,28 @@ export default function BriefingCard({ briefing, className }: Readonly<BriefingC
             initial="hidden"
             animate="visible"
             className={cn(
-                'flex h-full flex-col rounded-2xl border border-line bg-surface-warm p-4 shadow-sm sm:p-5',
+                'relative flex h-full flex-col rounded-2xl border border-line bg-surface-warm p-4 pb-12 shadow-sm sm:p-5 sm:pb-12',
                 'border-l-[3px]',
                 ruleClass,
                 className,
             )}
         >
-            <div className="flex flex-1 flex-col items-start gap-4 sm:flex-row sm:items-center sm:gap-6">
-                <div className="relative shrink-0">
-                    <TemariMascot
-                        mood={briefing.mood}
-                        sizeClass="h-52 w-52 sm:h-56 sm:w-56"
-                        idle="mood"
-                        gazeTracking
-                        ornaments
-                        aria-label={`Temari — mood ${briefing.mood}`}
-                    />
-                    <TemariPeek lines={PEEK_LINES} />
-                </div>
-
-                <div className="min-w-0 flex-1 self-center">
-                    <div className="flex flex-wrap items-baseline gap-2">
-                        <span className="text-xs font-semibold uppercase tracking-wider text-ink-meta">
-                            Briefing Temari
+            <div className="flex flex-1 flex-col gap-4 sm:flex-row sm:items-stretch sm:gap-6">
+                {/* LEFT 60% — greeting + narrator */}
+                <div className="min-w-0 sm:basis-3/5">
+                    <p className="text-xs font-semibold uppercase tracking-wider text-ink-meta">
+                        {formatIdDate(new Date().toISOString(), 'long')}
+                    </p>
+                    {firstName !== undefined && firstName !== '' && (
+                        <h1 className="mt-1 text-2xl font-semibold tracking-tight text-ink sm:text-3xl">
+                            Halo, {firstName}!
+                        </h1>
+                    )}
+                    <div className="mt-2 flex flex-wrap items-center gap-2">
+                        <span className="inline-flex items-center gap-1.5 rounded-full bg-brand-100 px-3 py-1 text-xs font-semibold text-brand-700">
+                            <span aria-hidden>{briefing.vibeEmoji}</span>
+                            {briefing.vibeLabel}
                         </span>
-                        <span className="text-xs font-semibold text-ink">
-                            {briefing.vibeEmoji} {briefing.vibeLabel}
-                        </span>
-                    </div>
-
-                    <div className="mt-2">
-                        {bothDone ? (
-                            <BriefingDone headline={briefing.headline} suggestion={briefing.suggestion} />
-                        ) : (
-                            <BriefingPending headline={briefing.headline} />
-                        )}
-                    </div>
-
-                    <div className="mt-3 flex flex-wrap gap-2">
                         <span className={cn('inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold', recoveryClass)}>
                             <Icon icon="mdi:heart-pulse" width={14} height={14} aria-hidden />
                             {briefing.recoveryLabel}
@@ -84,20 +76,132 @@ export default function BriefingCard({ briefing, className }: Readonly<BriefingC
                             </span>
                         )}
                     </div>
+
+                    <div className="mt-3">
+                        {bothDone ? (
+                            <BriefingDone headline={briefing.headline} suggestion={briefing.suggestion} />
+                        ) : (
+                            <BriefingPending headline={briefing.headline} />
+                        )}
+                    </div>
                 </div>
+
+                {/* RIGHT 40% — mascot only */}
+                <div className="flex flex-col items-center justify-center sm:basis-2/5">
+                    <div className="relative">
+                        <TemariMascot
+                            mood={briefing.mood}
+                            sizeClass="h-48 w-48 sm:h-56 sm:w-56 lg:h-60 lg:w-60"
+                            idle="mood"
+                            gazeTracking
+                            ornaments
+                            aria-label={`Temari — mood ${briefing.mood}`}
+                        />
+                        <TemariPeek lines={PEEK_LINES} />
+                    </div>
+                </div>
+            </div>
+
+            {/* Full-width speech bubble at the bottom (above the absolute footer button) */}
+            {briefing.mascotVoice.status === 'done' && briefing.mascotVoice.content !== null && briefing.mascotVoice.content !== '' && (
+                <div className="relative mt-4 rounded-2xl border border-brand-200/70 bg-brand-50/60 px-3 py-2.5 pl-9 text-sm italic leading-snug text-ink">
+                    <Icon
+                        icon="mdi:comment-quote-outline"
+                        width={16}
+                        height={16}
+                        aria-hidden
+                        className="absolute left-2.5 top-2.5 text-brand-700"
+                    />
+                    {briefing.mascotVoice.content}
+                </div>
+            )}
+
+            <div className="absolute bottom-3 right-3 z-10 sm:bottom-4 sm:right-4">
+                <BriefingFooterButton headline={briefing.headline} />
             </div>
         </motion.div>
     );
 }
 
+function BriefingFooterButton({ headline }: Readonly<{ headline: AnalysisPayload }>) {
+    const { status, pending, error, retryAfterSeconds, trigger } = useAnalysisTrigger(headline, ['briefing']);
+    const [remaining, setRemaining] = useState(retryAfterSeconds ?? 0);
+
+    useEffect(() => {
+        setRemaining(Math.max(0, retryAfterSeconds ?? 0));
+    }, [retryAfterSeconds]);
+
+    useEffect(() => {
+        if (remaining <= 0) return;
+        const id = globalThis.setInterval(() => {
+            setRemaining((r) => (r <= 1 ? 0 : r - 1));
+        }, 1000);
+        return () => globalThis.clearInterval(id);
+    }, [remaining]);
+
+    const cooling = remaining > 0;
+    const effective = pending ? 'queued' : status;
+
+    if (effective === 'queued' || effective === 'processing') {
+        return (
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-surface-sunken/90 px-3 py-1.5 text-xs text-ink-meta backdrop-blur-sm">
+                <Icon icon="mdi:loading" className="animate-spin" aria-hidden />
+                <span>Lagi dipikirin Temari…</span>
+            </span>
+        );
+    }
+
+    if (effective === 'failed') {
+        return (
+            <button
+                type="button"
+                onClick={trigger}
+                disabled={pending}
+                className="inline-flex items-center gap-1 rounded-full bg-brand-700 px-3 py-1 text-xs font-semibold text-white shadow-sm transition hover:bg-brand-800 disabled:opacity-50"
+            >
+                <Icon icon="mdi:reload" aria-hidden />
+                <span>Coba lagi</span>
+            </button>
+        );
+    }
+
+    if (effective === 'pending') {
+        return (
+            <button
+                type="button"
+                onClick={trigger}
+                disabled={pending}
+                className="inline-flex items-center gap-1 rounded-full bg-brand-700 px-3 py-1 text-xs font-semibold text-white shadow-sm transition hover:bg-brand-800 disabled:opacity-50"
+            >
+                <Icon icon="mdi:auto-fix" aria-hidden />
+                <span>Analisis sekarang</span>
+            </button>
+        );
+    }
+
+    return (
+        <button
+            type="button"
+            onClick={trigger}
+            disabled={cooling || pending}
+            aria-label={error ?? undefined}
+            className="inline-flex items-center gap-1 rounded-full bg-surface-sunken/80 px-2.5 py-1 text-xs text-ink-meta backdrop-blur-sm transition hover:text-brand-700 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:text-ink-meta"
+        >
+            <Icon icon="mdi:refresh" aria-hidden />
+            <span>{cooling ? `Tunggu ${formatDurationHMS(remaining)}` : 'Analisis ulang'}</span>
+        </button>
+    );
+}
+
 function BriefingDone({ headline, suggestion }: Readonly<{ headline: AnalysisPayload; suggestion: AnalysisPayload }>) {
     return (
-        <div className="space-y-1">
+        <div className="space-y-2">
             <AnalysisStatus
                 analysis={headline}
                 inertiaReloadProps={['briefing']}
                 size="md"
                 allowReanalyze={false}
+                showTimestamp={false}
                 renderContent={(content) => (
                     <p className="text-lg font-semibold leading-snug tracking-tight text-ink">{content}</p>
                 )}
@@ -106,8 +210,10 @@ function BriefingDone({ headline, suggestion }: Readonly<{ headline: AnalysisPay
                 analysis={suggestion}
                 inertiaReloadProps={['briefing']}
                 size="sm"
+                allowReanalyze={false}
+                showTimestamp={false}
                 renderContent={(content) => (
-                    <p className="text-sm leading-relaxed text-ink-soft">{content}</p>
+                    <p className="text-sm leading-snug text-ink-soft">{content}</p>
                 )}
             />
         </div>
@@ -126,6 +232,8 @@ function BriefingPending({ headline }: Readonly<{ headline: AnalysisPayload }>) 
             analysis={headline}
             inertiaReloadProps={['briefing']}
             size="md"
+            allowReanalyze={false}
+            showTimestamp={false}
             renderContent={(content) => (
                 <p className="text-lg font-semibold leading-snug tracking-tight text-ink">{content}</p>
             )}

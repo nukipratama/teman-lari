@@ -26,6 +26,15 @@ const briefing: BriefingResult = {
         subject_id: 1,
         discriminator: '2026-05-18',
     },
+    mascotVoice: {
+        id: 4,
+        status: 'pending',
+        content: null,
+        type: 'briefing_mascot_voice',
+        subject_type: 'briefing_user_day',
+        subject_id: 1,
+        discriminator: '2026-05-18',
+    },
     recoveryLabel: 'Pemulihan: oke',
     recoveryTone: 'positive',
     streakLabel: 'Lari hari ini',
@@ -103,7 +112,7 @@ describe('Dashboard', () => {
                 chartData={chartData}
             />,
         );
-        expect(screen.getByText('Halo, Ada.')).toBeInTheDocument();
+        expect(screen.getByText('Halo, Ada!')).toBeInTheDocument();
         expect(screen.getByText('Belum ada lari yang masuk')).toBeInTheDocument();
     });
 
@@ -267,7 +276,7 @@ it.each([
         expect(screen.getByText(expected)).toBeInTheDocument();
     });
 
-    it('renders empty first_name when user has no name', () => {
+    it('renders without greeting when user has no first_name', () => {
         setMockPage({
             auth: { user: { id: 1, name: '', first_name: '', avatar_url: null } },
             flash: {},
@@ -283,7 +292,8 @@ it.each([
                 chartData={chartData}
             />,
         );
-        expect(screen.getByText('Halo, .')).toBeInTheDocument();
+        expect(screen.queryByText(/^Halo,/)).not.toBeInTheDocument();
+        expect(screen.getByText('Belum ada lari yang masuk')).toBeInTheDocument();
     });
 
     it('handles anonymous page state', () => {
@@ -297,6 +307,7 @@ it.each([
                 chartData={chartData}
             />,
         );
-        expect(screen.getByText('Halo, .')).toBeInTheDocument();
+        expect(screen.queryByText(/^Halo,/)).not.toBeInTheDocument();
+        expect(screen.getByText('Belum ada lari yang masuk')).toBeInTheDocument();
     });
 });
