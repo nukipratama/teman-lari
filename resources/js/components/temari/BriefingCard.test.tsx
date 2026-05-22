@@ -1,5 +1,5 @@
-import { render, screen } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { act, render, screen } from '@testing-library/react';
+import { describe, expect, it, vi } from 'vitest';
 import BriefingCard from './BriefingCard';
 import type { AnalysisPayload, BriefingResult, Mood } from '@/types/inertia';
 
@@ -104,5 +104,38 @@ describe('BriefingCard', () => {
             />,
         );
         expect(screen.getByText('Pagi yang oke')).toBeInTheDocument();
+    });
+
+    it('shows queued spinner pill in footer when headline is being generated', () => {
+        render(
+            <BriefingCard
+                briefing={makeBriefing({
+                    headline: analysisPayload(null, 'queued', 'briefing_headline'),
+                })}
+            />,
+        );
+        expect(screen.getAllByText(/Lagi dipikirin Temari/).length).toBeGreaterThan(0);
+    });
+
+    it('ticks down the re-analyze cooldown each second', () => {
+        vi.useFakeTimers();
+        try {
+            const payload: AnalysisPayload = {
+                ...analysisPayload('Pagi yang oke', 'done', 'briefing_headline'),
+                retry_after_seconds: 3,
+            };
+            render(<BriefingCard briefing={makeBriefing({ headline: payload })} />);
+            expect(screen.getByText(/Tunggu 0:03/)).toBeInTheDocument();
+            act(() => {
+                vi.advanceTimersByTime(1000);
+            });
+            expect(screen.getByText(/Tunggu 0:02/)).toBeInTheDocument();
+            act(() => {
+                vi.advanceTimersByTime(2000);
+            });
+            expect(screen.getByText('Analisis ulang')).toBeInTheDocument();
+        } finally {
+            vi.useRealTimers();
+        }
     });
 });

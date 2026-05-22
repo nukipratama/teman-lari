@@ -76,21 +76,23 @@ export default function Dashboard({
 
                 <MilestoneBanner pending={pendingMilestone} />
 
-                <div className="grid items-stretch gap-4 sm:gap-6 lg:grid-cols-3">
-                    <section className="flex lg:col-span-2">
+                <div className="grid items-stretch gap-4 sm:gap-6 lg:grid-cols-5">
+                    <section className="flex lg:col-span-3">
                         <BriefingCard
                             briefing={briefing}
                             firstName={firstName}
                             className="w-full"
                         />
                     </section>
-                    <AtGlance
-                        load={load}
-                        decouplingValue={decouplingValue}
-                        weeklyDistanceKm={snapshot?.distance_km ?? null}
-                        weeklyRuns={snapshot?.runs ?? null}
-                        lastRun={recentRuns[0] ?? null}
-                    />
+                    <div className="lg:col-span-2">
+                        <AtGlance
+                            load={load}
+                            decouplingValue={decouplingValue}
+                            weeklyDistanceKm={snapshot?.distance_km ?? null}
+                            weeklyRuns={snapshot?.runs ?? null}
+                            lastRun={recentRuns[0] ?? null}
+                        />
+                    </div>
                 </div>
 
                 <WeekVsLastWeek data={weekVsLastWeek} className="mt-6" />
