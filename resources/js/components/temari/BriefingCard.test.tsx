@@ -22,6 +22,7 @@ function makeBriefing(overrides: Partial<BriefingResult> = {}): BriefingResult {
         vibeEmoji: '✨',
         headline: analysisPayload('Pagi yang oke', 'done', 'briefing_headline'),
         suggestion: analysisPayload('Easy run aja dulu', 'done', 'briefing_suggestion'),
+        mascotVoice: analysisPayload(null, 'pending', 'briefing_mascot_voice'),
         recoveryLabel: 'Pemulihan: cukup',
         recoveryTone: 'positive',
         streakLabel: 'Lari hari ini',

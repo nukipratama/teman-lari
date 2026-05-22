@@ -46,9 +46,13 @@ function rowOf(string $subjectType, int $subjectId, AnalysisType $type, ?string 
 
 // ── AnalyzeBriefingJob (group) ────────────────────────────────────────
 
-it('AnalyzeBriefingJob writes both headline + suggestion rows Done', function (): void {
+it('AnalyzeBriefingJob writes all three briefing rows Done', function (): void {
     $user = User::factory()->create();
-    mockNarrator(BriefingNarrator::class, ['headline' => 'H', 'suggestion' => 'S']);
+    mockNarrator(BriefingNarrator::class, [
+        'headline' => 'H',
+        'suggestion' => 'S',
+        'mascot_voice' => 'V',
+    ]);
 
     (new AnalyzeBriefingJob($user->id, '2026-05-18'))->handle(app(AnalysisService::class));
 
@@ -62,17 +66,23 @@ it('AnalyzeBriefingJob writes both headline + suggestion rows Done', function ()
     expect($rows[AnalysisType::BriefingHeadline->value]->content)->toBe('H')
         ->and($rows[AnalysisType::BriefingHeadline->value]->status)->toBe(AnalysisStatus::Done)
         ->and($rows[AnalysisType::BriefingSuggestion->value]->content)->toBe('S')
-        ->and($rows[AnalysisType::BriefingSuggestion->value]->status)->toBe(AnalysisStatus::Done);
+        ->and($rows[AnalysisType::BriefingSuggestion->value]->status)->toBe(AnalysisStatus::Done)
+        ->and($rows[AnalysisType::BriefingMascotVoice->value]->content)->toBe('V')
+        ->and($rows[AnalysisType::BriefingMascotVoice->value]->status)->toBe(AnalysisStatus::Done);
 });
 
 it('AnalyzeBriefingJob falls back to today when discriminator is null', function (): void {
     Carbon::setTestNow('2026-05-19 12:00:00');
     $user = User::factory()->create();
-    mockNarrator(BriefingNarrator::class, ['headline' => 'H', 'suggestion' => 'S']);
+    mockNarrator(BriefingNarrator::class, [
+        'headline' => 'H',
+        'suggestion' => 'S',
+        'mascot_voice' => 'V',
+    ]);
 
     (new AnalyzeBriefingJob($user->id))->handle(app(AnalysisService::class));
 
-    expect(Analysis::query()->where('subject_id', $user->id)->count())->toBe(2);
+    expect(Analysis::query()->where('subject_id', $user->id)->count())->toBe(3);
     Carbon::setTestNow();
 });
 
@@ -80,7 +90,7 @@ it('AnalyzeBriefingJob marks all rows failed when user missing', function (): vo
     (new AnalyzeBriefingJob(99999, '2026-05-18'))->handle(app(AnalysisService::class));
 
     $rows = Analysis::query()->where('subject_id', 99999)->get();
-    expect($rows)->toHaveCount(2);
+    expect($rows)->toHaveCount(3);
     foreach ($rows as $row) {
         expect($row->status)->toBe(AnalysisStatus::Failed);
     }

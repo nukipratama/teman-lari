@@ -1,7 +1,7 @@
 import { Head, usePage } from '@inertiajs/react';
 import { Icon } from '@iconify/react';
 import { motion } from 'framer-motion';
-import { lazy, Suspense, useRef } from 'react';
+import { lazy, Suspense } from 'react';
 import AppShell from '@/layouts/AppShell';
 import AnalysisStatus from '@/components/temari/AnalysisStatus';
 import BriefingCard from '@/components/temari/BriefingCard';
@@ -10,13 +10,12 @@ import DecorativeBlur from '@/components/DecorativeBlur';
 import MetricExplainer from '@/components/MetricExplainer';
 import MilestoneBanner, { type PendingMilestone } from '@/components/MilestoneBanner';
 import SectionHeading from '@/components/SectionHeading';
-import TemariFollow from '@/components/temari/TemariFollow';
 import WeekVsLastWeek, { type WeekVsLastWeekData } from '@/components/dashboard/WeekVsLastWeek';
 import FirstRunTooltip from '@/components/onboarding/FirstRunTooltip';
 import type { MetricKey } from '@/lib/metricGlossary';
 import { formStatusLabel } from '@/lib/formStatus';
 import { fadeInUp } from '@/lib/motion';
-import { formatIdDate } from '@/lib/pace';
+import { formatPace, formatRelativeId } from '@/lib/pace';
 import { cn } from '@/lib/cn';
 import { ICON_TONE, type Tone } from '@/lib/tones';
 import type {
@@ -59,7 +58,6 @@ export default function Dashboard({
 }: Readonly<DashboardProps>) {
     const { props } = usePage<SharedProps & DashboardProps>();
     const firstName = props.auth.user?.first_name ?? '';
-    const briefingRef = useRef<HTMLElement>(null);
 
     const hasCharts = chartData.labels.length > 1;
     const decouplingValue = formatDecoupling(snapshot?.avg_decoupling ?? null);
@@ -78,18 +76,24 @@ export default function Dashboard({
 
                 <MilestoneBanner pending={pendingMilestone} />
 
-                <HeroHeader firstName={firstName} briefing={briefing} snapshot={snapshot} />
-
-                <WeekVsLastWeek data={weekVsLastWeek} className="mt-6" />
-
-                <div className="mt-6 grid items-stretch gap-4 sm:gap-6 lg:grid-cols-3">
-                    <section ref={briefingRef} className="flex lg:col-span-2">
-                        <BriefingCard briefing={briefing} className="w-full" />
+                <div className="grid items-stretch gap-4 sm:gap-6 lg:grid-cols-3">
+                    <section className="flex lg:col-span-2">
+                        <BriefingCard
+                            briefing={briefing}
+                            firstName={firstName}
+                            className="w-full"
+                        />
                     </section>
-                    <AtGlance load={load} decouplingValue={decouplingValue} />
+                    <AtGlance
+                        load={load}
+                        decouplingValue={decouplingValue}
+                        weeklyDistanceKm={snapshot?.distance_km ?? null}
+                        weeklyRuns={snapshot?.runs ?? null}
+                        lastRun={recentRuns[0] ?? null}
+                    />
                 </div>
 
-                <TemariFollow sentinelRef={briefingRef} mood={briefing.mood} />
+                <WeekVsLastWeek data={weekVsLastWeek} className="mt-6" />
 
                 {hasCharts && (
                     <section className="mt-10">
@@ -148,66 +152,23 @@ export default function Dashboard({
     );
 }
 
-// === Hero header ====================================================
-
-interface HeroHeaderProps {
-    firstName: string;
-    briefing: BriefingResult;
-    snapshot: WeeklySnapshot | null;
-}
-
-function HeroHeader({ firstName, briefing, snapshot }: Readonly<HeroHeaderProps>) {
-    return (
-        <section className="rounded-2xl border border-line bg-surface-warm p-4 shadow-sm sm:rounded-3xl sm:p-6">
-            <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-                <div>
-                    <p className="text-xs font-semibold uppercase tracking-wider text-ink-meta">
-                        {formatIdDate(new Date().toISOString(), 'long')}
-                    </p>
-                    <h1 className="mt-1 text-2xl font-semibold tracking-tight text-ink sm:text-3xl">
-                        Halo, {firstName}.
-                    </h1>
-                    <div className="mt-2 flex flex-wrap items-center gap-2">
-                        <p className="text-sm leading-relaxed text-ink-soft">
-                            Ini ringkasan kondisi kamu hari ini.
-                        </p>
-                        {briefing.streakLabel !== null && (
-                            <span className="inline-flex items-center gap-1 rounded-full bg-brand-100 px-2.5 py-0.5 text-xs font-semibold text-brand-700">
-                                <Icon icon="mdi:fire" width={12} height={12} aria-hidden />
-                                {briefing.streakLabel}
-                            </span>
-                        )}
-                    </div>
-                </div>
-                {snapshot?.distance_km != null && (
-                    <div className="flex items-baseline justify-between gap-3 border-t border-line/60 pt-3 sm:block sm:border-0 sm:pt-0 sm:text-right">
-                        <div className="text-xs font-semibold uppercase tracking-wider text-ink-meta">
-                            Minggu ini
-                        </div>
-                        <div className="flex flex-col items-end sm:items-stretch">
-                            <div className="text-4xl font-black leading-none text-accent-600 tabular-nums sm:mt-1 sm:text-5xl">
-                                {snapshot.distance_km.toFixed(1)}
-                                <span className="ml-1 text-lg font-semibold text-ink-soft sm:text-xl">km</span>
-                            </div>
-                            {snapshot.runs != null && (
-                                <p className="mt-1 text-xs text-ink-meta">{snapshot.runs} run minggu ini</p>
-                            )}
-                        </div>
-                    </div>
-                )}
-            </header>
-        </section>
-    );
-}
-
-// === At-a-glance sidebar (3 stacked KPI rows in one card) ===========
+// === At-a-glance sidebar (KPI rows in one card) =====================
 
 interface AtGlanceProps {
     load: TrainingLoad | null;
     decouplingValue: string;
+    weeklyDistanceKm?: number | null;
+    weeklyRuns?: number | null;
+    lastRun?: ActivityDetail | null;
 }
 
-function AtGlance({ load, decouplingValue }: Readonly<AtGlanceProps>) {
+function AtGlance({
+    load,
+    decouplingValue,
+    weeklyDistanceKm = null,
+    weeklyRuns = null,
+    lastRun = null,
+}: Readonly<AtGlanceProps>) {
     if (load === null) {
         return (
             <aside className="flex h-full items-center rounded-2xl border border-dashed border-line bg-surface-elev/40 p-4 text-sm text-ink-meta sm:rounded-3xl sm:p-5">
@@ -224,6 +185,26 @@ function AtGlance({ load, decouplingValue }: Readonly<AtGlanceProps>) {
                 Kondisi
             </div>
             <div className="relative mt-3 divide-y divide-brand-200/60">
+                {weeklyDistanceKm != null && (
+                    <StatRow
+                        icon="mdi:run-fast"
+                        iconTone="accent"
+                        label="Minggu ini"
+                        value={`${weeklyDistanceKm.toFixed(1)} km`}
+                        hint={weeklyRuns != null ? `${weeklyRuns} run` : '—'}
+                        hintTone="meta"
+                    />
+                )}
+                {lastRun !== null && (
+                    <StatRow
+                        icon="mdi:history"
+                        iconTone="brand"
+                        label="Lari terakhir"
+                        value={formatRelativeId(lastRun.start_date_local)}
+                        hint={formatLastRunMetrics(lastRun)}
+                        hintTone="meta"
+                    />
+                )}
                 <StatRow
                     icon="mdi:scale-balance"
                     iconTone="brand"
@@ -254,6 +235,17 @@ function AtGlance({ load, decouplingValue }: Readonly<AtGlanceProps>) {
             </div>
         </aside>
     );
+}
+
+function formatLastRunMetrics(run: ActivityDetail): string {
+    const parts: string[] = [];
+    if (run.distance != null && run.distance > 0) {
+        parts.push(`${(run.distance / 1000).toFixed(1)} km`);
+    }
+    if (run.distance != null && run.distance > 0 && run.moving_time != null && run.moving_time > 0) {
+        parts.push(`${formatPace(run.moving_time / (run.distance / 1000))}/km`);
+    }
+    return parts.length > 0 ? parts.join(' · ') : '—';
 }
 
 interface StatRowProps {

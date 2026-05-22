@@ -74,16 +74,20 @@ export default function MetricExplainer({
                         id={popoverId}
                         role="dialog"
                         aria-label={entry.label}
-                        initial={{ opacity: 0, y: -4 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -4 }}
+                        initial={{ opacity: 0, y: -4, scale: 0.97 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: -4, scale: 0.97 }}
                         transition={{ duration: 0.15 }}
-                        className="absolute left-1/2 top-full z-30 mt-2 w-56 max-w-[min(16rem,calc(100vw-2rem))] -translate-x-1/2 rounded-xl border border-line bg-surface-elev p-3 text-left shadow-lg"
+                        className="absolute left-1/2 top-full z-30 mt-2 w-64 max-w-[min(18rem,calc(100vw-2rem))] -translate-x-1/2 overflow-hidden rounded-xl border border-brand-200 bg-gradient-to-br from-surface-warm via-surface-elev to-brand-50/60 text-left normal-case shadow-xl ring-1 ring-brand-100/50"
                     >
-                        <div className="text-xs font-semibold uppercase tracking-wider text-ink-meta">
-                            {entry.acronym ? `${entry.label} · ${entry.acronym}` : entry.label}
+                        <div aria-hidden className="absolute inset-y-0 left-0 w-1 bg-brand-500" />
+                        <div className="px-3.5 py-3 pl-4">
+                            <div className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-brand-700">
+                                <Icon icon="mdi:lightbulb-on-outline" width={12} height={12} aria-hidden />
+                                <span>{entry.acronym ? `${entry.label} · ${entry.acronym}` : entry.label}</span>
+                            </div>
+                            <p className="mt-1.5 text-sm leading-relaxed text-ink">{entry.body}</p>
                         </div>
-                        <p className="mt-1.5 text-sm leading-relaxed text-ink">{entry.body}</p>
                     </motion.div>
                 )}
             </AnimatePresence>

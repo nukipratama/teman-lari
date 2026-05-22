@@ -73,9 +73,11 @@ describe('TemariMascot', () => {
     });
 
     it('honours an explicit unlockedAccessories prop override', () => {
+        // Use a non-running mood so the front-facing TemariCharacter renders
+        // (running moods use the profile variant which has no accessory overlays).
         const { container } = render(
             <TemariMascot
-                mood="glow"
+                mood="dim"
                 unlockedAccessories={['accessory.headband_legendaris']}
             />,
         );
@@ -85,7 +87,7 @@ describe('TemariMascot', () => {
     it('skips unlock overlays when showUnlocks is false', () => {
         const { container } = render(
             <TemariMascot
-                mood="glow"
+                mood="dim"
                 showUnlocks={false}
                 unlockedAccessories={['accessory.headband_legendaris']}
             />,

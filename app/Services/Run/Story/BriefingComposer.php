@@ -38,6 +38,7 @@ class BriefingComposer
 
         $headline = $this->resolveRow($user, AnalysisType::BriefingHeadline, $subjectType, $discriminator);
         $suggestion = $this->resolveRow($user, AnalysisType::BriefingSuggestion, $subjectType, $discriminator);
+        $mascotVoice = $this->resolveRow($user, AnalysisType::BriefingMascotVoice, $subjectType, $discriminator);
 
         return new BriefingResult(
             vibeState: $vibeState,
@@ -45,6 +46,7 @@ class BriefingComposer
             vibeEmoji: Vibe::emoji($vibeState),
             headline: Analysis::toPayload($headline, AnalysisType::BriefingHeadline, $subjectType, $user->id, $discriminator),
             suggestion: Analysis::toPayload($suggestion, AnalysisType::BriefingSuggestion, $subjectType, $user->id, $discriminator),
+            mascotVoice: Analysis::toPayload($mascotVoice, AnalysisType::BriefingMascotVoice, $subjectType, $user->id, $discriminator),
             recoveryLabel: FormStatus::label($load),
             recoveryTone: FormStatus::tone($load),
             streakLabel: $this->streakLabel($daysSince),

@@ -25,6 +25,7 @@ export type AnalysisStatus = 'pending' | 'queued' | 'processing' | 'done' | 'fai
 export type AnalysisType =
     | 'briefing_headline'
     | 'briefing_suggestion'
+    | 'briefing_mascot_voice'
     | 'post_run_speech'
     | 'daily_greeting'
     | 'run_insight_technical'
@@ -54,6 +55,7 @@ export interface BriefingResult {
     vibeEmoji: string;
     headline: AnalysisPayload;
     suggestion: AnalysisPayload;
+    mascotVoice: AnalysisPayload;
     recoveryLabel: string;
     recoveryTone: RecoveryTone;
     streakLabel: string | null;

@@ -118,6 +118,32 @@ body {
         display: none;
     }
 
+    /* Speed streaks for the Temari mascot — short horizontal lines that
+       sweep left and fade, signaling rightward motion direction without
+       redrawing the character. Paired with the arm/leg running gait. The
+       --streak-peak CSS var lets each instance tune its fade max so tired
+       moods can render fainter streaks. */
+    @keyframes temari-streak-sweep {
+        0% {
+            transform: translateX(60%);
+            opacity: 0;
+        }
+        20% {
+            opacity: var(--streak-peak, 0.55);
+        }
+        100% {
+            transform: translateX(-120%);
+            opacity: 0;
+        }
+    }
+    .temari-streak {
+        position: absolute;
+        background-color: #3b2f1f;
+        opacity: 0;
+        height: 2px;
+        border-radius: 1px;
+        animation: temari-streak-sweep 0.55s linear infinite;
+    }
 }
 
 /* Mobile sidebar drawer — overrides default `<dialog>` centered-modal
