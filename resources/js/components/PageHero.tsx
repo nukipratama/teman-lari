@@ -19,23 +19,23 @@ interface PageHeroProps {
 }
 
 const TONE_SURFACE: Record<PageHeroTone, string> = {
-    brand: 'border-line bg-gradient-to-br from-brand-50 via-surface-warm to-accent-50',
-    pop: 'border-pop-200 bg-gradient-to-br from-pop-50 via-surface-warm to-accent-50',
+    brand: 'border-line bg-gradient-to-br from-leaf/10 via-surface-warm to-horizon/10',
+    pop: 'border-citrus/25 bg-gradient-to-br from-citrus/10 via-surface-warm to-horizon/10',
 };
 
 const TONE_ICON_TILE: Record<PageHeroTone, string> = {
-    brand: 'bg-brand-500',
-    pop: 'bg-pop-500',
+    brand: 'bg-leaf',
+    pop: 'bg-citrus',
 };
 
 const TONE_BLOB_PRIMARY: Record<PageHeroTone, string> = {
-    brand: 'bg-pop-200/40',
-    pop: 'bg-pop-300/40',
+    brand: 'bg-citrus/25',
+    pop: 'bg-citrus/40',
 };
 
 const TONE_BLOB_SECONDARY: Record<PageHeroTone, string> = {
-    brand: 'bg-brand-200/40',
-    pop: 'bg-accent-200/40',
+    brand: 'bg-leaf/25',
+    pop: 'bg-horizon/25',
 };
 
 /**
@@ -78,7 +78,7 @@ export default function PageHero({
                             <p
                                 className={cn(
                                     'text-xs font-semibold uppercase tracking-wider',
-                                    tone === 'pop' ? 'text-pop-700' : 'text-brand-700',
+                                    tone === 'pop' ? 'text-citrus-deep' : 'text-leaf-deep',
                                 )}
                             >
                                 {eyebrow}
@@ -86,7 +86,7 @@ export default function PageHero({
                         )}
                         <h1 className="mt-1 text-2xl font-semibold tracking-tight text-ink">{title}</h1>
                         {subtitle !== undefined && subtitle !== null && (
-                            <p className="mt-1 text-sm leading-relaxed text-ink-soft">{subtitle}</p>
+                            <p className="mt-1 text-sm leading-relaxed text-ink-2">{subtitle}</p>
                         )}
                     </div>
                 </div>

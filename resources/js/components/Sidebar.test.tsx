@@ -40,7 +40,7 @@ describe('Sidebar', () => {
     it('marks the active link based on current url', () => {
         setupPage('/aktivitas');
         const { container } = renderSidebar();
-        const activeLink = container.querySelector('a.border-brand-500');
+        const activeLink = container.querySelector('a.border-leaf');
         expect(activeLink).not.toBeNull();
         expect(activeLink?.textContent).toContain('Aktivitas');
     });
@@ -48,7 +48,7 @@ describe('Sidebar', () => {
     it('treats nested url as still active for parent link (/aktivitas/123)', () => {
         setupPage('/aktivitas/123');
         const { container } = renderSidebar();
-        const activeLink = container.querySelector('a.border-brand-500');
+        const activeLink = container.querySelector('a.border-leaf');
         expect(activeLink?.textContent).toContain('Aktivitas');
     });
 
@@ -75,7 +75,7 @@ describe('Sidebar', () => {
     it('marks Pengaturan as active when on /pengaturan', () => {
         setupPage('/pengaturan');
         const { container } = renderSidebar();
-        const activeLink = container.querySelector('a.border-brand-500');
+        const activeLink = container.querySelector('a.border-leaf');
         expect(activeLink?.textContent).toContain('Pengaturan');
     });
 

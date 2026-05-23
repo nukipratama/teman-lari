@@ -39,7 +39,7 @@ export default function RangeFilter({
 
     return (
         <nav aria-label="Range filter" className={cn('flex flex-wrap gap-2', className)}>
-            <span className="mr-1 self-center text-xs font-semibold uppercase tracking-wider text-ink-meta">
+            <span className="mr-1 self-center text-xs font-semibold uppercase tracking-wider text-ink-3">
                 Tampilkan
             </span>
             {RANGE_OPTIONS.map((value) => {
@@ -53,8 +53,8 @@ export default function RangeFilter({
                         className={cn(
                             'rounded-full border px-3 py-1 text-sm font-medium transition',
                             isActive
-                                ? 'border-brand-500 bg-brand-500 text-white shadow-sm'
-                                : 'border-line bg-surface-elev text-ink-soft hover:border-brand-300 hover:text-ink',
+                                ? 'border-leaf bg-leaf text-white shadow-sm'
+                                : 'border-line bg-surface-elev text-ink-2 hover:border-leaf/40 hover:text-ink',
                         )}
                     >
                         {RANGE_LABEL[value]}

@@ -179,7 +179,7 @@ function DetailHeader({ detail }: Readonly<{ detail: DetailedActivityDetail }>) 
     return (
         <div className="flex h-full flex-col justify-center rounded-2xl border border-line bg-surface-elev px-5 py-3 shadow-sm">
             <h1 className="text-xl font-semibold tracking-tight text-ink">{detail.name ?? 'Run'}</h1>
-            <p className="mt-0.5 text-xs text-ink-meta">{startDateLabel}</p>
+            <p className="mt-0.5 text-xs text-ink-3">{startDateLabel}</p>
         </div>
     );
 }
@@ -204,7 +204,7 @@ function TechnicalSection({
         >
             <h2
                 id="detail-teknis-heading"
-                className="border-b border-line px-4 py-3 text-xs font-semibold uppercase tracking-wider text-ink-meta sm:px-5 sm:py-4"
+                className="border-b border-line px-4 py-3 text-xs font-semibold uppercase tracking-wider text-ink-3 sm:px-5 sm:py-4"
             >
                 Detail Teknis
             </h2>
@@ -244,11 +244,11 @@ function TechnicalSection({
 
                 {perKm.length > 0 && (
                     <div>
-                        <h3 className="text-xs font-semibold uppercase tracking-wider text-ink-meta">Splits per KM</h3>
+                        <h3 className="text-xs font-semibold uppercase tracking-wider text-ink-3">Splits per KM</h3>
                         <div className="mt-3 overflow-x-auto">
                             <table className="w-full min-w-[420px] text-sm tabular-nums">
                                 <thead>
-                                    <tr className="text-left text-xs text-ink-meta">
+                                    <tr className="text-left text-xs text-ink-3">
                                         <th className="py-2 pr-3 font-semibold">KM</th>
                                         <th className="py-2 pr-3 font-semibold">Pace</th>
                                         <th className="py-2 pr-3 font-semibold">HR</th>
@@ -270,7 +270,7 @@ function TechnicalSection({
                     </div>
                 )}
 
-                <p className="text-[11px] text-ink-meta">
+                <p className="text-[11px] text-ink-3">
                     Strava activity ID {activity.strava_external_id ?? '—'} · ingested{' '}
                     {formatIdDate(activity.analyzed_at ?? null, 'long')}
                 </p>

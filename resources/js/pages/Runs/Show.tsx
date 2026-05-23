@@ -44,7 +44,7 @@ export default function RunsShow({
             >
                 <Link
                     href="/aktivitas"
-                    className="mb-4 inline-flex items-center gap-1 text-sm text-ink-meta transition hover:text-brand-600"
+                    className="mb-4 inline-flex items-center gap-1 text-sm text-ink-3 transition hover:text-leaf-deep"
                 >
                     <Icon icon="mdi:arrow-left" width={14} height={14} aria-hidden />
                     Semua aktivitas

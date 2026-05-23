@@ -18,7 +18,7 @@ export default function AppShell({ children, showSidebar = true }: Readonly<AppS
 
     if (!showSidebar) {
         return (
-            <div className="min-h-screen bg-surface text-ink dark:bg-surface-dark dark:text-ink-dark">
+            <div className="min-h-screen bg-surface text-ink">
                 <DemoBanner />
                 {children}
             </div>
@@ -27,10 +27,10 @@ export default function AppShell({ children, showSidebar = true }: Readonly<AppS
 
     return (
         <SidebarProvider>
-            <div className="min-h-screen bg-surface text-ink dark:bg-surface-dark dark:text-ink-dark">
+            <div className="min-h-screen bg-surface text-ink">
                 <a
                     href="#main-content"
-                    className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-lg focus:bg-brand-500 focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-white focus:shadow-lg"
+                    className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-lg focus:bg-leaf focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-white focus:shadow-lg"
                 >
                     Lompat ke konten
                 </a>
@@ -38,7 +38,7 @@ export default function AppShell({ children, showSidebar = true }: Readonly<AppS
                 <DemoBanner />
                 <Sidebar />
 
-                <div className="sticky top-0 z-10 flex items-center gap-3 border-b border-line bg-surface-elev/80 px-4 py-3 backdrop-blur dark:border-line-dark dark:bg-surface-dark-elev/80 lg:hidden">
+                <div className="sticky top-0 z-10 flex items-center gap-3 border-b border-line bg-surface-elev/80 px-4 py-3 backdrop-blur lg:hidden">
                     <SidebarTrigger />
                     <BrandMark size="compact" />
                 </div>

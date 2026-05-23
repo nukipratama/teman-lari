@@ -103,12 +103,12 @@ function IdentityCard({
     const avatarUrl = identity.avatar_url ?? fallbackAvatarUrl;
 
     return (
-        <section className="relative overflow-hidden rounded-2xl border border-line bg-gradient-to-br from-brand-50 via-surface-warm to-accent-50 p-5 shadow-sm sm:p-6">
-            <DecorativeBlur className="-right-12 -top-12 h-32 w-32 bg-brand-200/40" />
-            <DecorativeBlur className="-bottom-16 -left-10 h-32 w-32 bg-accent-200/40" />
+        <section className="relative overflow-hidden rounded-2xl border border-line bg-gradient-to-br from-leaf/10 via-surface-warm to-horizon/10 p-5 shadow-sm sm:p-6">
+            <DecorativeBlur className="-right-12 -top-12 h-32 w-32 bg-leaf/25" />
+            <DecorativeBlur className="-bottom-16 -left-10 h-32 w-32 bg-horizon/25" />
             <div className="relative flex items-center gap-4">
                 {avatarUrl === null ? (
-                    <div className="flex h-16 w-16 items-center justify-center rounded-full bg-brand-500/20 text-brand-700 ring-2 ring-white">
+                    <div className="flex h-16 w-16 items-center justify-center rounded-full bg-leaf/20 text-leaf-deep ring-2 ring-white">
                         <Icon icon="mdi:account" width={32} height={32} aria-hidden />
                     </div>
                 ) : (
@@ -121,7 +121,7 @@ function IdentityCard({
                 <div className="min-w-0 flex-1">
                     <h2 className="text-lg font-bold tracking-tight text-ink sm:text-xl">{identity.name}</h2>
                     {sinceLabel && (
-                        <p className="mt-0.5 text-sm text-ink-soft">{sinceLabel}</p>
+                        <p className="mt-0.5 text-sm text-ink-2">{sinceLabel}</p>
                     )}
                     {identity.strava_connected && (
                         <span className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-strava-orange/15 px-2.5 py-1 text-xs font-semibold text-strava-orange">
@@ -173,22 +173,22 @@ interface StatTileProps {
 
 const STAT_TILE_TONE: Record<StatTileProps['tone'], { bg: string; border: string; value: string; icon: string }> = {
     brand: {
-        bg: 'bg-gradient-to-br from-brand-50 via-surface-elev to-brand-100/60',
-        border: 'border-brand-200',
-        value: 'text-brand-800',
-        icon: 'bg-brand-500',
+        bg: 'bg-gradient-to-br from-leaf/10 via-surface-elev to-leaf/15',
+        border: 'border-leaf/25',
+        value: 'text-ink',
+        icon: 'bg-leaf',
     },
     accent: {
-        bg: 'bg-gradient-to-br from-accent-50 via-surface-elev to-accent-100/60',
-        border: 'border-accent-200',
-        value: 'text-accent-800',
-        icon: 'bg-accent-500',
+        bg: 'bg-gradient-to-br from-horizon/10 via-surface-elev to-horizon/15',
+        border: 'border-horizon/25',
+        value: 'text-ember-deep',
+        icon: 'bg-horizon',
     },
     pop: {
-        bg: 'bg-gradient-to-br from-pop-50 via-surface-elev to-pop-100/70',
-        border: 'border-pop-200',
-        value: 'text-pop-800',
-        icon: 'bg-pop-500',
+        bg: 'bg-gradient-to-br from-citrus/10 via-surface-elev to-citrus/10',
+        border: 'border-citrus/25',
+        value: 'text-ink',
+        icon: 'bg-citrus',
     },
 };
 
@@ -198,7 +198,7 @@ function StatTile({ label, value, suffix, icon, tone }: Readonly<StatTileProps>)
         <div className={cn('relative overflow-hidden rounded-2xl border p-3 shadow-md sm:p-4', cls.bg, cls.border)}>
             <DecorativeBlur intensity="md" className="-right-6 -top-6 h-16 w-16 bg-white/40" />
             <div className="relative flex items-center justify-between gap-2">
-                <span className="text-[10px] font-semibold uppercase tracking-wider text-ink-meta">{label}</span>
+                <span className="text-[10px] font-semibold uppercase tracking-wider text-ink-3">{label}</span>
                 <span
                     aria-hidden
                     className={cn('flex h-7 w-7 items-center justify-center rounded-lg text-white shadow-sm ring-1 ring-white/60 sm:h-8 sm:w-8', cls.icon)}
@@ -208,7 +208,7 @@ function StatTile({ label, value, suffix, icon, tone }: Readonly<StatTileProps>)
             </div>
             <div className={cn('relative mt-2 text-2xl font-black tabular-nums sm:text-3xl', cls.value)}>{value}</div>
             {suffix !== null && (
-                <div className="relative text-[11px] font-semibold uppercase tracking-wider text-ink-meta">{suffix}</div>
+                <div className="relative text-[11px] font-semibold uppercase tracking-wider text-ink-3">{suffix}</div>
             )}
         </div>
     );
@@ -218,10 +218,10 @@ function TopPrsSection({ prs, className }: Readonly<{ prs: TopPrEntry[]; classNa
     return (
         <section className={cn('rounded-2xl border border-line bg-surface-elev p-4 shadow-sm sm:p-5', className)}>
             <div className="flex items-baseline justify-between gap-3">
-                <h2 className="text-xs font-semibold uppercase tracking-wider text-ink-meta">Rekor terbaru</h2>
+                <h2 className="text-xs font-semibold uppercase tracking-wider text-ink-3">Rekor terbaru</h2>
                 <Link
                     href="/rekor"
-                    className="inline-flex items-center gap-0.5 text-xs font-semibold text-brand-700 hover:text-brand-800"
+                    className="inline-flex items-center gap-0.5 text-xs font-semibold text-leaf-deep hover:text-ink"
                 >
                     Semua rekor
                     <Icon icon="mdi:chevron-right" width={14} height={14} aria-hidden />
@@ -239,24 +239,24 @@ function TopPrsSection({ prs, className }: Readonly<{ prs: TopPrEntry[]; classNa
 function TopPrTile({ pr }: Readonly<{ pr: TopPrEntry }>) {
     const body = (
         <>
-            <div className="text-[10px] font-semibold uppercase tracking-wider text-pop-700">
+            <div className="text-[10px] font-semibold uppercase tracking-wider text-citrus-deep">
                 {PR_CATEGORY_LABELS[pr.category] ?? pr.category}
             </div>
-            <div className="mt-1 text-xl font-black tabular-nums text-pop-800">
+            <div className="mt-1 text-xl font-black tabular-nums text-ink">
                 {formatPrValue(pr.category, pr.value_sec)}
             </div>
-            <div className="mt-1 truncate text-xs text-ink-soft">{pr.activity_name ?? 'Aktivitas'}</div>
-            <div className="text-[11px] text-ink-meta">{formatIdDate(pr.set_at, 'long')}</div>
+            <div className="mt-1 truncate text-xs text-ink-2">{pr.activity_name ?? 'Aktivitas'}</div>
+            <div className="text-[11px] text-ink-3">{formatIdDate(pr.set_at, 'long')}</div>
         </>
     );
 
-    const chrome = 'block rounded-xl border border-pop-200 bg-gradient-to-br from-pop-50 to-pop-100/40 p-3 transition';
+    const chrome = 'block rounded-xl border border-citrus/25 bg-gradient-to-br from-citrus/10 to-citrus/10 p-3 transition';
 
     if (pr.activity_id !== null) {
         return (
             <Link
                 href={`/aktivitas/${pr.activity_id}`}
-                className={cn(chrome, 'hover:-translate-y-0.5 hover:border-pop-400 hover:shadow-md')}
+                className={cn(chrome, 'hover:-translate-y-0.5 hover:border-citrus hover:shadow-md')}
             >
                 {body}
             </Link>
@@ -280,12 +280,12 @@ function UnlocksSection({
     return (
         <section className={cn('rounded-2xl border border-line bg-surface-elev p-4 shadow-sm sm:p-5', className)}>
             <div className="flex items-baseline justify-between gap-3">
-                <h2 className="text-xs font-semibold uppercase tracking-wider text-ink-meta">Koleksi Aksesori</h2>
-                <span className="text-xs font-semibold text-ink-meta">
+                <h2 className="text-xs font-semibold uppercase tracking-wider text-ink-3">Koleksi Aksesori</h2>
+                <span className="text-xs font-semibold text-ink-3">
                     {unlockedCount}/{catalog.length}
                 </span>
             </div>
-            <p className="mt-1 text-sm text-ink-soft">
+            <p className="mt-1 text-sm text-ink-2">
                 Aksesori yang aku kenakan, terbuka dari milestone kamu.
             </p>
             <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -299,7 +299,7 @@ function UnlocksSection({
 
 const UNLOCK_TILE = {
     locked: 'rounded-xl border border-dashed border-line bg-surface-sunken/40 p-4 opacity-60',
-    unlocked: 'rounded-xl border border-pop-200 bg-pop-50/40 p-4',
+    unlocked: 'rounded-xl border border-citrus/25 bg-citrus/10 p-4',
 } as const;
 
 function UnlockTile({ def, unlocked }: Readonly<{ def: UnlockCatalogEntry; unlocked: boolean }>) {
@@ -309,11 +309,11 @@ function UnlockTile({ def, unlocked }: Readonly<{ def: UnlockCatalogEntry; unloc
                 icon={def.icon}
                 width={28}
                 height={28}
-                className={unlocked ? 'text-pop-600' : 'text-ink-meta/40'}
+                className={unlocked ? 'text-citrus-deep' : 'text-ink-3/40'}
                 aria-hidden
             />
             <div className="mt-2 text-sm font-semibold text-ink">{def.name}</div>
-            <div className="mt-1 text-xs leading-relaxed text-ink-soft">
+            <div className="mt-1 text-xs leading-relaxed text-ink-2">
                 {unlocked ? def.description : def.criteria}
             </div>
         </div>

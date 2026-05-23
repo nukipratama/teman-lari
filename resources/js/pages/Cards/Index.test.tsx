@@ -88,7 +88,7 @@ describe('Cards/Index', () => {
         );
         // Active Epik now takes its rarity colour (accent), not brand.
         const epikPill = screen.getByText('Epic').closest('a');
-        expect(epikPill).toHaveClass(/bg-accent-500/);
+        expect(epikPill).toHaveClass(/bg-horizon/);
     });
 
     it('promotes the highest-rarity card to the Spotlight slot on page 1', () => {

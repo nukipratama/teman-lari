@@ -34,7 +34,7 @@ export default function Sidebar() {
         <>
             <aside
                 aria-label="Main navigation"
-                className="hidden lg:fixed lg:inset-y-0 lg:left-0 lg:z-20 lg:flex lg:w-64 lg:flex-col lg:border-r lg:border-line lg:bg-surface-elev dark:lg:border-line-dark dark:lg:bg-surface-dark-elev"
+                className="hidden lg:fixed lg:inset-y-0 lg:left-0 lg:z-20 lg:flex lg:w-64 lg:flex-col lg:border-r lg:border-line lg:bg-surface-elev"
             >
                 <SidebarContent url={url} user={user} />
             </aside>
@@ -42,7 +42,7 @@ export default function Sidebar() {
             <dialog
                 ref={dialogRef}
                 aria-label="Main navigation"
-                className="sidebar-drawer m-0 max-h-screen w-72 max-w-[85vw] bg-surface-elev p-0 text-ink shadow-xl dark:bg-surface-dark-elev dark:text-ink-dark lg:hidden"
+                className="sidebar-drawer m-0 max-h-screen w-72 max-w-[85vw] bg-surface-elev p-0 text-ink shadow-xl lg:hidden"
                 onClose={close}
             >
                 <SidebarContent url={url} user={user} onNavigate={close} />
@@ -58,7 +58,7 @@ function SidebarContent({
 }: Readonly<{ url: string; user: AuthUser | null; onNavigate?: () => void }>) {
     return (
         <div className="flex h-full flex-col">
-            <div className="border-b border-line px-5 py-5 dark:border-line-dark">
+            <div className="border-b border-line px-5 py-5">
                 <Link href="/" onClick={onNavigate} aria-label="Beranda">
                     <BrandMark size="compact" />
                 </Link>
@@ -70,7 +70,7 @@ function SidebarContent({
                     links={SECONDARY_LINKS}
                     url={url}
                     onNavigate={onNavigate}
-                    className="mt-auto border-t border-line pt-3 dark:border-line-dark"
+                    className="mt-auto border-t border-line pt-3"
                 />
             </nav>
 
@@ -95,10 +95,10 @@ function NavList({
                             href={link.href}
                             onClick={onNavigate}
                             className={cn(
-                                'flex items-center gap-3 rounded-lg border-l-4 px-3 py-2.5 text-sm font-medium transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-500',
+                                'flex items-center gap-3 rounded-lg border-l-4 px-3 py-2.5 text-sm font-medium transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-leaf',
                                 active
-                                    ? 'border-brand-500 bg-brand-500/10 text-brand-700 dark:text-brand-300'
-                                    : 'border-transparent text-ink-soft hover:bg-line/40 hover:text-ink dark:text-ink-soft-dark dark:hover:bg-line-dark dark:hover:text-ink-dark',
+                                    ? 'border-leaf bg-leaf/10 text-leaf-deep'
+                                    : 'border-transparent text-ink-2 hover:bg-line/40 hover:text-ink',
                             )}
                         >
                             <Icon icon={link.icon} width={18} height={18} aria-hidden />
@@ -113,20 +113,20 @@ function NavList({
 
 function UserChip({ user }: Readonly<{ user: AuthUser }>) {
     return (
-        <div className="flex items-center gap-3 border-t border-line p-4 dark:border-line-dark">
+        <div className="flex items-center gap-3 border-t border-line p-4">
             {user.avatar_url === null ? (
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-brand-500/15 text-sm font-semibold text-brand-600 dark:text-brand-400">
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-leaf/15 text-sm font-semibold text-leaf-deep">
                     {user.name.charAt(0).toUpperCase()}
                 </div>
             ) : (
                 <img
                     src={user.avatar_url}
                     alt={user.name}
-                    className="h-10 w-10 rounded-full ring-2 ring-line dark:ring-line-dark"
+                    className="h-10 w-10 rounded-full ring-2 ring-line"
                 />
             )}
             <div className="min-w-0 flex-1">
-                <div className="truncate text-sm font-medium text-ink dark:text-ink-dark">{user.name}</div>
+                <div className="truncate text-sm font-medium text-ink">{user.name}</div>
             </div>
         </div>
     );

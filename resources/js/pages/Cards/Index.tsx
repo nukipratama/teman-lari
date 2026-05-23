@@ -79,7 +79,7 @@ export default function CardsIndex({ cards, selectedRarity }: Readonly<CardsInde
                     subtitle="Setiap lari mendapat satu kartu. Rarity-nya naik kalau kamu memecahkan PR, negative split, atau lari terjauh."
                     tone="pop"
                     trailing={
-                        <span className="inline-flex items-center gap-1.5 rounded-full bg-pop-500 px-3 py-1.5 text-sm font-bold text-white shadow-sm ring-2 ring-white">
+                        <span className="inline-flex items-center gap-1.5 rounded-full bg-citrus px-3 py-1.5 text-sm font-bold text-white shadow-sm ring-2 ring-white">
                             <Icon icon="mdi:cards" width={14} height={14} aria-hidden />
                             {totalLabel}
                         </span>
@@ -87,7 +87,7 @@ export default function CardsIndex({ cards, selectedRarity }: Readonly<CardsInde
                 />
 
                 <nav aria-label="Filter rarity" className="mt-6 flex flex-wrap items-center gap-2">
-                    <span className="mr-1 text-xs font-semibold uppercase tracking-wider text-ink-meta">
+                    <span className="mr-1 text-xs font-semibold uppercase tracking-wider text-ink-3">
                         Rarity
                     </span>
                     <RarityPill href="/kartu" label="Semua" rarity={null} active={selectedRarity === null} />
@@ -104,8 +104,8 @@ export default function CardsIndex({ cards, selectedRarity }: Readonly<CardsInde
 
                 {featured?.activity?.detail && (
                     <section className="mt-6">
-                        <div className="mb-3 inline-flex items-center gap-1.5 rounded-full bg-pop-500/15 px-3 py-1 text-xs font-bold uppercase tracking-wider text-pop-700 ring-1 ring-pop-300">
-                            <Icon icon="mdi:star-shooting" width={14} height={14} className="text-pop-600" aria-hidden />
+                        <div className="mb-3 inline-flex items-center gap-1.5 rounded-full bg-citrus/15 px-3 py-1 text-xs font-bold uppercase tracking-wider text-citrus-deep ring-1 ring-citrus/40">
+                            <Icon icon="mdi:star-shooting" width={14} height={14} className="text-citrus-deep" aria-hidden />
                             Kartu sorotan minggu ini
                         </div>
                         <MotionLink
@@ -145,10 +145,10 @@ function EmptyState() {
                 icon="mdi:cards-outline"
                 width={32}
                 height={32}
-                className="mx-auto text-ink-meta"
+                className="mx-auto text-ink-3"
                 aria-hidden
             />
-            <p className="mt-3 text-sm leading-relaxed text-ink-soft">
+            <p className="mt-3 text-sm leading-relaxed text-ink-2">
                 Belum ada kartu di rarity ini. Coba filter lain, atau sinkronkan lari terbaru kamu.
             </p>
         </div>
@@ -182,11 +182,11 @@ interface RarityPillProps {
 }
 
 const RARITY_PILL_ACTIVE: Record<Rarity, string> = {
-    legendaris: 'border border-pop-500 bg-pop-500 text-white shadow-sm',
-    epik: 'border border-accent-500 bg-accent-500 text-white shadow-sm',
+    legendaris: 'border border-citrus bg-citrus text-white shadow-sm',
+    epik: 'border border-horizon bg-horizon text-white shadow-sm',
     langka: 'border border-mood-spinning bg-mood-spinning text-white shadow-sm',
-    jarang: 'border border-brand-400 bg-brand-400 text-white shadow-sm',
-    biasa: 'border border-ink-meta bg-ink-meta text-white shadow-sm',
+    jarang: 'border border-leaf bg-leaf text-white shadow-sm',
+    biasa: 'border border-ink-3 bg-ink-3 text-white shadow-sm',
 };
 
 const RARITY_PILL_ICON: Record<Rarity, string> = {
@@ -197,8 +197,8 @@ const RARITY_PILL_ICON: Record<Rarity, string> = {
     biasa: 'mdi:circle-outline',
 };
 
-const PILL_INACTIVE = 'border border-line bg-surface-elev text-ink-soft hover:border-brand-300 hover:text-ink';
-const PILL_ALL_ACTIVE = 'border border-brand-500 bg-brand-500 text-white shadow-sm';
+const PILL_INACTIVE = 'border border-line bg-surface-elev text-ink-2 hover:border-leaf/40 hover:text-ink';
+const PILL_ALL_ACTIVE = 'border border-leaf bg-leaf text-white shadow-sm';
 
 function rarityToneClasses(rarity: Rarity | null, active: boolean): string {
     if (!active) return PILL_INACTIVE;

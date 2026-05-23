@@ -28,7 +28,7 @@ function PaginatorPill({ link }: Readonly<{ link: PaginatorLink }>) {
     if (link.url === null) {
         return (
             <span
-                className="rounded-lg border border-line px-4 py-2 text-sm text-ink-meta dark:border-line-dark dark:text-ink-meta-dark"
+                className="rounded-lg border border-line px-4 py-2 text-sm text-ink-3"
                 dangerouslySetInnerHTML={{ __html: link.label }}
             />
         );
@@ -40,8 +40,8 @@ function PaginatorPill({ link }: Readonly<{ link: PaginatorLink }>) {
             className={cn(
                 'rounded-lg border px-4 py-2 text-sm transition',
                 link.active
-                    ? 'border-brand-500 bg-brand-500 font-semibold text-white'
-                    : 'border-line text-ink hover:border-ink-soft dark:border-line-dark dark:text-ink-dark',
+                    ? 'border-leaf bg-leaf font-semibold text-white'
+                    : 'border-line text-ink hover:border-ink-3',
             )}
             dangerouslySetInnerHTML={{ __html: link.label }}
         />

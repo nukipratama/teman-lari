@@ -59,9 +59,9 @@ const FORM_CHIP_LABEL: Record<FormStatus, string> = {
 };
 
 const FORM_CHIP_CLASS: Record<FormStatus, string> = {
-    fresh: 'bg-brand-100 text-brand-700',
+    fresh: 'bg-leaf/15 text-leaf-deep',
     optimal: 'bg-mood-bouncy/15 text-mood-bouncy',
-    fatigued: 'bg-mood-glow/20 text-pop-700',
+    fatigued: 'bg-mood-glow/20 text-citrus-deep',
     overreaching: 'bg-mood-cooked/15 text-mood-cooked',
 };
 
@@ -168,12 +168,12 @@ function WeeklyStatusChips({ snapshot }: Readonly<{ snapshot: WeeklySnapshotRow 
     return (
         <>
             {snapshot.ctl_42d !== null && (
-                <span className="inline-flex items-center gap-1 rounded-full bg-brand-100 px-2.5 py-0.5 text-xs font-semibold text-brand-700">
+                <span className="inline-flex items-center gap-1 rounded-full bg-leaf/15 px-2.5 py-0.5 text-xs font-semibold text-leaf-deep">
                     Fit {snapshot.ctl_42d.toFixed(1)}
                 </span>
             )}
             {snapshot.form !== null && (
-                <span className="inline-flex items-center gap-1 rounded-full bg-accent-100 px-2.5 py-0.5 text-xs font-semibold text-accent-700">
+                <span className="inline-flex items-center gap-1 rounded-full bg-horizon/15 px-2.5 py-0.5 text-xs font-semibold text-horizon-deep">
                     Form {snapshot.form >= 0 ? '+' : ''}
                     {snapshot.form.toFixed(1)}
                 </span>
@@ -195,7 +195,7 @@ function WeeklyStatusChips({ snapshot }: Readonly<{ snapshot: WeeklySnapshotRow 
 function Stat({ icon, label }: Readonly<{ icon: string; label: string }>) {
     return (
         <span className="inline-flex items-center gap-1.5 rounded-full bg-surface-sunken px-3 py-1 text-ink">
-            <Icon icon={icon} width={12} height={12} className="text-ink-meta" aria-hidden />
+            <Icon icon={icon} width={12} height={12} className="text-ink-3" aria-hidden />
             <span className="font-semibold">{label}</span>
         </span>
     );
@@ -204,11 +204,11 @@ function Stat({ icon, label }: Readonly<{ icon: string; label: string }>) {
 function EmptyState() {
     return (
         <div className="rounded-2xl border border-dashed border-line bg-surface-elev/40 p-10 text-center">
-            <Icon icon="mdi:run-fast" width={28} height={28} className="mx-auto text-brand-500" aria-hidden />
+            <Icon icon="mdi:run-fast" width={28} height={28} className="mx-auto text-leaf" aria-hidden />
             <p className="mt-3 text-base text-ink">Belum ada lari yang tercatat. Sinkronkan lari pertama kamu dari Strava dulu, ya.</p>
             <Link
                 href="/"
-                className="mt-3 inline-flex items-center gap-1 text-sm text-brand-700 hover:text-brand-800"
+                className="mt-3 inline-flex items-center gap-1 text-sm text-leaf-deep hover:text-ink"
             >
                 <Icon icon="mdi:arrow-left" width={14} height={14} aria-hidden />
                 Kembali ke Beranda

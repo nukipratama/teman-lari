@@ -108,21 +108,21 @@ export default function Dashboard({
                         {trendAnalysis && (
                             <section
                                 aria-labelledby="trend-narrative-heading"
-                                className="relative mt-4 overflow-hidden rounded-2xl border border-brand-200 bg-gradient-to-br from-brand-50 via-surface-elev to-accent-50/40 p-4 shadow-md sm:p-5"
+                                className="relative mt-4 overflow-hidden rounded-2xl border border-leaf/25 bg-gradient-to-br from-leaf/10 via-surface-elev to-horizon/10/40 p-4 shadow-md sm:p-5"
                             >
-                                <DecorativeBlur intensity="md" className="-right-8 -top-8 h-24 w-24 bg-brand-200/40" />
+                                <DecorativeBlur intensity="md" className="-right-8 -top-8 h-24 w-24 bg-leaf/25" />
                                 <div className="relative flex items-start gap-3">
-                                    <span aria-hidden className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand-500 text-white shadow-sm ring-2 ring-white">
+                                    <span aria-hidden className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-leaf text-white shadow-sm ring-2 ring-white">
                                         <Icon icon="mdi:trending-up" width={20} height={20} />
                                     </span>
                                     <div className="min-w-0 flex-1">
                                         <h3
                                             id="trend-narrative-heading"
-                                            className="text-xs font-semibold uppercase tracking-wider text-brand-700"
+                                            className="text-xs font-semibold uppercase tracking-wider text-leaf-deep"
                                         >
                                             Catatan Tren
                                         </h3>
-                                        <p className="mt-0.5 text-xs text-ink-meta">30 hari terakhir kamu, dari sudut pandang aku.</p>
+                                        <p className="mt-0.5 text-xs text-ink-3">30 hari terakhir kamu, dari sudut pandang aku.</p>
                                         <div className="mt-3">
                                             <AnalysisStatus
                                                 analysis={trendAnalysis}
@@ -173,20 +173,20 @@ function AtGlance({
 }: Readonly<AtGlanceProps>) {
     if (load === null) {
         return (
-            <aside className="flex h-full items-center rounded-2xl border border-dashed border-line bg-surface-elev/40 p-4 text-sm text-ink-meta sm:rounded-3xl sm:p-5">
+            <aside className="flex h-full items-center rounded-2xl border border-dashed border-line bg-surface-elev/40 p-4 text-sm text-ink-3 sm:rounded-3xl sm:p-5">
                 Aku belum bisa merangkum kondisi kamu, datanya masih kurang. Sinkronkan beberapa lari dulu ya.
             </aside>
         );
     }
     const monotony = monotonySignal(load.monotony);
     return (
-        <aside className="relative flex h-full flex-col overflow-hidden rounded-2xl border border-brand-200 bg-gradient-to-br from-brand-50/80 via-surface-elev to-accent-50/60 p-4 shadow-md sm:rounded-3xl sm:p-5">
-            <DecorativeBlur className="-right-10 -top-10 h-32 w-32 bg-accent-200/40" />
-            <DecorativeBlur className="-bottom-12 -left-10 h-28 w-28 bg-brand-200/40" />
-            <div className="relative text-xs font-semibold uppercase tracking-wider text-brand-700">
+        <aside className="relative flex h-full flex-col overflow-hidden rounded-2xl border border-leaf/25 bg-gradient-to-br from-leaf/10 via-surface-elev to-horizon/10/60 p-4 shadow-md sm:rounded-3xl sm:p-5">
+            <DecorativeBlur className="-right-10 -top-10 h-32 w-32 bg-horizon/25" />
+            <DecorativeBlur className="-bottom-12 -left-10 h-28 w-28 bg-leaf/25" />
+            <div className="relative text-xs font-semibold uppercase tracking-wider text-leaf-deep">
                 Kondisi
             </div>
-            <div className="relative mt-3 divide-y divide-brand-200/60">
+            <div className="relative mt-3 divide-y divide-leaf/25">
                 {weeklyDistanceKm != null && (
                     <StatRow
                         icon="mdi:run-fast"
@@ -261,9 +261,9 @@ interface StatRowProps {
 }
 
 const HINT_TONE_CLASSES: Record<StatRowProps['hintTone'], string> = {
-    meta: 'text-ink-meta',
+    meta: 'text-ink-3',
     cooked: 'text-mood-cooked',
-    glow: 'text-pop-600',
+    glow: 'text-citrus-deep',
     bouncy: 'text-mood-bouncy',
 };
 
@@ -277,7 +277,7 @@ function StatRow({ icon, iconTone, label, value, hint, hintTone, explainerKey }:
                 <Icon icon={icon} width={16} height={16} />
             </span>
             <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider text-ink-meta">
+                <div className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider text-ink-3">
                     <span>{label}</span>
                     {explainerKey && <MetricExplainer metricKey={explainerKey} size="xs" />}
                 </div>
@@ -318,16 +318,16 @@ interface CoachStatProps {
 }
 
 const COACH_TILE_TONE: Record<Tone, string> = {
-    brand: 'border-brand-200 bg-gradient-to-br from-brand-50 via-surface-elev to-brand-100/60 shadow-brand-200/40',
-    accent: 'border-accent-200 bg-gradient-to-br from-accent-50 via-surface-elev to-accent-100/60 shadow-accent-200/40',
-    pop: 'border-pop-200 bg-gradient-to-br from-pop-50 via-surface-elev to-pop-100/70 shadow-pop-200/40',
+    brand: 'border-leaf/25 bg-gradient-to-br from-leaf/10 via-surface-elev to-leaf/15 shadow-leaf/25',
+    accent: 'border-horizon/25 bg-gradient-to-br from-horizon/10 via-surface-elev to-horizon/15 shadow-horizon/25',
+    pop: 'border-citrus/25 bg-gradient-to-br from-citrus/10 via-surface-elev to-citrus/10 shadow-citrus/25',
     neutral: 'border-line bg-surface-elev shadow-sm',
 };
 
 const COACH_VALUE_TONE: Record<Tone, string> = {
-    brand: 'text-brand-700',
-    accent: 'text-accent-700',
-    pop: 'text-pop-700',
+    brand: 'text-leaf-deep',
+    accent: 'text-horizon-deep',
+    pop: 'text-citrus-deep',
     neutral: 'text-ink',
 };
 
@@ -341,7 +341,7 @@ function CoachStat({ icon, iconTone, label, value, hint, explainerKey }: Readonl
         >
             <DecorativeBlur intensity="md" className="-right-6 -top-6 h-16 w-16 bg-white/40" />
             <div className="relative flex items-center justify-between gap-2">
-                <div className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider text-ink-meta">
+                <div className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider text-ink-3">
                     <span>{label}</span>
                     {explainerKey && <MetricExplainer metricKey={explainerKey} size="xs" />}
                 </div>
@@ -353,7 +353,7 @@ function CoachStat({ icon, iconTone, label, value, hint, explainerKey }: Readonl
                 </span>
             </div>
             <div className={cn('relative mt-1.5 text-2xl font-black tabular-nums sm:mt-2 sm:text-3xl', COACH_VALUE_TONE[iconTone])}>{value}</div>
-            <div className="relative text-[11px] font-medium text-ink-meta">{hint}</div>
+            <div className="relative text-[11px] font-medium text-ink-3">{hint}</div>
         </div>
     );
 }
@@ -361,7 +361,7 @@ function CoachStat({ icon, iconTone, label, value, hint, explainerKey }: Readonl
 function EmptyState() {
     return (
         <section className="mt-10 rounded-2xl border border-dashed border-line bg-surface-elev/40 p-10 text-center">
-            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-brand-500/15 text-brand-600">
+            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-leaf/15 text-leaf-deep">
                 <Icon icon="mdi:run-fast" width={28} height={28} aria-hidden />
             </div>
             <h2 className="mt-4 text-base font-semibold text-ink">Belum ada lari yang masuk</h2>

@@ -36,20 +36,20 @@ export default function Login({ authStravaUrl }: Readonly<LoginProps>) {
                         {FEATURES.map((feature) => (
                             <div
                                 key={feature.label}
-                                className="flex flex-col items-center rounded-2xl border border-line bg-surface-elev/60 p-5 text-center backdrop-blur dark:border-line-dark dark:bg-surface-dark-elev/60"
+                                className="flex flex-col items-center rounded-2xl border border-line bg-surface-elev/60 p-5 text-center backdrop-blur"
                             >
-                                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-500/15 text-brand-600 dark:text-brand-400">
+                                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-leaf/15 text-leaf-deep">
                                     <Icon icon={feature.icon} width={22} height={22} aria-hidden />
                                 </div>
-                                <h2 className="mt-4 text-sm font-semibold text-ink dark:text-ink-dark">{feature.label}</h2>
-                                <p className="mt-1 text-xs leading-relaxed text-ink dark:text-ink-dark">{feature.desc}</p>
+                                <h2 className="mt-4 text-sm font-semibold text-ink">{feature.label}</h2>
+                                <p className="mt-1 text-xs leading-relaxed text-ink">{feature.desc}</p>
                             </div>
                         ))}
                     </section>
 
-                    <div className="mx-auto w-full max-w-md rounded-3xl border border-line bg-surface-elev p-8 shadow-[0_1px_3px_rgba(0,0,0,0.04),0_8px_24px_-12px_rgba(0,0,0,0.08)] dark:border-line-dark dark:bg-surface-dark-elev dark:shadow-none">
-                        <h2 className="text-2xl font-semibold tracking-tight text-ink dark:text-ink-dark">Selamat datang</h2>
-                        <p className="mt-2 text-sm leading-relaxed text-ink dark:text-ink-dark">
+                    <div className="mx-auto w-full max-w-md rounded-3xl border border-line bg-surface-elev p-8 shadow-[0_1px_3px_rgba(0,0,0,0.04),0_8px_24px_-12px_rgba(0,0,0,0.08)]">
+                        <h2 className="text-2xl font-semibold tracking-tight text-ink">Selamat datang</h2>
+                        <p className="mt-2 text-sm leading-relaxed text-ink">
                             Masuk dengan Strava untuk mulai mencatat lari kamu
                         </p>
 
@@ -68,20 +68,20 @@ export default function Login({ authStravaUrl }: Readonly<LoginProps>) {
                                 type="button"
                                 onClick={submitDemo}
                                 disabled={demoForm.processing}
-                                className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-xl border border-line bg-surface-elev px-5 py-3 text-sm font-semibold text-ink transition hover:bg-surface focus:outline-none focus:ring-4 focus:ring-brand-500/20 dark:border-line-dark dark:bg-surface-dark-elev dark:text-ink-dark dark:hover:bg-surface-dark"
+                                className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-xl border border-line bg-surface-elev px-5 py-3 text-sm font-semibold text-ink transition hover:bg-surface focus:outline-none focus:ring-4 focus:ring-leaf/20"
                             >
                                 <Icon icon="mdi:play-circle-outline" width={18} height={18} aria-hidden />
                                 Coba versi demo
                             </button>
                         )}
 
-                        <p className="mt-5 text-center text-xs leading-relaxed text-ink-meta dark:text-ink-meta-dark">
+                        <p className="mt-5 text-center text-xs leading-relaxed text-ink-3">
                             Aku hanya menggunakan Strava untuk login dan membaca aktivitas lari kamu, tidak yang lain.
                         </p>
                     </div>
 
-                    <p className="mt-6 text-center text-xs text-ink-meta dark:text-ink-meta-dark">
-                        Made with <span className="text-pop-500">♥</span> by a runner, for runners
+                    <p className="mt-6 text-center text-xs text-ink-3">
+                        Made with <span className="text-citrus">♥</span> by a runner, for runners
                     </p>
                 </main>
             </div>

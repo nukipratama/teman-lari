@@ -38,37 +38,37 @@ interface PrVariant {
 
 const PR_VARIANT: Record<PrTone, PrVariant> = {
     brand: {
-        border: 'border-brand-300 hover:border-brand-500',
-        bg: 'from-brand-50 via-surface-elev to-brand-100/60',
-        topRule: 'from-brand-300 via-brand-500 to-brand-300',
-        blob: 'bg-brand-200/50',
-        label: 'text-brand-700',
-        value: 'text-brand-800',
-        iconBg: 'bg-brand-500',
+        border: 'border-leaf/40 hover:border-leaf',
+        bg: 'from-leaf/10 via-surface-elev to-leaf/15',
+        topRule: 'from-leaf/40 via-leaf to-leaf/40',
+        blob: 'bg-leaf/25',
+        label: 'text-leaf-deep',
+        value: 'text-ink',
+        iconBg: 'bg-leaf',
         icon: 'mdi:flash',
-        focusRing: 'focus-visible:ring-brand-500',
+        focusRing: 'focus-visible:ring-leaf',
     },
     accent: {
-        border: 'border-accent-300 hover:border-accent-500',
-        bg: 'from-accent-50 via-surface-elev to-accent-100/60',
-        topRule: 'from-accent-300 via-accent-500 to-accent-300',
-        blob: 'bg-accent-200/50',
-        label: 'text-accent-700',
-        value: 'text-accent-800',
-        iconBg: 'bg-accent-500',
+        border: 'border-horizon/40 hover:border-horizon',
+        bg: 'from-horizon/10 via-surface-elev to-horizon/15',
+        topRule: 'from-horizon/40 via-horizon to-horizon/40',
+        blob: 'bg-horizon/25',
+        label: 'text-horizon-deep',
+        value: 'text-ember-deep',
+        iconBg: 'bg-horizon',
         icon: 'mdi:medal',
-        focusRing: 'focus-visible:ring-accent-500',
+        focusRing: 'focus-visible:ring-horizon',
     },
     pop: {
-        border: 'border-pop-300 hover:border-pop-500',
-        bg: 'from-pop-50 via-surface-elev to-pop-100/60',
-        topRule: 'from-pop-300 via-pop-500 to-pop-300',
-        blob: 'bg-pop-200/50',
-        label: 'text-pop-700',
-        value: 'text-pop-800',
-        iconBg: 'bg-pop-500',
+        border: 'border-citrus/40 hover:border-citrus',
+        bg: 'from-citrus/10 via-surface-elev to-citrus/10',
+        topRule: 'from-citrus/40 via-citrus to-citrus/40',
+        blob: 'bg-citrus/25',
+        label: 'text-citrus-deep',
+        value: 'text-ink',
+        iconBg: 'bg-citrus',
         icon: 'mdi:crown',
-        focusRing: 'focus-visible:ring-pop-500',
+        focusRing: 'focus-visible:ring-citrus',
     },
     spinning: {
         border: 'border-mood-spinning/40 hover:border-mood-spinning',
@@ -134,8 +134,8 @@ export default function Rekor({ personalRecords }: Readonly<RekorProps>) {
 function EmptyState() {
     return (
         <div className="rounded-2xl border border-dashed border-line bg-surface-elev/40 p-10 text-center">
-            <Icon icon="mdi:trophy-outline" width={32} height={32} className="mx-auto text-ink-meta" aria-hidden />
-            <p className="mt-3 text-sm leading-relaxed text-ink-soft">
+            <Icon icon="mdi:trophy-outline" width={32} height={32} className="mx-auto text-ink-3" aria-hidden />
+            <p className="mt-3 text-sm leading-relaxed text-ink-2">
                 Belum ada PR yang tercatat. Lari dengan splits dan best-effort paces akan otomatis muncul di sini.
             </p>
         </div>
@@ -147,8 +147,8 @@ function PrCard({ pr }: Readonly<{ pr: ExtendedPR }>) {
     const activityName = pr.activity?.detail?.name ?? 'Run';
     const meta = (
         <>
-            <div className="truncate text-sm font-medium text-ink-soft group-hover/link:text-ink">{activityName}</div>
-            <div className="mt-0.5 text-xs text-ink-meta">{formatIdDate(pr.set_at, 'long')}</div>
+            <div className="truncate text-sm font-medium text-ink-2 group-hover/link:text-ink">{activityName}</div>
+            <div className="mt-0.5 text-xs text-ink-3">{formatIdDate(pr.set_at, 'long')}</div>
         </>
     );
 

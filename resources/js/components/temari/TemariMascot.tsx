@@ -70,11 +70,11 @@ interface OrnamentSpec {
 }
 
 const ORNAMENT_LAYOUT: ReadonlyArray<OrnamentSpec> = [
-    { icon: 'mdi:star-four-points', className: '-left-2 -top-1', size: 18, color: 'text-pop-500', delay: 0 },
-    { icon: 'mdi:star-four-points-outline', className: '-right-1 top-2', size: 14, color: 'text-accent-500', delay: 0.4 },
-    { icon: 'mdi:circle-small', className: 'right-2 -bottom-1', size: 22, color: 'text-brand-400', delay: 0.8 },
-    { icon: 'mdi:star-four-points-outline', className: 'left-0 -bottom-2', size: 12, color: 'text-pop-400', delay: 1.2 },
-    { icon: 'mdi:star-four-points', className: '-right-3 -top-2', size: 10, color: 'text-brand-500', delay: 0.6 },
+    { icon: 'mdi:star-four-points', className: '-left-2 -top-1', size: 18, color: 'text-citrus', delay: 0 },
+    { icon: 'mdi:star-four-points-outline', className: '-right-1 top-2', size: 14, color: 'text-horizon', delay: 0.4 },
+    { icon: 'mdi:circle-small', className: 'right-2 -bottom-1', size: 22, color: 'text-leaf', delay: 0.8 },
+    { icon: 'mdi:star-four-points-outline', className: 'left-0 -bottom-2', size: 12, color: 'text-citrus', delay: 1.2 },
+    { icon: 'mdi:star-four-points', className: '-right-3 -top-2', size: 10, color: 'text-leaf', delay: 0.6 },
 ];
 
 // Speed-line positions behind the mascot, signaling rightward motion. Stagger
