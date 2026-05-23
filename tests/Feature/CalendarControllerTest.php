@@ -17,7 +17,7 @@ it('renders the Kalender page for the current month by default', function (): vo
     $this->actingAs($user)->get('/kalender')
         ->assertSuccessful()
         ->assertInertia(fn (Assert $page) => $page
-            ->component('Kalender')
+            ->component('Riwayat/Kalender')
             ->where('month', Carbon::today()->format('Y-m'))
             ->has('monthLabel')
             ->has('cells'));

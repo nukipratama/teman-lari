@@ -36,7 +36,7 @@ class CalendarController extends Controller
         $gridStart = $monthStart->copy()->startOfWeek(Carbon::MONDAY);
         $gridEnd = $monthEnd->copy()->endOfWeek(Carbon::SUNDAY);
 
-        return Inertia::render('Kalender', [
+        return Inertia::render('Riwayat/Kalender', [
             'month' => $monthStart->format('Y-m'),
             'monthLabel' => $this->formatMonthLabel($monthStart),
             'prevMonth' => $monthStart->copy()->subMonthNoOverflow()->format('Y-m'),

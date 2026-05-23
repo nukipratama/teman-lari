@@ -3,7 +3,7 @@ import { Icon } from '@iconify/react';
 import { motion } from 'framer-motion';
 import { useMemo } from 'react';
 import AppShell from '@/layouts/AppShell';
-import PageHero from '@/components/PageHero';
+import RiwayatTabs from '@/components/daybreak/RiwayatTabs';
 import { cn } from '@/lib/cn';
 import { fadeInUp } from '@/lib/motion';
 import { formatPace } from '@/lib/pace';
@@ -100,19 +100,25 @@ export default function Kalender({ cells, monthLabel, prevMonth, nextMonth, mont
 
     return (
         <AppShell>
-            <Head title={`Kalender — ${monthLabel}`} />
+            <Head title={`Riwayat · Kalender — ${monthLabel}`} />
             <motion.main
                 variants={fadeInUp}
                 initial="hidden"
                 animate="visible"
-                className="w-full px-4 py-6 sm:px-6 sm:py-10"
+                className="mx-auto w-full max-w-7xl px-5 py-6 sm:px-8 lg:px-14 lg:py-10"
             >
-                <PageHero
-                    icon="mdi:calendar-month-outline"
-                    title="Kalender"
-                    subtitle="Lihat semua hari lari kamu dalam satu tampilan bulanan. Setiap warna mewakili mood lari hari itu."
-                    className="mb-6"
-                />
+                <header className="mb-6 flex flex-col gap-5">
+                    <div>
+                        <div className="mb-3.5 font-mono text-[11px] uppercase tracking-[0.18em] text-ink-3">
+                            Riwayat · {monthLabel.toLowerCase()}
+                        </div>
+                        <h1 className="font-display text-[44px] leading-[0.95] tracking-[-0.025em] text-ink sm:text-[56px] lg:text-[72px] lg:leading-[0.92]">
+                            Mood-kamu bulan ini,<br />
+                            <em className="italic text-horizon-deep">dalam satu lihat.</em>
+                        </h1>
+                    </div>
+                    <RiwayatTabs active="kalender" />
+                </header>
 
                 <MonthNav
                     label={monthLabel}
