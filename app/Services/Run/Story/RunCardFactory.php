@@ -41,6 +41,9 @@ class RunCardFactory
             'pr_set' => $prSet,
         ]);
 
+        $existing = RunCard::query()->where('activity_id', $activity->id)->first();
+        $previousRarityRank = $existing !== null ? self::RARITY_RANK[$existing->rarity] ?? -1 : -1;
+
         $card = RunCard::query()->updateOrCreate(
             ['activity_id' => $activity->id],
             [
@@ -61,7 +64,38 @@ class RunCardFactory
             $this->unlockEngine->grantEligible($activity->user);
         }
 
+        // Queue this card for the reveal modal when it's freshly created or
+        // its rarity climbed since the last build. Re-running build with the
+        // same rarity does NOT re-trigger the reveal.
+        $newRarityRank = self::RARITY_RANK[$card->rarity] ?? -1;
+        if ($newRarityRank > $previousRarityRank) {
+            $this->queueRevealFor($activity, $card);
+        }
+
         return $card;
+    }
+
+    private const array RARITY_RANK = [
+        RunCard::RARITY_COMMON => 0,
+        RunCard::RARITY_UNCOMMON => 1,
+        RunCard::RARITY_RARE => 2,
+        RunCard::RARITY_EPIC => 3,
+        RunCard::RARITY_LEGENDARY => 4,
+    ];
+
+    /**
+     * Stash the card id on the user so the next page load can pop the reveal
+     * modal. We never overwrite a pending reveal that's still unseen — the
+     * oldest one wins; the modal will cycle through any later cards on
+     * subsequent loads.
+     */
+    private function queueRevealFor(Activity $activity, RunCard $card): void
+    {
+        $user = $activity->user;
+        if ($user->pending_reveal_card_id !== null) {
+            return;
+        }
+        $user->forceFill(['pending_reveal_card_id' => $card->id])->save();
     }
 
     /**

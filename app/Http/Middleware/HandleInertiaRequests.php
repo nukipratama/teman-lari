@@ -66,6 +66,38 @@ class HandleInertiaRequests extends Middleware
                 ? []
                 : UserUnlock::query()->where('user_id', $user->id)->pluck('unlock_key')->all(),
             'aiActivity' => $this->aiActivityCounts($user),
+            'pendingReveal' => fn () => $this->pendingRevealFor($user),
+        ];
+    }
+
+    /**
+     * @return array{card_id: int, activity_id: int, rarity: string, special_move: string, badges: array<int, string>|null, detail_name: string|null}|null
+     */
+    private function pendingRevealFor(?User $user): ?array
+    {
+        if ($user === null || $user->pending_reveal_card_id === null) {
+            return null;
+        }
+
+        $card = RunCard::query()
+            ->whereKey($user->pending_reveal_card_id)
+            ->with(['activity.detail:id,activity_id,name', 'activity:id,user_id'])
+            ->first();
+
+        if ($card === null || $card->activity->user_id !== $user->id) {
+            return null;
+        }
+
+        /** @var array<int, string>|null $badges */
+        $badges = $card->badges;
+
+        return [
+            'card_id' => $card->id,
+            'activity_id' => $card->activity_id,
+            'rarity' => $card->rarity,
+            'special_move' => $card->special_move,
+            'badges' => $badges,
+            'detail_name' => $card->activity->detail?->name,
         ];
     }
 

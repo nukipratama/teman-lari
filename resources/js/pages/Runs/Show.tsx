@@ -55,7 +55,7 @@ export default function RunsShow({
                 variants={fadeInUp}
                 initial="hidden"
                 animate="visible"
-                className="mx-auto w-full max-w-7xl px-5 py-6 sm:px-8 lg:px-14 lg:py-10"
+                className="w-full px-5 py-6 sm:px-8 lg:px-14 lg:py-10"
             >
                 <Link
                     href="/aktivitas"

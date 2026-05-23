@@ -11,12 +11,22 @@ export interface AuthUser {
     avatar_url: string | null;
 }
 
+export interface PendingReveal {
+    card_id: number;
+    activity_id: number;
+    rarity: Rarity;
+    special_move: string;
+    badges: string[] | null;
+    detail_name: string | null;
+}
+
 export interface SharedProps {
     auth: { user: AuthUser | null };
     flash: { success: string | null; error: string | null; info: string | null };
     demoLoginEnabled: boolean;
     onboarding: { forceShow: boolean };
     aiActivity?: { pending: number; queued: number; processing: number };
+    pendingReveal?: PendingReveal | null;
     [key: string]: unknown;
 }
 

@@ -38,7 +38,7 @@ export default function TopNav() {
 
     return (
         <header className="hidden border-b border-cream-deep bg-cream lg:block">
-            <div className="mx-auto flex max-w-7xl items-center justify-between px-10 py-[18px]">
+            <div className="flex w-full items-center justify-between px-10 py-[18px]">
                 <div className="flex items-center gap-12">
                     <Link href="/" aria-label="Beranda">
                         <BrandMark size="compact" />

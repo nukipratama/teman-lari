@@ -1,10 +1,13 @@
 import { type ReactNode } from 'react';
+import { usePage } from '@inertiajs/react';
 import DemoBanner from '@/components/DemoBanner';
 import FloatingTemari from '@/components/temari/FloatingTemari';
 import UnlockToast from '@/components/temari/UnlockToast';
+import CardReveal from '@/components/daybreak/CardReveal';
 import TopNav from '@/components/daybreak/TopNav';
 import MobileBottomNav from '@/components/daybreak/MobileBottomNav';
 import { useDawnShift } from '@/hooks/useDawnShift';
+import type { SharedProps } from '@/types/inertia';
 
 interface AppShellProps {
     children: ReactNode;
@@ -14,12 +17,14 @@ interface AppShellProps {
 
 export default function AppShell({ children, withNav = true }: Readonly<AppShellProps>) {
     useDawnShift();
+    const pending = usePage<SharedProps>().props.pendingReveal ?? null;
 
     if (!withNav) {
         return (
             <div className="min-h-screen bg-cream text-ink">
                 <DemoBanner />
                 {children}
+                {pending && <CardReveal pending={pending} />}
             </div>
         );
     }
@@ -43,6 +48,7 @@ export default function AppShell({ children, withNav = true }: Readonly<AppShell
             <MobileBottomNav />
             <FloatingTemari />
             <UnlockToast />
+            {pending && <CardReveal pending={pending} />}
         </div>
     );
 }

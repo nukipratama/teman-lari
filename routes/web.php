@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Http\Controllers\AksesoriController;
 use App\Http\Controllers\Api\AnalysisController;
+use App\Http\Controllers\Api\CardSeenController;
 use App\Http\Controllers\Auth\DemoAuthController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\StravaAuthController;
@@ -58,6 +59,9 @@ Route::middleware('auth')->group(function (): void {
 
     Route::post('/api/milestones/{activity}/dismiss', [MilestoneController::class, 'dismiss'])
         ->name('api.milestones.dismiss');
+
+    Route::post('/api/kartu/{card}/seen', CardSeenController::class)
+        ->name('api.kartu.seen');
 
     Route::get('/api/analyses/{type}/{subjectId}', [AnalysisController::class, 'show'])
         ->whereNumber('subjectId')
