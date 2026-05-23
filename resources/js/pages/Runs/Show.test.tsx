@@ -233,7 +233,7 @@ describe('Runs/Show', () => {
                 pastYou={null}
             />,
         );
-        expect(screen.getByText('—')).toBeInTheDocument();
+        expect(screen.getAllByText('—').length).toBeGreaterThan(0);
     });
 
     it('renders the location chip when location_name is set', () => {
