@@ -5,6 +5,10 @@ import AppShell from '@/layouts/AppShell';
 import Chip from '@/components/daybreak/Chip';
 import CollectionHeader from '@/components/daybreak/CollectionHeader';
 import HeroPanel from '@/components/daybreak/HeroPanel';
+import MilestoneStrip from '@/components/daybreak/MilestoneStrip';
+import ProgressionChart from '@/components/daybreak/ProgressionChart';
+import SectionLabel from '@/components/daybreak/SectionLabel';
+import SplitsSparkline from '@/components/daybreak/SplitsSparkline';
 import TemariProto from '@/components/daybreak/TemariProto';
 import AnalysisStatus from '@/components/temari/AnalysisStatus';
 import { fadeInUp } from '@/lib/motion';
@@ -19,8 +23,27 @@ interface ExtendedPR extends Omit<PersonalRecord, 'activity'> {
     context_analysis?: AnalysisPayload;
 }
 
+interface FeaturedExtras {
+    pr_id: number;
+    splits_pace_sec: number[];
+    location_name: string | null;
+    weather_temp_c: number | null;
+    weather_humidity_pct: number | null;
+    target_sec: number | null;
+    delta_sec: number | null;
+}
+
+interface ProgressionSeries {
+    category: string;
+    weeks: string[];
+    times_sec: Array<number | null>;
+    goal_sec: number | null;
+}
+
 interface RekorProps {
     personalRecords: ExtendedPR[];
+    featuredExtras?: FeaturedExtras | null;
+    progressionSeries?: ProgressionSeries | null;
 }
 
 const DISTANCE_CATEGORIES = ['1km', '5km', '10km', '15km', 'half_marathon', 'marathon'] as const;
@@ -34,7 +57,11 @@ const DISTANCE_ORDER: Record<(typeof DISTANCE_CATEGORIES)[number], number> = {
     marathon: 6,
 };
 
-export default function KoleksiRekor({ personalRecords }: Readonly<RekorProps>) {
+export default function KoleksiRekor({
+    personalRecords,
+    featuredExtras = null,
+    progressionSeries = null,
+}: Readonly<RekorProps>) {
     const distancePRs = personalRecords
         .filter((p) => DISTANCE_CATEGORIES.includes(p.category as (typeof DISTANCE_CATEGORIES)[number]))
         .sort((a, b) => DISTANCE_ORDER[b.category as (typeof DISTANCE_CATEGORIES)[number]] - DISTANCE_ORDER[a.category as (typeof DISTANCE_CATEGORIES)[number]]);
@@ -64,7 +91,7 @@ export default function KoleksiRekor({ personalRecords }: Readonly<RekorProps>) 
                 />
 
                 {featured ? (
-                    <HeroScoreboard pr={featured} />
+                    <HeroScoreboard pr={featured} extras={featuredExtras} />
                 ) : (
                     <EmptyState />
                 )}
@@ -73,16 +100,30 @@ export default function KoleksiRekor({ personalRecords }: Readonly<RekorProps>) 
 
                 {pacePRs.length > 0 && <PaceTicker records={pacePRs} />}
 
+                {progressionSeries && featured && (
+                    <ProgressionSection series={progressionSeries} currentSec={featured.value_sec} />
+                )}
+
                 <TemariFooter />
             </motion.div>
         </AppShell>
     );
 }
 
-function HeroScoreboard({ pr }: Readonly<{ pr: ExtendedPR }>) {
+function HeroScoreboard({
+    pr,
+    extras,
+}: Readonly<{ pr: ExtendedPR; extras: FeaturedExtras | null }>) {
     const category = PR_CATEGORY_LABELS[pr.category] ?? pr.category;
     const time = formatPrValue(pr.category, pr.value_sec);
     const runName = pr.activity?.detail?.name ?? 'Lari';
+    const splits = extras?.splits_pace_sec ?? [];
+    const tempo = extras?.weather_temp_c;
+    const humidity = extras?.weather_humidity_pct;
+    const location = extras?.location_name;
+    const targetSec = extras?.target_sec ?? null;
+    const deltaSec = extras?.delta_sec ?? null;
+
     return (
         <HeroPanel className="mt-8 min-h-[400px] lg:px-14 lg:py-12">
             <span
@@ -90,13 +131,13 @@ function HeroScoreboard({ pr }: Readonly<{ pr: ExtendedPR }>) {
                 className="pointer-events-none absolute left-1/2 top-1/2 h-[520px] w-[520px] -translate-x-1/2 -translate-y-1/2 rounded-full opacity-60"
                 style={{ background: 'radial-gradient(circle, rgba(232,160,118,0.45) 0%, transparent 60%)' }}
             />
-            <div className="relative grid items-center gap-12 lg:grid-cols-[1.4fr_1fr]">
+            <div className="relative grid items-start gap-10 lg:grid-cols-[1.4fr_1fr]">
                 <div>
                     <div className="mb-5 flex flex-wrap items-center gap-2">
                         <Chip tone="onSky">{category}</Chip>
                     </div>
                     <div
-                        className="mb-4 font-sans font-bold leading-[0.85] tracking-[-0.05em] tabular-nums"
+                        className="mb-5 font-sans font-bold leading-[0.85] tracking-[-0.05em] tabular-nums"
                         style={{
                             fontSize: 'clamp(80px, 16vw, 200px)',
                             background: 'linear-gradient(180deg, var(--color-cream), oklch(85% 0.10 50))',
@@ -108,21 +149,32 @@ function HeroScoreboard({ pr }: Readonly<{ pr: ExtendedPR }>) {
                     >
                         {time}
                     </div>
-                    <div className="grid max-w-2xl gap-5 sm:grid-cols-3">
+                    <div className="mb-6 grid max-w-2xl gap-5 sm:grid-cols-3">
                         <Caption label="Tipe" value={runName} />
                         <Caption label="Hari" value={formatIdDate(pr.set_at, 'long')} />
                         <Caption
-                            label="Aktivitas"
-                            value={pr.activity_id ? (
-                                <Link
-                                    href={`/aktivitas/${pr.activity_id}`}
-                                    className="text-cream underline-offset-2 hover:underline"
-                                >
-                                    Lihat detail
-                                </Link>
-                            ) : '—'}
+                            label="Tempat"
+                            value={
+                                location ?? (
+                                    pr.activity_id ? (
+                                        <Link
+                                            href={`/aktivitas/${pr.activity_id}`}
+                                            className="text-cream underline-offset-2 hover:underline"
+                                        >
+                                            Lihat detail
+                                        </Link>
+                                    ) : '—'
+                                )
+                            }
                         />
+                        {tempo != null && (
+                            <Caption
+                                label="Cuaca"
+                                value={`${Math.round(tempo)}°C${humidity != null ? ` · ${Math.round(humidity)}% lembab` : ''}`}
+                            />
+                        )}
                     </div>
+                    <SplitsSparkline paceSec={splits} className="max-w-2xl" />
                 </div>
                 <div className="flex flex-col items-center gap-4">
                     <TemariProto pose="glow" size={180} equipped={{ medal: 'emas', headband: 'epik' }} />
@@ -143,8 +195,64 @@ function HeroScoreboard({ pr }: Readonly<{ pr: ExtendedPR }>) {
                     )}
                 </div>
             </div>
+            {targetSec != null && deltaSec != null && deltaSec > 0 && (
+                <MilestoneStrip
+                    targetSec={targetSec}
+                    deltaSec={deltaSec}
+                    distanceLabel={category}
+                    className="relative mt-7"
+                />
+            )}
         </HeroPanel>
     );
+}
+
+function ProgressionSection({
+    series,
+    currentSec,
+}: Readonly<{ series: ProgressionSeries; currentSec: number }>) {
+    const times = series.times_sec.filter((t): t is number => t != null);
+    const worst = times.length > 0 ? Math.max(...times) : currentSec;
+    const best = times.length > 0 ? Math.min(...times) : currentSec;
+    const delta = Math.max(0, worst - best);
+    const label = PR_CATEGORY_LABELS[series.category] ?? series.category;
+
+    return (
+        <section className="mt-10 grid items-center gap-7 rounded-2xl border border-cream-deep bg-cream px-8 py-7 lg:grid-cols-[1fr_1.4fr]">
+            <div>
+                <SectionLabel>Progres · {label} terbaikmu</SectionLabel>
+                <p className="font-display text-2xl leading-tight tracking-[-0.01em] text-ink sm:text-[30px]">
+                    Dari <em className="italic">{formatHHMMSS(worst)}</em> ke{' '}
+                    <em className="italic text-horizon-deep">{formatHHMMSS(best)}</em>
+                </p>
+                {delta > 0 && (
+                    <p className="mt-3 font-display text-sm italic leading-relaxed text-ink-2">
+                        “Dalam {series.weeks.length} minggu, kamu motong {formatHHMMSS(delta)}.”
+                    </p>
+                )}
+                <div className="mt-3 flex flex-wrap gap-1.5">
+                    <Chip>−{formatHHMMSS(delta)} total</Chip>
+                    {series.goal_sec != null && (
+                        <Chip tone="horizon">Goal: Sub-{formatHHMMSS(series.goal_sec)}</Chip>
+                    )}
+                </div>
+            </div>
+            <ProgressionChart
+                weeks={series.weeks}
+                timesSec={series.times_sec}
+                goalSec={series.goal_sec}
+            />
+        </section>
+    );
+}
+
+function formatHHMMSS(sec: number): string {
+    const s = Math.max(0, Math.round(sec));
+    const h = Math.floor(s / 3600);
+    const m = Math.floor((s % 3600) / 60);
+    const r = s % 60;
+    if (h > 0) return `${h}:${String(m).padStart(2, '0')}:${String(r).padStart(2, '0')}`;
+    return `${m}:${String(r).padStart(2, '0')}`;
 }
 
 function Caption({ label, value }: Readonly<{ label: string; value: ReactNode }>) {
