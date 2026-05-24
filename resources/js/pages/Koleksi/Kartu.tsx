@@ -13,9 +13,11 @@ import { fadeInUp, pressShrink } from '@/lib/motion';
 import { formatIdDate } from '@/lib/pace';
 import { RARITY_LABELS, RARITY_ORDER } from '@/lib/runcard';
 import { useState } from 'react';
+import AnalysisStatus from '@/components/temari/AnalysisStatus';
 import type {
     Activity,
     ActivityDetail,
+    AnalysisPayload,
     PaginatedResponse,
     Rarity,
     RunCard as RunCardModel,
@@ -28,6 +30,7 @@ interface FeaturedCardPayload {
     special_move: string;
     badges: string[] | null;
     detail: ActivityDetail | null;
+    flavor_analysis?: AnalysisPayload;
 }
 
 type CardWithRel = RunCardModel & {
@@ -131,6 +134,21 @@ function FeaturedPanel({
                     <h2 className="mb-4 font-display text-[44px] leading-[0.95] tracking-[-0.015em] text-cream sm:text-[56px] lg:text-[64px]">
                         <em className="italic text-horizon">{featured.special_move}</em>
                     </h2>
+                    {featured.flavor_analysis && (
+                        <div className="mb-4 max-w-xl">
+                            <AnalysisStatus
+                                analysis={featured.flavor_analysis}
+                                inertiaReloadProps={['featuredCard']}
+                                allowReanalyze={false}
+                                showTimestamp={false}
+                                renderContent={(text) => (
+                                    <p className="font-display text-lg italic leading-snug text-cream/85 sm:text-xl">
+                                        “{text}”
+                                    </p>
+                                )}
+                            />
+                        </div>
+                    )}
                     {tags.length > 0 && (
                         <div className="flex flex-wrap gap-2">
                             {tags.map((t) => (
@@ -141,7 +159,7 @@ function FeaturedPanel({
                 </div>
                 <Link
                     href={`/aktivitas/${featured.activity_id}`}
-                    className="hidden lg:block lg:rotate-[-3deg]"
+                    className="hidden lg:block"
                     onClick={() => onTap(featured.rarity, featured.id)}
                 >
                     <Kartu
@@ -154,6 +172,7 @@ function FeaturedPanel({
                         tags={tags}
                         size="md"
                         onSky
+                        className="rotate-[-3deg]"
                     />
                 </Link>
             </div>

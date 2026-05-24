@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace App\Http\Controllers;
 
 use App\Models\ActivityDetail;
+use App\Models\AI\Analysis;
 use App\Models\RunCard;
 use App\Models\User;
+use App\Services\AI\AnalysisType;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -38,7 +40,7 @@ class CardController extends Controller
     }
 
     /**
-     * @return array{id: int, activity_id: int, rarity: string, special_move: string, badges: array<int, string>|null, detail: ActivityDetail|null}|null
+     * @return array{id: int, activity_id: int, rarity: string, special_move: string, badges: array<int, string>|null, detail: ActivityDetail|null, flavor_analysis: array<string, mixed>}|null
      */
     private function featuredCard(User $user, ?string $rarity): ?array
     {
@@ -60,6 +62,10 @@ class CardController extends Controller
 
         $card->loadMissing('activity.detail');
 
+        $flavor = Analysis::query()
+            ->forSubject(RunCard::class, $card->id, AnalysisType::CardFlavor)
+            ->first();
+
         return [
             'id' => $card->id,
             'activity_id' => $card->activity_id,
@@ -67,6 +73,7 @@ class CardController extends Controller
             'special_move' => $card->special_move,
             'badges' => $card->badges,
             'detail' => $card->activity->detail,
+            'flavor_analysis' => Analysis::toPayload($flavor, AnalysisType::CardFlavor, RunCard::class, $card->id),
         ];
     }
 
