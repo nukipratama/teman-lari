@@ -115,6 +115,9 @@ export default function KoleksiAksesori({ items, equipped }: Readonly<AksesoriPr
                                     </li>
                                 ))}
                             </ul>
+                            <p className="mt-5 max-w-md font-display text-sm italic leading-relaxed text-cream/75">
+                                “Tiap kamu dapet aksesori baru, langsung aku siapin di sini.”
+                            </p>
                         </div>
                     </div>
                 </HeroPanel>
@@ -172,15 +175,33 @@ function SlotSection({
     );
 }
 
+function previewEquippedFor(item: AksesoriItem): TemariEquipped {
+    switch (item.unlock_key) {
+        case 'accessory.headband_epik':
+            return { headband: 'epik', medal: 'none' };
+        case 'accessory.headband_legendaris':
+            return { headband: 'legendaris', medal: 'none' };
+        case 'accessory.medal_first_pr':
+            return { medal: 'pertama' };
+        case 'accessory.medal_gold':
+            return { medal: 'emas' };
+        case 'accessory.weekly_streak_4':
+            return { pita: true, medal: 'none' };
+        default:
+            return { medal: 'none' };
+    }
+}
+
 function AksesoriCard({
     item,
     onEquip,
 }: Readonly<{ item: AksesoriItem; onEquip: (key: string) => void }>) {
     const locked = !item.unlocked;
+    const preview = previewEquippedFor(item);
     return (
         <article
             className={cn(
-                'flex flex-col gap-3 rounded-2xl px-5 py-5 transition',
+                'relative flex flex-col items-center gap-3 rounded-2xl px-5 py-5 text-center transition',
                 item.equipped
                     ? 'border-[1.5px] border-horizon bg-horizon/[0.08]'
                     : locked
@@ -188,16 +209,27 @@ function AksesoriCard({
                         : 'border border-cream-deep bg-cream hover:-translate-y-0.5 hover:shadow-md',
             )}
         >
-            <div className="flex items-start justify-between gap-3">
-                <span
-                    className={cn(
-                        'flex h-10 w-10 items-center justify-center rounded-xl',
-                        locked ? 'bg-ink-3/20 text-ink-3' : 'bg-horizon text-cream',
-                    )}
-                >
-                    <Icon icon={locked ? 'mdi:lock-outline' : item.icon} width={20} height={20} />
-                </span>
-                {item.equipped && <Chip tone="horizon">Dipake</Chip>}
+            {item.equipped && (
+                <Chip tone="horizon" className="absolute right-4 top-4">
+                    Dipake
+                </Chip>
+            )}
+            <div className="relative">
+                <TemariProto
+                    pose="proud"
+                    size={96}
+                    equipped={locked ? { medal: 'none' } : preview}
+                    animate={false}
+                    className={cn(locked && 'opacity-50 grayscale')}
+                />
+                {locked && (
+                    <span
+                        aria-hidden
+                        className="absolute -right-1 bottom-1 flex h-7 w-7 items-center justify-center rounded-full bg-ink-3 text-cream shadow-sm"
+                    >
+                        <Icon icon="mdi:lock-outline" width={14} height={14} />
+                    </span>
+                )}
             </div>
             <div>
                 <h3 className="font-display text-xl leading-tight tracking-[-0.01em] text-ink">{item.name}</h3>
