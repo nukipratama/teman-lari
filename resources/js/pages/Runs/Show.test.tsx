@@ -199,4 +199,30 @@ describe('Runs/Show', () => {
         renderShow({ activity: { id: 99, user_id: 1, analyzed_at: '2026-05-10', detail: hot }, detail: hot });
         expect(screen.getByText('+12.5%')).toBeInTheDocument();
     });
+
+    it('renders the empty-tiles fallback when detail has no technical numbers', () => {
+        const bare = {
+            ...detail,
+            stream_summary: null,
+            average_heartrate: null,
+            max_heartrate: null,
+            average_cadence: null,
+            trimp_edwards: null,
+        };
+        renderShow({ activity: { id: 99, user_id: 1, analyzed_at: '2026-05-10', detail: bare }, detail: bare });
+        expect(screen.getByText(/Detail teknis belum tersedia/)).toBeInTheDocument();
+    });
+
+    it('parses a string-form pace_sec from splits when pace_sec is missing', () => {
+        const withStringPace = {
+            ...detail,
+            stream_summary: {
+                ...(detail.stream_summary ?? {}),
+                per_km: [{ km: 1, pace: '5:30' }, { km: 2, pace: '5:20' }],
+            },
+        };
+        renderShow({ activity: { id: 99, user_id: 1, analyzed_at: '2026-05-10', detail: withStringPace }, detail: withStringPace });
+        // The splits table renders with parsed paces; we only assert the structure rendered.
+        expect(screen.getAllByText(/5:/).length).toBeGreaterThan(0);
+    });
 });

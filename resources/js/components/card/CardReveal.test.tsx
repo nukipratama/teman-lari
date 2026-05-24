@@ -82,4 +82,23 @@ describe('CardReveal', () => {
             expect.anything(),
         );
     });
+
+    it('Escape key dismisses the reveal modal', async () => {
+        post.mockClear();
+        render(<CardReveal pending={epicReveal} />);
+        await userEvent.setup().keyboard('{Escape}');
+        expect(post).toHaveBeenCalled();
+    });
+
+    it('Space + Enter + ArrowRight all advance the frame', async () => {
+        const u = userEvent.setup();
+        render(<CardReveal pending={epicReveal} />);
+        expect(screen.getByText(/Frame 1 \/ 4/)).toBeInTheDocument();
+        await u.keyboard(' ');
+        expect(screen.getByText(/Frame 2 \/ 4/)).toBeInTheDocument();
+        await u.keyboard('{Enter}');
+        expect(screen.getByText(/Frame 3 \/ 4/)).toBeInTheDocument();
+        await u.keyboard('{ArrowRight}');
+        expect(screen.getByText(/Frame 4 \/ 4/)).toBeInTheDocument();
+    });
 });

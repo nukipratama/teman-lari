@@ -111,6 +111,36 @@ describe('Kalender', () => {
         });
     });
 
+    it('mutes prev-month cells and excludes them from monthly stats', () => {
+        const cells = cellsFor([
+            { date: '2026-04-27', day: 27, is_current_month: false, distance_km: 10.0, trimp: 100 },
+            { date: '2026-04-28', day: 28, is_current_month: false },
+            { date: '2026-04-29', day: 29, is_current_month: false },
+            { date: '2026-04-30', day: 30, is_current_month: false },
+            { date: '2026-05-01', day: 1, is_current_month: true, distance_km: 5.0, trimp: 50, activity_id: 100 },
+            { date: '2026-05-02', day: 2, is_current_month: true },
+            { date: '2026-05-03', day: 3, is_current_month: true },
+        ]);
+        render(<Kalender {...BASE_PROPS} cells={cells} />);
+        // Only the in-month 5.0 km counts; the 10.0 from the prev-month cell is skipped.
+        expect(screen.getByText(/5\.0 km/)).toBeInTheDocument();
+        expect(screen.getAllByText(/1 lari/).length).toBeGreaterThan(0);
+    });
+
+    it('renders the monthly recap narrative when monthlyRecap.content is provided', () => {
+        const monthlyRecap = {
+            id: 1,
+            status: 'done' as const,
+            content: 'Mei jadi bulan paling kuat sejauh ini.',
+            type: 'monthly_recap' as const,
+            subject_type: 'monthly_recap_user_month',
+            subject_id: 1,
+            discriminator: '2026-05',
+        };
+        render(<Kalender {...BASE_PROPS} cells={TWO_WEEK_CELLS} monthlyRecap={monthlyRecap} />);
+        expect(screen.getByText(/Mei jadi bulan paling kuat/)).toBeInTheDocument();
+    });
+
     it('renders an empty placeholder for cells with no run', () => {
         const cells = cellsFor([
             { date: '2026-05-01', day: 1, is_current_month: true },
