@@ -23,9 +23,6 @@ use App\Models\ActivityDetail;
  */
 class MilestoneDetector
 {
-    /** km thresholds in ascending order. Largest crossed → highest priority. */
-    private const array DISTANCE_THRESHOLDS_KM = [1, 3, 5, 10, 15, 21.1, 42.2];
-
     /** Pace thresholds in seconds-per-km, sorted descending (slowest first). */
     private const array PACE_THRESHOLDS_SEC = [
         7 * 60,
@@ -143,9 +140,10 @@ class MilestoneDetector
     private function firstEverDistance(Activity $activity, ActivityDetail $detail, float $distanceKm): ?array
     {
         $thresholdReached = null;
-        foreach (self::DISTANCE_THRESHOLDS_KM as $threshold) {
-            if ($distanceKm >= $threshold) {
-                $thresholdReached = $threshold;
+        foreach (PrCategory::distances() as $category) {
+            $thresholdKm = ($category->distanceMeters() ?? 0) / 1000;
+            if ($distanceKm >= $thresholdKm) {
+                $thresholdReached = $thresholdKm;
             }
         }
         if ($thresholdReached === null) {
