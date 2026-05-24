@@ -17,7 +17,7 @@ import AnalysisStatus from '@/components/temari/AnalysisStatus';
 import { cn } from '@/lib/cn';
 import { fadeInUp } from '@/lib/motion';
 import { formStatusLabel } from '@/lib/formStatus';
-import { formatPace, formatRelativeId } from '@/lib/pace';
+import { formatKm, formatPace, formatRelativeId, paceSecPerKm } from '@/lib/pace';
 import { emberGlowStyle } from '@/lib/styles';
 import {
     VIBE_TO_POSE,
@@ -326,11 +326,8 @@ function SuggestionCard({ suggestion }: Readonly<{ suggestion: AnalysisPayload }
 }
 
 function LastLariCard({ run, pose }: Readonly<{ run: ActivityDetail; pose: TemariPose }>) {
-    const km = run.distance != null ? (run.distance / 1000).toFixed(2) : '—';
-    const paceSec =
-        run.distance != null && run.moving_time != null && run.distance > 0
-            ? run.moving_time / (run.distance / 1000)
-            : null;
+    const km = formatKm(run.distance);
+    const paceSec = paceSecPerKm(run.moving_time, run.distance);
     const trimp = run.trimp_edwards != null ? Math.round(run.trimp_edwards) : null;
     const dateLabel = formatRelativeId(run.start_date_local);
 

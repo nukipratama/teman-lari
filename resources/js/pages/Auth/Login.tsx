@@ -67,7 +67,7 @@ function HeroSide() {
                 style={{ bottom: '22%', background: HORIZON_BAND }}
             />
 
-            <BrandMark size="compact" tone="cream" />
+            <BrandMark tone="cream" />
 
             <div className="relative z-10 text-center">
                 <div className="mb-8 flex justify-center">

@@ -11,7 +11,7 @@ import Kartu from '@/components/card/Kartu';
 import TemariProto from '@/components/temari/TemariProto';
 import { cn } from '@/lib/cn';
 import { fadeInUp, pressShrink } from '@/lib/motion';
-import { formatDuration, formatIdDate } from '@/lib/pace';
+import { formatDuration, formatIdDate, formatKm } from '@/lib/pace';
 import { RARITY_LABELS, RARITY_ORDER, prettyBadge } from '@/lib/runcard';
 import { emberGlowStyle } from '@/lib/styles';
 import { useState } from 'react';
@@ -117,7 +117,7 @@ function FeaturedPanel({
     onTap,
 }: Readonly<{ featured: FeaturedCardPayload; onTap: (rarity: Rarity, id: number) => void }>) {
     const detail = featured.detail;
-    const km = detail?.distance != null ? (detail.distance / 1000).toFixed(2) : '—';
+    const km = formatKm(detail?.distance);
     const durasi = detail?.moving_time != null ? formatDuration(detail.moving_time) : '—';
     const trimp = detail?.trimp_edwards != null ? String(Math.round(detail.trimp_edwards)) : '—';
     const subtitle = `${RARITY_LABELS[featured.rarity]} · ${formatIdDate(detail?.start_date_local ?? null, 'short')}`;
@@ -247,7 +247,7 @@ function CardCell({
 }: Readonly<{ card: CardWithRel; onTap: (rarity: Rarity, id: number) => void }>) {
     const detail = card.activity?.detail;
     if (!detail) return null;
-    const km = detail.distance != null ? (detail.distance / 1000).toFixed(2) : '—';
+    const km = formatKm(detail.distance);
     const durasi = detail.moving_time != null ? formatDuration(detail.moving_time) : '—';
     const trimp = detail.trimp_edwards != null ? String(Math.round(detail.trimp_edwards)) : '—';
     const subtitle = `${detail.name ?? 'Lari'} · ${formatIdDate(detail.start_date_local, 'short')}`;

@@ -1,47 +1,23 @@
 import { cn } from '@/lib/cn';
 
 interface BrandMarkProps {
-    size?: 'hero' | 'compact';
     /** Wordmark color tone — flip to 'cream' when the mark sits on a dark hero surface. */
     tone?: 'ink' | 'cream';
-    tagline?: boolean;
     className?: string;
 }
 
-/**
- * Bunny-head glyph + italic "TemanLari" wordmark, per the Daybreak design.
- * Geometry mirrors the prototype `Logo` atom in
- * `temanlari/project/daybreak-atoms.jsx`:
- *  - rounded square (cream on sky, ink on cream) as the head silhouette
- *  - two ears poking up, slightly rotated outward
- *  - horizon-orange headband stripe across the lower-mid face
- */
-export default function BrandMark({ size = 'hero', tone = 'ink', tagline = false, className }: Readonly<BrandMarkProps>) {
-    const glyphPx = size === 'compact' ? 28 : 56;
-    const wordPx = size === 'compact' ? 22 : 44;
+export default function BrandMark({ tone = 'ink', className }: Readonly<BrandMarkProps>) {
     const wordColor = tone === 'cream' ? 'text-cream' : 'text-ink';
 
     return (
-        <div className={cn('flex items-center gap-2.5', size === 'hero' && 'flex-col gap-3 text-center', className)}>
-            <BunnyGlyph size={glyphPx} tone={tone} />
-            <div className="flex flex-col items-center">
-                <span
-                    className={cn('font-display italic leading-none tracking-[-0.02em]', wordColor)}
-                    style={{ fontSize: wordPx }}
-                >
-                    TemanLari
-                </span>
-                {tagline && size === 'hero' && (
-                    <span
-                        className={cn(
-                            'mt-2 font-display italic',
-                            tone === 'cream' ? 'text-cream/70' : 'text-ink-2',
-                        )}
-                    >
-                        Setiap Langkah Berarti
-                    </span>
-                )}
-            </div>
+        <div className={cn('flex items-center gap-2.5', className)}>
+            <BunnyGlyph size={28} tone={tone} />
+            <span
+                className={cn('font-display italic leading-none tracking-[-0.02em]', wordColor)}
+                style={{ fontSize: 22 }}
+            >
+                TemanLari
+            </span>
         </div>
     );
 }
@@ -59,38 +35,35 @@ function BunnyGlyph({ size, tone }: Readonly<{ size: number; tone: 'ink' | 'crea
         >
             <span
                 aria-hidden
-                className="absolute"
+                className="absolute rounded-full"
                 style={{
                     top: -size * 0.18,
                     left: size * 0.16,
                     width: size * 0.18,
                     height: size * 0.32,
                     background: face,
-                    borderRadius: '50%',
                     transform: 'rotate(-12deg)',
                 }}
             />
             <span
                 aria-hidden
-                className="absolute"
+                className="absolute rounded-full"
                 style={{
                     top: -size * 0.18,
                     right: size * 0.16,
                     width: size * 0.18,
                     height: size * 0.32,
                     background: face,
-                    borderRadius: '50%',
                     transform: 'rotate(12deg)',
                 }}
             />
             <span
                 aria-hidden
-                className="relative block w-full"
+                className="relative block w-full overflow-hidden"
                 style={{
                     height: size,
                     background: face,
                     borderRadius: r,
-                    overflow: 'hidden',
                 }}
             >
                 <span

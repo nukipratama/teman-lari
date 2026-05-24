@@ -8,7 +8,7 @@ import PillButton from '@/components/ui/PillButton';
 import TemariProto, { type TemariPose } from '@/components/temari/TemariProto';
 import TemariMascot from '@/components/temari/TemariMascot';
 import { RARITY_LABELS } from '@/lib/runcard';
-import { formatDuration, formatPace } from '@/lib/pace';
+import { formatDuration, formatKm, formatPace, paceSecPerKm } from '@/lib/pace';
 import { csrfToken } from '@/lib/http';
 import type { PendingReveal, Rarity } from '@/types/inertia';
 
@@ -155,7 +155,7 @@ export default function CardReveal({ pending }: Readonly<CardRevealProps>) {
 
     const frame = frames[step] ?? frames[frames.length - 1];
     const isLastFrame = step === frames.length - 1;
-    const km = pending.distance_m != null ? (pending.distance_m / 1000).toFixed(2) : '—';
+    const km = formatKm(pending.distance_m);
     const durasi = pending.moving_time_sec != null ? formatDuration(pending.moving_time_sec) : '—';
     const trimp = pending.trimp_edwards != null ? Math.round(pending.trimp_edwards).toString() : '—';
     const subtitle = buildSubtitle(pending);
@@ -252,7 +252,7 @@ function prettyBadge(slug: string): string {
 
 function buildSubtitle(pending: PendingReveal): string | null {
     if (pending.detail_name === null) return null;
-    if (pending.distance_m == null || pending.moving_time_sec == null) return pending.detail_name;
-    const paceSec = pending.moving_time_sec / (pending.distance_m / 1000);
+    const paceSec = paceSecPerKm(pending.moving_time_sec, pending.distance_m);
+    if (paceSec === null) return pending.detail_name;
     return `${pending.detail_name} · ${formatPace(paceSec)}/km`;
 }
