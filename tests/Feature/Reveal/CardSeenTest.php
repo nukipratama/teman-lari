@@ -63,6 +63,20 @@ it('shares pendingReveal as null when no flag is set', function (): void {
             ->where('pendingReveal', null));
 });
 
+it('shares pendingReveal as null when the flagged card was deleted', function (): void {
+    $user = User::factory()->create();
+    $activity = Activity::factory()->for($user)->analyzed()->create();
+    ActivityDetail::factory()->for($activity)->create();
+    $card = RunCard::factory()->for($activity)->create();
+    $user->forceFill(['pending_reveal_card_id' => $card->id])->save();
+    $card->delete();
+
+    $this->actingAs($user)->get('/')
+        ->assertSuccessful()
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            ->where('pendingReveal', null));
+});
+
 it('shares pendingReveal payload when a card is flagged', function (): void {
     $user = User::factory()->create();
     $activity = Activity::factory()->for($user)->analyzed()->create();
