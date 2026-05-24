@@ -103,8 +103,6 @@ class DashboardController extends Controller
 
     private static function weekPaceSecPerKm(WeeklySnapshot $snapshot): ?float
     {
-        // Estimate weekly average pace from TRIMP + distance heuristic — falls
-        // back to null when snapshot lacks enough data.
         $km = $snapshot->distance_km;
         $runs = $snapshot->runs;
         if ($km === null || $km <= 0 || $runs === null || $runs <= 0) {
@@ -142,8 +140,6 @@ class DashboardController extends Controller
             return null;
         }
 
-        // `milestone_payload` cast as array; query above filtered nulls.
-        // Frontend MilestoneBanner short-circuits when `milestones` is empty.
         /** @var array<int, array<string, mixed>> $payload */
         $payload = $activity->milestone_payload;
 

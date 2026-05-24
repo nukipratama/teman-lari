@@ -11,8 +11,8 @@ import Kartu from '@/components/card/Kartu';
 import TemariProto from '@/components/temari/TemariProto';
 import { cn } from '@/lib/cn';
 import { fadeInUp, pressShrink } from '@/lib/motion';
-import { formatIdDate } from '@/lib/pace';
-import { RARITY_LABELS, RARITY_ORDER } from '@/lib/runcard';
+import { formatDuration, formatIdDate } from '@/lib/pace';
+import { RARITY_LABELS, RARITY_ORDER, prettyBadge } from '@/lib/runcard';
 import { useState } from 'react';
 import AnalysisStatus from '@/components/temari/AnalysisStatus';
 import type {
@@ -111,7 +111,7 @@ function FeaturedPanel({
 }: Readonly<{ featured: FeaturedCardPayload; onTap: (rarity: Rarity, id: number) => void }>) {
     const detail = featured.detail;
     const km = detail?.distance != null ? (detail.distance / 1000).toFixed(2) : '—';
-    const durasi = detail?.moving_time != null ? formatDurationShort(detail.moving_time) : '—';
+    const durasi = detail?.moving_time != null ? formatDuration(detail.moving_time) : '—';
     const trimp = detail?.trimp_edwards != null ? String(Math.round(detail.trimp_edwards)) : '—';
     const subtitle = `${RARITY_LABELS[featured.rarity]} · ${formatIdDate(detail?.start_date_local ?? null, 'short')}`;
     const tags = (featured.badges ?? []).slice(0, 2).map(prettyBadge);
@@ -241,7 +241,7 @@ function CardCell({
     const detail = card.activity?.detail;
     if (!detail) return null;
     const km = detail.distance != null ? (detail.distance / 1000).toFixed(2) : '—';
-    const durasi = detail.moving_time != null ? formatDurationShort(detail.moving_time) : '—';
+    const durasi = detail.moving_time != null ? formatDuration(detail.moving_time) : '—';
     const trimp = detail.trimp_edwards != null ? String(Math.round(detail.trimp_edwards)) : '—';
     const subtitle = `${detail.name ?? 'Lari'} · ${formatIdDate(detail.start_date_local, 'short')}`;
     const tags = (card.badges ?? []).slice(0, 2).map(prettyBadge);
@@ -299,17 +299,3 @@ function LegendaryTease() {
     );
 }
 
-function formatDurationShort(secs: number): string {
-    const totalMinutes = Math.round(secs / 60);
-    if (totalMinutes < 60) return `${totalMinutes}m`;
-    const h = Math.floor(totalMinutes / 60);
-    const m = totalMinutes % 60;
-    return m === 0 ? `${h}j` : `${h}j ${m}m`;
-}
-
-function prettyBadge(slug: string): string {
-    return slug
-        .split('_')
-        .map((p) => p.charAt(0).toUpperCase() + p.slice(1))
-        .join(' ');
-}

@@ -18,8 +18,8 @@ import { cn } from '@/lib/cn';
 import { fadeInUp } from '@/lib/motion';
 import { formStatusLabel } from '@/lib/formStatus';
 import { moodFromActivity } from '@/lib/moodFromActivity';
-import { formatPace, formatRelativeId } from '@/lib/pace';
-import { RARITY_LABELS } from '@/lib/runcard';
+import { formatDuration, formatPace, formatRelativeId } from '@/lib/pace';
+import { RARITY_LABELS, prettyBadge } from '@/lib/runcard';
 import type {
     ActivityDetail,
     AnalysisPayload,
@@ -475,7 +475,7 @@ function pickFeaturedKartu(runs: ReadonlyArray<ActivityDetail>): FeaturedCard | 
                 name: card.special_move,
                 subtitle: `${RARITY_LABELS[card.rarity]} · ${formatRelativeId(r.start_date_local)}`,
                 km: r.distance != null ? (r.distance / 1000).toFixed(2) : '—',
-                durasi: r.moving_time != null ? formatDurationShort(r.moving_time) : '—',
+                durasi: r.moving_time != null ? formatDuration(r.moving_time) : '—',
                 trimp: r.trimp_edwards != null ? String(Math.round(r.trimp_edwards)) : '—',
                 rarity: card.rarity,
                 tags: (card.badges ?? []).slice(0, 2).map(prettyBadge),
@@ -508,14 +508,6 @@ function kartuStripItem(run: ActivityDetail): StripItem | null {
     };
 }
 
-function formatDurationShort(secs: number): string {
-    const totalMinutes = Math.round(secs / 60);
-    if (totalMinutes < 60) return `${totalMinutes}m`;
-    const h = Math.floor(totalMinutes / 60);
-    const m = totalMinutes % 60;
-    return m === 0 ? `${h}j` : `${h}j ${m}m`;
-}
-
 function formatSignedForm(form: number): string {
     return form >= 0 ? `+${form.toFixed(1)}` : form.toFixed(1);
 }
@@ -527,11 +519,4 @@ function vibeSubtitleFor(label: string): string {
 function poseForRun(run: ActivityDetail): TemariPose {
     const mood = moodFromActivity(run);
     return MOOD_TO_POSE[mood] ?? 'observational';
-}
-
-function prettyBadge(slug: string): string {
-    return slug
-        .split('_')
-        .map((p) => p.charAt(0).toUpperCase() + p.slice(1))
-        .join(' ');
 }

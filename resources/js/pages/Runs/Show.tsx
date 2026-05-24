@@ -15,7 +15,7 @@ import { cn } from '@/lib/cn';
 import { fadeInUp } from '@/lib/motion';
 import { moodFromActivity } from '@/lib/moodFromActivity';
 import { formatDurationHMS, formatIdDate, formatPace } from '@/lib/pace';
-import { RARITY_LABELS } from '@/lib/runcard';
+import { RARITY_LABELS, prettyBadge } from '@/lib/runcard';
 import type {
     Activity,
     ActivityDetail,
@@ -438,9 +438,3 @@ function computeBarWidth(sec: number | null, fastest: number | null, slowest: nu
     return Math.round(40 + t * 50);
 }
 
-function prettyBadge(slug: string): string {
-    return slug
-        .split('_')
-        .map((p) => p.charAt(0).toUpperCase() + p.slice(1))
-        .join(' ');
-}

@@ -12,7 +12,7 @@ import Card from '@/components/ui/Card';
 import RiwayatTabs from '@/components/riwayat/RiwayatTabs';
 import TemariProto, { type TemariPose } from '@/components/temari/TemariProto';
 import { cn } from '@/lib/cn';
-import { formatIdDate } from '@/lib/pace';
+import { formatIdDate, isoDateLocal, mondayOf, sundayOf } from '@/lib/pace';
 import { fadeInUp } from '@/lib/motion';
 import type { Activity, ActivityDetail, AnalysisPayload, FormStatus } from '@/types/inertia';
 
@@ -327,30 +327,6 @@ function groupByWeek(rows: ReadonlyArray<RunWithDetail>): WeekBucket[] {
     }
 
     return buckets;
-}
-
-function mondayOf(iso: string): Date {
-    const d = new Date(iso);
-    d.setHours(0, 0, 0, 0);
-    // getDay: 0=Sun..6=Sat. Shift so Monday=0..Sunday=6, subtract.
-    const offset = (d.getDay() + 6) % 7;
-    d.setDate(d.getDate() - offset);
-    return d;
-}
-
-function isoDateLocal(d: Date): string {
-    // toISOString() converts to UTC and rolls the date for non-UTC zones.
-    // Compose YYYY-MM-DD from local fields so snapshot keys match.
-    const y = d.getFullYear();
-    const m = (d.getMonth() + 1).toString().padStart(2, '0');
-    const day = d.getDate().toString().padStart(2, '0');
-    return `${y}-${m}-${day}`;
-}
-
-function sundayOf(monday: Date): Date {
-    const d = new Date(monday);
-    d.setDate(d.getDate() + 6);
-    return d;
 }
 
 function weekRangeLabel(monday: Date): string {

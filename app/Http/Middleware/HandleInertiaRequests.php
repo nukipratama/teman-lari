@@ -65,7 +65,7 @@ class HandleInertiaRequests extends Middleware
             'unlockedAccessories' => fn () => $user === null
                 ? []
                 : UserUnlock::query()->where('user_id', $user->id)->pluck('unlock_key')->all(),
-            'aiActivity' => $this->aiActivityCounts($user),
+            'aiActivity' => fn () => $this->aiActivityCounts($user),
             'pendingReveal' => fn () => $this->pendingRevealFor($user),
             'stravaSync' => fn () => $this->stravaSyncFor($user),
         ];

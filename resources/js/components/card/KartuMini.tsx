@@ -1,4 +1,5 @@
 import { cn } from '@/lib/cn';
+import { RARITY_BORDER } from '@/lib/runcard';
 import type { Rarity } from '@/types/inertia';
 
 interface KartuMiniProps {
@@ -7,14 +8,6 @@ interface KartuMiniProps {
     date?: string;
     className?: string;
 }
-
-const RARITY_BORDER: Record<Rarity, string> = {
-    common: 'border-rarity-common',
-    uncommon: 'border-rarity-uncommon',
-    rare: 'border-rarity-rare',
-    epic: 'border-rarity-epic',
-    legendary: 'border-rarity-legendary',
-};
 
 const RARITY_CORNER: Record<Rarity, string> = {
     common: 'border-t-rarity-common',

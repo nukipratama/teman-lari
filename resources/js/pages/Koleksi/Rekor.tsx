@@ -14,7 +14,7 @@ import SplitsSparkline from '@/components/run/SplitsSparkline';
 import TemariProto from '@/components/temari/TemariProto';
 import AnalysisStatus from '@/components/temari/AnalysisStatus';
 import { fadeInUp } from '@/lib/motion';
-import { formatIdDate } from '@/lib/pace';
+import { formatDurationHMS, formatIdDate } from '@/lib/pace';
 import { PR_CATEGORY_LABELS, formatPrValue } from '@/lib/pr';
 import type { AnalysisPayload, PersonalRecord } from '@/types/inertia';
 
@@ -223,18 +223,18 @@ function ProgressionSection({
             <div>
                 <SectionLabel>Progres · {label} terbaikmu</SectionLabel>
                 <p className="font-display text-2xl leading-tight tracking-[-0.01em] text-ink sm:text-[30px]">
-                    Dari <em className="italic">{formatHHMMSS(worst)}</em> ke{' '}
-                    <em className="italic text-horizon-deep">{formatHHMMSS(best)}</em>
+                    Dari <em className="italic">{formatDurationHMS(worst)}</em> ke{' '}
+                    <em className="italic text-horizon-deep">{formatDurationHMS(best)}</em>
                 </p>
                 {delta > 0 && (
                     <p className="mt-3 font-display text-sm italic leading-relaxed text-ink-2">
-                        “Dalam {series.weeks.length} minggu, kamu motong {formatHHMMSS(delta)}.”
+                        “Dalam {series.weeks.length} minggu, kamu motong {formatDurationHMS(delta)}.”
                     </p>
                 )}
                 <div className="mt-3 flex flex-wrap gap-1.5">
-                    <Chip>−{formatHHMMSS(delta)} total</Chip>
+                    <Chip>−{formatDurationHMS(delta)} total</Chip>
                     {series.goal_sec != null && (
-                        <Chip tone="horizon">Goal: Sub-{formatHHMMSS(series.goal_sec)}</Chip>
+                        <Chip tone="horizon">Goal: Sub-{formatDurationHMS(series.goal_sec)}</Chip>
                     )}
                 </div>
             </div>
@@ -245,15 +245,6 @@ function ProgressionSection({
             />
         </Card>
     );
-}
-
-function formatHHMMSS(sec: number): string {
-    const s = Math.max(0, Math.round(sec));
-    const h = Math.floor(s / 3600);
-    const m = Math.floor((s % 3600) / 60);
-    const r = s % 60;
-    if (h > 0) return `${h}:${String(m).padStart(2, '0')}:${String(r).padStart(2, '0')}`;
-    return `${m}:${String(r).padStart(2, '0')}`;
 }
 
 function Caption({ label, value }: Readonly<{ label: string; value: ReactNode }>) {

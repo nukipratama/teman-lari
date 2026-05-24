@@ -1,5 +1,5 @@
 import { cn } from '@/lib/cn';
-import { RARITY_LABELS } from '@/lib/runcard';
+import { RARITY_BORDER, RARITY_LABELS } from '@/lib/runcard';
 import Chip from '@/components/ui/Chip';
 import type { Rarity } from '@/types/inertia';
 
@@ -16,14 +16,6 @@ interface KartuProps {
     onSky?: boolean;
     className?: string;
 }
-
-const RARITY_BORDER: Record<Rarity, string> = {
-    common: 'border-rarity-common',
-    uncommon: 'border-rarity-uncommon',
-    rare: 'border-rarity-rare',
-    epic: 'border-rarity-epic',
-    legendary: 'border-rarity-legendary',
-};
 
 const RARITY_FLAG_BG: Record<Rarity, string> = {
     common: 'bg-rarity-common text-cream',
