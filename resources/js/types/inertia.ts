@@ -20,6 +20,11 @@ export interface PendingReveal {
     detail_name: string | null;
 }
 
+export interface StravaSync {
+    connected: boolean;
+    last_synced_at: string | null;
+}
+
 export interface SharedProps {
     auth: { user: AuthUser | null };
     flash: { success: string | null; error: string | null; info: string | null };
@@ -27,6 +32,7 @@ export interface SharedProps {
     onboarding: { forceShow: boolean };
     aiActivity?: { pending: number; queued: number; processing: number };
     pendingReveal?: PendingReveal | null;
+    stravaSync?: StravaSync | null;
     [key: string]: unknown;
 }
 

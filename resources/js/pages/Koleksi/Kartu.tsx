@@ -55,7 +55,6 @@ export default function KoleksiKartu({
     const totalKartu = Object.values(rarityCounts).reduce((sum, n) => sum + n, 0);
     const epicCount = rarityCounts.epic + rarityCounts.legendary;
     const eyebrow = `Koleksi · ${totalKartu} kartu · ${epicCount} Epic+`;
-    const aksesoriCount = '4 / 5';
 
     const grid = cards.data.filter((c) => featuredCard === null || c.id !== featuredCard.id);
 
@@ -80,7 +79,7 @@ export default function KoleksiKartu({
                     eyebrow={eyebrow}
                     headline1="Yang Temari kasih kamu"
                     headline2="semuanya."
-                    counts={{ kartu: totalKartu, rekor: 8, aksesori: aksesoriCount }}
+                    activeCount={String(totalKartu)}
                 />
 
                 {featuredCard && (

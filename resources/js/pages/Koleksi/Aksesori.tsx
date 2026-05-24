@@ -49,8 +49,6 @@ export default function KoleksiAksesori({ items, equipped }: Readonly<AksesoriPr
     const unlockedCount = items.filter((i) => i.unlocked).length;
     const eyebrow = `Koleksi · ${unlockedCount} / ${items.length} aksesori`;
 
-    const totalKartu = 63;
-    const totalRekor = 8;
     const aksesoriCount = `${unlockedCount} / ${items.length}`;
 
     const previewEquipped: TemariEquipped = {
@@ -88,7 +86,7 @@ export default function KoleksiAksesori({ items, equipped }: Readonly<AksesoriPr
                     eyebrow={eyebrow}
                     headline1="Dandanin Temari"
                     headline2="pake yang udah kamu dapet."
-                    counts={{ kartu: totalKartu, rekor: totalRekor, aksesori: aksesoriCount }}
+                    activeCount={aksesoriCount}
                 />
 
                 <HeroPanel className="mt-8 lg:px-14 lg:py-12">

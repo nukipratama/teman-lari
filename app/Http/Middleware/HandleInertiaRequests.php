@@ -67,6 +67,36 @@ class HandleInertiaRequests extends Middleware
                 : UserUnlock::query()->where('user_id', $user->id)->pluck('unlock_key')->all(),
             'aiActivity' => $this->aiActivityCounts($user),
             'pendingReveal' => fn () => $this->pendingRevealFor($user),
+            'stravaSync' => fn () => $this->stravaSyncFor($user),
+        ];
+    }
+
+    /**
+     * @return array{connected: bool, last_synced_at: string|null}
+     */
+    private function stravaSyncFor(?User $user): array
+    {
+        if ($user === null) {
+            return ['connected' => false, 'last_synced_at' => null];
+        }
+
+        $connected = $user->stravaConnection !== null;
+        if (! $connected) {
+            return ['connected' => false, 'last_synced_at' => null];
+        }
+
+        // Use the most-recent activity ingest timestamp as the human-facing
+        // "last synced" marker. Strava connection itself doesn't store a
+        // sync timestamp; we tag every activity via fetched_at.
+        $latest = Activity::query()
+            ->where('user_id', $user->id)
+            ->whereNotNull('fetched_at')
+            ->orderByDesc('fetched_at')
+            ->value('fetched_at');
+
+        return [
+            'connected' => true,
+            'last_synced_at' => $latest?->toIso8601String(),
         ];
     }
 

@@ -70,7 +70,6 @@ export default function KoleksiRekor({
     );
     const featured = distancePRs[0] ?? personalRecords[0] ?? null;
 
-    const totalKartu = 63;
     const eyebrow = `Koleksi · ${personalRecords.length} rekor · ${distancePRs.length} distance · ${pacePRs.length} pace`;
 
     return (
@@ -87,7 +86,7 @@ export default function KoleksiRekor({
                     eyebrow={eyebrow}
                     headline1="Sejauh ini"
                     headline2="yang terbaik dari kamu."
-                    counts={{ kartu: totalKartu, rekor: personalRecords.length, aksesori: '4 / 5' }}
+                    activeCount={String(personalRecords.length)}
                 />
 
                 {featured ? (

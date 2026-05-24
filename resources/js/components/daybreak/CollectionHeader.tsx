@@ -5,7 +5,8 @@ interface CollectionHeaderProps {
     eyebrow: string;
     headline1: string;
     headline2: string;
-    counts: { kartu: number; rekor: number; aksesori: string };
+    /** Count chip rendered on the currently-active sub-tab. */
+    activeCount?: string;
 }
 
 export default function CollectionHeader({
@@ -13,7 +14,7 @@ export default function CollectionHeader({
     eyebrow,
     headline1,
     headline2,
-    counts,
+    activeCount,
 }: Readonly<CollectionHeaderProps>) {
     return (
         <header className="flex flex-col gap-5">
@@ -26,7 +27,7 @@ export default function CollectionHeader({
                     <em className="italic text-horizon-deep">{headline2}</em>
                 </h1>
             </div>
-            <KoleksiTabs active={active} counts={counts} />
+            <KoleksiTabs active={active} activeCount={activeCount} />
         </header>
     );
 }
