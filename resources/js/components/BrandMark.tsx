@@ -1,4 +1,3 @@
-import { Icon } from '@iconify/react';
 import { cn } from '@/lib/cn';
 
 interface BrandMarkProps {
@@ -9,27 +8,101 @@ interface BrandMarkProps {
     className?: string;
 }
 
+/**
+ * Bunny-head glyph + italic "TemanLari" wordmark, per the Daybreak design.
+ * Geometry mirrors the prototype `Logo` atom in
+ * `temanlari/project/daybreak-atoms.jsx`:
+ *  - rounded square (cream on sky, ink on cream) as the head silhouette
+ *  - two ears poking up, slightly rotated outward
+ *  - horizon-orange headband stripe across the lower-mid face
+ */
 export default function BrandMark({ size = 'hero', tone = 'ink', tagline = false, className }: Readonly<BrandMarkProps>) {
-    if (size === 'compact') {
-        return (
-            <div className={cn('flex items-center gap-2.5', className)}>
-                <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-leaf text-white">
-                    <Icon icon="mdi:run-fast" width={20} height={20} aria-hidden />
-                </span>
-                <span className={cn('font-semibold tracking-tight', tone === 'cream' ? 'text-cream' : 'text-ink')}>TemanLari</span>
-            </div>
-        );
-    }
+    const glyphPx = size === 'compact' ? 28 : 56;
+    const wordPx = size === 'compact' ? 22 : 44;
+    const wordColor = tone === 'cream' ? 'text-cream' : 'text-ink';
 
     return (
-        <div className={cn('flex flex-col items-center text-center', className)}>
-            <span className="flex h-16 w-16 items-center justify-center rounded-2xl bg-leaf text-white shadow-sm">
-                <Icon icon="mdi:run-fast" width={36} height={36} aria-hidden />
-            </span>
-            <h1 className="mt-5 text-4xl font-semibold tracking-tight text-ink">TemanLari</h1>
-            {tagline && (
-                <p className="mt-2 text-base text-ink">Setiap Langkah Berarti</p>
-            )}
+        <div className={cn('flex items-center gap-2.5', size === 'hero' && 'flex-col gap-3 text-center', className)}>
+            <BunnyGlyph size={glyphPx} tone={tone} />
+            <div className="flex flex-col items-center">
+                <span
+                    className={cn('font-display italic leading-none tracking-[-0.02em]', wordColor)}
+                    style={{ fontSize: wordPx }}
+                >
+                    TemanLari
+                </span>
+                {tagline && size === 'hero' && (
+                    <span
+                        className={cn(
+                            'mt-2 font-display italic',
+                            tone === 'cream' ? 'text-cream/70' : 'text-ink-2',
+                        )}
+                    >
+                        Setiap Langkah Berarti
+                    </span>
+                )}
+            </div>
         </div>
+    );
+}
+
+function BunnyGlyph({ size, tone }: Readonly<{ size: number; tone: 'ink' | 'cream' }>) {
+    const face = tone === 'cream' ? 'var(--color-cream)' : 'var(--color-ink)';
+    const band = 'var(--color-horizon)';
+    const r = size * 0.28;
+
+    return (
+        <span
+            aria-hidden
+            className="relative inline-flex shrink-0"
+            style={{ width: size, height: size }}
+        >
+            <span
+                aria-hidden
+                className="absolute"
+                style={{
+                    top: -size * 0.18,
+                    left: size * 0.16,
+                    width: size * 0.18,
+                    height: size * 0.32,
+                    background: face,
+                    borderRadius: '50%',
+                    transform: 'rotate(-12deg)',
+                }}
+            />
+            <span
+                aria-hidden
+                className="absolute"
+                style={{
+                    top: -size * 0.18,
+                    right: size * 0.16,
+                    width: size * 0.18,
+                    height: size * 0.32,
+                    background: face,
+                    borderRadius: '50%',
+                    transform: 'rotate(12deg)',
+                }}
+            />
+            <span
+                aria-hidden
+                className="relative block w-full"
+                style={{
+                    height: size,
+                    background: face,
+                    borderRadius: r,
+                    overflow: 'hidden',
+                }}
+            >
+                <span
+                    aria-hidden
+                    className="absolute inset-x-0"
+                    style={{
+                        top: size * 0.22,
+                        height: size * 0.14,
+                        background: band,
+                    }}
+                />
+            </span>
+        </span>
     );
 }
