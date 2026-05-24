@@ -185,8 +185,8 @@ function TemariReadCard({ briefing, pose }: Readonly<{ briefing: BriefingResult;
                     analysis={briefing.mascotVoice}
                     inertiaReloadProps={['briefing']}
                     renderContent={(text) => (
-                        <p className="font-display text-[15px] italic leading-snug text-ink sm:text-lg">
-                            “{text}”
+                        <p className="font-sans text-sm leading-relaxed text-ink sm:text-[15px]">
+                            {text}
                         </p>
                     )}
                 />
@@ -277,8 +277,8 @@ function FeaturedKartuPanel({
                             allowReanalyze={false}
                             showTimestamp={false}
                             renderContent={(text) => (
-                                <p className="font-display text-lg italic leading-snug text-cream/85 sm:text-xl">
-                                    “{text}”
+                                <p className="font-sans text-[15px] leading-relaxed text-cream/85 sm:text-base">
+                                    {text}
                                 </p>
                             )}
                         />
@@ -331,7 +331,7 @@ function SuggestionCard({ suggestion }: Readonly<{ suggestion: AnalysisPayload }
                 analysis={suggestion}
                 inertiaReloadProps={['briefing']}
                 renderContent={(text) => (
-                    <p className="font-display text-3xl leading-tight tracking-[-0.015em] text-ink sm:text-4xl">
+                    <p className="font-sans text-[15px] leading-relaxed text-ink sm:text-base">
                         {text}
                     </p>
                 )}

@@ -154,8 +154,8 @@ export default function Kalender({ cells, monthLabel, prevMonth, nextMonth, mont
                                     analysis={monthlyRecap}
                                     inertiaReloadProps={['monthlyRecap']}
                                     renderContent={(text) => (
-                                        <p className="font-display text-base italic leading-relaxed text-ink-2 sm:text-lg">
-                                            “{text}”
+                                        <p className="font-sans text-[15px] leading-relaxed text-ink-2 sm:text-base">
+                                            {text}
                                         </p>
                                     )}
                                 />

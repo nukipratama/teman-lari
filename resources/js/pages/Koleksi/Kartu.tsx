@@ -141,8 +141,8 @@ function FeaturedPanel({
                                 allowReanalyze={false}
                                 showTimestamp={false}
                                 renderContent={(text) => (
-                                    <p className="font-display text-lg italic leading-snug text-cream/85 sm:text-xl">
-                                        “{text}”
+                                    <p className="font-sans text-[15px] leading-relaxed text-cream/85 sm:text-base">
+                                        {text}
                                     </p>
                                 )}
                             />

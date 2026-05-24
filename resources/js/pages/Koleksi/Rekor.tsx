@@ -185,8 +185,8 @@ function HeroScoreboard({
                                 allowReanalyze={false}
                                 showTimestamp={false}
                                 renderContent={(text) => (
-                                    <p className="font-display text-[15px] italic leading-snug text-cream">
-                                        “{text}”
+                                    <p className="font-sans text-[15px] leading-relaxed text-cream/90">
+                                        {text}
                                     </p>
                                 )}
                             />

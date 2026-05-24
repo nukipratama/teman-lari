@@ -79,8 +79,8 @@ export default function FourLensGrid({
                         analysis={lens.analysis}
                         inertiaReloadProps={inertiaReloadProps}
                         renderContent={(text) => (
-                            <p className="font-display text-[15px] italic leading-relaxed text-ink">
-                                “{text}”
+                            <p className="font-sans text-[15px] leading-relaxed text-ink">
+                                {text}
                             </p>
                         )}
                     />
