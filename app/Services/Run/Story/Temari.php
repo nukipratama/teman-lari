@@ -10,7 +10,6 @@ use App\Models\PersonalRecord;
 use App\Models\StoryLine;
 use App\Models\User;
 use App\Services\AI\AnalysisType;
-use App\Services\AI\AnalysisService;
 use App\Services\Run\Metrics\StreamSummary;
 use Illuminate\Support\Carbon;
 
@@ -44,10 +43,6 @@ class Temari
         self::MOOD_ADEM => 'dddd',
     ];
 
-    public function __construct(private readonly AnalysisService $analysisService)
-    {
-    }
-
     public function postRunLine(Activity $activity, ActivityDetail $detail): StoryLine
     {
         $hasPr = PersonalRecord::query()->where('activity_id', $activity->id)->exists();
@@ -73,7 +68,7 @@ class Temari
         $date = $forDate?->toDateString() ?? Carbon::today()->toDateString();
         $mood = $this->moodForVibe($vibe);
 
-        $line = StoryLine::query()->updateOrCreate(
+        return StoryLine::query()->updateOrCreate(
             [
                 'user_id' => $user->id,
                 'for_date' => $date,
@@ -86,15 +81,6 @@ class Temari
                 'sigil_pattern' => self::sigilForMoodPublic($mood),
             ],
         );
-
-        $this->analysisService->request(
-            subjectOrType: self::DAILY_GREETING_SUBJECT_TYPE,
-            subjectId: $user->id,
-            type: AnalysisType::DailyGreeting,
-            discriminator: $date,
-        );
-
-        return $line;
     }
 
     public static function sigilForMoodPublic(string $mood): string

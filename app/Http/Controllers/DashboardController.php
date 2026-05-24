@@ -11,7 +11,6 @@ use App\Models\PersonalRecord;
 use App\Models\StoryLine;
 use App\Models\User;
 use App\Models\WeeklySnapshot;
-use App\Services\AI\AnalysisService;
 use App\Services\AI\AnalysisType;
 use App\Services\Run\Metrics\TrainingLoad;
 use App\Services\Run\Story\BriefingComposer;
@@ -31,7 +30,6 @@ class DashboardController extends Controller
         Temari $temari,
         TrainingLoad $trainingLoad,
         BriefingComposer $briefingComposer,
-        AnalysisService $analysisService,
     ): Response {
         /** @var User $user */
         $user = $request->user();
@@ -64,7 +62,7 @@ class DashboardController extends Controller
             'snapshot' => $weeks->last(),
             'recentRuns' => $recentRuns,
             'chartData' => $this->fitnessChartData($weeks),
-            'trendAnalysis' => $this->resolveTrendCaption($user, $today, $analysisService),
+            'trendAnalysis' => $this->resolveTrendCaption($user, $today),
             'hasNewPr' => $this->detectNewPr($user),
             'pendingMilestone' => $this->resolvePendingMilestone($user),
             'weekVsLastWeek' => $this->resolveWeekVsLastWeek($weeks),
@@ -189,7 +187,7 @@ class DashboardController extends Controller
      *     discriminator: string|null,
      * }
      */
-    private function resolveTrendCaption(User $user, Carbon $today, AnalysisService $analysisService): array
+    private function resolveTrendCaption(User $user, Carbon $today): array
     {
         $discriminator = $today->toDateString();
         $subjectType = AnalysisType::TREND_CAPTION_SUBJECT_TYPE;
@@ -197,15 +195,6 @@ class DashboardController extends Controller
         $row = Analysis::query()
             ->forSubject($subjectType, $user->id, AnalysisType::TrendCaption, $discriminator)
             ->first();
-
-        if ($row === null) {
-            $row = $analysisService->request(
-                subjectOrType: $subjectType,
-                subjectId: $user->id,
-                type: AnalysisType::TrendCaption,
-                discriminator: $discriminator,
-            );
-        }
 
         return Analysis::toPayload($row, AnalysisType::TrendCaption, $subjectType, $user->id, $discriminator);
     }

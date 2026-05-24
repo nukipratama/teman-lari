@@ -9,7 +9,6 @@ use App\Models\AI\Analysis;
 use App\Models\PersonalRecord;
 use App\Models\User;
 use App\Models\UserUnlock;
-use App\Services\AI\AnalysisService;
 use App\Services\AI\AnalysisType;
 use App\Services\AI\Narrators\PersonaSummaryNarrator;
 use Illuminate\Http\Request;
@@ -24,7 +23,6 @@ class ProfileController extends Controller
     public function __invoke(
         Request $request,
         PersonaSummaryNarrator $personaNarrator,
-        AnalysisService $analysisService,
     ): Response {
         /** @var User $user */
         $user = $request->user();
@@ -70,14 +68,14 @@ class ProfileController extends Controller
             'unlocks' => $unlocks,
             'unlockCatalog' => config('temari_unlocks'),
             'personaMix' => $personaNarrator->personaMix($user),
-            'personaSummary' => $this->resolvePersonaSummary($user, $analysisService),
+            'personaSummary' => $this->resolvePersonaSummary($user),
         ]);
     }
 
     /**
      * @return array{id: int|null, status: string, content: string|null, type: string, subject_type: string, subject_id: int, discriminator: string|null}
      */
-    private function resolvePersonaSummary(User $user, AnalysisService $analysisService): array
+    private function resolvePersonaSummary(User $user): array
     {
         // Cache the persona summary per ISO week — moods don't shift by the
         // hour, and the narrator pulls 12 weeks of history regardless.
@@ -87,15 +85,6 @@ class ProfileController extends Controller
         $row = Analysis::query()
             ->forSubject($subjectType, $user->id, AnalysisType::PersonaSummary, $discriminator)
             ->first();
-
-        if ($row === null) {
-            $row = $analysisService->request(
-                subjectOrType: $subjectType,
-                subjectId: $user->id,
-                type: AnalysisType::PersonaSummary,
-                discriminator: $discriminator,
-            );
-        }
 
         return Analysis::toPayload($row, AnalysisType::PersonaSummary, $subjectType, $user->id, $discriminator);
     }
