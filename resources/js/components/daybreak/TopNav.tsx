@@ -1,8 +1,9 @@
 import { Link, router, usePage } from '@inertiajs/react';
 import { Icon } from '@iconify/react';
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { cn } from '@/lib/cn';
 import BrandMark from '@/components/BrandMark';
+import { useDismissable } from '@/hooks/useDismissable';
 import { formatRelativeId } from '@/lib/pace';
 import type { SharedProps, StravaSync } from '@/types/inertia';
 
@@ -106,24 +107,8 @@ function SyncPill({ sync }: Readonly<{ sync: StravaSync | null }>) {
 function UserMenu({ name, avatarUrl }: Readonly<{ name: string; avatarUrl: string | null }>) {
     const [open, setOpen] = useState(false);
     const containerRef = useRef<HTMLDivElement>(null);
-
-    useEffect(() => {
-        if (!open) return;
-        function onPointerDown(event: PointerEvent) {
-            if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
-                setOpen(false);
-            }
-        }
-        function onKey(event: KeyboardEvent) {
-            if (event.key === 'Escape') setOpen(false);
-        }
-        document.addEventListener('pointerdown', onPointerDown);
-        document.addEventListener('keydown', onKey);
-        return () => {
-            document.removeEventListener('pointerdown', onPointerDown);
-            document.removeEventListener('keydown', onKey);
-        };
-    }, [open]);
+    const close = useCallback(() => setOpen(false), []);
+    useDismissable(open, containerRef, close);
 
     function handleLogout() {
         setOpen(false);

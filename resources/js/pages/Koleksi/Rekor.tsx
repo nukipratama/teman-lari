@@ -6,8 +6,8 @@ import Card from '@/components/daybreak/Card';
 import Chip from '@/components/daybreak/Chip';
 import CollectionHeader from '@/components/daybreak/CollectionHeader';
 import HeroPanel from '@/components/daybreak/HeroPanel';
-import LinkCard from '@/components/daybreak/LinkCard';
 import MilestoneStrip from '@/components/daybreak/MilestoneStrip';
+import PrCard from '@/components/daybreak/PrCard';
 import ProgressionChart from '@/components/daybreak/ProgressionChart';
 import SectionLabel from '@/components/daybreak/SectionLabel';
 import SplitsSparkline from '@/components/daybreak/SplitsSparkline';
@@ -288,34 +288,15 @@ function TrophyWall({ records }: Readonly<{ records: ExtendedPR[] }>) {
 }
 
 function Medallion({ pr }: Readonly<{ pr: ExtendedPR }>) {
-    const category = PR_CATEGORY_LABELS[pr.category] ?? pr.category;
-    const time = formatPrValue(pr.category, pr.value_sec);
-    const runName = pr.activity?.detail?.name ?? 'Lari';
-    const body = (
-        <>
-            <div className="font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-horizon-deep">
-                {category}
-            </div>
-            <div className="font-sans text-[32px] font-bold leading-none tabular-nums tracking-[-0.02em] text-ink">
-                {time}
-            </div>
-            <div className="font-sans text-xs text-ink-2">{runName}</div>
-            <div className="font-mono text-[10px] uppercase tracking-[0.12em] text-ink-3">
-                {formatIdDate(pr.set_at, 'short')}
-            </div>
-        </>
-    );
-    if (pr.activity_id) {
-        return (
-            <LinkCard href={`/aktivitas/${pr.activity_id}`} padding="lg" className="flex h-full flex-col gap-3">
-                {body}
-            </LinkCard>
-        );
-    }
     return (
-        <Card padding="lg" className="flex h-full flex-col gap-3">
-            {body}
-        </Card>
+        <PrCard
+            category={PR_CATEGORY_LABELS[pr.category] ?? pr.category}
+            time={formatPrValue(pr.category, pr.value_sec)}
+            setAt={formatIdDate(pr.set_at, 'short')}
+            activityId={pr.activity_id}
+            runName={pr.activity?.detail?.name ?? 'Lari'}
+            size="lg"
+        />
     );
 }
 

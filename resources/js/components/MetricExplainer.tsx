@@ -1,6 +1,7 @@
 import { Icon } from '@iconify/react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { useCallback, useEffect, useId, useRef, useState } from 'react';
+import { useCallback, useId, useRef, useState } from 'react';
+import { useDismissable } from '@/hooks/useDismissable';
 import { METRIC_GLOSSARY, type MetricGlossaryEntry, type MetricKey } from '@/lib/metricGlossary';
 import { cn } from '@/lib/cn';
 
@@ -30,24 +31,7 @@ export default function MetricExplainer({
     const popoverId = useId();
 
     const close = useCallback(() => setOpen(false), []);
-
-    useEffect(() => {
-        if (!open) return;
-
-        const onKey = (e: KeyboardEvent) => {
-            if (e.key === 'Escape') close();
-        };
-        const onPointer = (e: PointerEvent) => {
-            if (!containerRef.current?.contains(e.target as Node)) close();
-        };
-
-        document.addEventListener('keydown', onKey);
-        document.addEventListener('pointerdown', onPointer);
-        return () => {
-            document.removeEventListener('keydown', onKey);
-            document.removeEventListener('pointerdown', onPointer);
-        };
-    }, [open, close]);
+    useDismissable(open, containerRef, close);
 
     const iconSize = size === 'xs' ? 12 : 14;
     const buttonClass =

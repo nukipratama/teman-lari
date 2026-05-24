@@ -1,12 +1,13 @@
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import { Icon } from '@iconify/react';
 import { motion } from 'framer-motion';
+import { useMemo } from 'react';
 import AppShell from '@/layouts/AppShell';
 import Card from '@/components/daybreak/Card';
 import Chip from '@/components/daybreak/Chip';
 import HeroPanel from '@/components/daybreak/HeroPanel';
-import LinkCard from '@/components/daybreak/LinkCard';
 import PersonaBar, { type PersonaSlice } from '@/components/daybreak/PersonaBar';
+import PrCard from '@/components/daybreak/PrCard';
 import SectionLabel from '@/components/daybreak/SectionLabel';
 import TemariProto from '@/components/daybreak/TemariProto';
 import VoiceCard from '@/components/daybreak/VoiceCard';
@@ -216,32 +217,13 @@ function BigStat({ value, unit, label }: Readonly<{ value: string; unit: string;
 }
 
 function RekorMini({ pr }: Readonly<{ pr: TopPrEntry }>) {
-    const category = PR_CATEGORY_LABELS[pr.category] ?? pr.category;
-    const time = formatPrValue(pr.category, pr.value_sec);
-    const body = (
-        <>
-            <div className="font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-horizon-deep">
-                {category}
-            </div>
-            <div className="font-sans text-2xl font-bold leading-none tabular-nums tracking-[-0.02em] text-ink">
-                {time}
-            </div>
-            <div className="font-mono text-[10px] uppercase tracking-[0.12em] text-ink-3">
-                {formatIdDate(pr.set_at, 'short')}
-            </div>
-        </>
-    );
-    if (pr.activity_id) {
-        return (
-            <LinkCard href={`/aktivitas/${pr.activity_id}`} className="flex h-full flex-col gap-2">
-                {body}
-            </LinkCard>
-        );
-    }
     return (
-        <Card className="flex h-full flex-col gap-2">
-            {body}
-        </Card>
+        <PrCard
+            category={PR_CATEGORY_LABELS[pr.category] ?? pr.category}
+            time={formatPrValue(pr.category, pr.value_sec)}
+            setAt={formatIdDate(pr.set_at, 'short')}
+            activityId={pr.activity_id}
+        />
     );
 }
 
@@ -252,11 +234,17 @@ function AksesoriStrip({
     unlocks: UnlockEntry[];
     catalog: Record<string, UnlockCatalogEntry>;
 }>) {
-    const unlockedKeys = new Set(unlocks.map((u) => u.unlock_key));
-    const entries = Object.entries(catalog);
-    if (entries.length === 0) return null;
+    const { entries, unlockedKeys, unlockedCount } = useMemo(() => {
+        const keys = new Set(unlocks.map((u) => u.unlock_key));
+        const list = Object.entries(catalog);
+        return {
+            entries: list,
+            unlockedKeys: keys,
+            unlockedCount: list.filter(([key]) => keys.has(key)).length,
+        };
+    }, [unlocks, catalog]);
 
-    const unlockedCount = entries.filter(([key]) => unlockedKeys.has(key)).length;
+    if (entries.length === 0) return null;
 
     return (
         <Card padding="lg">
