@@ -8,6 +8,7 @@ import JourneyStrip, { type JourneyMatchData } from '@/components/aktivitas/Jour
 import RangeFilter, { type RangeFilterValue } from '@/components/aktivitas/RangeFilter';
 import RingkasanCard from '@/components/aktivitas/RingkasanCard';
 import RunListRow, { type RunNote } from '@/components/run/RunListRow';
+import Card from '@/components/daybreak/Card';
 import RiwayatTabs from '@/components/daybreak/RiwayatTabs';
 import TemariProto, { type TemariPose } from '@/components/daybreak/TemariProto';
 import { cn } from '@/lib/cn';
@@ -138,7 +139,7 @@ interface WeekSectionProps {
 function WeekSection({ bucket, snapshot, notes }: Readonly<WeekSectionProps>) {
     const trimpLabel = Math.round(bucket.totalTrimp);
     return (
-        <section className="overflow-hidden rounded-2xl border border-cream-deep bg-cream shadow-sm">
+        <Card as="section" padding="none" className="overflow-hidden shadow-sm">
             <header className="flex flex-wrap items-baseline justify-between gap-3 border-b border-cream-deep bg-cream-deep/40 px-5 py-4">
                 <div className="font-display text-lg italic text-ink">{bucket.label}</div>
                 <div className="flex flex-wrap items-center gap-2 text-xs tabular-nums">
@@ -176,7 +177,7 @@ function WeekSection({ bucket, snapshot, notes }: Readonly<WeekSectionProps>) {
                     <RunListRow key={activity.id} detail={activity.detail} note={notes[activity.id] ?? null} />
                 ))}
             </div>
-        </section>
+        </Card>
     );
 }
 
@@ -219,7 +220,7 @@ function Stat({ icon, label }: Readonly<{ icon: string; label: string }>) {
 
 function EmptyState() {
     return (
-        <div className="rounded-2xl border-2 border-dashed border-cream-deep bg-cream/40 p-10 text-center">
+        <Card tone="empty" padding="lg" className="text-center">
             <Icon icon="mdi:run-fast" width={28} height={28} className="mx-auto text-horizon" aria-hidden />
             <p className="mt-3 font-display text-2xl italic text-ink-2">Belum ada lari yang tercatat.</p>
             <p className="mt-2 font-sans text-sm text-ink-3">Sinkronkan lari pertama kamu dari Strava dulu, ya.</p>
@@ -230,7 +231,7 @@ function EmptyState() {
                 <Icon icon="mdi:arrow-left" width={14} height={14} aria-hidden />
                 Kembali ke Hari Ini
             </Link>
-        </div>
+        </Card>
     );
 }
 

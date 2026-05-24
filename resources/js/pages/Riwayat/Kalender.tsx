@@ -3,6 +3,7 @@ import { Icon } from '@iconify/react';
 import { motion } from 'framer-motion';
 import { useMemo } from 'react';
 import AppShell from '@/layouts/AppShell';
+import Card from '@/components/daybreak/Card';
 import RiwayatTabs from '@/components/daybreak/RiwayatTabs';
 import SectionLabel from '@/components/daybreak/SectionLabel';
 import TemariProto from '@/components/daybreak/TemariProto';
@@ -147,7 +148,7 @@ export default function Kalender({ cells, monthLabel, prevMonth, nextMonth, mont
                 {monthlyRecap && (
                     <section className="mt-10">
                         <SectionLabel>Catatan bulanan Temari</SectionLabel>
-                        <div className="flex items-start gap-3.5 rounded-2xl border border-cream-deep bg-cream px-6 py-5">
+                        <Card className="flex items-start gap-3.5">
                             <TemariProto pose="observational" size={56} />
                             <div className="min-w-0 flex-1">
                                 <AnalysisStatus
@@ -160,7 +161,7 @@ export default function Kalender({ cells, monthLabel, prevMonth, nextMonth, mont
                                     )}
                                 />
                             </div>
-                        </div>
+                        </Card>
                     </section>
                 )}
             </motion.main>

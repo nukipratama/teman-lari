@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import AppShell from '@/layouts/AppShell';
 import MotionLink from '@/components/MotionLink';
 import ConfettiBurst from '@/components/ConfettiBurst';
+import Card from '@/components/daybreak/Card';
 import Chip from '@/components/daybreak/Chip';
 import CollectionHeader from '@/components/daybreak/CollectionHeader';
 import HeroPanel from '@/components/daybreak/HeroPanel';
@@ -268,18 +269,18 @@ function CardCell({
 
 function EmptyState() {
     return (
-        <div className="mt-6 rounded-2xl border-2 border-dashed border-cream-deep bg-cream/40 px-8 py-10 text-center">
+        <Card tone="empty" padding="lg" className="mt-6 text-center">
             <p className="font-display text-2xl italic text-ink-2">
                 Belum ada kartu di rarity ini.
             </p>
             <p className="mt-2 font-sans text-sm text-ink-3">Coba filter lain, atau sinkronkan lari terbaru kamu.</p>
-        </div>
+        </Card>
     );
 }
 
 function LegendaryTease() {
     return (
-        <section className="mt-8 flex flex-col items-start gap-5 rounded-2xl border-2 border-dashed border-cream-deep bg-cream px-7 py-6 sm:flex-row sm:items-center">
+        <Card tone="empty" as="section" padding="lg" className="mt-8 flex flex-col items-start gap-5 sm:flex-row sm:items-center">
             <div className="flex h-28 w-20 items-center justify-center rounded-lg border-2 border-dashed border-rarity-legendary bg-rarity-legendary/[0.06] font-display text-4xl italic text-rarity-legendary">
                 ?
             </div>
@@ -294,7 +295,7 @@ function LegendaryTease() {
                     Syaratnya: PR di 21K, atau 5 lari Nyala beruntun.
                 </p>
             </div>
-        </section>
+        </Card>
     );
 }
 

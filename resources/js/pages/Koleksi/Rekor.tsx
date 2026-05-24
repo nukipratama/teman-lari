@@ -2,9 +2,11 @@ import type { ReactNode } from 'react';
 import { Head, Link } from '@inertiajs/react';
 import { motion } from 'framer-motion';
 import AppShell from '@/layouts/AppShell';
+import Card from '@/components/daybreak/Card';
 import Chip from '@/components/daybreak/Chip';
 import CollectionHeader from '@/components/daybreak/CollectionHeader';
 import HeroPanel from '@/components/daybreak/HeroPanel';
+import LinkCard from '@/components/daybreak/LinkCard';
 import MilestoneStrip from '@/components/daybreak/MilestoneStrip';
 import ProgressionChart from '@/components/daybreak/ProgressionChart';
 import SectionLabel from '@/components/daybreak/SectionLabel';
@@ -217,7 +219,7 @@ function ProgressionSection({
     const label = PR_CATEGORY_LABELS[series.category] ?? series.category;
 
     return (
-        <section className="mt-10 grid items-center gap-7 rounded-2xl border border-cream-deep bg-cream px-8 py-7 lg:grid-cols-[1fr_1.4fr]">
+        <Card as="section" padding="lg" className="mt-10 grid items-center gap-7 lg:grid-cols-[1fr_1.4fr]">
             <div>
                 <SectionLabel>Progres · {label} terbaikmu</SectionLabel>
                 <p className="font-display text-2xl leading-tight tracking-[-0.01em] text-ink sm:text-[30px]">
@@ -241,7 +243,7 @@ function ProgressionSection({
                 timesSec={series.times_sec}
                 goalSec={series.goal_sec}
             />
-        </section>
+        </Card>
     );
 }
 
@@ -289,8 +291,8 @@ function Medallion({ pr }: Readonly<{ pr: ExtendedPR }>) {
     const category = PR_CATEGORY_LABELS[pr.category] ?? pr.category;
     const time = formatPrValue(pr.category, pr.value_sec);
     const runName = pr.activity?.detail?.name ?? 'Lari';
-    const card = (
-        <div className="flex h-full flex-col gap-3 rounded-2xl border border-cream-deep bg-cream px-6 py-5">
+    const body = (
+        <>
             <div className="font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-horizon-deep">
                 {category}
             </div>
@@ -301,19 +303,20 @@ function Medallion({ pr }: Readonly<{ pr: ExtendedPR }>) {
             <div className="font-mono text-[10px] uppercase tracking-[0.12em] text-ink-3">
                 {formatIdDate(pr.set_at, 'short')}
             </div>
-        </div>
+        </>
     );
     if (pr.activity_id) {
         return (
-            <Link
-                href={`/aktivitas/${pr.activity_id}`}
-                className="block h-full transition hover:-translate-y-0.5 hover:shadow-md"
-            >
-                {card}
-            </Link>
+            <LinkCard href={`/aktivitas/${pr.activity_id}`} padding="lg" className="flex h-full flex-col gap-3">
+                {body}
+            </LinkCard>
         );
     }
-    return card;
+    return (
+        <Card padding="lg" className="flex h-full flex-col gap-3">
+            {body}
+        </Card>
+    );
 }
 
 function PaceTicker({ records }: Readonly<{ records: ExtendedPR[] }>) {
@@ -371,22 +374,22 @@ function PaceCell({ pr }: Readonly<{ pr: ExtendedPR }>) {
 
 function TemariFooter() {
     return (
-        <section className="mt-10 flex items-start gap-3.5 rounded-2xl border border-cream-deep bg-cream px-6 py-5">
+        <Card as="section" className="mt-10 flex items-start gap-3.5">
             <TemariProto pose="observational" size={56} />
             <p className="flex-1 font-display text-[15px] italic leading-relaxed text-ink-2">
                 “Tiap kamu pecahin rekor, langsung aku catet di sini. Nggak ada yang ilang, ya.”
             </p>
-        </section>
+        </Card>
     );
 }
 
 function EmptyState() {
     return (
-        <div className="mt-8 rounded-2xl border-2 border-dashed border-cream-deep bg-cream/40 px-8 py-12 text-center">
+        <Card tone="empty" padding="lg" className="mt-8 text-center">
             <p className="font-display text-3xl italic text-ink-2">Belum ada PR.</p>
             <p className="mt-2 font-sans text-sm text-ink-3">
                 Sinkronkan lari Strava kamu — Temari otomatis nyatet rekor yang kepecahin.
             </p>
-        </div>
+        </Card>
     );
 }

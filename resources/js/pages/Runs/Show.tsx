@@ -3,6 +3,7 @@ import { Head, Link } from '@inertiajs/react';
 import { Icon } from '@iconify/react';
 import { motion } from 'framer-motion';
 import AppShell from '@/layouts/AppShell';
+import Card from '@/components/daybreak/Card';
 import FourLensGrid from '@/components/daybreak/FourLensGrid';
 import HeroPanel from '@/components/daybreak/HeroPanel';
 import Kartu from '@/components/daybreak/Kartu';
@@ -158,7 +159,7 @@ export default function RunsShow({
                     </HeroPanel>
 
                     {/* EMBEDDED KARTU */}
-                    <aside className="flex flex-col gap-3.5 rounded-2xl border border-cream-deep bg-cream px-6 py-6">
+                    <Card as="aside" padding="lg" className="flex flex-col gap-3.5">
                         <SectionLabel>Kartu buat lari ini</SectionLabel>
                         {card ? (
                             <Kartu
@@ -181,7 +182,7 @@ export default function RunsShow({
                                 “{RARITY_LABELS[card.rarity]} — aku catet karena {detail.name ?? 'lari ini'} layak.”
                             </p>
                         )}
-                    </aside>
+                    </Card>
                 </section>
 
                 {/* KATA TEMARI header + 4-LENS GRID */}
@@ -250,6 +251,7 @@ function MapWeatherPanel({ detail }: Readonly<{ detail: DetailedActivityDetail }
 
     return (
         <div className="relative flex flex-col gap-5 overflow-hidden rounded-2xl bg-sky px-6 py-5 text-cream">
+            {/* sky-toned: bg-sky deliberately, NOT a default Card — preserves the prototype's contrast pairing inside the page. */}
             <SectionLabel onSky>Rute lari</SectionLabel>
             {(temp != null || location != null) && (
                 <div className="flex items-baseline gap-4">
@@ -322,9 +324,9 @@ function DetailTiles({
 
     if (tiles.length === 0) {
         return (
-            <div className="rounded-2xl border-2 border-dashed border-cream-deep bg-cream/40 px-6 py-8 text-center font-display text-base italic text-ink-3">
+            <Card tone="empty" padding="lg" className="text-center font-display text-base italic text-ink-3">
                 Detail teknis belum tersedia.
-            </div>
+            </Card>
         );
     }
 
@@ -367,7 +369,7 @@ function SplitsTable({ rows, className }: Readonly<{ rows: PerKmRow[]; className
     const fastestLabel = fastest != null ? `${formatPace(fastest)} — km ${fastestKm ?? '?'}` : null;
 
     return (
-        <section className={cn('rounded-2xl border border-cream-deep bg-cream px-6 py-5', className)}>
+        <Card as="section" padding="lg" className={className}>
             <header className="mb-4 flex flex-wrap items-baseline justify-between gap-3">
                 <SectionLabel>Splits per km</SectionLabel>
                 {fastestLabel && (
@@ -413,7 +415,7 @@ function SplitsTable({ rows, className }: Readonly<{ rows: PerKmRow[]; className
                     );
                 })}
             </div>
-        </section>
+        </Card>
     );
 }
 

@@ -1,3 +1,4 @@
+import Card from '@/components/daybreak/Card';
 import { formatPace } from '@/lib/pace';
 import { cn } from '@/lib/cn';
 
@@ -36,13 +37,7 @@ export default function JourneyStrip({ match, className }: Readonly<JourneyStrip
     const { first, current, pace_improvement_sec, hr_improvement_bpm, total_km } = match;
 
     return (
-        <section
-            aria-label="Perjalanan lari"
-            className={cn(
-                'rounded-2xl border border-cream-deep bg-cream px-6 py-5',
-                className,
-            )}
-        >
+        <Card as="section" padding="lg" className={className}>
             <h3 className="font-mono text-[10px] font-semibold uppercase tracking-[0.16em] text-ink-3">
                 Kamu vs Lari Pertama Kamu
             </h3>
@@ -82,7 +77,7 @@ export default function JourneyStrip({ match, className }: Readonly<JourneyStrip
             </div>
             <PaceLine label="Lari pertama kamu" summary={first} />
             <PaceLine label="Lari terbaru" summary={current} className="mt-1" />
-        </section>
+        </Card>
     );
 }
 

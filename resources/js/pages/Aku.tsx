@@ -2,8 +2,10 @@ import { Head, Link, usePage } from '@inertiajs/react';
 import { Icon } from '@iconify/react';
 import { motion } from 'framer-motion';
 import AppShell from '@/layouts/AppShell';
+import Card from '@/components/daybreak/Card';
 import Chip from '@/components/daybreak/Chip';
 import HeroPanel from '@/components/daybreak/HeroPanel';
+import LinkCard from '@/components/daybreak/LinkCard';
 import PersonaBar, { type PersonaSlice } from '@/components/daybreak/PersonaBar';
 import SectionLabel from '@/components/daybreak/SectionLabel';
 import TemariProto from '@/components/daybreak/TemariProto';
@@ -113,7 +115,7 @@ export default function Aku({
 
                 <section className="mt-10">
                     <SectionLabel>Persona · 12 minggu terakhir</SectionLabel>
-                    <div className="flex flex-col gap-5 rounded-2xl border border-cream-deep bg-cream px-6 py-5">
+                    <Card className="flex flex-col gap-5">
                         <PersonaBar mix={personaMix} />
                         {personaSummary && (
                             <AnalysisStatus
@@ -126,7 +128,7 @@ export default function Aku({
                                 )}
                             />
                         )}
-                    </div>
+                    </Card>
                 </section>
 
                 {topPrs.length > 0 && (
@@ -156,7 +158,7 @@ export default function Aku({
                     />
                 </section>
 
-                <section className="mt-10 flex items-start gap-3.5 rounded-2xl border border-cream-deep bg-cream px-6 py-5">
+                <Card as="section" className="mt-10 flex items-start gap-3.5">
                     <TemariProto pose="observational" size={48} />
                     <div className="flex-1">
                         <p className="font-display text-base italic leading-relaxed text-ink-2">
@@ -172,7 +174,7 @@ export default function Aku({
                             Sambungkan
                         </Link>
                     )}
-                </section>
+                </Card>
             </motion.div>
         </AppShell>
     );
@@ -180,7 +182,7 @@ export default function Aku({
 
 function BigStat({ value, unit, label }: Readonly<{ value: string; unit: string; label: string }>) {
     return (
-        <div className="rounded-2xl border border-cream-deep bg-cream px-7 py-6">
+        <Card padding="lg">
             <div className="font-mono text-[10px] uppercase tracking-[0.14em] text-ink-3">{label}</div>
             <div className="mt-2 flex items-baseline gap-2">
                 <span
@@ -198,15 +200,15 @@ function BigStat({ value, unit, label }: Readonly<{ value: string; unit: string;
                 </span>
                 <span className="font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3">{unit}</span>
             </div>
-        </div>
+        </Card>
     );
 }
 
 function RekorMini({ pr }: Readonly<{ pr: TopPrEntry }>) {
     const category = PR_CATEGORY_LABELS[pr.category] ?? pr.category;
     const time = formatPrValue(pr.category, pr.value_sec);
-    const card = (
-        <div className="flex h-full flex-col gap-2 rounded-2xl border border-cream-deep bg-cream px-5 py-4">
+    const body = (
+        <>
             <div className="font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-horizon-deep">
                 {category}
             </div>
@@ -216,16 +218,20 @@ function RekorMini({ pr }: Readonly<{ pr: TopPrEntry }>) {
             <div className="font-mono text-[10px] uppercase tracking-[0.12em] text-ink-3">
                 {formatIdDate(pr.set_at, 'short')}
             </div>
-        </div>
+        </>
     );
     if (pr.activity_id) {
         return (
-            <Link href={`/aktivitas/${pr.activity_id}`} className="block h-full transition hover:-translate-y-0.5">
-                {card}
-            </Link>
+            <LinkCard href={`/aktivitas/${pr.activity_id}`} className="flex h-full flex-col gap-2">
+                {body}
+            </LinkCard>
         );
     }
-    return card;
+    return (
+        <Card className="flex h-full flex-col gap-2">
+            {body}
+        </Card>
+    );
 }
 
 function AksesoriStrip({
@@ -242,7 +248,7 @@ function AksesoriStrip({
     const unlockedCount = entries.filter(([key]) => unlockedKeys.has(key)).length;
 
     return (
-        <div className="rounded-2xl border border-cream-deep bg-cream px-6 py-5">
+        <Card padding="lg">
             <div className="mb-4 flex items-center justify-between">
                 <Chip tone="horizon">{unlockedCount} / {entries.length} kebuka</Chip>
                 <Link
@@ -288,6 +294,6 @@ function AksesoriStrip({
                     );
                 })}
             </div>
-        </div>
+        </Card>
     );
 }

@@ -1,5 +1,6 @@
 import { Icon } from '@iconify/react';
 import AnalysisStatus from '@/components/temari/AnalysisStatus';
+import Card from '@/components/daybreak/Card';
 import { cn } from '@/lib/cn';
 import type { AnalysisPayload } from '@/types/inertia';
 
@@ -56,12 +57,11 @@ export default function FourLensGrid({
     return (
         <div className={cn('grid gap-3.5 sm:grid-cols-2', className)}>
             {lenses.map((lens) => (
-                <article
+                <Card
                     key={lens.id}
-                    className={cn(
-                        'rounded-2xl border border-cream-deep border-l-[3px] bg-cream px-6 py-5',
-                        TONE_BORDER[lens.tone],
-                    )}
+                    as="article"
+                    padding="lg"
+                    className={cn('border-l-[3px]', TONE_BORDER[lens.tone])}
                 >
                     <div className="mb-2.5 flex items-center gap-2">
                         <Icon
@@ -84,7 +84,7 @@ export default function FourLensGrid({
                             </p>
                         )}
                     />
-                </article>
+                </Card>
             ))}
         </div>
     );

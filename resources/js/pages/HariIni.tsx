@@ -4,8 +4,10 @@ import AppShell from '@/layouts/AppShell';
 import ConfettiBurst from '@/components/ConfettiBurst';
 import MilestoneBanner, { type PendingMilestone } from '@/components/MilestoneBanner';
 import FirstRunTooltip from '@/components/onboarding/FirstRunTooltip';
+import Card from '@/components/daybreak/Card';
 import Chip from '@/components/daybreak/Chip';
 import HeroPanel from '@/components/daybreak/HeroPanel';
+import LinkCard from '@/components/daybreak/LinkCard';
 import Kartu from '@/components/daybreak/Kartu';
 import KartuMini from '@/components/daybreak/KartuMini';
 import PillButton from '@/components/daybreak/PillButton';
@@ -175,7 +177,7 @@ export default function HariIni({
 
 function TemariReadCard({ briefing, pose }: Readonly<{ briefing: BriefingResult; pose: TemariPose }>) {
     return (
-        <div className="flex items-center gap-3.5 rounded-2xl border border-cream-deep bg-cream px-5 py-4 shadow-sm">
+        <Card className="flex items-center gap-3.5">
             <TemariProto pose={pose} size={56} />
             <div className="min-w-0 flex-1">
                 <div className="mb-1 font-mono text-[9px] font-bold uppercase tracking-[0.14em] text-horizon">
@@ -191,7 +193,7 @@ function TemariReadCard({ briefing, pose }: Readonly<{ briefing: BriefingResult;
                     )}
                 />
             </div>
-        </div>
+        </Card>
     );
 }
 
@@ -325,7 +327,7 @@ function FeaturedKartuPanel({
 
 function SuggestionCard({ suggestion }: Readonly<{ suggestion: AnalysisPayload }>) {
     return (
-        <section className="flex flex-col gap-3.5 rounded-[18px] bg-cream-deep px-7 py-7">
+        <Card tone="cream-deep" padding="lg" as="section" className="flex flex-col gap-3.5">
             <SectionLabel>Saran sesi dari Temari</SectionLabel>
             <AnalysisStatus
                 analysis={suggestion}
@@ -340,7 +342,7 @@ function SuggestionCard({ suggestion }: Readonly<{ suggestion: AnalysisPayload }
                 <Chip tone="horizon">~ 5–8 KM</Chip>
                 <Chip>Easy effort</Chip>
             </div>
-        </section>
+        </Card>
     );
 }
 
@@ -354,10 +356,7 @@ function LastLariCard({ run, pose }: Readonly<{ run: ActivityDetail; pose: Temar
     const dateLabel = formatRelativeId(run.start_date_local);
 
     return (
-        <Link
-            href={`/aktivitas/${run.activity_id}`}
-            className="flex flex-col gap-3.5 rounded-[18px] border border-cream-deep bg-cream px-7 py-6 transition hover:-translate-y-0.5 hover:shadow-md"
-        >
+        <LinkCard href={`/aktivitas/${run.activity_id}`} padding="lg" className="flex flex-col gap-3.5">
             <SectionLabel>Lari terakhir · {dateLabel}</SectionLabel>
             <div className="flex items-start gap-3.5">
                 <TemariProto pose={pose} size={56} />
@@ -378,7 +377,7 @@ function LastLariCard({ run, pose }: Readonly<{ run: ActivityDetail; pose: Temar
             <span className="mt-auto font-mono text-[11px] font-semibold uppercase tracking-[0.12em] text-horizon">
                 Lihat detail →
             </span>
-        </Link>
+        </LinkCard>
     );
 }
 
@@ -413,7 +412,7 @@ function KondisiCard({
         },
     ];
     return (
-        <section className="flex flex-col gap-3 rounded-[18px] border border-cream-deep bg-cream px-7 py-6">
+        <Card as="section" padding="lg" className="flex flex-col gap-3">
             <SectionLabel>Kondisi · {snapshot ? '7 hari' : 'belum cukup data'}</SectionLabel>
             {rows.map(({ label, value, hint, color }) => (
                 <div
@@ -434,7 +433,7 @@ function KondisiCard({
                     </div>
                 </div>
             ))}
-        </section>
+        </Card>
     );
 }
 
