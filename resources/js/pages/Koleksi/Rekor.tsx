@@ -219,7 +219,7 @@ function ProgressionSection({
     const label = PR_CATEGORY_LABELS[series.category] ?? series.category;
 
     return (
-        <Card as="section" padding="lg" className="mt-10 grid items-center gap-7 lg:grid-cols-[1fr_1.4fr]">
+        <Card as="section" padding="lg" className="mt-8 grid items-center gap-7 lg:grid-cols-[1fr_1.4fr]">
             <div>
                 <SectionLabel>Progres · {label} terbaikmu</SectionLabel>
                 <p className="font-display text-2xl leading-tight tracking-[-0.01em] text-ink sm:text-[30px]">
@@ -269,7 +269,7 @@ function Caption({ label, value }: Readonly<{ label: string; value: ReactNode }>
 
 function TrophyWall({ records }: Readonly<{ records: ExtendedPR[] }>) {
     return (
-        <section className="mt-10">
+        <section className="mt-8">
             <header className="mb-4 flex items-baseline justify-between">
                 <div className="flex items-baseline gap-3">
                     <h2 className="font-display text-2xl tracking-[-0.01em] text-ink sm:text-[32px]">
@@ -321,7 +321,7 @@ function Medallion({ pr }: Readonly<{ pr: ExtendedPR }>) {
 
 function PaceTicker({ records }: Readonly<{ records: ExtendedPR[] }>) {
     return (
-        <section className="mt-10">
+        <section className="mt-8">
             <header className="mb-4 flex items-baseline justify-between">
                 <div className="flex items-baseline gap-3">
                     <h2 className="font-display text-2xl tracking-[-0.01em] text-ink sm:text-[32px]">
@@ -374,7 +374,7 @@ function PaceCell({ pr }: Readonly<{ pr: ExtendedPR }>) {
 
 function TemariFooter() {
     return (
-        <Card as="section" className="mt-10 flex items-start gap-3.5">
+        <Card as="section" className="mt-8 flex items-start gap-3.5">
             <TemariProto pose="observational" size={56} />
             <p className="flex-1 font-display text-[15px] italic leading-relaxed text-ink-2">
                 “Tiap kamu pecahin rekor, langsung aku catet di sini. Nggak ada yang ilang, ya.”

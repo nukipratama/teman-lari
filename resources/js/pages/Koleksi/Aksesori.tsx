@@ -162,7 +162,7 @@ function SlotSection({
     onEquip,
 }: Readonly<{ slot: Slot; items: AksesoriItem[]; onEquip: (key: string) => void }>) {
     return (
-        <section className="mt-10">
+        <section className="mt-8">
             <SectionLabel>{SLOT_LABEL[slot]}</SectionLabel>
             <div className="grid gap-3.5 sm:grid-cols-2 lg:grid-cols-3">
                 {items.map((item) => (

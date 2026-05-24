@@ -1,4 +1,6 @@
-import { Link, usePage } from '@inertiajs/react';
+import { Link, router, usePage } from '@inertiajs/react';
+import { Icon } from '@iconify/react';
+import { useEffect, useRef, useState } from 'react';
 import { cn } from '@/lib/cn';
 import BrandMark from '@/components/BrandMark';
 import { formatRelativeId } from '@/lib/pace';
@@ -53,7 +55,7 @@ export default function TopNav() {
                 </div>
                 <div className="flex items-center gap-3.5">
                     <SyncPill sync={stravaSync} />
-                    {user && <UserAvatar name={user.name} avatarUrl={user.avatar_url} />}
+                    {user && <UserMenu name={user.name} avatarUrl={user.avatar_url} />}
                 </div>
             </div>
         </header>
@@ -101,22 +103,91 @@ function SyncPill({ sync }: Readonly<{ sync: StravaSync | null }>) {
     );
 }
 
-function UserAvatar({ name, avatarUrl }: Readonly<{ name: string; avatarUrl: string | null }>) {
-    if (avatarUrl) {
-        return (
-            <img
-                src={avatarUrl}
-                alt={name}
-                className="h-9 w-9 rounded-full object-cover ring-2 ring-cream-deep"
-            />
-        );
+function UserMenu({ name, avatarUrl }: Readonly<{ name: string; avatarUrl: string | null }>) {
+    const [open, setOpen] = useState(false);
+    const containerRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        if (!open) return;
+        function onPointerDown(event: PointerEvent) {
+            if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+                setOpen(false);
+            }
+        }
+        function onKey(event: KeyboardEvent) {
+            if (event.key === 'Escape') setOpen(false);
+        }
+        document.addEventListener('pointerdown', onPointerDown);
+        document.addEventListener('keydown', onKey);
+        return () => {
+            document.removeEventListener('pointerdown', onPointerDown);
+            document.removeEventListener('keydown', onKey);
+        };
+    }, [open]);
+
+    function handleLogout() {
+        setOpen(false);
+        router.post('/logout');
     }
+
     return (
-        <div
-            className="flex h-9 w-9 items-center justify-center rounded-full bg-horizon font-display text-[17px] font-semibold italic text-sky"
-            aria-label={name}
-        >
-            {name.charAt(0).toUpperCase()}
+        <div ref={containerRef} className="relative">
+            <button
+                type="button"
+                onClick={() => setOpen((v) => !v)}
+                aria-haspopup="menu"
+                aria-expanded={open}
+                aria-label={`Buka menu ${name}`}
+                className="flex h-9 w-9 items-center justify-center rounded-full ring-2 ring-cream-deep transition hover:ring-leaf focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-leaf focus-visible:ring-offset-2 focus-visible:ring-offset-cream"
+            >
+                {avatarUrl ? (
+                    <img
+                        src={avatarUrl}
+                        alt=""
+                        className="h-9 w-9 rounded-full object-cover"
+                    />
+                ) : (
+                    <span
+                        aria-hidden
+                        className="flex h-9 w-9 items-center justify-center rounded-full bg-horizon font-display text-[17px] font-semibold italic text-sky"
+                    >
+                        {name.charAt(0).toUpperCase()}
+                    </span>
+                )}
+            </button>
+            {open && (
+                <div
+                    role="menu"
+                    className="absolute right-0 top-[calc(100%+10px)] z-40 w-52 overflow-hidden rounded-2xl border border-cream-deep bg-cream shadow-lg"
+                >
+                    <div className="border-b border-cream-deep px-4 py-3">
+                        <div className="font-mono text-[10px] font-semibold uppercase tracking-[0.14em] text-ink-3">
+                            Masuk sebagai
+                        </div>
+                        <div className="mt-0.5 truncate font-sans text-sm font-medium text-ink">
+                            {name}
+                        </div>
+                    </div>
+                    <Link
+                        href="/profil"
+                        role="menuitem"
+                        onClick={() => setOpen(false)}
+                        className="flex items-center gap-2.5 px-4 py-2.5 font-sans text-sm text-ink transition hover:bg-cream-deep"
+                    >
+                        <Icon icon="mdi:account-outline" width={16} height={16} aria-hidden className="text-ink-3" />
+                        Aku
+                    </Link>
+                    <button
+                        type="button"
+                        role="menuitem"
+                        onClick={handleLogout}
+                        className="flex w-full items-center gap-2.5 border-t border-cream-deep px-4 py-2.5 text-left font-sans text-sm text-ink transition hover:bg-cream-deep"
+                    >
+                        <Icon icon="mdi:logout" width={16} height={16} aria-hidden className="text-ink-3" />
+                        Keluar
+                    </button>
+                </div>
+            )}
         </div>
     );
 }

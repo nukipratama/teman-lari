@@ -185,7 +185,7 @@ function RarityFilter({
     counts,
 }: Readonly<{ selected: string | null; counts: Record<Rarity, number> }>) {
     return (
-        <nav aria-label="Filter rarity" className="mt-6 flex flex-wrap items-center gap-2">
+        <nav aria-label="Filter rarity" className="mt-8 flex flex-wrap items-center gap-2">
             <span className="mr-1.5 font-mono text-[10px] uppercase tracking-[0.14em] text-ink-3">
                 Rarity
             </span>
@@ -269,7 +269,7 @@ function CardCell({
 
 function EmptyState() {
     return (
-        <Card tone="empty" padding="lg" className="mt-6 text-center">
+        <Card tone="empty" padding="lg" className="mt-8 text-center">
             <p className="font-display text-2xl italic text-ink-2">
                 Belum ada kartu di rarity ini.
             </p>

@@ -1,4 +1,4 @@
-import { Head, Link, usePage } from '@inertiajs/react';
+import { Head, Link, router, usePage } from '@inertiajs/react';
 import { Icon } from '@iconify/react';
 import { motion } from 'framer-motion';
 import AppShell from '@/layouts/AppShell';
@@ -175,6 +175,17 @@ export default function Aku({
                         </Link>
                     )}
                 </Card>
+
+                <div className="mt-8 flex justify-center lg:hidden">
+                    <button
+                        type="button"
+                        onClick={() => router.post('/logout')}
+                        className="inline-flex items-center gap-2 rounded-full border border-cream-deep bg-cream px-5 py-2.5 font-sans text-sm text-ink-2 transition hover:text-ink"
+                    >
+                        <Icon icon="mdi:logout" width={16} height={16} aria-hidden className="text-ink-3" />
+                        Keluar
+                    </button>
+                </div>
             </motion.div>
         </AppShell>
     );
