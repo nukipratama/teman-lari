@@ -25,11 +25,19 @@ import { formStatusLabel } from '@/lib/formStatus';
 import { formatKm, formatPace, formatRelativeId, paceSecPerKm } from '@/lib/pace';
 import { emberGlowStyle } from '@/lib/styles';
 import {
+    MOOD_UPPER,
     VIBE_TO_POSE,
+    atlHint,
+    ctlHint,
+    formatIdDateUpper,
     formatSignedForm,
+    formatWeather,
     kartuStripItem,
+    monotonyHint,
     pickFeaturedKartu,
     poseForRun,
+    shortenLocation,
+    strainHint,
     vibeSubtitleFor,
     type FeaturedCard,
     type StripItem,
@@ -466,74 +474,6 @@ function LastLariCard({ run, pose, note }: Readonly<{ run: ActivityDetail; pose:
             </span>
         </LinkCard>
     );
-}
-
-function formatIdDateUpper(iso: string | null): string {
-    if (iso == null) return '';
-    const date = new Date(iso);
-    if (Number.isNaN(date.getTime())) return '';
-    return new Intl.DateTimeFormat('id-ID', { weekday: 'short', day: 'numeric', month: 'short' })
-        .format(date)
-        .toUpperCase();
-}
-
-const MOOD_UPPER: Record<Mood, string> = {
-    nyala: 'NYALA',
-    enteng: 'ENTENG',
-    oleng: 'OLENG',
-    lemes: 'LEMES',
-    mumet: 'MUMET',
-    adem: 'ADEM',
-};
-
-function shortenLocation(name: string | null): string | null {
-    if (name === null || name === '') return null;
-    // Strava location_name often looks like "Senayan, Jakarta Pusat, DKI Jakarta, Indonesia".
-    // Keep the first one or two segments so the card stays compact.
-    const parts = name.split(',').map((s) => s.trim()).filter(Boolean);
-    if (parts.length === 0) return null;
-    return parts.length === 1 ? parts[0] : `${parts[0]}, ${parts[1]}`;
-}
-
-function formatWeather(tempC: number | null, humidityPct: number | null, rain: boolean | null): string | null {
-    const bits: string[] = [];
-    if (tempC !== null) bits.push(`${Math.round(tempC)}°C`);
-    if (humidityPct !== null) bits.push(`${Math.round(humidityPct)}%`);
-    if (rain === true) bits.push('hujan');
-    return bits.length > 0 ? bits.join(' · ') : null;
-}
-
-// Indonesian descriptors for Kondisi card subtitles. Thresholds are rough
-// runner-folklore numbers, not medical advice — calibrate over time as the
-// product gathers feedback.
-function ctlHint(ctl: number | null | undefined): string {
-    if (ctl == null) return '';
-    if (ctl < 25) return 'lagi dibangun';
-    if (ctl < 50) return 'naik tipis';
-    if (ctl < 80) return 'stabil';
-    return 'tinggi';
-}
-
-function atlHint(atl: number | null | undefined): string {
-    if (atl == null) return '';
-    if (atl < 25) return 'fresh';
-    if (atl < 55) return 'wajar';
-    if (atl < 85) return 'lelah';
-    return 'berat';
-}
-
-function strainHint(strain: number | null | undefined): string {
-    if (strain == null) return '';
-    if (strain < 250) return 'ringan';
-    if (strain < 500) return 'sedang';
-    return 'berat';
-}
-
-function monotonyHint(monotony: number | null | undefined): string {
-    if (monotony == null) return '';
-    if (monotony < 1.5) return 'sehat';
-    if (monotony < 2) return 'tinggi';
-    return 'monoton';
 }
 
 function KondisiCard({
