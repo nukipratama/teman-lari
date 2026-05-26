@@ -36,9 +36,9 @@ const briefing: BriefingResult = {
         discriminator: '2026-05-18',
     },
     featuredKartuVoice: {
-        id: null,
-        status: 'pending',
-        content: null,
+        id: 5,
+        status: 'done',
+        content: 'Kartu ini bukti kamu bisa lebih jauh dari yang kamu kira.',
         type: 'briefing_featured_kartu_voice',
         subject_type: 'briefing_user_day',
         subject_id: 1,
@@ -157,5 +157,21 @@ describe('HariIni', () => {
             <HariIni briefing={briefing} load={load} snapshot={snapshot} recentRuns={[detailWithCard]} />,
         );
         expect(screen.getByText(/Yang Temari kasih ke kamu/)).toBeInTheDocument();
+    });
+
+    it('renders the featuredKartuVoice quote inside the hero panel', () => {
+        render(
+            <HariIni briefing={briefing} load={load} snapshot={snapshot} recentRuns={[detailWithCard]} />,
+        );
+        expect(screen.getAllByText(/bukti kamu bisa lebih jauh/).length).toBeGreaterThan(0);
+    });
+
+    it('renders without crashing when suggestion content is empty', () => {
+        const emptyBriefing: BriefingResult = {
+            ...briefing,
+            suggestion: { ...briefing.suggestion, content: '' },
+        };
+        render(<HariIni briefing={emptyBriefing} load={load} snapshot={snapshot} recentRuns={[]} />);
+        expect(screen.getByText(/Halo, Ada/)).toBeInTheDocument();
     });
 });
