@@ -124,9 +124,7 @@ export default function HariIni({
                         </div>
                         <h1 className="font-display text-display-2xl text-ink">
                             Halo, {firstName} —<br />
-                            <em className="not-italic text-horizon-deep">
-                                <span className="italic">{vibeSubtitle}</span>
-                            </em>
+                            <span className="italic text-horizon">{vibeSubtitle}</span>
                         </h1>
                     </div>
                     <aside className="flex flex-col gap-3.5 pb-3.5">
@@ -250,6 +248,11 @@ function VitalChip({
         leaf: 'bg-leaf',
         ink: onSky ? 'bg-cream/50' : 'bg-ink-3',
     }[tone];
+    const valueClass = {
+        horizon: onSky ? 'text-cream' : 'text-horizon-deep',
+        leaf:    onSky ? 'text-cream' : 'text-leaf',
+        ink:     onSky ? 'text-cream' : 'text-ink',
+    }[tone];
     return (
         <div
             className={cn(
@@ -264,7 +267,7 @@ function VitalChip({
                 <span>{label}</span>
                 {explainerKey && <MetricExplainer metricKey={explainerKey} size="xs" />}
             </div>
-            <div className={cn('font-sans text-[22px] font-bold leading-none tabular-nums tracking-[-0.02em]', onSky ? 'text-cream' : 'text-ink')}>
+            <div className={cn('font-sans text-[22px] font-bold leading-none tabular-nums tracking-[-0.02em]', valueClass)}>
                 {value}
             </div>
             {sub !== '' && <div className={cn('mt-1 font-display text-xs italic', onSky ? 'text-cream/65' : 'text-ink-3')}>{sub}</div>}
@@ -364,7 +367,7 @@ function SuggestionContent({ text }: Readonly<{ text: string }>) {
 
     return (
         <div className="space-y-2.5">
-            <h3 className="font-display text-2xl leading-tight tracking-[-0.01em] text-ink">
+            <h3 className="font-display text-display-xs leading-tight tracking-[-0.01em] text-ink">
                 {title}
             </h3>
             {body !== '' && (
