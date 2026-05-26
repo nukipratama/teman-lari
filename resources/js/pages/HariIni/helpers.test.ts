@@ -24,7 +24,7 @@ function runWith(overrides: Partial<ActivityDetail>, cardOverrides?: { rarity?: 
                 id: 99,
                 user_id: 1,
                 analyzed_at: '2026-05-20',
-                runCard: {
+                run_card: {
                     id: cardOverrides.id ?? 7,
                     activity_id: 99,
                     rarity: cardOverrides.rarity ?? 'common',

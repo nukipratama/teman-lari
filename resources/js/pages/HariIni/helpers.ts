@@ -57,7 +57,7 @@ export function pickFeaturedKartu(runs: ReadonlyArray<ActivityDetail>): Featured
     let bestRank = -1;
     let bestDate = '';
     for (const r of runs) {
-        const card = r.activity?.runCard;
+        const card = r.activity?.run_card;
         if (!card) continue;
         const rank = RARITY_RANK[card.rarity];
         const date = r.start_date_local ?? '';
@@ -81,7 +81,7 @@ export function pickFeaturedKartu(runs: ReadonlyArray<ActivityDetail>): Featured
 }
 
 export function kartuStripItem(run: ActivityDetail): StripItem | null {
-    const card: RunCard | undefined = run.activity?.runCard;
+    const card: RunCard | undefined = run.activity?.run_card;
     if (!card) return null;
     return {
         key: `card-${card.id}`,

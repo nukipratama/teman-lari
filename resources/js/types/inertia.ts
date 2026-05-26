@@ -110,7 +110,7 @@ export interface Activity {
     name?: string;
     analyzed_at: string | null;
     detail?: ActivityDetail;
-    runCard?: RunCard;
+    run_card?: RunCard;
 }
 
 export type Rarity = 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary';

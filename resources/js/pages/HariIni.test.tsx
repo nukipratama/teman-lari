@@ -79,7 +79,7 @@ const detailWithCard: ActivityDetail = {
         id: 99,
         user_id: 1,
         analyzed_at: '2026-05-20T08:00',
-        runCard: {
+        run_card: {
             id: 7,
             activity_id: 99,
             rarity: 'epic',
