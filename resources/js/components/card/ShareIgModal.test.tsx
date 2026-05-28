@@ -4,6 +4,11 @@ import { describe, expect, it, vi } from 'vitest';
 vi.mock('html-to-image', () => ({
     toPng: vi.fn(() => Promise.resolve('data:image/png;base64,abc')),
 }));
+
+// jsdom doesn't implement ClipboardItem
+(globalThis as unknown as { ClipboardItem: unknown }).ClipboardItem = class {
+    constructor(public data: Record<string, Blob | Promise<Blob>>) {}
+};
 import ShareIgModal, { type ShareKartuData } from './ShareIgModal';
 
 const kartu: ShareKartuData = {
@@ -74,22 +79,32 @@ describe('ShareIgModal', () => {
     });
 
     it('fires Bagikan without crashing when share API is unavailable', async () => {
+        const writeText = vi.fn(() => Promise.resolve());
         Object.defineProperty(navigator, 'share', { value: undefined, configurable: true });
-        Object.defineProperty(navigator, 'clipboard', {
-            value: { writeText: vi.fn(() => Promise.resolve()) },
-            configurable: true,
-        });
+        Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
+        globalThis.fetch = vi.fn((url: string) =>
+            url.startsWith('data:')
+                ? Promise.resolve({ blob: () => Promise.resolve(new Blob(['i'], { type: 'image/png' })) } as Response)
+                : Promise.reject(new Error('unexpected')),
+        ) as typeof fetch;
         render(<ShareIgModal kartu={kartu} onClose={vi.fn()} />);
-        await act(async () => { fireEvent.click(screen.getAllByText(/Bagikan/)[0]); });
+        await act(async () => {
+            fireEvent.click(screen.getAllByRole('button').find((b) => b.textContent === 'Bagikan') ?? document.body);
+        });
+        expect(writeText).toHaveBeenCalledWith(expect.stringContaining('/kartu/7'));
     });
 
-    it('fires Salin Gambar without crashing', async () => {
-        Object.defineProperty(navigator, 'clipboard', {
-            value: { write: vi.fn(() => Promise.resolve()) },
-            configurable: true,
-        });
+    it('fires Salin Gambar and copies image to clipboard', async () => {
+        const write = vi.fn(() => Promise.resolve());
+        Object.defineProperty(navigator, 'clipboard', { value: { write }, configurable: true });
+        globalThis.fetch = vi.fn((url: string) =>
+            url.startsWith('data:')
+                ? Promise.resolve({ blob: () => Promise.resolve(new Blob(['i'], { type: 'image/png' })) } as Response)
+                : Promise.reject(new Error('unexpected')),
+        ) as typeof fetch;
         render(<ShareIgModal kartu={kartu} onClose={vi.fn()} />);
         await act(async () => { fireEvent.click(screen.getByText(/Salin Gambar/)); });
+        expect(write).toHaveBeenCalled();
     });
 
     it('toggles data and quote visibility switches', () => {

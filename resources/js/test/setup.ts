@@ -94,7 +94,7 @@ vi.mock('@inertiajs/react', async () => {
             delete: vi.fn(),
             reset: vi.fn(),
         }),
-        router: { post: vi.fn(), get: vi.fn(), reload: vi.fn() },
+        router: { post: vi.fn(), get: vi.fn(), reload: vi.fn(), visit: vi.fn() },
     };
 });
 

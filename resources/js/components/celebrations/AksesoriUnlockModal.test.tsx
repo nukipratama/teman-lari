@@ -48,4 +48,11 @@ describe('AksesoriUnlockModal', () => {
         render(<AksesoriUnlockModal unlock={epikUnlock} onClose={vi.fn()} />);
         expect(screen.getByText('Pakai sekarang')).toBeInTheDocument();
     });
+
+    it('calls onClose when "Pakai sekarang" is clicked', () => {
+        const onClose = vi.fn();
+        render(<AksesoriUnlockModal unlock={epikUnlock} onClose={onClose} />);
+        fireEvent.click(screen.getByText('Pakai sekarang'));
+        expect(onClose).toHaveBeenCalledOnce();
+    });
 });
