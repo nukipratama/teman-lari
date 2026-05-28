@@ -76,7 +76,7 @@ jobs:
       # the artisan wrapper silently drops --coverage in parallel mode.
       # env is set at step level because job.services.*.ports is only
       # available there, not at job-level env.
-      - name: Tests + 100% line coverage
+      - name: Tests + 95% coverage
         id: pest
         env:
           APP_ENV: testing
@@ -139,7 +139,7 @@ jobs:
         if: steps.node_modules_cache.outputs.cache-hit != 'true'
         run: npm ci --prefer-offline --no-audit --no-fund
 
-      - name: Vitest + 100% line/function coverage
+      - name: Vitest + 95% coverage
         run: npm run test:coverage
 
       - name: Vitest summary
