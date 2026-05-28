@@ -42,7 +42,7 @@ export default function TopNav() {
     const user = props.auth.user;
     const stravaSync = props.stravaSync ?? null;
 
-    const [scrolled, setScrolled] = useState(false);
+    const [scrolled, setScrolled] = useState(() => window.scrollY > 8);
     useEffect(() => {
         const onScroll = () => setScrolled(window.scrollY > 8);
         window.addEventListener('scroll', onScroll, { passive: true });
@@ -52,7 +52,7 @@ export default function TopNav() {
     return (
         <header className={cn(
             'sticky top-0 z-30 hidden bg-cream-deep transition-shadow duration-200 lg:block',
-            scrolled ? 'shadow-[0_1px_6px_rgba(0,0,0,0.08)]' : '',
+            scrolled && 'shadow-[0_1px_6px_rgba(0,0,0,0.08)]',
         )}>
             <div className="flex w-full items-center justify-between px-10 py-[18px]">
                 <div className="flex items-center gap-12">

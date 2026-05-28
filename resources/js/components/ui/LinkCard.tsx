@@ -14,7 +14,7 @@ interface LinkCardProps {
     children: ReactNode;
 }
 
-const HOVER = 'block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-leaf focus-visible:ring-offset-2 focus-visible:ring-offset-cream';
+const FOCUS_RING = 'block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-leaf focus-visible:ring-offset-2 focus-visible:ring-offset-cream';
 
 export default function LinkCard({
     href,
@@ -28,7 +28,7 @@ export default function LinkCard({
         <Link
             href={href}
             onClick={onClick}
-            className={cn(TONE_CLASS[tone], PADDING_CLASS[padding], HOVER, className)}
+            className={cn(TONE_CLASS[tone], PADDING_CLASS[padding], FOCUS_RING, className)}
         >
             {children}
         </Link>

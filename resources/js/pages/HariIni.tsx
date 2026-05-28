@@ -165,8 +165,8 @@ export default function HariIni({
 
                         {/* KARTU STRIP (60%) + VITAL CHIPS (40%) */}
                         <div className="mt-6 flex flex-col gap-4 lg:grid lg:grid-cols-[3fr_2fr] lg:gap-8">
-                            {/* 60% — kartu strip */}
-                            {cardStrip.length > 0 ? (
+                            {/* 60% — kartu strip (conditionally rendered; VitalChips uses lg:col-start-2 to stay in col 2) */}
+                            {cardStrip.length > 0 && (
                                 <section data-tour="kartu-strip">
                                     <SectionLabel>Kartu terakhir</SectionLabel>
                                     {/* Mobile: horizontal scroll */}
@@ -186,10 +186,10 @@ export default function HariIni({
                                         ))}
                                     </div>
                                 </section>
-                            ) : <div />}
+                            )}
 
-                            {/* 40% — vital chips stretched to match strip height */}
-                            <div className="h-full">
+                            {/* 40% — vital chips, pinned to col 2 even when strip is absent */}
+                            <div className="h-full lg:col-start-2">
                                 <VitalChips briefing={briefing} load={load} />
                             </div>
                         </div>
@@ -292,7 +292,7 @@ function VitalChip({
                 'flex h-full flex-col justify-between rounded-xl px-3.5 py-4',
                 onSky
                     ? 'border border-cream/15 bg-cream/[0.08] backdrop-blur-sm'
-                    : 'border-2 border-cream-deep bg-cream',
+                    : 'bg-cream',
             )}
         >
             <div className={cn('mb-1 flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-[0.14em]', onSky ? 'text-cream/70' : 'text-ink-3')}>
