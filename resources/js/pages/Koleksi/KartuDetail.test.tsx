@@ -107,9 +107,11 @@ describe('KartuDetail', () => {
         expect(screen.queryByText(/Lari ini bukti/)).not.toBeInTheDocument();
     });
 
-    it('opens ShareIgModal when "Bagikan" is clicked', () => {
+    it('opens ShareIgModal and closes it when Bagikan / Tutup are clicked', () => {
         render(<KartuDetail card={epicCard} relatedCards={[]} totalForRarity={3} />);
         fireEvent.click(screen.getByRole('button', { name: /Bagikan/i }));
         expect(screen.getByText(/Bagikan kartu/)).toBeInTheDocument();
+        // Closing the modal covers () => setShareOpen(false)
+        fireEvent.click(screen.getByLabelText('Tutup'));
     });
 });

@@ -151,4 +151,20 @@ describe('CardReveal', () => {
         expect(screen.getByText('30m')).toBeInTheDocument();
         expect(screen.getByText('42')).toBeInTheDocument();
     });
+
+    it('shows Bagikan button on last frame and opens ShareIgModal', async () => {
+        const u = userEvent.setup();
+        render(<CardReveal pending={epicReveal} />);
+        // Epic = 4 frames; advance to last
+        await u.click(screen.getByText('Lanjut'));
+        await u.click(screen.getByText('Lanjut'));
+        await u.click(screen.getByText('Lanjut'));
+        // Last frame: "Bagikan" button appears
+        expect(screen.getByRole('button', { name: /Bagikan/ })).toBeInTheDocument();
+        await u.click(screen.getByRole('button', { name: /Bagikan/ }));
+        // ShareIgModal opens
+        expect(screen.getByText(/Bagikan kartu/)).toBeInTheDocument();
+        // Close the modal (covers () => setShareOpen(false))
+        await u.click(screen.getByLabelText('Tutup'));
+    });
 });
