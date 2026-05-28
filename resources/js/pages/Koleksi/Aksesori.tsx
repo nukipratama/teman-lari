@@ -9,7 +9,6 @@ import HeroPanel from '@/components/ui/HeroPanel';
 import PillButton from '@/components/ui/PillButton';
 import SectionLabel from '@/components/ui/SectionLabel';
 import TemariProto, { type TemariEquipped } from '@/components/temari/TemariProto';
-import PageOnboardingTooltip from '@/components/onboarding/PageOnboardingTooltip';
 import { cn } from '@/lib/cn';
 import { fadeInUp } from '@/lib/motion';
 
@@ -83,14 +82,6 @@ export default function KoleksiAksesori({ items, equipped }: Readonly<AksesoriPr
                 animate="visible"
                 className="w-full px-5 py-6 sm:px-8 lg:px-14 lg:py-10"
             >
-                <PageOnboardingTooltip
-                    pageKey="koleksi"
-                    icon="🃏"
-                    title="Koleksi kamu."
-                >
-                    Tiga sub-tab di sini: Kartu (tiap lari aku kasih satu), Rekor (PR kamu di berbagai jarak), Aksesori (bisa dipakein ke aku, kebuka pelan-pelan).
-                </PageOnboardingTooltip>
-
                 <CollectionHeader
                     active="aksesori"
                     eyebrow={eyebrow}
@@ -240,7 +231,7 @@ function AksesoriCard({
                     ? 'border-[1.5px] border-horizon bg-horizon/[0.08]'
                     : locked
                         ? 'border-2 border-dashed border-cream-deep bg-cream/40'
-                        : 'border border-cream-deep bg-cream hover:-translate-y-0.5 hover:shadow-md',
+                        : 'border border-cream-deep bg-cream',
             )}
         >
             {item.equipped && (

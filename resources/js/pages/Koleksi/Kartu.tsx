@@ -16,7 +16,6 @@ import { RARITY_LABELS, RARITY_ORDER, prettyBadge } from '@/lib/runcard';
 import { emberGlowStyle } from '@/lib/styles';
 import { useState } from 'react';
 import AnalysisStatus from '@/components/temari/AnalysisStatus';
-import PageOnboardingTooltip from '@/components/onboarding/PageOnboardingTooltip';
 import type {
     Activity,
     ActivityDetail,
@@ -83,14 +82,6 @@ export default function KoleksiKartu({
                 animate="visible"
                 className="w-full px-5 py-6 sm:px-8 lg:px-14 lg:py-10"
             >
-                <PageOnboardingTooltip
-                    pageKey="koleksi"
-                    icon="🃏"
-                    title="Koleksi kamu."
-                >
-                    Tiga sub-tab di sini: Kartu (tiap lari aku kasih satu), Rekor (PR kamu di berbagai jarak), Aksesori (bisa dipakein ke aku, kebuka pelan-pelan).
-                </PageOnboardingTooltip>
-
                 <CollectionHeader
                     active="kartu"
                     eyebrow={eyebrow}
@@ -278,7 +269,7 @@ function CardCell({
             href={`/kartu/${card.id}`}
             whileTap={pressShrink}
             onClick={() => onTap(card.rarity, card.id)}
-            className="block transition hover:-translate-y-0.5"
+            className="block"
         >
             <Kartu
                 name={card.special_move}

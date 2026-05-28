@@ -79,7 +79,7 @@ export default function RunCard({ card, detail, className, size = 'normal' }: Re
     return (
         <article
             className={cn(
-                'group relative flex h-full flex-col overflow-hidden rounded-2xl shadow-md ring-2 transition hover:shadow-xl sm:rounded-3xl',
+                'group relative flex h-full flex-col overflow-hidden rounded-2xl shadow-md ring-2 sm:rounded-3xl',
                 isHero ? 'p-5 ring-4 shadow-lg sm:p-7' : 'p-4 ring-2 sm:p-5',
                 r.ringClass,
                 r.bgClass,

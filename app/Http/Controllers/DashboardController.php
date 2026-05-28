@@ -8,7 +8,6 @@ use App\Models\Activity;
 use App\Models\ActivityDetail;
 use App\Models\AI\Analysis;
 use App\Models\PersonalRecord;
-use App\Models\RunCard;
 use App\Models\StoryLine;
 use App\Models\User;
 use App\Models\WeeklySnapshot;
@@ -64,17 +63,12 @@ class DashboardController extends Controller
 
         $lastRunNote = $this->lastRunNote($recentRuns->first()?->activity_id);
 
-        $totalKartuCount = RunCard::query()
-            ->whereHas('activity', fn ($q) => $q->where('user_id', $user->id))
-            ->count();
-
         return Inertia::render('HariIni', [
             'briefing' => $briefing,
             'load' => $load,
             'snapshot' => $weeks->last(),
             'recentRuns' => $recentRuns,
             'lastRunNote' => $lastRunNote,
-            'totalKartuCount' => $totalKartuCount,
             'chartData' => $this->fitnessChartData($weeks),
             'trendAnalysis' => $this->resolveTrendCaption($user, $today),
             'hasNewPr' => $this->detectNewPr($user),

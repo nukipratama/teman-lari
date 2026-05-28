@@ -12,7 +12,6 @@ import SectionLabel from '@/components/ui/SectionLabel';
 import TemariProto from '@/components/temari/TemariProto';
 import VoiceCard from '@/components/temari/VoiceCard';
 import AnalysisStatus from '@/components/temari/AnalysisStatus';
-import PageOnboardingTooltip from '@/components/onboarding/PageOnboardingTooltip';
 import { cn } from '@/lib/cn';
 import { fadeInUp } from '@/lib/motion';
 import { formatIdDate, formatShortDateId, monthsSinceId } from '@/lib/pace';
@@ -92,14 +91,6 @@ export default function Aku({
                 animate="visible"
                 className="w-full px-5 py-6 sm:px-8 lg:px-14 lg:py-10"
             >
-                <PageOnboardingTooltip
-                    pageKey="aku"
-                    icon="🏃"
-                    title="Perjalanan kamu."
-                >
-                    Total km, total lari, lari terjauh, plus persona kamu (gaya lari 12 minggu terakhir). Tombol Strava buat sambung ulang juga di sini.
-                </PageOnboardingTooltip>
-
                 <header className="mb-8">
                     <div className="mb-3.5 font-mono text-[11px] font-bold uppercase tracking-[0.18em] text-ink-3 lg:text-xs">
                         {eyebrowParts.join(' · ')}

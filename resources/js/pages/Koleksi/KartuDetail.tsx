@@ -222,7 +222,7 @@ export default function KartuDetail({
                         {detail && (
                             <Link
                                 href={`/aktivitas/${card.activity_id}`}
-                                className="block transition hover:-translate-y-0.5"
+                                className="block"
                             >
                                 <Card padding="md" className="flex items-center gap-4">
                                     <TemariProto pose="proud" size={48} animate={false} />
@@ -255,7 +255,7 @@ export default function KartuDetail({
                                         <Link
                                             key={c.id}
                                             href={`/kartu/${c.id}`}
-                                            className="block transition hover:-translate-y-0.5"
+                                            className="block"
                                         >
                                             <div
                                                 className={cn(

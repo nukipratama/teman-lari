@@ -5,7 +5,6 @@ import { useCallback, useMemo, useState, type ReactNode } from 'react';
 import AppShell from '@/layouts/AppShell';
 import RiwayatFilter, { type MoodOption } from '@/components/riwayat/RiwayatFilter';
 import RiwayatTabs from '@/components/riwayat/RiwayatTabs';
-import PageOnboardingTooltip from '@/components/onboarding/PageOnboardingTooltip';
 import { cn } from '@/lib/cn';
 import { fadeInUp } from '@/lib/motion';
 import { MOOD_FILL, MOOD_LABEL, MOOD_SOFT_FILL } from '@/lib/mood';
@@ -112,14 +111,6 @@ export default function Kalender({
                 animate="visible"
                 className="w-full px-5 py-6 sm:px-8 lg:px-14 lg:py-10"
             >
-                <PageOnboardingTooltip
-                    pageKey="riwayat"
-                    icon="📅"
-                    title="Riwayat lari kamu."
-                >
-                    Dua view di sini: Jejak (per minggu) sama Kalender (heatmap mood). Tiap lari aku kasih mood: nyala, enteng, oleng, lemes, mumet, adem.
-                </PageOnboardingTooltip>
-
                 <header className="mb-8 flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
                     <div className="min-w-0">
                         <LifetimeEyebrow lifetime={lifetime} />
@@ -347,7 +338,7 @@ function DayCellView({
         return (
             <Link
                 href={`/aktivitas/${cell.activity_id}`}
-                className={cn(cellChrome, 'hover:shadow-md hover:brightness-105')}
+                className={cn(cellChrome)}
                 aria-label={ariaLabel}
             >
                 {inner}

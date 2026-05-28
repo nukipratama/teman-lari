@@ -14,7 +14,7 @@ interface LinkCardProps {
     children: ReactNode;
 }
 
-const HOVER = 'block transition hover:-translate-y-0.5 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-leaf focus-visible:ring-offset-2 focus-visible:ring-offset-cream';
+const HOVER = 'block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-leaf focus-visible:ring-offset-2 focus-visible:ring-offset-cream';
 
 export default function LinkCard({
     href,

@@ -11,7 +11,6 @@ import MoodChip from '@/components/ui/MoodChip';
 import SectionLabel from '@/components/ui/SectionLabel';
 import TemariProto, { type TemariPose } from '@/components/temari/TemariProto';
 import PastYouStrip from '@/components/run/PastYouStrip';
-import PageOnboardingTooltip from '@/components/onboarding/PageOnboardingTooltip';
 import { cn } from '@/lib/cn';
 import { fadeInUp } from '@/lib/motion';
 import { moodFromActivity } from '@/lib/moodFromActivity';
@@ -109,14 +108,6 @@ export default function RunsShow({
                 animate="visible"
                 className="w-full px-5 py-6 sm:px-8 lg:px-14 lg:py-10"
             >
-                <PageOnboardingTooltip
-                    pageKey="run-detail"
-                    icon="✨"
-                    title="Detail lari kamu."
-                >
-                    Aku kasih komentar buat lari ini, splits per km, breakdown zone HR, sama perbandingan sama past-you kalau ada. Kalau analisis-nya kosong, tap Baca ulang.
-                </PageOnboardingTooltip>
-
                 <Link
                     href="/aktivitas"
                     className="mb-5 inline-flex items-center gap-1 font-mono text-xs uppercase tracking-[0.14em] text-ink-3 transition hover:text-horizon-deep"
@@ -163,7 +154,7 @@ export default function RunsShow({
                         {card ? (
                             <Link
                                 href={`/kartu/${card.id}`}
-                                className="block transition hover:-translate-y-0.5"
+                                className="block"
                             >
                                 <Kartu
                                     name={card.special_move}
