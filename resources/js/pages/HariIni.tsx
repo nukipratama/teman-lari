@@ -4,7 +4,6 @@ import { motion } from 'framer-motion';
 import AppShell from '@/layouts/AppShell';
 import ConfettiBurst from '@/components/ConfettiBurst';
 import MilestoneBanner, { type PendingMilestone } from '@/components/MilestoneBanner';
-import FirstRunTooltip from '@/components/onboarding/FirstRunTooltip';
 import GuidedTour, { type TourStep } from '@/components/onboarding/GuidedTour';
 import MetricExplainer from '@/components/MetricExplainer';
 import type { MetricKey } from '@/lib/metricGlossary';
@@ -64,7 +63,6 @@ interface HariIniProps {
     snapshot: WeeklySnapshot | null;
     recentRuns: ActivityDetail[];
     lastRunNote?: LastRunNote | null;
-    totalKartuCount?: number;
     hasNewPr?: boolean;
     pendingMilestone?: PendingMilestone | null;
 }
@@ -107,7 +105,6 @@ export default function HariIni({
     snapshot,
     recentRuns,
     lastRunNote = null,
-    totalKartuCount = 0,
     hasNewPr = false,
     pendingMilestone = null,
 }: Readonly<HariIniProps>) {
@@ -141,7 +138,6 @@ export default function HariIni({
                     storageKey="onboarding_shown"
                     forceShow={props.onboarding.forceShow}
                 />
-                <FirstRunTooltip recentRunCount={recentRuns.length} />
                 <MilestoneBanner pending={pendingMilestone} />
 
                 {/* HEADLINE */}
@@ -155,9 +151,8 @@ export default function HariIni({
                             <span className="italic text-horizon">{vibeSubtitle}</span>
                         </h1>
                     </div>
-                    <aside className="flex flex-col gap-3.5 pb-3.5">
+                    <aside className="pb-3.5">
                         <KataTemariCompact briefing={briefing} pose={pose} />
-                        <VitalChips briefing={briefing} load={load} />
                     </aside>
                 </header>
 
@@ -168,39 +163,43 @@ export default function HariIni({
                         {/* HERO KARTU */}
                         {featured && <FeaturedKartuPanel featured={featured} pose={pose} featuredKartuVoice={briefing.featuredKartuVoice} />}
 
+                        {/* KARTU STRIP (60%) + VITAL CHIPS (40%) */}
+                        <div className="mt-6 flex flex-col gap-4 lg:grid lg:grid-cols-[3fr_2fr] lg:gap-8">
+                            {/* 60% — kartu strip (conditionally rendered; VitalChips uses lg:col-start-2 to stay in col 2) */}
+                            {cardStrip.length > 0 && (
+                                <section data-tour="kartu-strip">
+                                    <SectionLabel>Kartu terakhir</SectionLabel>
+                                    {/* Mobile: horizontal scroll */}
+                                    <div className="-mx-5 flex items-stretch gap-3 overflow-x-auto px-5 pb-1 scrollbar-hide sm:-mx-8 sm:px-8 lg:hidden">
+                                        {cardStrip.map((item) => (
+                                            <Link key={item.key} href={`/aktivitas/${item.activityId}`} className="flex-none block">
+                                                <KartuMini name={item.name} rarity={item.rarity} date={item.date} className="h-full" />
+                                            </Link>
+                                        ))}
+                                    </div>
+                                    {/* Desktop: auto-fit grid — empty tracks collapse so last card aligns with container edge */}
+                                    <div className="hidden lg:grid lg:gap-3" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))' }}>
+                                        {cardStrip.map((item) => (
+                                            <Link key={item.key} href={`/aktivitas/${item.activityId}`} className="block h-full">
+                                                <KartuMini name={item.name} rarity={item.rarity} date={item.date} className="h-full w-full" />
+                                            </Link>
+                                        ))}
+                                    </div>
+                                </section>
+                            )}
+
+                            {/* 40% — vital chips, pinned to col 2 even when strip is absent */}
+                            <div className="h-full lg:col-start-2">
+                                <VitalChips briefing={briefing} load={load} />
+                            </div>
+                        </div>
+
                         {/* 3-UP */}
-                        <section className="mt-4 grid gap-4 lg:grid-cols-[1.2fr_1fr_1fr]">
+                        <section className="mt-8 grid gap-4 lg:grid-cols-3">
                             <SuggestionCard suggestion={briefing.suggestion} lastRun={lastRun} />
                             {lastRun && <LastLariCard run={lastRun} pose={poseForRun(lastRun)} note={lastRunNote} />}
                             <KondisiCard load={load} snapshot={snapshot} />
                         </section>
-
-                        {/* KARTU STRIP */}
-                        {cardStrip.length > 0 && (
-                            <section data-tour="kartu-strip" className="mt-10">
-                                <header className="mb-4 flex items-end justify-between">
-                                    <div>
-                                        <SectionLabel>Kartu terakhir</SectionLabel>
-                                        <p className="font-display text-headline-md text-ink">
-                                            Yang Temari kasih ke kamu belakangan ini.
-                                        </p>
-                                    </div>
-                                    <Link
-                                        href="/kartu"
-                                        className="hidden font-mono text-[12px] font-semibold uppercase tracking-[0.14em] text-horizon-deep hover:text-ember-deep sm:inline"
-                                    >
-                                        Semua {totalKartuCount > 0 ? `${totalKartuCount} ` : ''}koleksi →
-                                    </Link>
-                                </header>
-                                <div className="-mx-5 flex items-stretch gap-3 overflow-x-auto px-5 pb-1 scrollbar-hide sm:-mx-8 sm:px-8 lg:mx-0 lg:grid lg:grid-cols-[repeat(auto-fill,minmax(140px,1fr))] lg:overflow-visible lg:px-0">
-                                    {cardStrip.map((item) => (
-                                        <Link key={item.key} href={`/aktivitas/${item.activityId}`} className="flex-none block lg:h-full">
-                                            <KartuMini name={item.name} rarity={item.rarity} date={item.date} className="h-full lg:w-full" />
-                                        </Link>
-                                    ))}
-                                </div>
-                            </section>
-                        )}
                     </>
                 )}
             </motion.div>
@@ -240,7 +239,7 @@ function VitalChips({ briefing, load, onSky = false }: Readonly<{ briefing: Brie
     const vibeSub = briefing.vibeLabel.toLowerCase();
 
     return (
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid h-full grid-cols-3 gap-2">
             <VitalChip
                 label="Vibe"
                 value={vibeValue}
@@ -290,10 +289,10 @@ function VitalChip({
     return (
         <div
             className={cn(
-                'rounded-xl px-3.5 py-3',
+                'flex h-full flex-col justify-between rounded-xl px-3.5 py-4',
                 onSky
                     ? 'border border-cream/15 bg-cream/[0.08] backdrop-blur-sm'
-                    : 'border-2 border-cream-deep bg-cream',
+                    : 'bg-cream',
             )}
         >
             <div className={cn('mb-1 flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-[0.14em]', onSky ? 'text-cream/70' : 'text-ink-3')}>
@@ -539,7 +538,7 @@ function KondisiCard({
             {rows.map(({ label, value, hint, color }) => (
                 <div
                     key={label}
-                    className="flex items-baseline justify-between border-b-2 border-dashed border-cream-deep pb-2 last:border-b-0 last:pb-0"
+                    className="flex items-baseline justify-between py-1.5 border-b border-cream-deep last:border-b-0"
                 >
                     <div>
                         <div className="text-[13px] font-medium text-ink">{label}</div>

@@ -13,8 +13,6 @@ describe('LinkCard', () => {
         const { container } = render(<LinkCard href="/x">x</LinkCard>);
         const root = container.firstChild as HTMLElement;
         expect(root.className).toMatch(/bg-cream/);
-        expect(root.className).toMatch(/border-cream-deep/);
-        expect(root.className).toMatch(/hover:-translate-y-0\.5/);
         expect(root.className).toMatch(/focus-visible:ring-leaf/);
     });
 

@@ -1,6 +1,6 @@
 import { Link, router, usePage } from '@inertiajs/react';
 import { Icon } from '@iconify/react';
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { cn } from '@/lib/cn';
 import BrandMark from '@/components/BrandMark';
 import StravaSyncBadge from '@/components/StravaSyncBadge';
@@ -42,8 +42,18 @@ export default function TopNav() {
     const user = props.auth.user;
     const stravaSync = props.stravaSync ?? null;
 
+    const [scrolled, setScrolled] = useState(() => window.scrollY > 8);
+    useEffect(() => {
+        const onScroll = () => setScrolled(window.scrollY > 8);
+        window.addEventListener('scroll', onScroll, { passive: true });
+        return () => window.removeEventListener('scroll', onScroll);
+    }, []);
+
     return (
-        <header className="sticky top-0 z-30 hidden border-b border-cream-deep bg-cream lg:block">
+        <header className={cn(
+            'sticky top-0 z-30 hidden bg-cream-deep transition-shadow duration-200 lg:block',
+            scrolled && 'shadow-[0_1px_6px_rgba(0,0,0,0.08)]',
+        )}>
             <div className="flex w-full items-center justify-between px-10 py-[18px]">
                 <div className="flex items-center gap-12">
                     <Link href="/" aria-label="Beranda">

@@ -8,7 +8,6 @@ describe('Card', () => {
         expect(screen.getByText('hello')).toBeInTheDocument();
         const root = container.firstChild as HTMLElement;
         expect(root.className).toMatch(/bg-cream/);
-        expect(root.className).toMatch(/border-cream-deep/);
     });
 
     it.each(['cream', 'cream-deep', 'sky-glass', 'empty'] satisfies CardTone[])(

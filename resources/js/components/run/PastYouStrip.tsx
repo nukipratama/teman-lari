@@ -71,7 +71,7 @@ export default function PastYouStrip({ match, currentDistance, className }: Read
         return (
             <Link
                 href={`/aktivitas/${match.past.activity_id}`}
-                className={cn(CARD_BASE, 'transition hover:-translate-y-0.5 hover:border-leaf/40 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-leaf', className)}
+                className={cn(CARD_BASE, 'focus:outline-none focus-visible:ring-2 focus-visible:ring-leaf', className)}
             >
                 {body}
             </Link>

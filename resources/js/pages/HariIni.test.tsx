@@ -117,7 +117,7 @@ describe('HariIni', () => {
     });
 
     it('renders the three vital chips (Vibe / Form / Recovery)', () => {
-        render(<HariIni briefing={briefing} load={load} snapshot={snapshot} recentRuns={[]} />);
+        render(<HariIni briefing={briefing} load={load} snapshot={snapshot} recentRuns={[detailWithCard]} />);
         expect(screen.getByText('Vibe')).toBeInTheDocument();
         expect(screen.getByText('Form')).toBeInTheDocument();
         expect(screen.getByText('Recovery')).toBeInTheDocument();
@@ -156,7 +156,7 @@ describe('HariIni', () => {
         render(
             <HariIni briefing={briefing} load={load} snapshot={snapshot} recentRuns={[detailWithCard]} />,
         );
-        expect(screen.getByText(/Yang Temari kasih ke kamu/)).toBeInTheDocument();
+        expect(screen.getByText(/Kartu terakhir/i)).toBeInTheDocument();
     });
 
     it('renders the featuredKartuVoice quote inside the hero panel', () => {

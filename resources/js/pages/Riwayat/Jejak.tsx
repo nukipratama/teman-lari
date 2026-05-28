@@ -12,7 +12,6 @@ import RiwayatFilter, { type MoodOption, type RangeOption } from '@/components/r
 import RiwayatTabs from '@/components/riwayat/RiwayatTabs';
 import TemariMascot from '@/components/temari/TemariMascot';
 import TemariProto, { type TemariPose } from '@/components/temari/TemariProto';
-import PageOnboardingTooltip from '@/components/onboarding/PageOnboardingTooltip';
 import { cn } from '@/lib/cn';
 import { MOOD_FILL, MOOD_LABEL } from '@/lib/mood';
 import { moodFromActivity } from '@/lib/moodFromActivity';
@@ -165,14 +164,6 @@ export default function RunsIndex({
                 animate="visible"
                 className="w-full px-5 py-6 sm:px-8 lg:px-14 lg:py-10"
             >
-                <PageOnboardingTooltip
-                    pageKey="riwayat"
-                    icon="📅"
-                    title="Riwayat lari kamu."
-                >
-                    Dua view di sini: Jejak (per minggu) sama Kalender (heatmap mood). Tiap lari aku kasih mood: nyala, enteng, oleng, lemes, mumet, adem.
-                </PageOnboardingTooltip>
-
                 <header className="flex flex-col gap-5">
                     <PageHero
                         eyebrow={`Riwayat · ${runs.length} aktivitas`}

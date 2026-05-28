@@ -13,7 +13,6 @@ import SectionLabel from '@/components/ui/SectionLabel';
 import SplitsSparkline from '@/components/run/SplitsSparkline';
 import TemariProto from '@/components/temari/TemariProto';
 import AnalysisStatus from '@/components/temari/AnalysisStatus';
-import PageOnboardingTooltip from '@/components/onboarding/PageOnboardingTooltip';
 import { fadeInUp } from '@/lib/motion';
 import { formatDurationHMS, formatIdDate } from '@/lib/pace';
 import { PR_CATEGORY_LABELS, formatPrValue } from '@/lib/pr';
@@ -86,14 +85,6 @@ export default function KoleksiRekor({
                 animate="visible"
                 className="w-full px-5 py-6 sm:px-8 lg:px-14 lg:py-10"
             >
-                <PageOnboardingTooltip
-                    pageKey="koleksi"
-                    icon="🃏"
-                    title="Koleksi kamu."
-                >
-                    Tiga sub-tab di sini: Kartu (tiap lari aku kasih satu), Rekor (PR kamu di berbagai jarak), Aksesori (bisa dipakein ke aku, kebuka pelan-pelan).
-                </PageOnboardingTooltip>
-
                 <CollectionHeader
                     active="rekor"
                     eyebrow={eyebrow}
