@@ -168,23 +168,11 @@ export default function HariIni({
                         {/* HERO KARTU */}
                         {featured && <FeaturedKartuPanel featured={featured} pose={pose} featuredKartuVoice={briefing.featuredKartuVoice} />}
 
-                        {/* 3-UP */}
-                        <section className="mt-4 grid gap-4 lg:grid-cols-[1.2fr_1fr_1fr]">
-                            <SuggestionCard suggestion={briefing.suggestion} lastRun={lastRun} />
-                            {lastRun && <LastLariCard run={lastRun} pose={poseForRun(lastRun)} note={lastRunNote} />}
-                            <KondisiCard load={load} snapshot={snapshot} />
-                        </section>
-
-                        {/* KARTU STRIP */}
+                        {/* KARTU STRIP — directly below the hero */}
                         {cardStrip.length > 0 && (
-                            <section data-tour="kartu-strip" className="mt-10">
-                                <header className="mb-4 flex items-end justify-between">
-                                    <div>
-                                        <SectionLabel>Kartu terakhir</SectionLabel>
-                                        <p className="font-display text-headline-md text-ink">
-                                            Yang Temari kasih ke kamu belakangan ini.
-                                        </p>
-                                    </div>
+                            <section data-tour="kartu-strip" className="mt-6">
+                                <header className="mb-3 flex items-end justify-between">
+                                    <SectionLabel>Kartu terakhir</SectionLabel>
                                     <Link
                                         href="/kartu"
                                         className="hidden font-mono text-[12px] font-semibold uppercase tracking-[0.14em] text-horizon-deep hover:text-ember-deep sm:inline"
@@ -201,6 +189,13 @@ export default function HariIni({
                                 </div>
                             </section>
                         )}
+
+                        {/* 3-UP */}
+                        <section className="mt-8 grid gap-4 lg:grid-cols-[1.2fr_1fr_1fr]">
+                            <SuggestionCard suggestion={briefing.suggestion} lastRun={lastRun} />
+                            {lastRun && <LastLariCard run={lastRun} pose={poseForRun(lastRun)} note={lastRunNote} />}
+                            <KondisiCard load={load} snapshot={snapshot} />
+                        </section>
                     </>
                 )}
             </motion.div>
