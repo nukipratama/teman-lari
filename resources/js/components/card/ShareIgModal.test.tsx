@@ -1,5 +1,9 @@
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, act } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
+
+vi.mock('html-to-image', () => ({
+    toPng: vi.fn(() => Promise.resolve('data:image/png;base64,abc')),
+}));
 import ShareIgModal, { type ShareKartuData } from './ShareIgModal';
 
 const kartu: ShareKartuData = {
@@ -67,5 +71,33 @@ describe('ShareIgModal', () => {
     it('renders stat items km, durasi, trimp', () => {
         render(<ShareIgModal kartu={kartu} onClose={vi.fn()} />);
         expect(screen.getAllByText(/5\.28/).length).toBeGreaterThan(0);
+    });
+
+    it('fires Bagikan without crashing when share API is unavailable', async () => {
+        Object.defineProperty(navigator, 'share', { value: undefined, configurable: true });
+        Object.defineProperty(navigator, 'clipboard', {
+            value: { writeText: vi.fn(() => Promise.resolve()) },
+            configurable: true,
+        });
+        render(<ShareIgModal kartu={kartu} onClose={vi.fn()} />);
+        await act(async () => { fireEvent.click(screen.getAllByText(/Bagikan/)[0]); });
+    });
+
+    it('fires Salin Gambar without crashing', async () => {
+        Object.defineProperty(navigator, 'clipboard', {
+            value: { write: vi.fn(() => Promise.resolve()) },
+            configurable: true,
+        });
+        render(<ShareIgModal kartu={kartu} onClose={vi.fn()} />);
+        await act(async () => { fireEvent.click(screen.getByText(/Salin Gambar/)); });
+    });
+
+    it('toggles data and quote visibility switches', () => {
+        render(<ShareIgModal kartu={kartu} onClose={vi.fn()} />);
+        const switches = screen.getAllByRole('switch');
+        expect(switches.length).toBe(2);
+        fireEvent.click(switches[0]);
+        fireEvent.click(switches[1]);
+        fireEvent.click(switches[0]);
     });
 });
