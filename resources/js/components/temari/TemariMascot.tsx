@@ -4,6 +4,7 @@ import { Icon } from '@iconify/react';
 import { usePage } from '@inertiajs/react';
 import { cn } from '@/lib/cn';
 import { breath, FIDGET_PATTERNS, idleByMood, type FidgetPattern } from '@/lib/motion';
+import { equippedToKeys } from '@/lib/equippedAccessories';
 import { useGaze } from '@/hooks/useGaze';
 import TemariCharacter from './TemariCharacter';
 import type { Mood, SharedProps } from '@/types/inertia';
@@ -51,9 +52,9 @@ interface TemariMascotProps {
     idle?: 'none' | 'breath' | 'mood';
     /** Pupils follow the cursor (range ~240px from mascot centre). */
     gazeTracking?: boolean;
-    /** Override unlocked accessories. Falls back to shared Inertia prop when omitted. */
+    /** Explicit accessory keys to draw, overriding the user's equipped set. */
     unlockedAccessories?: ReadonlyArray<string>;
-    /** Render unlocked accessory overlays from shared Inertia state. Default true. */
+    /** Render the equipped accessory overlays. Default true. */
     showUnlocks?: boolean;
     /** Decorative sparkle ornaments around the mascot. */
     ornaments?: boolean;
@@ -130,15 +131,18 @@ export default function TemariMascot({
     const reduced = false;
     const fidget = useIdleFidget(idle !== 'none');
 
-    // usePage may be null in non-Inertia render contexts (e.g. Storybook).
-    let shared: ReadonlyArray<string> = [];
+    // The mascot wears what the user has *equipped* (one per slot), matching
+    // the SVG TemariProto everywhere else. usePage may throw in non-Inertia
+    // render contexts (e.g. Storybook), so guard it.
+    let equipped: SharedProps['equippedAccessories'] = null;
     try {
-        const page = usePage<SharedProps & { unlockedAccessories?: ReadonlyArray<string> }>();
-        shared = page.props.unlockedAccessories ?? [];
+        const page = usePage<SharedProps>();
+        equipped = page.props.equippedAccessories ?? null;
     } catch {
-        shared = [];
+        equipped = null;
     }
-    const unlocks: ReadonlyArray<string> = showUnlocks ? (unlockedAccessories ?? shared) : [];
+    const equippedKeys = equippedToKeys(equipped);
+    const unlocks: ReadonlyArray<string> = showUnlocks ? (unlockedAccessories ?? equippedKeys) : [];
 
     const idleVariants = resolveIdle(idle, mood);
     const streakCfg = streakConfigFor(mood);
