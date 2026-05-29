@@ -134,11 +134,17 @@ export default function HariIni({
                 animate="visible"
                 className="w-full px-5 py-6 sm:px-8 lg:px-14 lg:py-10"
             >
-                <GuidedTour
-                    steps={TOUR_STEPS}
-                    storageKey="onboarding_shown"
-                    forceShow={props.onboarding.forceShow}
-                />
+                {/* Defer onboarding while a card-reveal takeover is pending, or the
+                    coachmark stacks on top of the reveal (a first run that earns an
+                    Epic/Legendaris card, or the demo seed). CardReveal's dismiss does a
+                    partial reload of `pendingReveal`, which remounts the tour once it clears. */}
+                {!props.pendingReveal && (
+                    <GuidedTour
+                        steps={TOUR_STEPS}
+                        storageKey="onboarding_shown"
+                        forceShow={props.onboarding.forceShow}
+                    />
+                )}
                 <MilestoneBanner pending={pendingMilestone} />
 
                 {/* HEADLINE */}
