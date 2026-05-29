@@ -41,7 +41,9 @@ Day-to-day commands (all inside Sail):
 
 ```bash
 ./vendor/bin/sail composer run dev   # Vite + queue listener + log watcher
+./vendor/bin/sail composer check     # one-shot gate: pint + phpstan + rector + pest + tsc + vitest
 ./vendor/bin/sail bin pest           # PHP tests
+./vendor/bin/sail bin pest --parallel    # parallel (works locally; test user is granted per-process DB rights)
 ./vendor/bin/sail npm run test       # FE tests (Vitest)
 ./vendor/bin/sail npm run test:coverage  # FE tests with 95% line+function gate
 ./vendor/bin/sail bin pint           # format
