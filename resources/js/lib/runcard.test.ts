@@ -11,6 +11,18 @@ describe('RARITY_LABELS', () => {
     it('contains all 5 rarities', () => {
         expect(RARITY_ORDER).toHaveLength(5);
     });
+
+    // Parity guard: mirrored in App\Enums\Rarity::label() (see RarityTest.php).
+    // Changing the ladder on one runtime without the other fails a test.
+    it('exposes the Indonesian rarity ladder labels', () => {
+        expect(RARITY_LABELS).toEqual({
+            common: 'Biasa',
+            uncommon: 'Berkesan',
+            rare: 'Langka',
+            epic: 'Luar Biasa',
+            legendary: 'Legendaris',
+        });
+    });
 });
 
 describe('BADGE_LABELS', () => {
