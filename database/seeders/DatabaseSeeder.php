@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Database\Seeders;
 
 use App\Models\User;
+use Database\Seeders\Demo\DemoRunSeeder;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 
@@ -12,11 +13,15 @@ class DatabaseSeeder extends Seeder
 {
     use WithoutModelEvents;
 
-    public function run(): void
+    public function run(DemoRunSeeder $demoRunSeeder): void
     {
         User::factory()->create([
             'name' => 'Test User',
             'email' => 'test@example.com',
         ]);
+
+        // `migrate:fresh --seed` starts from an empty DB, so no prior demo
+        // rows to wipe — seed straight in for a full, login-ready demo dataset.
+        $demoRunSeeder->seed(fresh: false, log: fn (string $line) => $this->command?->line($line));
     }
 }

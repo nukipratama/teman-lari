@@ -26,6 +26,7 @@ final readonly class RunBlueprint
         public bool $hasGps = true,
         public bool $hasHrSensor = true,
         public bool $hasCadenceSensor = true,
+        public ?DemoLocation $location = null,
     ) {
     }
 

@@ -23,6 +23,7 @@ use App\Services\Run\Metrics\PersonalRecords;
 use App\Services\Run\Metrics\TrainingLoad;
 use App\Services\Run\Metrics\WeeklyAggregator;
 use App\Services\Run\Story\RunCardFactory;
+use App\Services\Gamification\UnlockEngine;
 use App\Services\Run\Story\Temari;
 use App\Services\Run\Story\Vibe;
 use Closure;
@@ -37,16 +38,6 @@ class DemoRunSeeder
 {
     public const string DEMO_USER_EMAIL = 'demo@teman-lari.local';
 
-    // Senayan / SCBD, Jakarta. Must agree with DEMO_LOCATION_NAME below.
-    private const float DEMO_START_LAT = -6.2253;
-
-    private const float DEMO_START_LNG = 106.8090;
-
-    // Pre-resolved so seed skips the Nominatim call and the chip renders immediately.
-    private const string DEMO_LOCATION_NAME = 'Senayan, Jakarta Pusat, DKI Jakarta, Indonesia';
-
-    private const string DEMO_LOCATION_COUNTRY = 'ID';
-
     public function __construct(
         private readonly BlueprintLibrary $library,
         private readonly StreamSynthesizer $synthesizer,
@@ -60,16 +51,17 @@ class DemoRunSeeder
         private readonly WeeklyAggregator $weeklyAggregator,
         private readonly AnalysisService $analysisService,
         private readonly RuleBasedNarrationFiller $filler,
+        private readonly UnlockEngine $unlockEngine,
         private readonly PolylineEncoder $polylineEncoder = new PolylineEncoder(),
     ) {
     }
 
-    private function demoPolyline(int $distanceM, int $seed): string
+    private function demoPolyline(int $distanceM, int $seed, DemoLocation $location): string
     {
         $rng = new Randomizer(new Mt19937($seed));
 
-        $lat = self::DEMO_START_LAT;
-        $lng = self::DEMO_START_LNG;
+        $lat = $location->lat;
+        $lng = $location->lng;
 
         $radiusM = max(250, (int) round($distanceM / (2 * M_PI)));
         $latPerM = 1.0 / 111_320.0;
@@ -124,6 +116,13 @@ class DemoRunSeeder
             $log('Rebuilding weekly snapshots...');
             $weeks = $this->weeklyAggregator->rebuildFor($user);
             $log(sprintf('  %d weekly snapshots written', $weeks));
+
+            // PR-driven unlocks fire incrementally during seedOne, but the
+            // card-rarity ones (legendaris/epik) and the weekly-streak one
+            // depend on cards + snapshots that only exist after the loop. One
+            // final sweep grants everything the dataset now qualifies for.
+            $granted = $this->unlockEngine->grantEligible($user);
+            $log(sprintf('  %d accessory unlocks granted (%s)', count($granted), $granted === [] ? 'all already unlocked' : implode(', ', $granted)));
 
             $log("Generating today's Temari greeting...");
             $vibeState = $this->vibe->current($user);
@@ -205,6 +204,25 @@ class DemoRunSeeder
             type: AnalysisType::TrendCaption,
             discriminator: $today,
         );
+
+        // Persona summary is cached per ISO week — discriminator must match
+        // ProfileController::resolvePersonaSummary() or the Aku card misses it.
+        $this->analysisService->request(
+            subjectOrType: AnalysisType::PERSONA_SUMMARY_SUBJECT_TYPE,
+            subjectId: $user->id,
+            type: AnalysisType::PersonaSummary,
+            discriminator: Carbon::now()->isoFormat('GGGG-[W]WW'),
+        );
+
+        // One monthly recap per calendar month across the seeded window.
+        for ($m = 6; $m >= 0; $m--) {
+            $this->analysisService->request(
+                subjectOrType: AnalysisType::MONTHLY_RECAP_SUBJECT_TYPE,
+                subjectId: $user->id,
+                type: AnalysisType::MonthlyRecap,
+                discriminator: Carbon::today()->startOfMonth()->subMonthsNoOverflow($m)->format('Y-m'),
+            );
+        }
     }
 
     private function backfillWithFiller(User $user): int
@@ -313,6 +331,8 @@ class DemoRunSeeder
         $hrStream = $streams['heartrate']['data'] ?? [];
         $cadenceStream = $streams['cadence']['data'] ?? [];
 
+        $location = $blueprint->location ?? DemoLocation::default();
+
         $detail = ActivityDetail::query()->create([
             'activity_id' => $activity->id,
             'name' => $blueprint->name ?? 'Run',
@@ -329,12 +349,12 @@ class DemoRunSeeder
             'calories' => round($blueprint->distanceM / 1000 * 65),
             'splits_metric' => $splits,
             'summary_polyline' => $blueprint->hasGps
-                ? $this->demoPolyline($blueprint->distanceM, $blueprint->seed())
+                ? $this->demoPolyline($blueprint->distanceM, $blueprint->seed(), $location)
                 : null,
-            'start_lat' => $blueprint->hasGps ? self::DEMO_START_LAT : null,
-            'start_lng' => $blueprint->hasGps ? self::DEMO_START_LNG : null,
-            'location_name' => $blueprint->hasGps ? self::DEMO_LOCATION_NAME : null,
-            'location_country' => $blueprint->hasGps ? self::DEMO_LOCATION_COUNTRY : null,
+            'start_lat' => $blueprint->hasGps ? $location->lat : null,
+            'start_lng' => $blueprint->hasGps ? $location->lng : null,
+            'location_name' => $blueprint->hasGps ? $location->name : null,
+            'location_country' => $blueprint->hasGps ? $location->country : null,
             'location_resolved_at' => $blueprint->hasGps ? $blueprint->startsAt->copy()->addMinutes(2) : null,
             'weather_temp_c' => $blueprint->weatherTempC,
             'weather_humidity_pct' => $blueprint->weatherHumidityPct,
