@@ -1,5 +1,6 @@
 import { type CSSProperties, useCallback, useLayoutEffect, useState } from 'react';
-import TemariProto from '@/components/temari/TemariProto';
+import Portal from '@/components/ui/Portal';
+import Temari from '@/components/temari/Temari';
 
 export interface TourStep {
     target: string;
@@ -118,8 +119,10 @@ export default function GuidedTour({
         }
     })();
 
+    // Portal so the overlay escapes the page's enter-animation stacking context
+    // (see Portal) and lands above the bottom nav.
     return (
-        <>
+        <Portal>
             {/* 4-panel backdrop */}
             <div aria-hidden className="pointer-events-none fixed inset-0 z-[49]">
                 <div className="fixed bg-ink/60" style={{ top: 0, left: 0, right: 0, height: Math.max(0, y) }} />
@@ -136,7 +139,7 @@ export default function GuidedTour({
                 style={tooltipStyle}
             >
                 <div className="flex items-start gap-3">
-                    <TemariProto pose="observational" size={44} />
+                    <Temari pose="observational" size={44} />
                     <div className="min-w-0 flex-1">
                         <div className="mb-1 font-mono text-[9px] font-bold uppercase tracking-[0.16em] text-ink-3">
                             {step + 1} / {steps.length}
@@ -164,6 +167,6 @@ export default function GuidedTour({
                     </div>
                 </div>
             </div>
-        </>
+        </Portal>
     );
 }

@@ -2,12 +2,17 @@
 
 declare(strict_types=1);
 
+use App\Enums\Rarity;
 use App\Models\Activity;
+use App\Models\AI\Analysis;
+use App\Models\ActivityDetail;
 use App\Models\PersonalRecord;
 use App\Models\RunCard;
 use App\Models\StoryLine;
 use App\Models\User;
+use App\Models\UserUnlock;
 use App\Models\WeeklySnapshot;
+use App\Services\AI\AnalysisType;
 use Database\Seeders\Demo\DemoRunSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
@@ -25,9 +30,9 @@ it('creates the demo user, runs, cards, story lines, PRs, and weekly snapshots',
 
     $user = User::query()->where('email', DemoRunSeeder::DEMO_USER_EMAIL)->firstOrFail();
 
-    // 16 scripted + RNG fillers @ 65% over ~90d = 63; exact match fails loud on drift.
+    // 26 scripted + RNG fillers @ 65% over ~180d; exact match fails loud on drift.
     $activityCount = Activity::query()->where('user_id', $user->id)->count();
-    expect($activityCount)->toBe(63);
+    expect($activityCount)->toBe(122);
 
     expect(RunCard::query()->whereIn('activity_id', Activity::query()->where('user_id', $user->id)->pluck('id'))->count())
         ->toBe($activityCount)
@@ -35,8 +40,51 @@ it('creates the demo user, runs, cards, story lines, PRs, and weekly snapshots',
         ->toBe($activityCount)
         ->and(StoryLine::query()->where('user_id', $user->id)->where('kind', StoryLine::KIND_DAILY_GREETING)->count())
         ->toBe(1)
-        ->and(WeeklySnapshot::query()->where('user_id', $user->id)->count())->toBe(14)
-        ->and(PersonalRecord::query()->where('user_id', $user->id)->count())->toBe(8);
+        ->and(WeeklySnapshot::query()->where('user_id', $user->id)->count())->toBe(27)
+        ->and(PersonalRecord::query()->where('user_id', $user->id)->count())->toBe(9);
+});
+
+it('seeds a full-featured, login-ready demo: rarity ladder, unlocks, persona, varied maps', function (): void {
+    // One full seed feeds every assertion below — the seed is heavy (122 runs),
+    // so completeness checks share it rather than re-seeding per concern.
+    $this->artisan('demo:seed', ['--fresh' => true])->assertSuccessful();
+
+    $user = User::query()->where('email', DemoRunSeeder::DEMO_USER_EMAIL)->firstOrFail();
+    $cardQuery = RunCard::query()->whereHas('activity', fn ($q) => $q->where('user_id', $user->id));
+
+    expect((clone $cardQuery)->where('rarity', Rarity::Legendary)->count())->toBeGreaterThanOrEqual(1)
+        ->and((clone $cardQuery)->where('rarity', Rarity::Epic)->count())->toBeGreaterThanOrEqual(3);
+
+    // Every defined accessory should unlock from the seeded dataset.
+    $unlocked = UserUnlock::query()->where('user_id', $user->id)->pluck('unlock_key')->all();
+    expect($unlocked)->toContain(
+        'accessory.medal_first_pr',
+        'accessory.medal_gold',
+        'accessory.headband_legendaris',
+        'accessory.headband_epik',
+        'accessory.weekly_streak_4',
+    );
+
+    // Best-in-slot accessories are equipped so the demo mascot shows them off.
+    $equipped = UserUnlock::query()->where('user_id', $user->id)->where('equipped', true)->pluck('unlock_key')->all();
+    expect($equipped)->toContain('accessory.headband_legendaris', 'accessory.medal_gold', 'accessory.weekly_streak_4');
+
+    $persona = Analysis::query()
+        ->where('subject_type', AnalysisType::PERSONA_SUMMARY_SUBJECT_TYPE)
+        ->where('subject_id', $user->id)
+        ->where('discriminator', Carbon::now()->isoFormat('GGGG-[W]WW'))
+        ->first();
+    expect($persona)->not->toBeNull()
+        ->and($persona->status->value)->toBe('done')
+        ->and($persona->content)->not->toBeEmpty();
+
+    $distinctLocations = ActivityDetail::query()
+        ->join('activities', 'activities.id', '=', 'activity_details.activity_id')
+        ->where('activities.user_id', $user->id)
+        ->whereNotNull('activity_details.location_name')
+        ->distinct()
+        ->count('activity_details.location_name');
+    expect($distinctLocations)->toBeGreaterThan(1);
 });
 
 it('is idempotent — re-running with --fresh produces a consistent row count', function (): void {

@@ -17,4 +17,9 @@ describe('cn', () => {
     it('handles a single class', () => {
         expect(cn('only')).toBe('only');
     });
+
+    it('merges conflicting tailwind utilities so the last one wins', () => {
+        expect(cn('px-2', 'px-4')).toBe('px-4');
+        expect(cn('text-sm', false, 'text-lg')).toBe('text-lg');
+    });
 });

@@ -7,7 +7,8 @@ import Kartu from './Kartu';
 import PillButton from '@/components/ui/PillButton';
 import ShareIgModal from './ShareIgModal';
 import type { ShareKartuData } from './ShareIgModal';
-import TemariProto, { type TemariPose } from '@/components/temari/TemariProto';
+import Temari from '@/components/temari/Temari';
+import { type TemariPose } from '@/components/temari/TemariProto';
 import TemariMascot from '@/components/temari/TemariMascot';
 import { RARITY_LABELS } from '@/lib/runcard';
 import { formatDuration, formatKm, formatPace, paceSecPerKm } from '@/lib/pace';
@@ -66,8 +67,8 @@ function framesFor(theatrical: boolean, rarity: Rarity, name: string): Frame[] {
         },
         {
             pose: 'excited',
-            eyebrow: 'Verdict',
-            title: 'Ini layak kartu.',
+            eyebrow: 'Hasil',
+            title: 'Ini pantas dapet kartu.',
         },
         {
             pose: 'holding',
@@ -209,7 +210,7 @@ export default function CardReveal({ pending, onPrMoment }: Readonly<CardRevealP
                                 {frame.runner ? (
                                     <TemariMascot mood="nyala" sizeClass="h-[200px] w-[200px]" idle="mood" />
                                 ) : (
-                                    <TemariProto pose={frame.pose} size={200} />
+                                    <Temari pose={frame.pose} size={200} />
                                 )}
                             </div>
                             <div>
@@ -266,11 +267,11 @@ export default function CardReveal({ pending, onPrMoment }: Readonly<CardRevealP
                                         size="sm"
                                         onClick={dismiss}
                                     >
-                                        {isLastFrame ? 'Tutup' : 'Skip'}
+                                        {isLastFrame ? 'Tutup' : 'Lewati'}
                                     </PillButton>
                                 </div>
                                 <div className="mt-4 font-mono text-[9px] uppercase tracking-[0.14em] text-cream/55">
-                                    Frame {step + 1} / {frames.length} · tap untuk lanjut
+                                    Frame {step + 1} / {frames.length} · ketuk untuk lanjut
                                 </div>
                             </div>
                         </div>

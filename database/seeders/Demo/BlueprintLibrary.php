@@ -22,6 +22,9 @@ class BlueprintLibrary
 
     private const int PHONE_ONLY_BUCKET_HI = 13;
 
+    /** @var list<RunBlueprint>|null memoized so the fixture is built once per seed */
+    private ?array $scriptedCache = null;
+
     /**
      * @return list<RunBlueprint>
      */
@@ -30,52 +33,110 @@ class BlueprintLibrary
         return [...$this->scripted(), ...$this->fillers()];
     }
 
+    private function loc(int $index): DemoLocation
+    {
+        return DemoLocation::library()[$index];
+    }
+
     /**
      * Order = day-descending (oldest first → today last) for natural CTL ramp.
+     * Locations are spread across the curated Indonesian spots; the
+     * half-marathon at D-136 is the all-time-longest run (→ Legendary card).
      *
      * @return list<RunBlueprint>
      */
     private function scripted(): array
     {
-        return [
+        return $this->scriptedCache ??= [
+            // --- Older base: building from couch to a first half marathon ---
             new RunBlueprint(
-                startsAt: Carbon::today()->subDays(87)->setTime(6, 30),
+                startsAt: Carbon::today()->subDays(178)->setTime(6, 30),
+                distanceM: 4_000,
+                targetPaceSecPerKm: 450,
+                hrProfile: HrProfile::Z2Steady,
+                name: 'Lari pelan pertama',
+                tags: ['baseline'],
+                location: $this->loc(0),
+            ),
+            new RunBlueprint(
+                startsAt: Carbon::today()->subDays(171)->setTime(6, 30),
                 distanceM: 5_000,
-                targetPaceSecPerKm: 420,
+                targetPaceSecPerKm: 440,
                 hrProfile: HrProfile::Z2Steady,
                 name: 'First proper 5K',
                 tags: ['first_5k', 'baseline'],
+                location: $this->loc(1),
             ),
             new RunBlueprint(
-                startsAt: Carbon::today()->subDays(74)->setTime(6, 0),
-                distanceM: 14_000,
+                startsAt: Carbon::today()->subDays(157)->setTime(6, 0),
+                distanceM: 12_000,
                 targetPaceSecPerKm: 480,
-                hrProfile: HrProfile::Z2Steady,
+                hrProfile: HrProfile::LsdDrift,
                 elevationGainM: 80,
                 name: 'Sunday LSD',
                 tags: ['long_slow_distance'],
+                location: $this->loc(0),
             ),
-            // Past You anchor for the D-0 run below.
             new RunBlueprint(
-                startsAt: Carbon::today()->subDays(65)->setTime(6, 45),
-                distanceM: 5_200,
-                targetPaceSecPerKm: 410,
+                startsAt: Carbon::today()->subDays(150)->setTime(6, 0),
+                distanceM: 5_500,
+                targetPaceSecPerKm: 425,
                 hrProfile: HrProfile::Z2Steady,
-                name: 'Morning 5K loop',
-                tags: ['past_you_anchor'],
+                name: 'Pagi di Bandung',
+                tags: ['travel'],
+                location: $this->loc(3),
             ),
             new RunBlueprint(
-                startsAt: Carbon::today()->subDays(58)->setTime(11, 0),
-                distanceM: 10_000,
+                startsAt: Carbon::today()->subDays(143)->setTime(6, 30),
+                distanceM: 8_000,
                 targetPaceSecPerKm: 410,
+                hrProfile: HrProfile::Tempo,
+                name: 'Tempo pertama',
+                tags: ['tempo'],
+                location: $this->loc(0),
+            ),
+            new RunBlueprint(
+                startsAt: Carbon::today()->subDays(136)->setTime(5, 30),
+                distanceM: 21_300,
+                targetPaceSecPerKm: 480,
+                hrProfile: HrProfile::LsdDrift,
+                elevationGainM: 140,
+                name: 'Half marathon perdana',
+                tags: ['half_marathon', 'big_volume', 'all_time_longest'],
+                location: $this->loc(0),
+            ),
+            new RunBlueprint(
+                startsAt: Carbon::today()->subDays(129)->setTime(6, 0),
+                distanceM: 5_000,
+                targetPaceSecPerKm: 400,
+                hrProfile: HrProfile::NegSplit,
+                name: 'Negative split Surabaya',
+                tags: ['negative_split', 'travel'],
+                location: $this->loc(4),
+            ),
+            new RunBlueprint(
+                startsAt: Carbon::today()->subDays(122)->setTime(11, 0),
+                distanceM: 10_000,
+                targetPaceSecPerKm: 405,
                 hrProfile: HrProfile::LsdDrift,
                 weatherTempC: 32,
                 weatherHumidityPct: 88,
                 name: 'Midday tropical 10K',
                 tags: ['hari_panas'],
+                location: $this->loc(2),
             ),
             new RunBlueprint(
-                startsAt: Carbon::today()->subDays(51)->setTime(17, 30),
+                startsAt: Carbon::today()->subDays(115)->setTime(5, 10),
+                distanceM: 9_000,
+                targetPaceSecPerKm: 385,
+                hrProfile: HrProfile::Intervals,
+                cadenceSpm: 178,
+                name: 'Dawn 6×800m',
+                tags: ['anak_pagi', 'intervals'],
+                location: $this->loc(0),
+            ),
+            new RunBlueprint(
+                startsAt: Carbon::today()->subDays(108)->setTime(17, 30),
                 distanceM: 8_000,
                 targetPaceSecPerKm: 430,
                 hrProfile: HrProfile::Z2Steady,
@@ -84,23 +145,79 @@ class BlueprintLibrary
                 weatherRainDetected: true,
                 name: 'Hujan deras 8K',
                 tags: ['pejuang_hujan'],
+                location: $this->loc(0),
+            ),
+            new RunBlueprint(
+                startsAt: Carbon::today()->subDays(94)->setTime(6, 0),
+                distanceM: 6_000,
+                targetPaceSecPerKm: 430,
+                hrProfile: HrProfile::Z2Steady,
+                name: 'Lari pagi di Sanur',
+                tags: ['travel'],
+                location: $this->loc(6),
+            ),
+            // --- Recent block: sharpening toward a 10K PR ---
+            // Past You anchor for the D-0 run below.
+            new RunBlueprint(
+                startsAt: Carbon::today()->subDays(87)->setTime(6, 45),
+                distanceM: 5_200,
+                targetPaceSecPerKm: 410,
+                hrProfile: HrProfile::Z2Steady,
+                name: 'Morning 5K loop',
+                tags: ['past_you_anchor'],
+                location: $this->loc(0),
+            ),
+            new RunBlueprint(
+                startsAt: Carbon::today()->subDays(74)->setTime(6, 0),
+                distanceM: 14_000,
+                targetPaceSecPerKm: 470,
+                hrProfile: HrProfile::LsdDrift,
+                elevationGainM: 80,
+                name: 'Sunday LSD 14K',
+                tags: ['long_slow_distance'],
+                location: $this->loc(5),
+            ),
+            new RunBlueprint(
+                startsAt: Carbon::today()->subDays(58)->setTime(11, 0),
+                distanceM: 10_000,
+                targetPaceSecPerKm: 400,
+                hrProfile: HrProfile::LsdDrift,
+                weatherTempC: 32,
+                weatherHumidityPct: 88,
+                name: 'Midday tropical 10K',
+                tags: ['hari_panas'],
+                location: $this->loc(7),
+            ),
+            new RunBlueprint(
+                startsAt: Carbon::today()->subDays(51)->setTime(17, 30),
+                distanceM: 8_000,
+                targetPaceSecPerKm: 425,
+                hrProfile: HrProfile::Z2Steady,
+                weatherTempC: 25,
+                weatherHumidityPct: 95,
+                weatherRainDetected: true,
+                name: 'Hujan deras 8K',
+                tags: ['pejuang_hujan'],
+                location: $this->loc(0),
             ),
             new RunBlueprint(
                 startsAt: Carbon::today()->subDays(44)->setTime(5, 10),
                 distanceM: 9_000,
-                targetPaceSecPerKm: 380,
+                targetPaceSecPerKm: 375,
                 hrProfile: HrProfile::Intervals,
                 cadenceSpm: 178,
                 name: 'Dawn 6×800m',
                 tags: ['anak_pagi', 'intervals'],
+                location: $this->loc(0),
             ),
             new RunBlueprint(
                 startsAt: Carbon::today()->subDays(37)->setTime(6, 30),
                 distanceM: 10_000,
-                targetPaceSecPerKm: 380,
+                targetPaceSecPerKm: 375,
                 hrProfile: HrProfile::NegSplit,
                 name: 'Negative split tempo',
                 tags: ['negative_split', 'pembalik_keadaan'],
+                location: $this->loc(1),
             ),
             new RunBlueprint(
                 startsAt: Carbon::today()->subDays(30)->setTime(17, 0),
@@ -110,15 +227,17 @@ class BlueprintLibrary
                 cadenceSpm: 168,
                 name: 'Recovery jog',
                 tags: ['recovery'],
+                location: $this->loc(0),
             ),
             new RunBlueprint(
                 startsAt: Carbon::today()->subDays(23)->setTime(6, 0),
                 distanceM: 18_000,
-                targetPaceSecPerKm: 470,
+                targetPaceSecPerKm: 465,
                 hrProfile: HrProfile::LsdDrift,
                 elevationGainM: 120,
                 name: 'Sunday long 18K',
                 tags: ['long_slow_distance', 'big_volume'],
+                location: $this->loc(0),
             ),
             new RunBlueprint(
                 startsAt: Carbon::today()->subDays(16)->setTime(6, 30),
@@ -129,6 +248,7 @@ class BlueprintLibrary
                 weatherHumidityPct: 85,
                 name: 'Heavy legs tempo',
                 tags: ['fatigued', 'high_drift'],
+                location: $this->loc(0),
             ),
             new RunBlueprint(
                 startsAt: Carbon::today()->subDays(9)->setTime(6, 30),
@@ -137,16 +257,18 @@ class BlueprintLibrary
                 hrProfile: HrProfile::Tempo,
                 name: 'Fresh tempo 8K',
                 tags: ['fresh'],
+                location: $this->loc(0),
             ),
             new RunBlueprint(
                 startsAt: Carbon::today()->subDays(4)->setTime(6, 0),
                 distanceM: 10_000,
-                targetPaceSecPerKm: 350,
+                targetPaceSecPerKm: 348,
                 hrProfile: HrProfile::Tempo,
                 cadenceSpm: 176,
                 weatherTempC: 26,
                 name: '10K race-pace effort',
                 tags: ['10k_pr_attempt'],
+                location: $this->loc(0),
             ),
             new RunBlueprint(
                 startsAt: Carbon::today()->subDays(1)->setTime(17, 30),
@@ -155,6 +277,7 @@ class BlueprintLibrary
                 hrProfile: HrProfile::Z2Steady,
                 name: 'Yesterday shakeout',
                 tags: ['recovery'],
+                location: $this->loc(0),
             ),
             new RunBlueprint(
                 startsAt: Carbon::today()->setTime(6, 30),
@@ -163,6 +286,7 @@ class BlueprintLibrary
                 hrProfile: HrProfile::NegSplit,
                 name: 'Pagi negative split',
                 tags: ['negative_split', 'past_you_today'],
+                location: $this->loc(0),
             ),
             // Treadmill: no summary_polyline / no latlng stream, HR+cadence intact.
             new RunBlueprint(
@@ -189,6 +313,7 @@ class BlueprintLibrary
                 tags: ['no_hr', 'no_cadence', 'phone_only'],
                 hasHrSensor: false,
                 hasCadenceSensor: false,
+                location: $this->loc(0),
             ),
         ];
     }
@@ -207,7 +332,7 @@ class BlueprintLibrary
         $blueprints = [];
         $today = Carbon::today();
 
-        for ($d = 90; $d >= 2; $d--) {
+        for ($d = 182; $d >= 2; $d--) {
             $date = $today->copy()->subDays($d);
             if (in_array($date->toDateString(), $scriptedDates, true)) {
                 continue;
@@ -223,8 +348,9 @@ class BlueprintLibrary
 
     private function makeFiller(Carbon $date, Randomizer $rng): RunBlueprint
     {
-        $distance = $rng->getInt(40, 120) * 100;
-        $pace = $rng->getInt(420, 510);
+        $profile = $this->rollProfile($rng);
+        [$distance, $pace] = $this->distanceAndPaceFor($profile, $rng);
+
         $startHour = $rng->getInt(0, 99) < 70 ? 6 : 17;
         $minute = $rng->getInt(0, 50);
         $temp = $rng->getInt(24, 31);
@@ -235,37 +361,69 @@ class BlueprintLibrary
         $hasGps = $dataRoll >= self::TREADMILL_BUCKET_HI;
         $hasSensors = $dataRoll < self::TREADMILL_BUCKET_HI || $dataRoll >= self::PHONE_ONLY_BUCKET_HI;
 
+        $cadenceBase = $profile === HrProfile::Intervals ? 176 : 168;
+        $library = DemoLocation::library();
+
         return new RunBlueprint(
             startsAt: $date->copy()->setTime($startHour, $minute),
             distanceM: $distance,
             targetPaceSecPerKm: $pace,
-            hrProfile: HrProfile::Z2Steady,
-            cadenceSpm: 168 + $rng->getInt(0, 6),
+            hrProfile: $profile,
+            cadenceSpm: $cadenceBase + $rng->getInt(0, 6),
             elevationGainM: $hasGps ? $rng->getInt(20, 70) : 0,
             weatherTempC: $temp,
             weatherHumidityPct: $humidity,
             weatherRainDetected: $rain,
-            name: $this->fillerName($date, $rng),
-            tags: ['filler'],
+            name: $this->fillerName($date, $profile),
+            tags: ['filler', $profile->value],
             hasGps: $hasGps,
             hasHrSensor: $hasSensors,
             hasCadenceSensor: $hasSensors,
+            location: $hasGps ? $library[$rng->getInt(0, count($library) - 1)] : null,
         );
     }
 
-    private function fillerName(Carbon $date, Randomizer $rng): string
+    /**
+     * Weighted toward easy aerobic base (how real training distributes), with
+     * a minority of quality sessions for variety.
+     */
+    private function rollProfile(Randomizer $rng): HrProfile
     {
-        $names = [
-            'Easy aerobic',
-            'Morning loop',
-            'Evening base',
-            'Komplek run',
-            'Pelan-pelan',
-            'Z2 base',
-            'Senayan loop',
-            'Sore santai',
-        ];
+        $roll = $rng->getInt(0, 99);
 
-        return $names[$rng->getInt(0, count($names) - 1)].' '.$date->translatedFormat('d M');
+        return match (true) {
+            $roll < 55 => HrProfile::Z2Steady,
+            $roll < 70 => HrProfile::Tempo,
+            $roll < 82 => HrProfile::LsdDrift,
+            $roll < 92 => HrProfile::Intervals,
+            default => HrProfile::NegSplit,
+        };
+    }
+
+    /**
+     * @return array{int, int} distance in metres, target pace in sec/km
+     */
+    private function distanceAndPaceFor(HrProfile $profile, Randomizer $rng): array
+    {
+        return match ($profile) {
+            HrProfile::Tempo => [$rng->getInt(60, 100) * 100, $rng->getInt(380, 410)],
+            HrProfile::LsdDrift => [$rng->getInt(120, 200) * 100, $rng->getInt(460, 510)],
+            HrProfile::Intervals => [$rng->getInt(60, 90) * 100, $rng->getInt(360, 400)],
+            HrProfile::NegSplit => [$rng->getInt(50, 100) * 100, $rng->getInt(390, 420)],
+            HrProfile::Z2Steady => [$rng->getInt(40, 120) * 100, $rng->getInt(420, 510)],
+        };
+    }
+
+    private function fillerName(Carbon $date, HrProfile $profile): string
+    {
+        $name = match ($profile) {
+            HrProfile::Tempo => 'Tempo sore',
+            HrProfile::LsdDrift => 'Long run santai',
+            HrProfile::Intervals => 'Interval pagi',
+            HrProfile::NegSplit => 'Progresif',
+            HrProfile::Z2Steady => 'Easy aerobic',
+        };
+
+        return $name.' '.$date->translatedFormat('d M');
     }
 }

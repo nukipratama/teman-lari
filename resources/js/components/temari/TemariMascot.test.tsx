@@ -2,8 +2,27 @@ import { act, render } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import * as inertia from '@inertiajs/react';
 import TemariMascot from './TemariMascot';
+import { setMockPage } from '@/test/setup';
 
 describe('TemariMascot', () => {
+    it('draws the equipped accessories from shared state by default', () => {
+        setMockPage({
+            equippedAccessories: { headband: 'legendaris', medal: null, pita: false, aura: false },
+        });
+        // legendaris headband band is the rect at y=20.5 in UnlockedExtras.
+        const { container } = render(<TemariMascot mood="adem" />);
+        expect(container.innerHTML).toContain('y="20.5"');
+    });
+
+    it('does not draw an accessory the user has not equipped', () => {
+        setMockPage({
+            equippedAccessories: { headband: 'epik', medal: null, pita: false, aura: false },
+        });
+        const { container } = render(<TemariMascot mood="adem" />);
+        // epik flag is present, legendaris band (y=20.5) is not.
+        expect(container.innerHTML).not.toContain('y="20.5"');
+    });
+
     it('renders the TemariCharacter SVG inside the motion wrapper', () => {
         const { container } = render(<TemariMascot mood="nyala" />);
         expect(container.querySelectorAll('svg').length).toBe(1);

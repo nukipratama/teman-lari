@@ -15,13 +15,15 @@ import Kartu from '@/components/card/Kartu';
 import KartuMini from '@/components/card/KartuMini';
 import PillButton from '@/components/ui/PillButton';
 import SectionLabel from '@/components/ui/SectionLabel';
-import TemariProto, { type TemariPose } from '@/components/temari/TemariProto';
+import Temari from '@/components/temari/Temari';
+import { type TemariPose } from '@/components/temari/TemariProto';
 import AnalysisStatus from '@/components/temari/AnalysisStatus';
 import { useAnalysisTrigger } from '@/hooks/useAnalysisTrigger';
 import { cn } from '@/lib/cn';
 import EmptyRunsState from '@/components/run/EmptyRunsState';
 import { fadeInUp } from '@/lib/motion';
 import { formStatusLabel } from '@/lib/formStatus';
+import { renderBold } from '@/lib/richText';
 import { formatKm, formatPace, formatRelativeId, paceSecPerKm } from '@/lib/pace';
 import { emberGlowStyle } from '@/lib/styles';
 import {
@@ -82,7 +84,7 @@ const TOUR_STEPS: TourStep[] = [
     {
         target: 'greeting',
         title: 'Briefing harian',
-        body: 'Tiap pagi aku kasih briefing kondisi lari kamu: vibe, saran sesi, sama recap terakhir.',
+        body: 'Tiap pagi aku kasih briefing kondisi lari kamu: vibe, saran sesi, sama ringkasan lari terakhir.',
         tipSide: 'below',
     },
     {
@@ -94,7 +96,7 @@ const TOUR_STEPS: TourStep[] = [
     {
         target: 'bottom-nav-koleksi',
         title: 'Koleksi kamu',
-        body: 'Semua kartu ngumpul di sini. Koleksi tumbuh seiring larimu.',
+        body: 'Semua kartu ngumpul di sini. Makin sering lari, makin banyak kartunya.',
         tipSide: 'above',
     },
 ];
@@ -133,11 +135,17 @@ export default function HariIni({
                 animate="visible"
                 className="w-full px-5 py-6 sm:px-8 lg:px-14 lg:py-10"
             >
-                <GuidedTour
-                    steps={TOUR_STEPS}
-                    storageKey="onboarding_shown"
-                    forceShow={props.onboarding.forceShow}
-                />
+                {/* Defer onboarding while a card-reveal takeover is pending, or the
+                    coachmark stacks on top of the reveal (a first run that earns an
+                    Epic/Legendaris card, or the demo seed). CardReveal's dismiss does a
+                    partial reload of `pendingReveal`, which remounts the tour once it clears. */}
+                {!props.pendingReveal && (
+                    <GuidedTour
+                        steps={TOUR_STEPS}
+                        storageKey="onboarding_shown"
+                        forceShow={props.onboarding.forceShow}
+                    />
+                )}
                 <MilestoneBanner pending={pendingMilestone} />
 
                 {/* HEADLINE */}
@@ -210,7 +218,7 @@ export default function HariIni({
 function KataTemariCompact({ briefing, pose }: Readonly<{ briefing: BriefingResult; pose: TemariPose }>) {
     return (
         <Card padding="lg" className="flex items-start gap-3.5">
-            <TemariProto pose={pose} size={48} animate={false} />
+            <Temari pose={pose} size={48} animate={false} />
             <div className="min-w-0 flex-1">
                 <div className="mb-1.5 font-mono text-[10px] font-bold uppercase tracking-[0.14em] text-horizon-deep">
                     ★ Kata Temari hari ini
@@ -221,7 +229,7 @@ function KataTemariCompact({ briefing, pose }: Readonly<{ briefing: BriefingResu
                     size="sm"
                     renderContent={(text) => (
                         <p className="whitespace-pre-line font-display text-base italic leading-relaxed text-ink">
-                            &ldquo;{text}&rdquo;
+                            &ldquo;{renderBold(text)}&rdquo;
                         </p>
                     )}
                 />
@@ -249,11 +257,12 @@ function VitalChips({ briefing, load, onSky = false }: Readonly<{ briefing: Brie
                 explainerKey="vibe_vs_mood"
             />
             <VitalChip
-                label="Form"
+                label="Kesiapan"
                 value={load ? formatSignedForm(load.form) : '—'}
                 sub={load ? formStatusLabel(load.form_status) : ''}
                 tone="leaf"
                 onSky={onSky}
+                explainerKey="form"
             />
             <VitalChip
                 label="Recovery"
@@ -322,7 +331,7 @@ function FeaturedKartuPanel({
             />
             <div className="relative grid items-center gap-8 lg:grid-cols-[200px_1fr_40%] lg:gap-10">
                 <div className="hidden lg:block">
-                    <TemariProto pose={pose} size={240} />
+                    <Temari pose={pose} size={240} />
                 </div>
                 <div>
                     <div className="mb-4 font-mono text-[11px] font-bold uppercase tracking-[0.2em] text-horizon">
@@ -340,7 +349,7 @@ function FeaturedKartuPanel({
                             onSky
                             renderContent={(text) => (
                                 <p className="font-display text-quote-lg italic text-cream">
-                                    &ldquo;{text}&rdquo;
+                                    &ldquo;{renderBold(text)}&rdquo;
                                 </p>
                             )}
                         />
@@ -364,7 +373,7 @@ function FeaturedKartuPanel({
                 </div>
                 {/* mobile fallback: Temari above, full Kartu below — keep the kartu-as-hero feel */}
                 <div className="flex flex-col items-center gap-4 lg:hidden">
-                    <TemariProto pose={pose} size={120} animate={false} />
+                    <Temari pose={pose} size={120} animate={false} />
                     <Kartu
                         name={featured.name}
                         subtitle={featured.subtitle}
@@ -402,11 +411,11 @@ function SuggestionContent({ text }: Readonly<{ text: string }>) {
     return (
         <div className="space-y-2.5">
             <h3 className="font-display text-display-xs leading-tight tracking-[-0.01em] text-ink">
-                {title}
+                {renderBold(title)}
             </h3>
             {body !== '' && (
                 <p className="whitespace-pre-line font-sans text-sm leading-relaxed text-ink-2">
-                    {body}
+                    {renderBold(body)}
                 </p>
             )}
         </div>
@@ -461,7 +470,7 @@ function LastLariCard({ run, pose, note }: Readonly<{ run: ActivityDetail; pose:
         <LinkCard href={`/aktivitas/${run.activity_id}`} padding="md" className="flex flex-col gap-3">
             <SectionLabel>Lari terakhir · {dateLabel}</SectionLabel>
             <div className="flex items-start gap-3">
-                <TemariProto pose={pose} size={48} />
+                <Temari pose={pose} size={48} />
                 <div className="min-w-0 flex-1">
                     <div className="font-display text-2xl leading-tight tracking-[-0.01em] text-ink">
                         {run.name ?? 'Lari'}

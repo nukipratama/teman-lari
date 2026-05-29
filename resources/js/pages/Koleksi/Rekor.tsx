@@ -11,10 +11,11 @@ import PrCard from '@/components/card/PrCard';
 import ProgressionChart from '@/components/koleksi/ProgressionChart';
 import SectionLabel from '@/components/ui/SectionLabel';
 import SplitsSparkline from '@/components/run/SplitsSparkline';
-import TemariProto from '@/components/temari/TemariProto';
+import Temari from '@/components/temari/Temari';
 import AnalysisStatus from '@/components/temari/AnalysisStatus';
 import { fadeInUp } from '@/lib/motion';
 import { formatDurationHMS, formatIdDate } from '@/lib/pace';
+import { renderBold } from '@/lib/richText';
 import { PR_CATEGORY_LABELS, formatPrValue } from '@/lib/pr';
 import { emberGlowStyle } from '@/lib/styles';
 import GradientText from '@/components/ui/GradientText';
@@ -155,7 +156,7 @@ function HeroScoreboard({
                 </div>
                 <div className="flex flex-col items-center gap-4 lg:items-stretch">
                     <div className="flex justify-center">
-                        <TemariProto pose="glow" size={180} equipped={{ medal: 'emas', headband: 'epik' }} />
+                        <Temari pose="glow" size={180} />
                     </div>
                     {pr.context_analysis && (
                         <div className="rounded-2xl border border-cream/[0.12] bg-cream/[0.06] px-5 py-4 backdrop-blur">
@@ -166,7 +167,7 @@ function HeroScoreboard({
                                 showTimestamp={false}
                                 renderContent={(text) => (
                                     <p className="font-display text-quote-lg italic text-cream">
-                                        “{text}”
+                                        “{renderBold(text)}”
                                     </p>
                                 )}
                             />
@@ -351,7 +352,7 @@ function PaceCell({ pr }: Readonly<{ pr: ExtendedPR }>) {
 function TemariFooter() {
     return (
         <Card as="section" className="mt-8 flex items-start gap-3.5">
-            <TemariProto pose="observational" size={56} />
+            <Temari pose="observational" size={56} />
             <p className="flex-1 font-display text-[15px] italic leading-relaxed text-ink-2">
                 “Tiap kamu pecahin rekor, langsung aku catat di sini. Nggak ada yang ilang, ya.”
             </p>

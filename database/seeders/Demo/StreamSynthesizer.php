@@ -13,10 +13,6 @@ use Random\Randomizer;
  */
 class StreamSynthesizer
 {
-    private const float ANCHOR_LAT = -6.2088;
-
-    private const float ANCHOR_LNG = 106.8456;
-
     /**
      * @return array<string, array{data: list<int|float|array{float, float}>}>
      */
@@ -28,6 +24,7 @@ class StreamSynthesizer
         }
         $avgSpeed = $blueprint->distanceM / $duration;
         $rng = new Randomizer(new Mt19937($blueprint->seed()));
+        $location = $blueprint->location ?? DemoLocation::default();
 
         $time = [];
         $velocity = [];
@@ -55,7 +52,7 @@ class StreamSynthesizer
             }
             $altitude[] = $this->altitudeAt($blueprint, $progress);
             if ($blueprint->hasGps) {
-                $latlng[] = $this->latLngAt($progress);
+                $latlng[] = $this->latLngAt($location, $progress);
             }
         }
 
@@ -112,13 +109,13 @@ class StreamSynthesizer
     /**
      * @return array{float, float}
      */
-    private function latLngAt(float $progress): array
+    private function latLngAt(DemoLocation $location, float $progress): array
     {
         $angle = $progress * 2 * M_PI;
 
         return [
-            round(self::ANCHOR_LAT + 0.008 * sin($angle), 6),
-            round(self::ANCHOR_LNG + 0.008 * cos($angle), 6),
+            round($location->lat + 0.008 * sin($angle), 6),
+            round($location->lng + 0.008 * cos($angle), 6),
         ];
     }
 

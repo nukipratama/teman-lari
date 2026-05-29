@@ -8,7 +8,7 @@ import HeroPanel from '@/components/ui/HeroPanel';
 import KartuComponent from '@/components/card/Kartu';
 import PillButton from '@/components/ui/PillButton';
 import SectionLabel from '@/components/ui/SectionLabel';
-import TemariProto from '@/components/temari/TemariProto';
+import Temari from '@/components/temari/Temari';
 import AnalysisStatus from '@/components/temari/AnalysisStatus';
 import ShareIgModal from '@/components/card/ShareIgModal';
 import type { ShareKartuData } from '@/components/card/ShareIgModal';
@@ -16,6 +16,7 @@ import { cn } from '@/lib/cn';
 import { fadeInUp } from '@/lib/motion';
 import { formatDuration, formatIdDate, formatKm } from '@/lib/pace';
 import { RARITY_BORDER, RARITY_LABELS, prettyBadge } from '@/lib/runcard';
+import { renderBold } from '@/lib/richText';
 import type { ActivityDetail, AnalysisPayload, Rarity } from '@/types/inertia';
 
 // Short Indonesian descriptions for each badge key
@@ -132,7 +133,7 @@ export default function KartuDetail({
                                 }}
                             />
 
-                            <TemariProto pose="excited" size={140} className="relative" />
+                            <Temari pose="excited" size={140} className="relative" />
 
                             <div className="relative w-full max-w-xs rotate-[-2deg] drop-shadow-2xl">
                                 <KartuComponent
@@ -177,7 +178,7 @@ export default function KartuDetail({
                             <h1 className="font-display text-display-lg leading-[0.92] tracking-[-0.025em] text-ink">
                                 {card.special_move}.
                             </h1>
-                            <div className="mt-5">
+                            <div className="mt-3">
                                 <AnalysisStatus
                                     analysis={card.flavor_analysis}
                                     inertiaReloadProps={['card']}
@@ -185,7 +186,7 @@ export default function KartuDetail({
                                     showTimestamp={false}
                                     renderContent={(text) => (
                                         <p className="font-display text-quote-md italic leading-relaxed text-ink-2">
-                                            &ldquo;{text}&rdquo;
+                                            &ldquo;{renderBold(text)}&rdquo;
                                         </p>
                                     )}
                                 />
@@ -225,7 +226,7 @@ export default function KartuDetail({
                                 className="block"
                             >
                                 <Card padding="md" className="flex items-center gap-4">
-                                    <TemariProto pose="proud" size={48} animate={false} />
+                                    <Temari pose="proud" size={48} animate={false} />
                                     <div className="min-w-0 flex-1">
                                         <div className="mb-0.5 font-mono text-[9px] font-bold uppercase tracking-[0.14em] text-ink-3">
                                             Dari lari
@@ -248,7 +249,7 @@ export default function KartuDetail({
                         {relatedCards.length > 0 && (
                             <div>
                                 <SectionLabel className="mb-3">
-                                    Yang serupa dari koleksi
+                                    Kartu mirip di koleksimu
                                 </SectionLabel>
                                 <div className="grid grid-cols-3 gap-2.5">
                                     {relatedCards.map((c) => (
