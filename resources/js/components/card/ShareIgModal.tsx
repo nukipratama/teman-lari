@@ -133,11 +133,14 @@ export default function ShareIgModal({ kartu, onClose }: Readonly<ShareIgModalPr
                     exit={{ opacity: 0, scale: 0.96, y: 8 }}
                     transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
                     onClick={(e) => e.stopPropagation()}
-                    className="flex w-full max-w-lg flex-col overflow-hidden rounded-3xl bg-cream shadow-2xl lg:max-w-4xl lg:flex-row"
+                    className="flex w-full max-w-lg flex-col overflow-y-auto rounded-3xl bg-cream shadow-2xl lg:max-w-4xl lg:flex-row lg:overflow-hidden"
                     style={{ maxHeight: '92dvh' }}
                 >
-                    {/* ── LEFT: preview ── */}
-                    <div className="flex flex-col items-center gap-3 overflow-y-auto bg-cream-deep p-5 lg:w-80 lg:shrink-0 lg:overflow-hidden">
+                    {/* ── LEFT: preview ──
+                        Mobile: the whole panel scrolls as one; these halves keep their
+                        natural height (shrink-0) so nothing clips. Desktop: side-by-side,
+                        preview fixed and the controls column scrolls on its own. */}
+                    <div className="flex shrink-0 flex-col items-center gap-3 bg-cream-deep p-5 lg:w-80 lg:overflow-hidden">
                         {/* Preview canvas */}
                         <div
                             ref={previewRef}
@@ -272,7 +275,7 @@ export default function ShareIgModal({ kartu, onClose }: Readonly<ShareIgModalPr
                     </div>
 
                     {/* ── RIGHT: controls ── */}
-                    <div className="flex flex-1 flex-col overflow-y-auto">
+                    <div className="flex flex-col max-lg:shrink-0 lg:flex-1 lg:overflow-y-auto">
                         {/* Header */}
                         <div className="flex items-center gap-3 border-b border-cream-deep px-5 pb-3.5 pt-5">
                             <button
