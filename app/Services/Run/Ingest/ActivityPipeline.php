@@ -17,9 +17,11 @@ use App\Services\Run\Metrics\TrainingLoad;
 use App\Services\Run\Metrics\WeeklyAggregator;
 use App\Services\Run\Story\RunCardFactory;
 use App\Services\Run\Story\Temari;
+use App\Services\Strava\Exceptions\StravaRateLimitedException;
 use App\Services\Strava\StravaClient;
 use App\Services\Weather\OpenMeteoClient;
 use Carbon\CarbonImmutable;
+use Illuminate\Http\Client\RequestException;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
@@ -66,6 +68,10 @@ class ActivityPipeline
             $detail = $this->client
                 ->get($connection, "/activities/{$activity->strava_external_id}")
                 ->json();
+        } catch (StravaRateLimitedException $e) {
+            // Don't burn a retry on a fixed backoff: let the queued job re-queue
+            // with an exponential delay (see IngestActivityJob).
+            throw $e;
         } catch (Throwable $e) {
             $this->handleDetailFailure($activity, $e);
 
@@ -240,6 +246,21 @@ class ActivityPipeline
                 ->json();
 
             return is_array($streams) ? $streams : null;
+        } catch (StravaRateLimitedException $e) {
+            // The detail already stored; a rate-limited stream fetch should
+            // re-queue the whole job rather than silently drop the streams.
+            throw $e;
+        } catch (RequestException $e) {
+            // 4xx (404 = no streams for this activity) is permanent and
+            // expected for treadmill / manual runs; 5xx is transient. Either
+            // way streams are best-effort, so we log and continue without them.
+            Log::info('streams fetch failed (non-fatal)', [
+                'activity_id' => $activity->id,
+                'status' => $e->response->status(),
+                'error' => $e->getMessage(),
+            ]);
+
+            return null;
         } catch (Throwable $e) {
             Log::info('streams fetch failed (non-fatal)', [
                 'activity_id' => $activity->id,
@@ -248,6 +269,20 @@ class ActivityPipeline
 
             return null;
         }
+    }
+
+    /**
+     * Pull the HTTP status off a failed Strava request, when the throwable
+     * carries one. Non-HTTP throwables (transport errors, runtime guards)
+     * return null and are treated as transient.
+     */
+    private function httpStatus(Throwable $reason): ?int
+    {
+        if ($reason instanceof RequestException) {
+            return $reason->response->status();
+        }
+
+        return null;
     }
 
     /**
@@ -327,6 +362,25 @@ class ActivityPipeline
 
     private function handleDetailFailure(Activity $activity, Throwable $reason): void
     {
+        // A 4xx is permanent (404 deleted, 403 unshared): no amount of retrying
+        // recovers it. Stamp analyzed_at so the row is treated as handled and
+        // we stop re-fetching it on every sync. 5xx and transport errors stay
+        // transient and fall through to the retry counter below.
+        $status = $this->httpStatus($reason);
+        if ($status !== null && $status >= 400 && $status < 500) {
+            $activity->update([
+                'detail_fail_count' => $activity->detail_fail_count + 1,
+                'analyzed_at' => now(),
+            ]);
+            Log::info('detail fetch hit a permanent 4xx; marking handled', [
+                'activity_id' => $activity->id,
+                'status' => $status,
+                'reason' => $reason->getMessage(),
+            ]);
+
+            return;
+        }
+
         $count = $activity->detail_fail_count + 1;
 
         if ($count >= self::DETAIL_FETCH_MAX_ATTEMPTS) {

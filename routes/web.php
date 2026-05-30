@@ -15,8 +15,15 @@ use App\Http\Controllers\MilestoneController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\RekorController;
 use App\Http\Controllers\RunController;
+use App\Http\Controllers\Strava\StravaWebhookController;
 use App\Http\Controllers\TokenUsageController;
 use Illuminate\Support\Facades\Route;
+
+// Strava push subscription. Called by Strava unauthenticated — gated by the
+// shared verify token (handshake) and scoped to the owning athlete (events),
+// so it lives outside the auth middleware group.
+Route::get('/strava/webhook', [StravaWebhookController::class, 'verify'])->name('strava.webhook.verify');
+Route::post('/strava/webhook', [StravaWebhookController::class, 'handle'])->name('strava.webhook.handle');
 
 Route::middleware('guest')->group(function (): void {
     Route::get('/login', [LoginController::class, 'show'])->name('login');

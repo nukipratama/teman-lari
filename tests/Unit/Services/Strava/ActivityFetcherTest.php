@@ -7,6 +7,7 @@ use App\Models\StravaConnection;
 use App\Models\User;
 use App\Services\Strava\ActivityFetcher;
 use App\Services\Strava\StravaClient;
+use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Http;
@@ -135,6 +136,25 @@ it('skips items with missing or zero ids', function (): void {
     ]);
 
     expect((new ActivityFetcher(new StravaClient()))->fetchNewExternalIds($connection))->toBe([42]);
+});
+
+it('stops at the first activity started on or before the --since bound', function (): void {
+    $connection = makeConnection();
+    Http::fake([
+        'strava.com/api/v3/athlete/activities*' => Http::sequence()
+            ->push([
+                ['id' => 30, 'sport_type' => 'Run', 'start_date' => '2026-05-10T06:00:00Z'],
+                ['id' => 20, 'sport_type' => 'Run', 'start_date' => '2026-05-05T06:00:00Z'],
+                ['id' => 10, 'sport_type' => 'Run', 'start_date' => '2026-04-20T06:00:00Z'],
+            ]),
+    ]);
+
+    $ids = (new ActivityFetcher(new StravaClient()))
+        ->fetchNewExternalIds($connection, CarbonImmutable::parse('2026-05-01T00:00:00Z'));
+
+    // id 10 (2026-04-20) is on/before the bound → walk stops, it is excluded.
+    expect($ids)->toBe([20, 30]);
+    Http::assertSentCount(1);
 });
 
 it('paginates beyond page 1 when a full page returns', function (): void {

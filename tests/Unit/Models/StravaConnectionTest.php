@@ -76,3 +76,38 @@ it('belongs to a user', function (): void {
     expect($connection->user)->toBeInstanceOf(User::class)
         ->and($connection->user->is($user))->toBeTrue();
 });
+
+it('casts revoked_at to a Carbon instance', function (): void {
+    $connection = StravaConnection::factory()->create(['revoked_at' => '2026-01-01 00:00:00']);
+
+    expect($connection->revoked_at)->toBeInstanceOf(Carbon::class)
+        ->and($connection->revoked_at->toDateTimeString())->toBe('2026-01-01 00:00:00');
+});
+
+it('reports revoked state via isRevoked', function (): void {
+    $active = StravaConnection::factory()->create();
+    $revoked = StravaConnection::factory()->create(['revoked_at' => Carbon::now()]);
+
+    expect($active->isRevoked())->toBeFalse()
+        ->and($revoked->isRevoked())->toBeTrue();
+});
+
+it('stamps revoked_at via markRevoked and is a no-op when already revoked', function (): void {
+    $connection = StravaConnection::factory()->create();
+
+    $connection->markRevoked();
+    expect($connection->fresh()->isRevoked())->toBeTrue();
+
+    $stampedAt = $connection->fresh()->revoked_at;
+    $connection->markRevoked();
+    expect($connection->fresh()->revoked_at->equalTo($stampedAt))->toBeTrue();
+});
+
+it('excludes revoked connections from the active scope', function (): void {
+    $active = StravaConnection::factory()->create();
+    StravaConnection::factory()->create(['revoked_at' => Carbon::now()]);
+
+    $ids = StravaConnection::query()->active()->pluck('id')->all();
+
+    expect($ids)->toBe([$active->id]);
+});

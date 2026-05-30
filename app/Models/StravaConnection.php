@@ -9,6 +9,7 @@ use Database\Factories\StravaConnectionFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Override;
@@ -21,6 +22,7 @@ use Override;
  * @property string $refresh_token
  * @property Carbon $token_expires_at
  * @property string $scopes
+ * @property Carbon|null $revoked_at
  * @property-read User $user
  */
 #[Fillable([
@@ -30,6 +32,7 @@ use Override;
     'refresh_token',
     'token_expires_at',
     'scopes',
+    'revoked_at',
 ])]
 #[Hidden(['access_token', 'refresh_token'])]
 class StravaConnection extends Model
@@ -46,6 +49,29 @@ class StravaConnection extends Model
     }
 
     /**
+     * @param  Builder<StravaConnection>  $query
+     * @return Builder<StravaConnection>
+     */
+    public function scopeActive(Builder $query): Builder
+    {
+        return $query->whereNull('revoked_at');
+    }
+
+    public function isRevoked(): bool
+    {
+        return $this->revoked_at !== null;
+    }
+
+    public function markRevoked(): void
+    {
+        if ($this->revoked_at !== null) {
+            return;
+        }
+
+        $this->update(['revoked_at' => Carbon::now()]);
+    }
+
+    /**
      * @return array<string, string>
      */
     #[Override]
@@ -56,6 +82,7 @@ class StravaConnection extends Model
             'access_token' => 'encrypted',
             'refresh_token' => 'encrypted',
             'token_expires_at' => 'datetime',
+            'revoked_at' => 'datetime',
         ];
     }
 }

@@ -6,6 +6,7 @@ namespace App\Services\Strava;
 
 use App\Models\Activity;
 use App\Models\StravaConnection;
+use Carbon\CarbonImmutable;
 
 class ActivityFetcher
 {
@@ -23,9 +24,13 @@ class ActivityFetcher
      * activity (everything older is assumed synced) and returns the new ids
      * sorted oldest-first so the caller can ingest in chronological order.
      *
+     * When `$since` is given, the walk also stops at the first activity that
+     * started on or before it — bounding a first-connect backfill to a recent
+     * window instead of pulling an athlete's entire history.
+     *
      * @return list<int>
      */
-    public function fetchNewExternalIds(StravaConnection $connection): array
+    public function fetchNewExternalIds(StravaConnection $connection, ?CarbonImmutable $since = null): array
     {
         $existing = Activity::query()
             ->where('user_id', $connection->user_id)
@@ -49,14 +54,19 @@ class ActivityFetcher
                 break;
             }
 
-            $hitKnown = false;
+            $stop = false;
             foreach ($items as $item) {
                 $id = (int) ($item['id'] ?? 0);
                 if ($id <= 0) {
                     continue;
                 }
                 if (isset($existingSet[$id])) {
-                    $hitKnown = true;
+                    $stop = true;
+
+                    break;
+                }
+                if ($since !== null && $this->startedOnOrBefore($item, $since)) {
+                    $stop = true;
 
                     break;
                 }
@@ -66,7 +76,7 @@ class ActivityFetcher
                 $newIds[] = $id;
             }
 
-            if ($hitKnown || count($items) < self::PER_PAGE) {
+            if ($stop || count($items) < self::PER_PAGE) {
                 break;
             }
             $page++;
@@ -76,6 +86,19 @@ class ActivityFetcher
         sort($newIds);
 
         return $newIds;
+    }
+
+    /**
+     * @param  array<string, mixed>  $item
+     */
+    private function startedOnOrBefore(array $item, CarbonImmutable $since): bool
+    {
+        $start = $item['start_date'] ?? null;
+        if (! is_string($start) || $start === '') {
+            return false;
+        }
+
+        return CarbonImmutable::parse($start)->lessThanOrEqualTo($since);
     }
 
     /**
