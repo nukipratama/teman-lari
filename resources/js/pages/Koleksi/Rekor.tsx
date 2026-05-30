@@ -1,5 +1,6 @@
-import type { ReactNode } from 'react';
+import { type ReactNode, useState } from 'react';
 import { Head, Link } from '@inertiajs/react';
+import { toggleButtonVariants } from '@/lib/variants';
 import AppShell from '@/layouts/AppShell';
 import Card from '@/components/ui/Card';
 import Chip from '@/components/ui/Chip';
@@ -47,8 +48,18 @@ interface ProgressionSeries {
 interface RekorProps {
     personalRecords: ExtendedPR[];
     featuredExtras?: FeaturedExtras | null;
-    progressionSeries?: ProgressionSeries | null;
+    progressionByCategory?: Record<string, ProgressionSeries> | null;
+    progressionDefault?: string | null;
 }
+
+// Order + short labels for the progression distance selector.
+const PROGRESSION_TABS = ['5km', '10km', 'half_marathon', 'marathon'] as const;
+const PROGRESSION_TAB_LABEL: Record<(typeof PROGRESSION_TABS)[number], string> = {
+    '5km': '5K',
+    '10km': '10K',
+    half_marathon: 'HM',
+    marathon: 'FM',
+};
 
 const DISTANCE_CATEGORIES = ['1km', '5km', '10km', '15km', 'half_marathon', 'marathon'] as const;
 
@@ -64,7 +75,8 @@ const DISTANCE_ORDER: Record<(typeof DISTANCE_CATEGORIES)[number], number> = {
 export default function KoleksiRekor({
     personalRecords,
     featuredExtras = null,
-    progressionSeries = null,
+    progressionByCategory = null,
+    progressionDefault = null,
 }: Readonly<RekorProps>) {
     const distancePRs = personalRecords
         .filter((p) => DISTANCE_CATEGORIES.includes(p.category as (typeof DISTANCE_CATEGORIES)[number]))
@@ -98,8 +110,11 @@ export default function KoleksiRekor({
 
                 {pacePRs.length > 0 && <PaceTicker records={pacePRs} />}
 
-                {progressionSeries && featured && (
-                    <ProgressionSection series={progressionSeries} currentSec={featured.value_sec} />
+                {progressionByCategory && Object.keys(progressionByCategory).length > 0 && (
+                    <ProgressionSection
+                        byCategory={progressionByCategory}
+                        defaultCategory={progressionDefault}
+                    />
                 )}
 
                 <TemariFooter />
@@ -208,40 +223,66 @@ function HeroScoreboard({
 }
 
 function ProgressionSection({
-    series,
-    currentSec,
-}: Readonly<{ series: ProgressionSeries; currentSec: number }>) {
+    byCategory,
+    defaultCategory,
+}: Readonly<{ byCategory: Record<string, ProgressionSeries>; defaultCategory: string | null }>) {
+    const tabs = PROGRESSION_TABS.filter((c) => byCategory[c]);
+    const initial =
+        defaultCategory && byCategory[defaultCategory] ? defaultCategory : (tabs.at(-1) ?? tabs[0]);
+    const [selected, setSelected] = useState<string>(initial);
+    const series = byCategory[selected] ?? byCategory[tabs[0]];
+
     const times = series.times_sec.filter((t): t is number => t != null);
-    const worst = times.length > 0 ? Math.max(...times) : currentSec;
-    const best = times.length > 0 ? Math.min(...times) : currentSec;
+    const worst = times.length > 0 ? Math.max(...times) : 0;
+    const best = times.length > 0 ? Math.min(...times) : 0;
     const delta = Math.max(0, worst - best);
     const label = PR_CATEGORY_LABELS[series.category] ?? series.category;
 
     return (
-        <Card as="section" padding="lg" className="mt-8 grid items-center gap-7 lg:grid-cols-[1fr_1.4fr]">
-            <div>
-                <SectionLabel>Progres · {label} terbaikmu</SectionLabel>
-                <p className="font-display text-headline-sm text-ink">
-                    Dari <em className="italic">{formatDurationHMS(worst)}</em> ke{' '}
-                    <em className="italic text-horizon-deep">{formatDurationHMS(best)}</em>
-                </p>
-                {delta > 0 && (
-                    <p className="mt-3 font-display text-sm italic leading-relaxed text-ink-2">
-                        “Dalam {series.weeks.length} minggu, kamu motong {formatDurationHMS(delta)}.”
-                    </p>
-                )}
-                <div className="mt-3 flex flex-wrap gap-1.5">
-                    <Chip>−{formatDurationHMS(delta)} total</Chip>
-                    {series.goal_sec != null && (
-                        <Chip tone="horizon">Goal: Sub-{formatDurationHMS(series.goal_sec)}</Chip>
-                    )}
+        <Card as="section" padding="lg" className="mt-8">
+            {tabs.length > 1 && (
+                <div className="mb-6 flex flex-wrap items-center gap-2" role="tablist" aria-label="Pilih jarak">
+                    <span className="mr-1 font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3">Jarak</span>
+                    {tabs.map((c) => (
+                        <button
+                            key={c}
+                            type="button"
+                            role="tab"
+                            aria-selected={c === selected}
+                            onClick={() => setSelected(c)}
+                            className={toggleButtonVariants({ selected: c === selected, size: 'sm' })}
+                        >
+                            {PROGRESSION_TAB_LABEL[c]}
+                        </button>
+                    ))}
                 </div>
+            )}
+            <div className="grid items-center gap-7 lg:grid-cols-[1fr_1.4fr]">
+                <div>
+                    <SectionLabel>Progres · {label} terbaikmu</SectionLabel>
+                    <p className="font-display text-headline-sm text-ink">
+                        Dari <em className="italic">{formatDurationHMS(worst)}</em> ke{' '}
+                        <em className="italic text-horizon-deep">{formatDurationHMS(best)}</em>
+                    </p>
+                    {delta > 0 && (
+                        <p className="mt-3 font-display text-sm italic leading-relaxed text-ink-2">
+                            “Dalam {series.weeks.length} minggu, kamu motong {formatDurationHMS(delta)}.”
+                        </p>
+                    )}
+                    <div className="mt-3 flex flex-wrap gap-1.5">
+                        <Chip>−{formatDurationHMS(delta)} total</Chip>
+                        {series.goal_sec != null && (
+                            <Chip tone="horizon">Goal: Sub-{formatDurationHMS(series.goal_sec)}</Chip>
+                        )}
+                    </div>
+                </div>
+                <ProgressionChart
+                    key={selected}
+                    weeks={series.weeks}
+                    timesSec={series.times_sec}
+                    goalSec={series.goal_sec}
+                />
             </div>
-            <ProgressionChart
-                weeks={series.weeks}
-                timesSec={series.times_sec}
-                goalSec={series.goal_sec}
-            />
         </Card>
     );
 }

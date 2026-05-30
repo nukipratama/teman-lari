@@ -62,7 +62,7 @@ describe('Koleksi/Rekor', () => {
         expect(screen.getByText(/Senayan/)).toBeInTheDocument();
     });
 
-    it('renders progression chart when progressionSeries has at least 2 weeks', () => {
+    it('renders progression chart when a category series has weeks', () => {
         const series = {
             category: '5km',
             weeks: ['2026-04-13', '2026-04-20', '2026-04-27'],
@@ -73,10 +73,30 @@ describe('Koleksi/Rekor', () => {
             <KoleksiRekor
                 personalRecords={[pr('5km', 1751)]}
                 featuredExtras={featuredExtras}
-                progressionSeries={series}
+                progressionByCategory={{ '5km': series }}
+                progressionDefault="5km"
             />,
         );
         expect(screen.getByTestId('progression-chart')).toBeInTheDocument();
+    });
+
+    it('renders a distance selector when multiple category series exist', () => {
+        const mk = (category: string) => ({
+            category,
+            weeks: ['2026-04-13', '2026-04-20'],
+            times_sec: [1800, 1751],
+            goal_sec: 1740,
+        });
+        render(
+            <KoleksiRekor
+                personalRecords={[pr('5km', 1751, 1), pr('marathon', 12000, 2)]}
+                featuredExtras={featuredExtras}
+                progressionByCategory={{ '5km': mk('5km'), marathon: mk('marathon') }}
+                progressionDefault="marathon"
+            />,
+        );
+        expect(screen.getByRole('tab', { name: 'FM' })).toBeInTheDocument();
+        expect(screen.getByRole('tab', { name: '5K' })).toBeInTheDocument();
     });
 
     it('renders the trophy wall for distance PRs', () => {
