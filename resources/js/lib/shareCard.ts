@@ -258,6 +258,21 @@ function drawTextBlock(
     return lines.length * lineHeight;
 }
 
+/** Bottom-left mono date stamp, shared by the poster and angka templates. */
+function drawDateFooter(d: DrawCtx): void {
+    const { ctx, h, cfg, pal } = d;
+    if (!cfg.kartu.date) {
+        return;
+    }
+    ctx.font = '500 30px "JetBrains Mono"';
+    ctx.letterSpacing = '2px';
+    ctx.fillStyle = pal.meta;
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'alphabetic';
+    ctx.fillText(cfg.kartu.date.replace('\n', ' · '), PAD, h - PAD);
+    ctx.letterSpacing = '0px';
+}
+
 function drawPoster(d: DrawCtx): void {
     const { ctx, w, h, cfg, pal, bunny, statItems } = d;
     paintGlow(ctx, w / 2, h * 0.44, w * 0.5);
@@ -280,15 +295,7 @@ function drawPoster(d: DrawCtx): void {
         ctx.stroke();
         drawStatRows(d, PAD, footerTop + 30, w - PAD * 2, items);
     }
-    if (cfg.kartu.date) {
-        ctx.font = '500 30px "JetBrains Mono"';
-        ctx.letterSpacing = '2px';
-        ctx.fillStyle = pal.meta;
-        ctx.textAlign = 'left';
-        ctx.textBaseline = 'alphabetic';
-        ctx.fillText(cfg.kartu.date.replace('\n', ' · '), PAD, h - PAD);
-        ctx.letterSpacing = '0px';
-    }
+    drawDateFooter(d);
 
     // Hero (name + quote), optically centered between header and footer.
     const heroTop = PAD + 70;
@@ -327,15 +334,7 @@ function drawAngka(d: DrawCtx): void {
     drawBrand(ctx, w - PAD, PAD, pal.isDark, bunny);
     drawRarityFlag(ctx, PAD, PAD, cfg.kartu.rarity);
 
-    if (cfg.kartu.date) {
-        ctx.font = '500 30px "JetBrains Mono"';
-        ctx.letterSpacing = '2px';
-        ctx.fillStyle = pal.meta;
-        ctx.textAlign = 'left';
-        ctx.textBaseline = 'alphabetic';
-        ctx.fillText(cfg.kartu.date.replace('\n', ' · '), PAD, h - PAD);
-        ctx.letterSpacing = '0px';
-    }
+    drawDateFooter(d);
 
     const centerY = h * 0.46;
     ctx.textAlign = 'left';

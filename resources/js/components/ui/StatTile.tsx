@@ -42,8 +42,8 @@ export default function StatTile({
             </div>
             <div
                 className={cn(
-                    'font-mono font-bold leading-none tracking-[-0.02em] tabular-nums',
-                    size === 'sm' ? 'text-2xl' : 'text-stat',
+                    'leading-none',
+                    size === 'sm' ? 'text-stat-sm' : 'text-stat',
                     valueClass,
                 )}
             >
