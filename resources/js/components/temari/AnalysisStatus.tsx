@@ -140,7 +140,7 @@ export default function AnalysisStatus({
 
     return (
         <div className="flex flex-col gap-1.5">
-            <span className={`inline-flex items-center gap-1.5 text-xs ${onSky ? 'text-cream/60' : 'text-ink-2'}`}>
+            <span className={`inline-flex items-center gap-1.5 text-xs ${onSky ? 'text-ink-on-sky' : 'text-ink-2'}`}>
                 <Icon icon="mdi:sparkles-outline" aria-hidden />
                 <span>Belum dibaca Temari.</span>
             </span>

@@ -27,7 +27,7 @@ export default function KpiTile({ label, value, sub, tone = 'neutral', explainer
                 <span>{label}</span>
                 {explainerKey && <MetricExplainer metricKey={explainerKey} size="xs" />}
             </div>
-            <div className={cn('mt-1.5 text-2xl font-black tabular-nums sm:mt-2 sm:text-3xl', TONE_CLASS[tone])}>{value}</div>
+            <div className={cn('mt-1.5 font-mono text-2xl font-bold tabular-nums sm:mt-2 sm:text-3xl', TONE_CLASS[tone])}>{value}</div>
             {sub != null && (
                 <div className="mt-1 text-xs text-ink-3">{sub}</div>
             )}

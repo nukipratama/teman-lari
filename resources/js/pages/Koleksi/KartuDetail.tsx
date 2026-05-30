@@ -165,7 +165,7 @@ export default function KartuDetail({
                     <div className="flex flex-col gap-6">
                         {/* Title block */}
                         <div>
-                            <div className="mb-3 font-mono text-[10px] font-bold uppercase tracking-[0.18em] text-horizon-deep">
+                            <div className="mb-3 font-mono text-[11px] font-bold uppercase tracking-[0.18em] text-horizon-deep">
                                 ★ {rarityLabel} · {totalForRarity} dari koleksimu
                             </div>
                             <h1 className="font-display text-display-lg leading-[0.92] tracking-[-0.025em] text-ink">
@@ -221,13 +221,13 @@ export default function KartuDetail({
                                 <Card padding="md" className="flex items-center gap-4">
                                     <Temari pose="proud" size={48} animate={false} />
                                     <div className="min-w-0 flex-1">
-                                        <div className="mb-0.5 font-mono text-[9px] font-bold uppercase tracking-[0.14em] text-ink-3">
+                                        <div className="mb-0.5 font-mono text-[11px] font-bold uppercase tracking-[0.14em] text-ink-3">
                                             Dari lari
                                         </div>
                                         <div className="font-display text-xl leading-tight tracking-[-0.005em] text-ink">
                                             {detail.name ?? 'Lari'}
                                         </div>
-                                        <div className="mt-1 font-mono text-[10px] uppercase tracking-[0.1em] text-ink-3">
+                                        <div className="mt-1 font-mono text-[11px] uppercase tracking-[0.1em] text-ink-3">
                                             {formatIdDate(detail.start_date_local, 'long')}
                                         </div>
                                     </div>
@@ -260,7 +260,7 @@ export default function KartuDetail({
                                                 <div className="font-display text-[17px] leading-tight text-ink">
                                                     {c.special_move}
                                                 </div>
-                                                <div className="mt-1.5 font-mono text-[9px] uppercase tracking-[0.1em] text-ink-3">
+                                                <div className="mt-1.5 font-mono text-[11px] uppercase tracking-[0.1em] text-ink-3">
                                                     {rarityLabel} ·{' '}
                                                     {formatIdDate(
                                                         c.detail?.start_date_local ?? null,

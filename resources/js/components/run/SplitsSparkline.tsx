@@ -13,7 +13,7 @@ export default function SplitsSparkline({ paceSec, className }: Readonly<SplitsS
         return (
             <div
                 className={cn(
-                    'rounded-xl border border-cream/[0.12] bg-sky/40 px-5 py-4 font-display text-xs italic text-cream/55',
+                    'rounded-xl border border-cream/[0.12] bg-sky/40 px-5 py-4 font-display text-xs italic text-ink-on-sky',
                     className,
                 )}
             >
@@ -32,7 +32,7 @@ export default function SplitsSparkline({ paceSec, className }: Readonly<SplitsS
     return (
         <div className={cn('rounded-xl border border-cream/[0.12] bg-sky/40 px-5 py-4 backdrop-blur', className)}>
             <header className="mb-3 flex items-baseline justify-between gap-3">
-                <div className="font-mono text-[10px] uppercase tracking-[0.14em] text-cream/60">
+                <div className="font-mono text-[11px] uppercase tracking-[0.14em] text-ink-on-sky">
                     Splits · pace per km
                 </div>
                 <div className="font-display text-[13px] italic text-horizon">
@@ -56,7 +56,7 @@ export default function SplitsSparkline({ paceSec, className }: Readonly<SplitsS
                                 aria-label={`Km ${i + 1}: ${formatPace(p)}`}
                                 title={`Km ${i + 1} · ${formatPace(p)}/km`}
                             />
-                            <div className="font-mono text-[9px] tabular-nums text-cream/50">{i + 1}</div>
+                            <div className="font-mono text-[11px] tabular-nums text-ink-on-sky">{i + 1}</div>
                         </div>
                     );
                 })}

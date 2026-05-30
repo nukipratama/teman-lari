@@ -199,7 +199,7 @@ function RarityFilter({
 }: Readonly<{ selected: string | null; counts: Record<Rarity, number> }>) {
     return (
         <nav aria-label="Filter kartu" className="mt-8 flex flex-wrap items-center gap-2">
-            <span className="mr-1.5 font-mono text-[10px] uppercase tracking-[0.14em] text-ink-3">
+            <span className="mr-1.5 font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3">
                 Tingkat
             </span>
             <FilterPill href="/kartu" label="Semua" active={selected === null} dot={null} />

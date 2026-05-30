@@ -343,7 +343,7 @@ function MetricChip({
                     : 'bg-cream-deep/60 text-ink-2',
             )}
         >
-            <span className="font-mono text-[10px] uppercase tracking-wider text-ink-3">{label}</span>
+            <span className="font-mono text-[11px] uppercase tracking-wider text-ink-3">{label}</span>
             <span className="tabular-nums">{value}</span>
         </span>
     );

@@ -85,7 +85,7 @@ export default function RiwayatFilter<V extends string>({
                 <Icon icon="mdi:tune-variant" width={14} height={14} aria-hidden />
                 <span>{summary}</span>
                 {totalActive > 0 && (
-                    <span className="inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-sky px-1 font-mono text-[10px] font-bold text-cream">
+                    <span className="inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-sky px-1 font-mono text-[11px] font-bold text-cream">
                         {totalActive}
                     </span>
                 )}
@@ -104,7 +104,7 @@ export default function RiwayatFilter<V extends string>({
                 >
                     {(totalActive > 0 || onReset) && (
                         <div className="flex items-center justify-between border-b border-line/60 px-3 py-2">
-                            <span className="font-mono text-[10px] font-semibold uppercase tracking-[0.14em] text-ink-3">
+                            <span className="font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-ink-3">
                                 Filter
                             </span>
                             {totalActive > 0 && onReset && (
@@ -129,7 +129,7 @@ export default function RiwayatFilter<V extends string>({
 function RangeSectionView<V extends string>({ section }: Readonly<{ section: RangeSection<V> }>) {
     return (
         <div className="border-b border-line/60 px-3 py-3 last:border-b-0">
-            <div className="mb-2 font-mono text-[10px] font-semibold uppercase tracking-[0.14em] text-ink-3">
+            <div className="mb-2 font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-ink-3">
                 Rentang waktu
             </div>
             <div className="flex flex-col gap-1">
@@ -162,7 +162,7 @@ function RangeSectionView<V extends string>({ section }: Readonly<{ section: Ran
 function MoodSectionView({ section }: Readonly<{ section: MoodSection }>) {
     return (
         <div className="border-b border-line/60 px-3 py-3 last:border-b-0">
-            <div className="mb-2 font-mono text-[10px] font-semibold uppercase tracking-[0.14em] text-ink-3">
+            <div className="mb-2 font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-ink-3">
                 Mood
             </div>
             <div className="grid grid-cols-2 gap-1">

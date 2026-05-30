@@ -78,7 +78,7 @@ export default function Kartu({
             <span
                 aria-hidden
                 className={cn(
-                    'absolute right-0 top-0 rounded-bl-lg px-2.5 py-1 font-mono text-[10px] font-bold uppercase tracking-[0.12em]',
+                    'absolute right-0 top-0 rounded-bl-lg px-2.5 py-1 font-mono text-[11px] font-bold uppercase tracking-[0.12em]',
                     RARITY_FLAG_BG[rarity],
                 )}
             >
@@ -126,7 +126,7 @@ function Stat({ label, value, sizeClass }: Readonly<{ label: string; value: stri
             <div className={cn('font-sans font-bold leading-none tabular-nums text-ink', sizeClass)}>
                 {value}
             </div>
-            <div className="mt-1 font-mono text-[9px] uppercase tracking-[0.14em] text-ink-3">
+            <div className="mt-1 font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3">
                 {label}
             </div>
         </div>

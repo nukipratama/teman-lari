@@ -173,7 +173,7 @@ export default function ShareIgModal({ kartu, onClose }: Readonly<ShareIgModalPr
 
                             {/* Rarity */}
                             <div
-                                className="relative mb-2 whitespace-nowrap font-mono text-[10px] font-bold uppercase tracking-[0.16em]"
+                                className="relative mb-2 whitespace-nowrap font-mono text-[11px] font-bold uppercase tracking-[0.16em]"
                                 style={{ color: 'var(--color-horizon)' }}
                             >
                                 ★ Kartu {RARITY_LABELS[kartu.rarity]}
@@ -285,7 +285,7 @@ export default function ShareIgModal({ kartu, onClose }: Readonly<ShareIgModalPr
                                 <Icon icon="mdi:close" width={16} height={16} />
                             </button>
                             <div className="flex-1 text-center">
-                                <div className="font-mono text-[9px] uppercase tracking-[0.14em] text-ink-3">
+                                <div className="font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3">
                                     Bagikan kartu
                                 </div>
                                 <div className="font-display text-xl tracking-tight text-ink">

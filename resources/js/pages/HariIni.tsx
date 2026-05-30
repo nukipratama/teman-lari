@@ -307,7 +307,7 @@ function VitalChip({
             <div className={cn('font-sans text-[22px] font-bold leading-none tabular-nums tracking-[-0.02em]', valueClass)}>
                 {value}
             </div>
-            {sub !== '' && <div className={cn('mt-1 font-display text-xs italic', onSky ? 'text-cream/65' : 'text-ink-3')}>{sub}</div>}
+            {sub !== '' && <div className={cn('mt-1 font-display text-xs italic', onSky ? 'text-ink-on-sky' : 'text-ink-3')}>{sub}</div>}
         </div>
     );
 }
@@ -480,7 +480,7 @@ function LastLariCard({ run, pose, note }: Readonly<{ run: ActivityDetail; pose:
                         </div>
                     )}
                     {(locationShort || weatherLabel) && (
-                        <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 font-mono text-[10px] uppercase tracking-[0.1em] text-ink-3">
+                        <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 font-mono text-[11px] uppercase tracking-[0.1em] text-ink-3">
                             {locationShort && (
                                 <span className="inline-flex items-center gap-1">
                                     <Icon icon="mdi:map-marker-outline" width={11} height={11} aria-hidden />
@@ -578,7 +578,7 @@ function KondisiCard({
 function Stat({ l, v }: Readonly<{ l: string; v: string }>) {
     return (
         <div>
-            <div className="mb-1.5 font-mono text-[10px] font-bold uppercase tracking-[0.14em] text-ink-3">{l}</div>
+            <div className="mb-1.5 font-mono text-[11px] font-bold uppercase tracking-[0.14em] text-ink-3">{l}</div>
             <div className="font-sans text-3xl font-black leading-none tabular-nums tracking-tight text-ink">{v}</div>
         </div>
     );

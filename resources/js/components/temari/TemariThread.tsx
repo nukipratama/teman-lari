@@ -71,7 +71,7 @@ export default function TemariThread({
                             Catatan Temari
                         </span>
                         {moodLabel && (
-                            <span className="rounded-full bg-surface-sunken px-2 py-0.5 font-mono text-[10px] font-semibold uppercase tracking-wider text-ink-3">
+                            <span className="rounded-full bg-surface-sunken px-2 py-0.5 font-mono text-[11px] font-semibold uppercase tracking-wider text-ink-3">
                                 {moodLabel}
                             </span>
                         )}

@@ -46,20 +46,20 @@ export default function FitnessChart({ data }: Readonly<FitnessChartProps>) {
                 <h3 className="font-mono text-xs font-semibold uppercase tracking-wider text-ink-3">
                     Fitness &amp; Form
                 </h3>
-                <span className="text-[10px] text-ink-3">hover untuk detail</span>
+                <span className="text-[11px] text-ink-3">hover untuk detail</span>
             </div>
 
             <dl className="mt-3 grid grid-cols-3 gap-3">
                 {SERIES.map((s) => (
                     <div key={s.key} className="rounded-xl bg-line/20 p-2">
-                        <dt className="flex items-center gap-1.5 font-mono text-[10px] font-semibold uppercase tracking-wider text-ink-3">
+                        <dt className="flex items-center gap-1.5 font-mono text-[11px] font-semibold uppercase tracking-wider text-ink-3">
                             <span aria-hidden className="inline-block h-2 w-2 rounded-full" style={{ background: s.color }} />
                             {s.label}
                         </dt>
-                        <dd className="mt-0.5 text-base font-bold tabular-nums text-ink">
+                        <dd className="mt-0.5 font-mono text-base font-bold tabular-nums text-ink">
                             {latest[s.key as keyof typeof latest]?.toFixed(1) ?? '—'}
                         </dd>
-                        <dd className="text-[10px] text-ink-3">{s.desc}</dd>
+                        <dd className="text-[11px] text-ink-2">{s.desc}</dd>
                     </div>
                 ))}
             </dl>

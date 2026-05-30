@@ -32,7 +32,7 @@ export default function EmptyRunsState() {
             <div className="flex flex-col items-center gap-5 text-center">
                 <Temari pose="reading" size={140} />
                 <div>
-                    <div className="mb-3 font-mono text-[10px] font-bold uppercase tracking-[0.18em] text-horizon">
+                    <div className="mb-3 font-mono text-[11px] font-bold uppercase tracking-[0.18em] text-horizon">
                         ★ Lagi nungguin
                     </div>
                     <h2 className="font-display text-display-sm text-ink">

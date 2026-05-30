@@ -59,7 +59,7 @@ export default function VolumeChart({ data }: Readonly<VolumeChartProps>) {
                 <h3 className="font-mono text-xs font-semibold uppercase tracking-wider text-ink-3">
                     Weekly Volume
                 </h3>
-                <span className="text-[10px] text-ink-3">hover untuk detail</span>
+                <span className="text-[11px] text-ink-3">hover untuk detail</span>
             </div>
 
             <dl className="mt-3 grid grid-cols-2 gap-3">
@@ -114,11 +114,11 @@ export default function VolumeChart({ data }: Readonly<VolumeChartProps>) {
 function Stat({ label, value, desc }: Readonly<{ label: string; value: string; desc: string }>) {
     return (
         <div className="rounded-xl bg-line/20 p-2">
-            <dt className="font-mono text-[10px] font-semibold uppercase tracking-wider text-ink-3">
+            <dt className="font-mono text-[11px] font-semibold uppercase tracking-wider text-ink-3">
                 {label}
             </dt>
-            <dd className="mt-0.5 text-base font-bold tabular-nums text-ink">{value}</dd>
-            <dd className="text-[10px] text-ink-3">{desc}</dd>
+            <dd className="mt-0.5 font-mono text-base font-bold tabular-nums text-ink">{value}</dd>
+            <dd className="text-[11px] text-ink-2">{desc}</dd>
         </div>
     );
 }

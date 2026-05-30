@@ -249,7 +249,7 @@ function ProgressionSection({
 function Caption({ label, value }: Readonly<{ label: string; value: ReactNode }>) {
     return (
         <div>
-            <div className="mb-1.5 font-mono text-[9px] uppercase tracking-[0.14em] text-cream/55">
+            <div className="mb-1.5 font-mono text-[11px] uppercase tracking-[0.14em] text-ink-on-sky">
                 {label}
             </div>
             <div className="font-sans text-[13px] font-medium leading-tight text-cream">{value}</div>
@@ -326,7 +326,7 @@ function PaceCell({ pr }: Readonly<{ pr: ExtendedPR }>) {
     const runName = pr.activity?.detail?.name ?? 'Lari';
     return (
         <div className="flex flex-col gap-2 rounded-xl bg-sky/40 px-5 py-5">
-            <div className="inline-flex items-center gap-1.5 font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-rarity-rare">
+            <div className="inline-flex items-center gap-1.5 font-mono text-[11px] font-bold uppercase tracking-[0.16em] text-rarity-rare">
                 <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-rarity-rare" style={{ boxShadow: '0 0 8px var(--color-rarity-rare)' }} />
                 {category}
             </div>
@@ -335,7 +335,7 @@ function PaceCell({ pr }: Readonly<{ pr: ExtendedPR }>) {
             </div>
             <div className="border-t border-cream/10 pt-2.5">
                 <div className="font-sans text-xs text-cream/85">{runName}</div>
-                <div className="font-mono text-[10px] uppercase tracking-[0.12em] text-cream/50">
+                <div className="font-mono text-[11px] uppercase tracking-[0.12em] text-ink-on-sky">
                     {formatIdDate(pr.set_at, 'short')}
                 </div>
             </div>

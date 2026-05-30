@@ -99,7 +99,7 @@ export default function KoleksiAksesori({ items, equipped }: Readonly<AksesoriPr
                             <ul className="grid gap-2 sm:grid-cols-2">
                                 {SLOT_ORDER.map((slot) => (
                                     <li key={slot} className="flex items-center justify-between rounded-xl bg-cream/[0.06] px-4 py-3">
-                                        <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-cream/55">
+                                        <span className="font-mono text-[11px] uppercase tracking-[0.14em] text-ink-on-sky">
                                             {SLOT_LABEL[slot]}
                                         </span>
                                         <span className="font-display text-base italic text-cream">
