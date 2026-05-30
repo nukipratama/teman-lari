@@ -8,6 +8,7 @@ use App\Jobs\Strava\IngestActivityJob;
 use App\Models\Activity;
 use App\Models\User;
 use App\Services\Strava\ActivityFetcher;
+use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -20,10 +21,10 @@ class SyncOrchestrator
     {
     }
 
-    public function syncUser(User $user): int
+    public function syncUser(User $user, ?CarbonImmutable $since = null): int
     {
         $connection = $user->stravaConnection;
-        if ($connection === null) {
+        if ($connection === null || $connection->isRevoked()) {
             return 0;
         }
 
@@ -35,7 +36,7 @@ class SyncOrchestrator
         }
 
         try {
-            $newIds = $this->fetcher->fetchNewExternalIds($connection);
+            $newIds = $this->fetcher->fetchNewExternalIds($connection, $since);
             if ($newIds === []) {
                 return 0;
             }
@@ -60,6 +61,39 @@ class SyncOrchestrator
         } finally {
             $lock->release();
         }
+    }
+
+    /**
+     * Ingest a single activity by its Strava external id (webhook push path).
+     * Inserts the row if it is new, then dispatches exactly one IngestActivityJob.
+     * Idempotent: an already-stored activity reuses its row and re-ingests.
+     */
+    public function syncSingleActivity(User $user, int $externalId): bool
+    {
+        $connection = $user->stravaConnection;
+        if ($connection === null || $connection->isRevoked()) {
+            return false;
+        }
+
+        $this->insertActivityRows($user->id, [$externalId]);
+
+        $activity = Activity::query()
+            ->where('user_id', $user->id)
+            ->where('strava_external_id', $externalId)
+            ->first();
+
+        if ($activity === null) {
+            return false;
+        }
+
+        IngestActivityJob::dispatch($activity->id);
+
+        Log::info('strava-sync queued single activity from webhook', [
+            'user_id' => $user->id,
+            'strava_external_id' => $externalId,
+        ]);
+
+        return true;
     }
 
     /**

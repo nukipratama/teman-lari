@@ -10,6 +10,7 @@ use App\Models\ActivityDetail;
 use App\Models\ActivityStream;
 use App\Models\StravaConnection;
 use App\Services\Run\Ingest\ActivityPipeline;
+use App\Services\Strava\Exceptions\StravaRateLimitedException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Http;
@@ -104,6 +105,52 @@ it('marks analyzed_at after max attempts so we stop hammering Strava', function 
 
     expect($activity->fresh()->detail_fail_count)->toBe(5)
         ->and($activity->fresh()->analyzed_at)->not->toBeNull();
+});
+
+it('stops immediately on a 404 detail (deleted activity), no further retries', function (): void {
+    $activity = makeActivityWithConnection();
+
+    Http::fake([
+        'strava.com/api/v3/activities/999' => Http::response(['error' => 'Record Not Found'], 404),
+    ]);
+
+    app(ActivityPipeline::class)->ingest($activity);
+
+    // analyzed_at stamped so the row is treated as handled and never refetched,
+    // even though we are nowhere near DETAIL_FETCH_MAX_ATTEMPTS.
+    expect($activity->fresh()->detail_fail_count)->toBe(1)
+        ->and($activity->fresh()->analyzed_at)->not->toBeNull();
+});
+
+it('keeps retrying on a 5xx detail (transient)', function (): void {
+    $activity = makeActivityWithConnection();
+
+    Http::fake([
+        'strava.com/api/v3/activities/999' => Http::response(['error' => 'down'], 503),
+    ]);
+
+    app(ActivityPipeline::class)->ingest($activity);
+
+    // 5xx is transient: increment but leave analyzed_at null so we retry.
+    expect($activity->fresh()->detail_fail_count)->toBe(1)
+        ->and($activity->fresh()->analyzed_at)->toBeNull();
+});
+
+it('propagates a rate-limit exception so the job can re-queue with backoff', function (): void {
+    $activity = makeActivityWithConnection();
+
+    // Exhaust the 15-minute bucket so the next client call throws before any HTTP.
+    for ($i = 0; $i < 200; $i++) {
+        RateLimiter::hit('strava-api:15min', 15 * 60);
+    }
+    Http::fake();
+
+    expect(fn () => app(ActivityPipeline::class)->ingest($activity))
+        ->toThrow(StravaRateLimitedException::class);
+
+    // The rate-limited fetch must NOT count as a detail failure.
+    expect($activity->fresh()->detail_fail_count)->toBe(0)
+        ->and($activity->fresh()->analyzed_at)->toBeNull();
 });
 
 it('still stores detail when streams 404 (best-effort)', function (): void {

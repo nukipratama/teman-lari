@@ -39,6 +39,12 @@ return [
         'client_id' => env('STRAVA_CLIENT_ID'),
         'client_secret' => env('STRAVA_CLIENT_SECRET'),
         'redirect' => null,
+        // Shared secret echoed back to Strava during the webhook subscription
+        // handshake (GET /strava/webhook?hub.verify_token=...).
+        'webhook_verify_token' => env('STRAVA_WEBHOOK_VERIFY_TOKEN'),
+        // Strava's id for the active push subscription. Set after creating it
+        // via `php artisan strava:webhook-subscribe --action=create`.
+        'webhook_subscription_id' => env('STRAVA_WEBHOOK_SUBSCRIPTION_ID'),
     ],
 
 ];

@@ -20,6 +20,12 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->web(append: [
             \App\Http\Middleware\HandleInertiaRequests::class,
         ]);
+
+        // Strava POSTs the webhook with no session/CSRF token; it is guarded by
+        // the verify token + athlete scoping in the controller instead.
+        $middleware->validateCsrfTokens(except: [
+            'strava/webhook',
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //

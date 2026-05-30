@@ -27,3 +27,9 @@ Artisan::command('dev:fresh {--force : Required outside the local environment}',
 
 // 05:00 local time: refresh trend caption for active users (last 7 days).
 Schedule::command('ai:daily-trend')->dailyAt('05:00');
+
+// Hourly fallback poll behind the Strava webhook: catches activities Strava
+// failed to push (delivery is best-effort). Ingest only — it leans on the
+// "already done" idempotency guards in AnalysisService / AnalyzeGroupJob, so it
+// never re-bills LLM narration for activities already analyzed.
+Schedule::command('strava:sync')->hourly()->withoutOverlapping();
