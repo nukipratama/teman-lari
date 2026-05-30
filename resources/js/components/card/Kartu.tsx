@@ -47,6 +47,14 @@ const SIZE_STAT_GAP: Record<NonNullable<KartuProps['size']>, string> = {
     xl: 'gap-9',
 };
 
+// Duration now renders as full words ("2 jam 30 menit"), so it gets a readable
+// prose size on its own line rather than the oversized tabular stat treatment.
+const SIZE_DURASI: Record<NonNullable<KartuProps['size']>, string> = {
+    md: 'text-sm',
+    lg: 'text-base',
+    xl: 'text-lg',
+};
+
 /**
  * Layout rule: header at the top, stats+tags pinned to the bottom via
  * `mt-auto`. When the grid stretches cards in a row to match the tallest
@@ -104,10 +112,19 @@ export default function Kartu({
                     </div>
                 )}
             </div>
-            <div className={cn('mt-auto flex items-baseline pt-5', SIZE_STAT_GAP[size])}>
-                <Stat label="KM" value={km} sizeClass={SIZE_STAT[size]} />
-                <Stat label="Durasi" value={durasi} sizeClass={SIZE_STAT[size]} />
-                <Stat label="TRIMP" value={trimp} sizeClass={SIZE_STAT[size]} />
+            <div className="mt-auto pt-5">
+                <div className={cn('flex items-baseline', SIZE_STAT_GAP[size])}>
+                    <Stat label="KM" value={km} sizeClass={SIZE_STAT[size]} />
+                    <Stat label="TRIMP" value={trimp} sizeClass={SIZE_STAT[size]} />
+                </div>
+                <div className="mt-3 flex items-baseline gap-2">
+                    <span className="font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3">
+                        Durasi
+                    </span>
+                    <span className={cn('font-sans font-semibold leading-tight text-ink', SIZE_DURASI[size])}>
+                        {durasi}
+                    </span>
+                </div>
             </div>
             {tags && tags.length > 0 && (
                 <div className="mt-3 flex flex-wrap gap-1.5">

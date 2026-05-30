@@ -131,15 +131,17 @@ export default function RunCard({ card, detail, className, size = 'normal' }: Re
                 </span>
             </header>
 
-            <div
-                className={cn(
-                    'relative grid grid-cols-3 gap-3 text-center',
-                    isHero ? 'mt-7' : 'mt-5',
-                )}
-            >
-                <Stat value={km} unit="km" size={size} />
-                <Stat value={duration} unit="durasi" size={size} />
-                <Stat value={trimp} unit="TRIMP" size={size} />
+            <div className={cn('relative', isHero ? 'mt-7' : 'mt-5')}>
+                <div className="grid grid-cols-2 gap-3 text-center">
+                    <Stat value={km} unit="km" size={size} />
+                    <Stat value={trimp} unit="TRIMP" size={size} />
+                </div>
+                <div className="mt-3 flex items-baseline justify-center gap-2">
+                    <span className="font-mono text-[11px] uppercase tracking-wide text-ink-3">durasi</span>
+                    <span className={cn('font-sans font-semibold leading-tight text-ink', isHero ? 'text-base' : 'text-sm')}>
+                        {duration}
+                    </span>
+                </div>
             </div>
 
             {card.badges && card.badges.length > 0 && (
