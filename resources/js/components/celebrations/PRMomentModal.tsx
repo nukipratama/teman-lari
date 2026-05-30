@@ -86,7 +86,11 @@ export default function PRMomentModal({ pr, onClose, onShare }: Readonly<PRMomen
                     {/* Big time */}
                     <div className="relative mb-5 text-center">
                         <div
-                            className="font-sans text-[clamp(72px,20vw,108px)] font-bold leading-[0.85] tracking-[-0.04em] tabular-nums"
+                            className={`font-sans font-bold leading-[0.85] tracking-[-0.04em] tabular-nums ${
+                                pr.timeDisplay.length > 5
+                                    ? 'text-[clamp(56px,18vw,84px)]'
+                                    : 'text-[clamp(72px,22vw,108px)]'
+                            }`}
                             style={{
                                 background:
                                     'linear-gradient(180deg, var(--color-cream), oklch(85% 0.10 50))',
