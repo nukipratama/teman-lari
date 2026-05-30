@@ -3,7 +3,6 @@ import { useRef, useState } from 'react';
 import { toPng } from 'html-to-image';
 import { Icon } from '@iconify/react';
 import BrandMark from '@/components/BrandMark';
-import Kartu from './Kartu';
 import { cn } from '@/lib/cn';
 import { iconButtonVariants, toggleButtonVariants } from '@/lib/variants';
 import { RARITY_LABELS } from '@/lib/runcard';
@@ -56,8 +55,8 @@ export default function ShareIgModal({ kartu, onClose }: Readonly<ShareIgModalPr
     if (kartu === null) return null;
 
     const isDark = theme !== 'Cream';
-    const dividerColor = isDark ? 'rgba(246,241,232,0.15)' : 'rgba(31,39,71,0.10)';
-    const metaColor = isDark ? 'rgba(246,241,232,0.55)' : 'var(--color-ink-3)';
+    const dividerColor = isDark ? 'rgba(246,241,232,0.18)' : 'rgba(31,39,71,0.10)';
+    const metaColor = isDark ? 'rgba(246,241,232,0.72)' : 'var(--color-ink-3)';
 
     const statItems = [
         { v: kartu.km, l: 'KM' },
@@ -167,84 +166,71 @@ export default function ShareIgModal({ kartu, onClose }: Readonly<ShareIgModalPr
                                 }}
                             />
 
-                            {/* BrandMark — absolutely anchored top-right, always visible */}
-                            <div className="absolute right-4 top-4 scale-[0.55] origin-top-right">
-                                <BrandMark tone={isDark ? 'cream' : 'ink'} />
-                            </div>
-
-                            {/* Rarity */}
-                            <div
-                                className="relative mb-2 whitespace-nowrap font-mono text-[11px] font-bold uppercase tracking-[0.16em]"
-                                style={{ color: 'var(--color-horizon)' }}
-                            >
-                                ★ Kartu {RARITY_LABELS[kartu.rarity]}
-                            </div>
-
-                            {/* Name */}
-                            <h3
-                                className={cn(
-                                    'relative mb-2 font-display leading-[0.95] tracking-[-0.025em]',
-                                    format === 'story' ? 'text-2xl' : 'text-xl',
-                                )}
-                                style={{ color: isDark ? 'var(--color-horizon)' : 'var(--color-ink)' }}
-                            >
-                                <em className="italic">{kartu.name}.</em>
-                            </h3>
-
-                            {/* Card */}
-                            <div className="relative flex flex-1 items-center justify-center">
-                                <div
-                                    className={cn(
-                                        'w-full drop-shadow-xl',
-                                        format === 'story' ? '-rotate-[3deg]' : '-rotate-[2deg]',
-                                    )}
+                            {/* Top row: rarity flag + brand mark */}
+                            <div className="relative flex items-start justify-between gap-3">
+                                <span
+                                    className="whitespace-nowrap rounded-full px-2.5 py-1 font-mono text-[11px] font-bold uppercase tracking-[0.14em]"
+                                    style={{ background: 'var(--color-horizon)', color: 'var(--color-sky-deep)' }}
                                 >
-                                    <Kartu
-                                        name={kartu.name}
-                                        subtitle={kartu.date ?? undefined}
-                                        km={kartu.km}
-                                        durasi={kartu.durasi}
-                                        trimp={kartu.trimp}
-                                        rarity={kartu.rarity}
-                                        tags={kartu.tags.slice(0, 1)}
-                                        size="md"
-                                        className="w-full"
-                                    />
+                                    ★ {RARITY_LABELS[kartu.rarity]}
+                                </span>
+                                <div className="origin-top-right scale-[0.6]">
+                                    <BrandMark tone={isDark ? 'cream' : 'ink'} />
                                 </div>
                             </div>
 
-                            {/* Quote — story only */}
+                            {/* Name — the editorial focal point */}
+                            <h3
+                                className={cn(
+                                    'relative mt-5 font-display italic leading-[0.95] tracking-[-0.02em]',
+                                    format === 'story' ? 'text-[34px]' : 'text-[26px]',
+                                )}
+                                style={{ color: isDark ? 'var(--color-horizon)' : 'var(--color-ink)' }}
+                            >
+                                {kartu.name}.
+                            </h3>
+
+                            <div className="flex-1" />
+
+                            {/* Pull-quote — story only */}
                             {format === 'story' && showQuote && kartu.quote && (
                                 <p
-                                    className="relative mt-2 text-center font-display text-xs italic leading-snug"
-                                    style={{ color: isDark ? 'rgba(246,241,232,0.8)' : 'var(--color-ink-2)' }}
+                                    className="relative mb-4 border-l-2 pl-3 font-display text-[15px] italic leading-snug"
+                                    style={{
+                                        borderColor: 'var(--color-horizon)',
+                                        color: isDark ? 'rgba(246,241,232,0.85)' : 'var(--color-ink-2)',
+                                    }}
                                 >
-                                    &ldquo;{kartu.quote}&rdquo;
+                                    {kartu.quote}
                                 </p>
                             )}
 
-                            {/* Stats — story only */}
-                            {format === 'story' && showStats && (
-                                <div
-                                    className="relative mt-3 grid gap-x-1 gap-y-2 border-t pt-3"
-                                    style={{
-                                        borderColor: dividerColor,
-                                        gridTemplateColumns: `repeat(${Math.min(statItems.length, 3)}, 1fr)`,
-                                    }}
-                                >
-                                    {statItems.map(({ v, l }) => (
-                                        <div key={l} className="min-w-0 text-center">
-                                            <div className="truncate font-sans text-xs font-bold tabular-nums leading-none">
-                                                {v}
-                                            </div>
-                                            <div
-                                                className="mt-0.5 font-mono text-[7px] uppercase tracking-[0.12em]"
+                            {/* Stat list — label/value rows stay legible with the wordy duration */}
+                            {showStats && (
+                                <div className="relative border-t pt-2.5" style={{ borderColor: dividerColor }}>
+                                    {(format === 'story' ? statItems : statItems.slice(0, 3)).map(({ v, l }) => (
+                                        <div key={l} className="flex items-baseline justify-between gap-3 py-[3px]">
+                                            <span
+                                                className="font-mono text-[11px] uppercase tracking-[0.12em]"
                                                 style={{ color: metaColor }}
                                             >
                                                 {l}
-                                            </div>
+                                            </span>
+                                            <span className="min-w-0 truncate font-sans text-sm font-bold tabular-nums">
+                                                {v}
+                                            </span>
                                         </div>
                                     ))}
+                                </div>
+                            )}
+
+                            {/* Footer date */}
+                            {kartu.date && (
+                                <div
+                                    className="relative mt-2.5 font-mono text-[11px] tracking-[0.08em]"
+                                    style={{ color: metaColor }}
+                                >
+                                    {kartu.date.replace('\n', ' · ')}
                                 </div>
                             )}
                         </div>
@@ -320,17 +306,18 @@ export default function ShareIgModal({ kartu, onClose }: Readonly<ShareIgModalPr
                                 </div>
                             </div>
 
-                            {/* Toggles — disabled in feed format */}
-                            <div className={cn('overflow-hidden rounded-xl bg-cream-deep', format === 'feed' && 'pointer-events-none opacity-40')}>
+                            {/* Toggles — the quote only renders on the taller story format */}
+                            <div className="overflow-hidden rounded-xl bg-cream-deep">
                                 {[
-                                    { label: 'Tampilkan data', value: showStats, toggle: () => setShowStats((v) => !v) },
-                                    { label: 'Tampilkan quote', value: showQuote, toggle: () => setShowQuote((v) => !v) },
-                                ].map(({ label, value, toggle }, i) => (
+                                    { label: 'Tampilkan data', value: showStats, toggle: () => setShowStats((v) => !v), disabled: false },
+                                    { label: 'Tampilkan quote', value: showQuote, toggle: () => setShowQuote((v) => !v), disabled: format === 'feed' },
+                                ].map(({ label, value, toggle, disabled }, i) => (
                                     <div
                                         key={label}
                                         className={cn(
                                             'flex items-center justify-between px-4 py-3.5',
                                             i > 0 && 'border-t border-cream',
+                                            disabled && 'pointer-events-none opacity-40',
                                         )}
                                     >
                                         <span className="text-sm text-ink">{label}</span>
