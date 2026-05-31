@@ -1,5 +1,5 @@
-import polylineCodec from '@mapbox/polyline';
 import { DAYBREAK } from '@/lib/chartTokens';
+import { projectPolyline } from '@/lib/route';
 import { RARITY_LABELS } from '@/lib/runcard';
 import type { CardEdition, Rarity } from '@/types/inertia';
 
@@ -57,6 +57,9 @@ const DIMS: Record<Format, { w: number; h: number }> = {
 };
 
 const PAD = 92;
+
+// Card tile aspect (height / width) — shared by every template that draws a tile.
+const TILE_ASPECT = 1.34;
 
 // Daybreak palette as literal hex (canvas can't read CSS vars). Brand hues
 // reference the shared DAYBREAK bridge so they can't drift; the rest are
@@ -144,9 +147,9 @@ function roundRectPath(ctx: CanvasRenderingContext2D, x: number, y: number, w: n
 }
 
 /**
- * Decode + stroke a route polyline inside a box (x, y, w, h), preserving aspect
- * ratio and flipping latitude so north is up. Returns false (drew nothing) when
- * the polyline is missing / undecodable / single-point, so callers can fall back.
+ * Stroke a route polyline inside a box (x, y, w, h) using the shared
+ * `projectPolyline` geometry (same normalization as the on-card RouteGlyph).
+ * Returns false (drew nothing) when there's no drawable route, so callers fall back.
  */
 function drawRoute(
     ctx: CanvasRenderingContext2D,
@@ -155,47 +158,20 @@ function drawRoute(
     stroke: string,
     lineWidth: number,
 ): boolean {
-    if (polyline == null || polyline === '') {
+    const projected = projectPolyline(polyline, box.w, box.h, lineWidth * 1.5, 240);
+    if (projected === null) {
         return false;
     }
-    let points: Array<[number, number]>;
-    try {
-        points = polylineCodec.decode(polyline) as Array<[number, number]>;
-    } catch {
-        return false;
-    }
-    if (points.length < 2) {
-        return false;
-    }
-    if (points.length > 240) {
-        const stride = Math.ceil(points.length / 240);
-        points = points.filter((_, i) => i % stride === 0);
-    }
-
-    const lats = points.map((p) => p[0]);
-    const lngs = points.map((p) => p[1]);
-    const minLat = Math.min(...lats);
-    const maxLat = Math.max(...lats);
-    const minLng = Math.min(...lngs);
-    const maxLng = Math.max(...lngs);
-    const spanLat = maxLat - minLat || 1;
-    const spanLng = maxLng - minLng || 1;
-    const pad = lineWidth * 1.5;
-    const innerW = box.w - pad * 2;
-    const innerH = box.h - pad * 2;
-    const scale = Math.min(innerW / spanLng, innerH / spanLat);
-    const offX = box.x + pad + (innerW - spanLng * scale) / 2;
-    const offY = box.y + pad + (innerH - spanLat * scale) / 2;
 
     ctx.save();
     ctx.beginPath();
-    points.forEach((p, i) => {
-        const px = offX + (p[1] - minLng) * scale;
-        const py = offY + (maxLat - p[0]) * scale;
+    projected.points.forEach(([px, py], i) => {
+        const x = box.x + px;
+        const y = box.y + py;
         if (i === 0) {
-            ctx.moveTo(px, py);
+            ctx.moveTo(x, y);
         } else {
-            ctx.lineTo(px, py);
+            ctx.lineTo(x, y);
         }
     });
     ctx.strokeStyle = stroke;
@@ -492,7 +468,7 @@ function drawPolaroid(d: DrawCtx): void {
     const { ctx, w, h, cfg } = d;
     const k = cfg.kartu;
     const tileW = cfg.format === 'story' ? w * 0.62 : w * 0.56;
-    const tileH = tileW * 1.34;
+    const tileH = tileW * TILE_ASPECT;
     const frameW = tileW + 88;
     const frameX = (w - frameW) / 2;
     const photoTop = cfg.format === 'story' ? h * 0.12 : PAD * 0.7;
@@ -565,7 +541,7 @@ function drawPack(d: DrawCtx): void {
 function drawKartuTile(d: DrawCtx, cx: number, cy: number, tileW: number): void {
     const { ctx, cfg } = d;
     const k = cfg.kartu;
-    const tileH = tileW * 1.34;
+    const tileH = tileW * TILE_ASPECT;
     const x = cx - tileW / 2;
     const y = cy - tileH / 2;
     const pad = tileW * 0.075;
@@ -687,7 +663,7 @@ function drawKartu(d: DrawCtx): void {
     // Bigger tile, positioned so the tile + quote read as one centered block
     // (no large dead void below the card).
     const tileW = story ? w * 0.72 : w * 0.58;
-    const tileH = tileW * 1.34;
+    const tileH = tileW * TILE_ASPECT;
     const top = story ? Math.max(PAD + 140, (h - tileH - 150) / 2) : (h - tileH) / 2 + 20;
     drawKartuTile(d, w / 2, top + tileH / 2, tileW);
 

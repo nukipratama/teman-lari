@@ -1,5 +1,5 @@
 import { cn } from '@/lib/cn';
-import { RARITY_BORDER } from '@/lib/runcard';
+import { RARITY_BORDER, RARITY_DOT, RARITY_TINT } from '@/lib/runcard';
 import RouteGlyph from '@/components/card/RouteGlyph';
 import type { CardEdition, Rarity } from '@/types/inertia';
 
@@ -11,22 +11,6 @@ interface KartuMiniProps {
     edition?: CardEdition | null;
     className?: string;
 }
-
-const RARITY_DOT: Record<Rarity, string> = {
-    common: 'bg-rarity-common',
-    uncommon: 'bg-rarity-uncommon',
-    rare: 'bg-rarity-rare',
-    epic: 'bg-rarity-epic',
-    legendary: 'bg-rarity-legendary',
-};
-
-const RARITY_TINT: Record<Rarity, string> = {
-    common: 'bg-rarity-common/[0.05]',
-    uncommon: 'bg-rarity-uncommon/[0.06]',
-    rare: 'bg-rarity-rare/[0.07]',
-    epic: 'bg-rarity-epic/[0.08]',
-    legendary: 'bg-rarity-legendary/[0.09]',
-};
 
 /**
  * Compact mini-TCG tile for the HariIni "kartu terakhir" strip: same visual

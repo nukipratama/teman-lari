@@ -41,6 +41,24 @@ export const RARITY_BORDER: Record<Rarity, string> = {
     legendary: 'border-rarity-legendary',
 };
 
+// Static literal Tailwind class maps (so JIT picks them up) for the rarity
+// swatch + surface wash shared by the card and the mini tile.
+export const RARITY_DOT: Record<Rarity, string> = {
+    common: 'bg-rarity-common',
+    uncommon: 'bg-rarity-uncommon',
+    rare: 'bg-rarity-rare',
+    epic: 'bg-rarity-epic',
+    legendary: 'bg-rarity-legendary',
+};
+
+export const RARITY_TINT: Record<Rarity, string> = {
+    common: 'bg-rarity-common/[0.05]',
+    uncommon: 'bg-rarity-uncommon/[0.06]',
+    rare: 'bg-rarity-rare/[0.07]',
+    epic: 'bg-rarity-epic/[0.08]',
+    legendary: 'bg-rarity-legendary/[0.09]',
+};
+
 // Slug → Title Case ("anak_pagi" → "Anak Pagi"). Fallback for unknown slugs.
 export function prettyBadge(slug: string): string {
     return slug

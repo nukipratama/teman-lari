@@ -1,5 +1,5 @@
 import { cn } from '@/lib/cn';
-import { BADGE_ABILITY, RARITY_BORDER, RARITY_LABELS, badgeEmblem, badgeName } from '@/lib/runcard';
+import { BADGE_ABILITY, RARITY_BORDER, RARITY_DOT, RARITY_LABELS, RARITY_TINT, badgeEmblem, badgeName } from '@/lib/runcard';
 import { BunnyGlyph } from '@/components/BrandMark';
 import GradientText from '@/components/ui/GradientText';
 import RouteGlyph from '@/components/card/RouteGlyph';
@@ -25,23 +25,7 @@ interface KartuProps {
     className?: string;
 }
 
-const RARITY_DOT: Record<Rarity, string> = {
-    common: 'bg-rarity-common',
-    uncommon: 'bg-rarity-uncommon',
-    rare: 'bg-rarity-rare',
-    epic: 'bg-rarity-epic',
-    legendary: 'bg-rarity-legendary',
-};
-
-// Static literal classes so Tailwind's JIT picks them up.
-const RARITY_TINT: Record<Rarity, string> = {
-    common: 'bg-rarity-common/[0.05]',
-    uncommon: 'bg-rarity-uncommon/[0.06]',
-    rare: 'bg-rarity-rare/[0.07]',
-    epic: 'bg-rarity-epic/[0.08]',
-    legendary: 'bg-rarity-legendary/[0.09]',
-};
-
+// RARITY_DOT / RARITY_TINT are shared with KartuMini — see lib/runcard.ts.
 const RARITY_RIBBON: Record<Rarity, string> = {
     common: 'bg-rarity-common/[0.12]',
     uncommon: 'bg-rarity-uncommon/[0.12]',
