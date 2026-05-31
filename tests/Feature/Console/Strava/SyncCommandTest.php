@@ -46,7 +46,7 @@ it('skips users whose connection is revoked', function (): void {
     $active = User::factory()->create();
     StravaConnection::factory()->for($active)->create();
     $revoked = User::factory()->create();
-    StravaConnection::factory()->for($revoked)->create(['revoked_at' => now()]);
+    StravaConnection::factory()->for($revoked)->revoked()->create();
 
     $orchestrator = Mockery::mock(SyncOrchestrator::class);
     $orchestrator->shouldReceive('syncUser')

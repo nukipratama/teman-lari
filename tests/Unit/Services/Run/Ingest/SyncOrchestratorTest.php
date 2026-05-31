@@ -89,7 +89,7 @@ it('returns 0 when fetcher finds no new activities', function (): void {
 
 it('skips a revoked connection without querying Strava', function (): void {
     $user = User::factory()->create();
-    StravaConnection::factory()->for($user)->create(['revoked_at' => now()]);
+    StravaConnection::factory()->for($user)->revoked()->create();
 
     $fetcher = Mockery::mock(ActivityFetcher::class);
     $fetcher->shouldNotReceive('fetchNewExternalIds');
@@ -141,7 +141,7 @@ it('re-uses the existing row when a webhook update arrives for a known activity'
 
 it('does not sync a single activity for a revoked connection', function (): void {
     $user = User::factory()->create();
-    StravaConnection::factory()->for($user)->create(['revoked_at' => now()]);
+    StravaConnection::factory()->for($user)->revoked()->create();
 
     $fetcher = Mockery::mock(ActivityFetcher::class);
 
