@@ -9,6 +9,7 @@ use App\Models\AI\Analysis;
 use App\Models\RunCard;
 use App\Models\User;
 use App\Services\AI\AnalysisType;
+use App\Services\Run\Story\Temari;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -25,8 +26,10 @@ class CardController extends Controller
 
         $page = RunCard::query()
             ->whereHas('activity', fn ($q) => $q->where('user_id', $user->id))
-            ->with(['activity.detail'])
+            ->with(['activity.detail', 'activity.postRunStoryLine'])
             ->when($rarity, fn ($q) => $q->where('rarity', $rarity))
+            // Newest-first: the collection reads as a chronological feed (a filter
+            // tab narrows to one rarity; the rarity-rank pick lives on the banner).
             ->orderByDesc('id')
             ->paginate(24)
             ->withQueryString();
@@ -34,9 +37,10 @@ class CardController extends Controller
         $counts = $this->rarityCounts($user);
         $editions = $this->editionIndexMap($user);
 
-        $page->getCollection()->each(
-            fn (RunCard $c) => $c->setAttribute('edition', $this->edition($c, $editions, $counts)),
-        );
+        $page->getCollection()->each(function (RunCard $c) use ($editions, $counts): void {
+            $c->setAttribute('edition', $this->edition($c, $editions, $counts));
+            $c->setAttribute('mood', $c->activity->postRunStoryLine->mood ?? Temari::MOOD_ADEM);
+        });
 
         return Inertia::render('Koleksi/Kartu', [
             'cards' => $page,
@@ -54,7 +58,7 @@ class CardController extends Controller
         $card->loadMissing('activity');
         abort_if($card->activity->user_id !== $user->id, 404);
 
-        $card->loadMissing('activity.detail');
+        $card->loadMissing('activity.detail', 'activity.postRunStoryLine');
 
         $counts = $this->rarityCounts($user);
         $editions = $this->editionIndexMap($user);
@@ -65,7 +69,7 @@ class CardController extends Controller
 
         $relatedCards = RunCard::query()
             ->whereHas('activity', fn ($q) => $q->where('user_id', $user->id))
-            ->with(['activity.detail'])
+            ->with(['activity.detail', 'activity.postRunStoryLine'])
             ->where('rarity', $card->rarity)
             ->where('id', '!=', $card->id)
             ->orderByDesc('id')
@@ -90,7 +94,7 @@ class CardController extends Controller
      *
      * @param  array<int, int>  $editions
      * @param  array<string, int>  $counts
-     * @return array{id: int, activity_id: int, rarity: string, special_move: string, badges: array<int, string>|null, detail: ActivityDetail|null, edition: array{index: int, total: int}}
+     * @return array{id: int, activity_id: int, rarity: string, special_move: string, mood: string, badges: array<int, string>|null, detail: ActivityDetail|null, edition: array{index: int, total: int}}
      */
     private function cardPayload(RunCard $card, array $editions, array $counts): array
     {
@@ -99,6 +103,7 @@ class CardController extends Controller
             'activity_id' => $card->activity_id,
             'rarity' => $card->rarity->value,
             'special_move' => $card->special_move,
+            'mood' => $card->activity->postRunStoryLine->mood ?? Temari::MOOD_ADEM,
             'badges' => $card->badges,
             'detail' => $card->activity->detail,
             'edition' => $this->edition($card, $editions, $counts),
@@ -108,13 +113,13 @@ class CardController extends Controller
     /**
      * @param  array<int, int>  $editions
      * @param  array<string, int>  $counts
-     * @return array{id: int, activity_id: int, rarity: string, special_move: string, badges: array<int, string>|null, detail: ActivityDetail|null, edition: array{index: int, total: int}, flavor_analysis: array<string, mixed>}|null
+     * @return array{id: int, activity_id: int, rarity: string, special_move: string, mood: string, badges: array<int, string>|null, detail: ActivityDetail|null, edition: array{index: int, total: int}, flavor_analysis: array<string, mixed>}|null
      */
     private function featuredCard(User $user, ?string $rarity, array $editions, array $counts): ?array
     {
         $query = RunCard::query()
             ->whereHas('activity', fn ($q) => $q->where('user_id', $user->id))
-            ->with(['activity.detail']);
+            ->with(['activity.detail', 'activity.postRunStoryLine']);
 
         if ($rarity !== null) {
             $query->where('rarity', $rarity);

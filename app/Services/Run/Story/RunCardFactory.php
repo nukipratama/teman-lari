@@ -99,11 +99,15 @@ class RunCardFactory
         $negativeSplit = ($summary['negative_split'] ?? false) === true;
         $hasZoneData = is_array($summary['time_in_zone_pct'] ?? null);
 
+        // Tuned toward a pyramid: most runs land Common, each tier above needs a
+        // genuinely rarer condition so Legendaris/Luar Biasa stay special. Uncommon
+        // requires a quality signal (a negative split) or a long run — a plodding
+        // mid-distance easy run stays Biasa.
         return match (true) {
             $isLongest && $distance >= 21_097.5 => Rarity::Legendary,
-            $prSet => Rarity::Epic,
-            $negativeSplit && $distance >= 5_000 => Rarity::Rare,
-            $hasZoneData && $distance >= 3_000 => Rarity::Uncommon,
+            $prSet && $distance >= 10_000 => Rarity::Epic,
+            $prSet || ($negativeSplit && $distance >= 8_000) => Rarity::Rare,
+            $distance >= 12_000 || ($hasZoneData && $negativeSplit) => Rarity::Uncommon,
             default => Rarity::Common,
         };
     }

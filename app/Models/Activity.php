@@ -32,6 +32,7 @@ use Override;
  * @property-read RunCard|null $runCard
  * @property-read Collection<int, PersonalRecord> $personalRecords
  * @property-read Collection<int, StoryLine> $storyLines
+ * @property-read StoryLine|null $postRunStoryLine
  */
 #[Fillable([
     'user_id',
@@ -93,6 +94,17 @@ class Activity extends Model
     public function storyLines(): HasMany
     {
         return $this->hasMany(StoryLine::class);
+    }
+
+    /**
+     * The single post-run story line, which carries this run's Temari mood. The
+     * card surfaces read mood from here rather than recomputing it.
+     *
+     * @return HasOne<StoryLine, $this>
+     */
+    public function postRunStoryLine(): HasOne
+    {
+        return $this->hasOne(StoryLine::class)->where('kind', StoryLine::KIND_POST_RUN);
     }
 
     /**

@@ -1,5 +1,30 @@
 import { describe, expect, it } from 'vitest';
-import { BADGE_ABILITY, BADGE_LABELS, RARITY_LABELS, RARITY_ORDER, badgeEmblem, badgeName } from './runcard';
+import {
+    BADGE_ABILITY,
+    BADGE_LABELS,
+    RARITY_LABELS,
+    RARITY_ORDER,
+    avgCadenceFromDetail,
+    badgeEmblem,
+    badgeName,
+    fastestKmFromDetail,
+    zonePctFromDetail,
+} from './runcard';
+import type { ActivityDetail } from '@/types/inertia';
+
+function detailWith(summary: ActivityDetail['stream_summary']): ActivityDetail {
+    return {
+        id: 1,
+        activity_id: 1,
+        name: null,
+        start_date_local: null,
+        distance: null,
+        moving_time: null,
+        average_heartrate: null,
+        trimp_edwards: null,
+        stream_summary: summary,
+    };
+}
 
 describe('RARITY_LABELS', () => {
     it('has label for every rarity in RARITY_ORDER', () => {
@@ -61,5 +86,52 @@ describe('badgeEmblem / badgeName', () => {
     it('falls back to prettyBadge for unknown slugs', () => {
         expect(badgeEmblem('unknown_slug')).toBe('');
         expect(badgeName('unknown_slug')).toBe('Unknown Slug');
+    });
+});
+
+describe('avgCadenceFromDetail', () => {
+    it('averages per-km cadence, rounding, ignoring missing values', () => {
+        const detail = detailWith({
+            per_km: [
+                { km: 1, pace: '6:00', avg_cadence_spm: 176 },
+                { km: 2, pace: '5:50', avg_cadence_spm: 180 },
+                { km: 3, pace: '5:40', avg_cadence_spm: null },
+            ],
+        });
+        expect(avgCadenceFromDetail(detail)).toBe(178);
+    });
+
+    it('returns null when no cadence data exists', () => {
+        expect(avgCadenceFromDetail(detailWith({ per_km: [{ km: 1, pace: '6:00' }] }))).toBeNull();
+        expect(avgCadenceFromDetail(detailWith(undefined))).toBeNull();
+    });
+});
+
+describe('fastestKmFromDetail', () => {
+    it('returns the fastest single-km pace string', () => {
+        const detail = detailWith({
+            per_km: [
+                { km: 1, pace: '6:00' },
+                { km: 2, pace: '5:12' },
+                { km: 3, pace: '5:45' },
+            ],
+        });
+        expect(fastestKmFromDetail(detail)).toBe('5:12');
+    });
+
+    it('returns null without per-km data', () => {
+        expect(fastestKmFromDetail(detailWith(undefined))).toBeNull();
+    });
+});
+
+describe('zonePctFromDetail', () => {
+    it('returns the zone distribution when present', () => {
+        const detail = detailWith({ time_in_zone_pct: { Z1: 10, Z2: 50, Z3: 40 } });
+        expect(zonePctFromDetail(detail)).toEqual({ Z1: 10, Z2: 50, Z3: 40 });
+    });
+
+    it('returns null when zone data is absent or all-zero', () => {
+        expect(zonePctFromDetail(detailWith(undefined))).toBeNull();
+        expect(zonePctFromDetail(detailWith({ time_in_zone_pct: { Z1: 0, Z2: 0 } }))).toBeNull();
     });
 });

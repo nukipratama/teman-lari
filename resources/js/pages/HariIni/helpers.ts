@@ -1,9 +1,9 @@
 import { moodFromActivity } from '@/lib/moodFromActivity';
 import { formatDuration, formatKm, formatRelativeId } from '@/lib/pace';
-import { RARITY_LABELS, paceShapeFromDetail } from '@/lib/runcard';
+import { RARITY_LABELS, buildCardStats, paceShapeFromDetail, zonePctFromDetail, type CardStatStrings } from '@/lib/runcard';
 import { MOOD_TO_POSE } from '@/lib/temariPose';
 import type { TemariPose } from '@/components/temari/TemariProto';
-import type { ActivityDetail, Mood, Rarity, RunCard } from '@/types/inertia';
+import type { ActivityDetail, Mood, Rarity, RunCard, ZonePct } from '@/types/inertia';
 
 export interface FeaturedCard {
     activityId: number;
@@ -13,7 +13,10 @@ export interface FeaturedCard {
     durasi: string;
     trimp: string;
     rarity: Rarity;
+    mood: Mood;
     badges: ReadonlyArray<string>;
+    stats: CardStatStrings;
+    zonePct: ZonePct | null;
     polyline: string | null;
     paceShape: number[];
     startDate: string | null;
@@ -47,6 +50,25 @@ const RARITY_RANK: Record<Rarity, number> = {
     legendary: 4,
 };
 
+function toFeaturedCard(r: ActivityDetail, card: RunCard): FeaturedCard {
+    return {
+        activityId: r.activity_id,
+        name: card.special_move,
+        subtitle: `${RARITY_LABELS[card.rarity]} · ${formatRelativeId(r.start_date_local)}`,
+        km: formatKm(r.distance),
+        durasi: r.moving_time != null ? formatDuration(r.moving_time) : '—',
+        trimp: r.trimp_edwards != null ? String(Math.round(r.trimp_edwards)) : '—',
+        rarity: card.rarity,
+        mood: moodFromActivity(r),
+        badges: (card.badges ?? []).slice(0, 3),
+        stats: buildCardStats(r),
+        zonePct: zonePctFromDetail(r),
+        polyline: r.summary_polyline ?? null,
+        paceShape: paceShapeFromDetail(r),
+        startDate: r.start_date_local,
+    };
+}
+
 export function pickFeaturedKartu(runs: ReadonlyArray<ActivityDetail>): FeaturedCard | null {
     let best: FeaturedCard | null = null;
     let bestRank = -1;
@@ -57,19 +79,7 @@ export function pickFeaturedKartu(runs: ReadonlyArray<ActivityDetail>): Featured
         const rank = RARITY_RANK[card.rarity];
         const date = r.start_date_local ?? '';
         if (rank > bestRank || (rank === bestRank && date > bestDate)) {
-            best = {
-                activityId: r.activity_id,
-                name: card.special_move,
-                subtitle: `${RARITY_LABELS[card.rarity]} · ${formatRelativeId(r.start_date_local)}`,
-                km: formatKm(r.distance),
-                durasi: r.moving_time != null ? formatDuration(r.moving_time) : '—',
-                trimp: r.trimp_edwards != null ? String(Math.round(r.trimp_edwards)) : '—',
-                rarity: card.rarity,
-                badges: (card.badges ?? []).slice(0, 3),
-                polyline: r.summary_polyline ?? null,
-                paceShape: paceShapeFromDetail(r),
-                startDate: r.start_date_local,
-            };
+            best = toFeaturedCard(r, card);
             bestRank = rank;
             bestDate = date;
         }

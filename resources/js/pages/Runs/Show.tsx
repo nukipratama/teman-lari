@@ -15,7 +15,7 @@ import { cn } from '@/lib/cn';
 import PageContainer from '@/components/ui/PageContainer';
 import { moodFromActivity } from '@/lib/moodFromActivity';
 import { formatDurationHMS, formatIdDate, formatKm, formatPace, paceSecPerKm } from '@/lib/pace';
-import { RARITY_LABELS, paceShapeFromDetail } from '@/lib/runcard';
+import { RARITY_LABELS, buildCardStats, paceShapeFromDetail, zonePctFromDetail } from '@/lib/runcard';
 import { emberGlowStyle } from '@/lib/styles';
 import { MOOD_TO_POSE } from '@/lib/temariPose';
 import type {
@@ -149,7 +149,7 @@ export default function RunsShow({
                         {card ? (
                             <Link
                                 href={`/kartu/${card.id}`}
-                                className="block"
+                                className="mx-auto block w-full max-w-[260px]"
                             >
                                 <Kartu
                                     name={card.special_move}
@@ -158,7 +158,10 @@ export default function RunsShow({
                                     durasi={duration === '—' ? '—' : duration}
                                     trimp={trimp != null ? trimp : '—'}
                                     rarity={card.rarity}
+                                    mood={mood}
                                     badges={(card.badges ?? []).slice(0, 3)}
+                                    stats={buildCardStats(detail)}
+                                    zonePct={zonePctFromDetail(detail)}
                                     polyline={detail.summary_polyline}
                                     paceShape={paceShapeFromDetail(detail)}
                                     size="md"

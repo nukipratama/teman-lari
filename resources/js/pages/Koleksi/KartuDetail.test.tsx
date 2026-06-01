@@ -41,13 +41,14 @@ const epicCard = {
     activity_id: 99,
     rarity: 'epic' as const,
     special_move: 'Tendangan Balik',
+    mood: 'enteng' as const,
     badges: ['negative_split', 'anak_pagi'] as string[],
     detail,
     flavor_analysis: doneAnalysis,
 };
 
 const relatedCards = [
-    { id: 11, activity_id: 100, rarity: 'epic' as const, special_move: 'Lompatan Fajar', badges: null, detail: null },
+    { id: 11, activity_id: 100, rarity: 'epic' as const, special_move: 'Lompatan Fajar', mood: 'adem' as const, badges: null, detail: null },
 ];
 
 beforeEach(() => {

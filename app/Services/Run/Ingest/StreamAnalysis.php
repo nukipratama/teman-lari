@@ -510,7 +510,9 @@ class StreamAnalysis
         $firstAvg = array_sum(array_column($firstHalf, 'average_speed')) / count($firstHalf);
         $secondAvg = array_sum(array_column($secondHalf, 'average_speed')) / count($secondHalf);
 
-        return ['negative_split' => $secondAvg > $firstAvg];
+        // Require a meaningful margin (second half ≥1.5% faster). A bare `>` lets
+        // a flat run coin-flip into "negative split" on per-km noise alone.
+        return ['negative_split' => $secondAvg > $firstAvg * 1.015];
     }
 
 }

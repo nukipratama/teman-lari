@@ -6,7 +6,7 @@ import type { Rarity } from '@/types/inertia';
 const SAMPLE_POLYLINE = '_p~iF~ps|U_ulLnnqC_mqNvxq`@';
 
 describe('KartuMini', () => {
-    it('renders name + date', () => {
+    it('renders name and date in the micro footer', () => {
         render(<KartuMini name="Sunset 5K" date="18 Mei" />);
         expect(screen.getByText('Sunset 5K')).toBeInTheDocument();
         expect(screen.getByText('18 Mei')).toBeInTheDocument();
@@ -28,5 +28,11 @@ describe('KartuMini', () => {
     it('renders the edition mark when provided', () => {
         render(<KartuMini name="x" edition={{ index: 2, total: 5 }} />);
         expect(screen.getByText('#2/5')).toBeInTheDocument();
+    });
+
+    it('renders the TemariProto mascot in the art zone', () => {
+        const { container } = render(<KartuMini name="x" />);
+        // Art zone always contains the mascot SVG.
+        expect(container.querySelector('svg')).not.toBeNull();
     });
 });

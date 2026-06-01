@@ -9,6 +9,7 @@ use App\Models\PersonalRecord;
 use App\Models\RunCard;
 use App\Models\User;
 use App\Services\Gamification\EquippedAccessories;
+use App\Services\Run\Story\Temari;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Inertia\Middleware;
@@ -103,7 +104,7 @@ class HandleInertiaRequests extends Middleware
     }
 
     /**
-     * @return array{card_id: int, activity_id: int, rarity: string, special_move: string, badges: array<int, string>|null, detail_name: string|null, distance_m: float|null, moving_time_sec: int|null, trimp_edwards: float|null, summary_polyline: string|null, edition: array{index: int, total: int}, is_pr: bool, pr_category_label: string|null, pr_time_display: string|null}|null
+     * @return array{card_id: int, activity_id: int, rarity: string, special_move: string, mood: string, badges: array<int, string>|null, detail_name: string|null, distance_m: float|null, moving_time_sec: int|null, trimp_edwards: float|null, summary_polyline: string|null, edition: array{index: int, total: int}, is_pr: bool, pr_category_label: string|null, pr_time_display: string|null}|null
      */
     private function pendingRevealFor(?User $user): ?array
     {
@@ -114,7 +115,8 @@ class HandleInertiaRequests extends Middleware
         $card = RunCard::query()
             ->whereKey($user->pending_reveal_card_id)
             ->with([
-                'activity.detail:id,activity_id,name,distance,moving_time,trimp_edwards,summary_polyline',
+                'activity.detail:id,activity_id,name,distance,moving_time,trimp_edwards,average_heartrate,summary_polyline,stream_summary',
+                'activity.postRunStoryLine',
                 'activity:id,user_id',
             ])
             ->first();
@@ -138,11 +140,14 @@ class HandleInertiaRequests extends Middleware
             'activity_id' => $card->activity_id,
             'rarity' => $card->rarity->value,
             'special_move' => $card->special_move,
+            'mood' => $card->activity->postRunStoryLine->mood ?? Temari::MOOD_ADEM,
             'badges' => $badges,
             'detail_name' => $detail?->name,
             'distance_m' => $detail?->distance,
             'moving_time_sec' => $detail?->moving_time,
             'trimp_edwards' => $detail?->trimp_edwards,
+            'average_heartrate' => $detail?->average_heartrate,
+            'stream_summary' => $detail?->stream_summary,
             'summary_polyline' => $detail?->summary_polyline,
             'edition' => $this->editionFor($user, $card),
             'is_pr' => $pr !== null,

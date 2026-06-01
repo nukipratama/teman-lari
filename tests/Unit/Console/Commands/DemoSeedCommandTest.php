@@ -30,9 +30,9 @@ it('creates the demo user, runs, cards, story lines, PRs, and weekly snapshots',
 
     $user = User::query()->where('email', DemoRunSeeder::DEMO_USER_EMAIL)->firstOrFail();
 
-    // 33 scripted + RNG fillers @ 65% over ~180d; exact match fails loud on drift.
+    // 35 scripted + RNG fillers @ 65% over ~180d; exact match fails loud on drift.
     $activityCount = Activity::query()->where('user_id', $user->id)->count();
-    expect($activityCount)->toBe(124);
+    expect($activityCount)->toBe(126);
 
     expect(RunCard::query()->whereIn('activity_id', Activity::query()->where('user_id', $user->id)->pluck('id'))->count())
         ->toBe($activityCount)

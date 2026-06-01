@@ -6,7 +6,7 @@ namespace App\Services\Run\Story;
 
 class SpecialMoves
 {
-    public const DEFAULT_MOVE = 'Langkah Mantap'; // Steady Stride
+    public const DEFAULT_MOVE = 'Lari Santai'; // honest default — easy, no story
 
     /**
      * @param  array<string, mixed>  $streamSummary
@@ -31,31 +31,31 @@ class SpecialMoves
         $hardShare = $z3 + $z4 + (float) ($zonePct['Z5'] ?? 0.0);
 
         if ($prSet && $negativeSplit) {
-            return 'Pembalik Keadaan'; // Comeback
+            return 'Tancap di Akhir'; // PR with a strong second half — floored it late
         }
 
         if ($distanceM >= 10_000 && $hardShare < 5.0) {
-            return 'Berdarah Dingin'; // Cold Blooded
+            return 'Jauh Santuy'; // long but easy, barely broke a sweat
         }
 
         if ($z3 > 60.0) {
-            return 'Paru-paru Baja'; // Steel Lungs
+            return 'Tahan Tempo'; // held the tempo zone the whole way
         }
 
         if (((float) ($distribution['>175'] ?? 0.0)) > 60.0) {
-            return 'Metronom'; // Metronome Mode
+            return 'Kaki Mesin'; // machine legs — locked, fast cadence
         }
 
         if ($z2 > 80.0) {
-            return 'Pemburu Sabar'; // Patient Predator
+            return 'Adem Ayem'; // calm, patient, mostly zone-2
         }
 
         if ($prSet) {
-            return 'Tendangan Awal'; // Early Strike
+            return 'Pecah Rekor'; // straight-up new PR
         }
 
         if ($cadenceDropSpm <= 1.0 && $distanceM >= 5_000) {
-            return 'Tanpa Letih'; // Tireless
+            return 'Anti Ngedrop'; // cadence never faded
         }
 
         return self::DEFAULT_MOVE;

@@ -5,6 +5,7 @@ const kartu: ShareKartuData = {
     id: 1,
     name: 'Pemburu Sabar',
     rarity: 'legendary',
+    mood: 'nyala',
     subtitle: null,
     date: '30 Mei 2026\n06:30',
     km: '42.61',
@@ -12,9 +13,13 @@ const kartu: ShareKartuData = {
     pace: '5:48',
     trimp: '913',
     hr: '164 bpm',
+    cadence: '178 spm',
+    fastestKm: '5:12/km',
+    zonePct: { Z1: 10, Z2: 40, Z3: 30, Z4: 15, Z5: 5 },
     location: 'Gelora Bung Karno, Jakarta',
     weather: '27°C',
     tags: ['Anak Pagi'],
+    tagEmojis: ['🌅'],
     quote: 'Kartu ini lahir dari sesi yang tenang tapi solid.',
     polyline: '_p~iF~ps|U_ulLnnqC_mqNvxq`@',
     edition: { index: 2, total: 7 },
@@ -77,7 +82,7 @@ beforeEach(() => {
 });
 
 describe('drawShareCard', () => {
-    const layouts: Layout[] = ['kartu', 'pack', 'rute', 'polaroid', 'poster', 'struk'];
+    const layouts: Layout[] = ['kartu', 'rute', 'struk'];
     const formats: Format[] = ['story', 'feed'];
 
     it.each(layouts)('paints the %s layout at the fixed story resolution', async (layout) => {
@@ -93,14 +98,14 @@ describe('drawShareCard', () => {
     it.each(formats)('uses the right canvas size for %s', async (format) => {
         const ctx = makeCtx();
         const canvas = { width: 0, height: 0, getContext: () => ctx } as unknown as HTMLCanvasElement;
-        await drawShareCard(canvas, { kartu, theme: 'Cream', layout: 'poster', format, showStats: true, showQuote: false });
+        await drawShareCard(canvas, { kartu, theme: 'Cream', layout: 'rute', format, showStats: true, showQuote: false });
         expect(canvas.height).toBe(format === 'story' ? 1920 : 1080);
     });
 
     it('does not throw when the 2d context is unavailable', async () => {
         const canvas = { width: 0, height: 0, getContext: () => null } as unknown as HTMLCanvasElement;
         await expect(
-            drawShareCard(canvas, { kartu, theme: 'Sky', layout: 'struk', format: 'feed', showStats: false, showQuote: false }),
+            drawShareCard(canvas, { kartu, theme: 'Sky', layout: 'rute', format: 'feed', showStats: false, showQuote: false }),
         ).resolves.toBeUndefined();
     });
 });
@@ -133,7 +138,7 @@ describe('shareCardBlob', () => {
         vi.spyOn(document, 'createElement').mockReturnValue(canvas as unknown as HTMLCanvasElement);
 
         await expect(
-            shareCardBlob({ kartu, theme: 'Cream', layout: 'poster', format: 'feed', showStats: false, showQuote: false }),
+            shareCardBlob({ kartu, theme: 'Cream', layout: 'struk', format: 'feed', showStats: false, showQuote: false }),
         ).rejects.toThrow('toBlob failed');
     });
 });

@@ -3,25 +3,26 @@ import AppShell from '@/layouts/AppShell';
 import MotionLink from '@/components/MotionLink';
 import ConfettiBurst from '@/components/ConfettiBurst';
 import Card from '@/components/ui/Card';
-import Chip from '@/components/ui/Chip';
 import CollectionHeader from '@/components/koleksi/CollectionHeader';
 import HeroPanel from '@/components/ui/HeroPanel';
 import Kartu from '@/components/card/Kartu';
+import PillButton from '@/components/ui/PillButton';
 import Temari from '@/components/temari/Temari';
 import { cn } from '@/lib/cn';
 import { pressShrink } from '@/lib/motion';
+import { emberGlowStyle } from '@/lib/styles';
 import PageContainer from '@/components/ui/PageContainer';
 import { formatDuration, formatIdDate, formatKm } from '@/lib/pace';
-import { RARITY_LABELS, RARITY_ORDER, badgeName, paceShapeFromDetail } from '@/lib/runcard';
+import { RARITY_LABELS, RARITY_ORDER, RARITY_POSE, buildCardStats, paceShapeFromDetail, zonePctFromDetail } from '@/lib/runcard';
 import { renderBold } from '@/lib/richText';
-import { emberGlowStyle } from '@/lib/styles';
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import AnalysisStatus from '@/components/temari/AnalysisStatus';
 import type {
     Activity,
     ActivityDetail,
     AnalysisPayload,
     CardEdition,
+    Mood,
     PaginatedResponse,
     Rarity,
     RunCard as RunCardModel,
@@ -32,6 +33,7 @@ interface FeaturedCardPayload {
     activity_id: number;
     rarity: Rarity;
     special_move: string;
+    mood: Mood;
     badges: string[] | null;
     detail: ActivityDetail | null;
     edition?: CardEdition | null;
@@ -39,6 +41,7 @@ interface FeaturedCardPayload {
 }
 
 type CardWithRel = RunCardModel & {
+    mood: Mood;
     activity: Activity & { detail: ActivityDetail };
 };
 
@@ -61,19 +64,28 @@ export default function KoleksiKartu({
     const epicCount = rarityCounts.epic + rarityCounts.legendary;
     const eyebrow = `Koleksi · ${totalKartu} kartu · ${epicCount} terbaik`;
 
-    // On the "Semua" view we hide the spotlight card from the grid to avoid
-    // it appearing twice (hero + tile). On any rarity-filtered view we keep
-    // it in the grid — filtering by Epik and finding the highlighted Epik
-    // card missing from the count reads as a bug, not a feature.
-    const grid = selectedRarity === null
-        ? cards.data.filter((c) => featuredCard === null || c.id !== featuredCard.id)
-        : cards.data;
+    // One flat, newest-first grid (the controller orders by id desc). Filter
+    // tabs narrow to a single rarity; otherwise it's the whole collection.
+    const grid = cards.data;
 
     const triggerBurstFor = (rarity: Rarity, id: number) => {
         if (rarity === 'epic' || rarity === 'legendary') {
             setBurstKey(`card-${id}-${Date.now()}`);
         }
     };
+
+    const gridBody: ReactNode =
+        grid.length === 0 ? (
+            <div className="mt-6">
+                <EmptyState />
+            </div>
+        ) : (
+            <div className="mt-6 grid gap-3.5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                {grid.map((card) => (
+                    <CardCell key={card.id} card={card} onTap={triggerBurstFor} />
+                ))}
+            </div>
+        );
 
     return (
         <AppShell>
@@ -88,23 +100,11 @@ export default function KoleksiKartu({
                     activeCount={String(totalKartu)}
                 />
 
-                {featuredCard && (
-                    <FeaturedPanel featured={featuredCard} onTap={triggerBurstFor} />
-                )}
+                {featuredCard && <SlimBanner featured={featuredCard} />}
 
                 <RarityFilter selected={selectedRarity} counts={rarityCounts} />
 
-                {grid.length === 0 && featuredCard === null ? (
-                    <div className="mt-6">
-                        <EmptyState />
-                    </div>
-                ) : (
-                    <div className="mt-6 grid gap-3.5 sm:grid-cols-2 lg:grid-cols-3">
-                        {grid.map((card) => (
-                            <CardCell key={card.id} card={card} onTap={triggerBurstFor} />
-                        ))}
-                    </div>
-                )}
+                {gridBody}
 
                 {rarityCounts.legendary === 0 && <LegendaryTease />}
             </PageContainer>
@@ -112,86 +112,79 @@ export default function KoleksiKartu({
     );
 }
 
-function FeaturedPanel({
-    featured,
-    onTap,
-}: Readonly<{ featured: FeaturedCardPayload; onTap: (rarity: Rarity, id: number) => void }>) {
+/** Collection highlight hero — same layout as the homepage featured panel. */
+function SlimBanner({ featured }: Readonly<{ featured: FeaturedCardPayload }>) {
     const detail = featured.detail;
-    const km = formatKm(detail?.distance);
-    const durasi = detail?.moving_time != null ? formatDuration(detail.moving_time) : '—';
-    const trimp = detail?.trimp_edwards != null ? String(Math.round(detail.trimp_edwards)) : '—';
-    const subtitle = `${RARITY_LABELS[featured.rarity]} · ${formatIdDate(detail?.start_date_local ?? null, 'short')}`;
-    const allTags = (featured.badges ?? []).slice(0, 2).map((b) => badgeName(b));
-    // Mobile: cap to 1 chip so the panel fits on iPhone SE-class screens.
-    const mobileTags = allTags.slice(0, 1);
+    const pose = RARITY_POSE[featured.rarity];
+    const kartuProps = {
+        name: featured.special_move,
+        subtitle: detail ? `${detail.name ?? 'Lari'} · ${formatIdDate(detail.start_date_local, 'short')}` : undefined,
+        km: formatKm(detail?.distance),
+        durasi: detail?.moving_time != null ? formatDuration(detail.moving_time) : '—',
+        trimp: detail?.trimp_edwards != null ? String(Math.round(detail.trimp_edwards)) : '—',
+        rarity: featured.rarity,
+        mood: featured.mood,
+        badges: featured.badges ?? [],
+        stats: buildCardStats(detail),
+        zonePct: zonePctFromDetail(detail),
+        polyline: detail?.summary_polyline,
+        paceShape: paceShapeFromDetail(detail),
+        edition: featured.edition,
+        size: 'md' as const,
+    };
 
     return (
-        <HeroPanel className="mt-8 lg:px-14 lg:py-12">
+        <HeroPanel className="mt-6 min-h-[320px] lg:px-14 lg:py-12">
             <span
                 aria-hidden
-                className="pointer-events-none absolute -right-10 -top-10 h-60 w-60 rounded-full"
+                className="pointer-events-none absolute -right-16 -top-16 h-72 w-72 rounded-full"
                 style={emberGlowStyle()}
             />
-            <div className="relative grid items-center gap-9 lg:grid-cols-[160px_1fr_minmax(380px,_46%)]">
+            <div className="relative grid items-center gap-8 lg:grid-cols-[160px_1fr_40%] lg:gap-10">
+                {/* Temari — desktop only */}
                 <div className="hidden lg:block">
-                    <Temari pose="proud" size={160} />
+                    <Temari pose={pose} size={200} />
                 </div>
+
+                {/* Quote + CTA */}
                 <div>
-                    <div className="mb-3.5 font-mono text-[11px] font-bold uppercase tracking-[0.18em] text-horizon">
+                    <div className="mb-3 font-mono text-[11px] font-bold uppercase tracking-[0.2em] text-horizon">
                         ★ Highlight minggu ini · {RARITY_LABELS[featured.rarity]}
                     </div>
-                    <h2 className="mb-4 font-display text-display-md text-cream">
+                    <h2 className="mb-4 font-display text-display-xl text-cream">
                         <em className="italic text-horizon">{featured.special_move}</em>
                     </h2>
                     {featured.flavor_analysis && (
-                        <div className="mb-4 max-w-xl">
+                        <div className="mb-5 max-w-xl">
                             <AnalysisStatus
                                 analysis={featured.flavor_analysis}
                                 inertiaReloadProps={['featuredCard']}
                                 allowReanalyze={false}
                                 showTimestamp={false}
+                                onSky
                                 renderContent={(text) => (
                                     <p className="font-display text-quote-lg italic text-cream">
-                                        “{renderBold(text)}”
+                                        &ldquo;{renderBold(text)}&rdquo;
                                     </p>
                                 )}
                             />
                         </div>
                     )}
-                    {allTags.length > 0 && (
-                        <>
-                            <div className="hidden flex-wrap gap-2 sm:flex">
-                                {allTags.map((t) => (
-                                    <Chip key={t} tone="horizon">{t}</Chip>
-                                ))}
-                            </div>
-                            <div className="flex flex-wrap gap-2 sm:hidden">
-                                {mobileTags.map((t) => (
-                                    <Chip key={t} tone="horizon">{t}</Chip>
-                                ))}
-                            </div>
-                        </>
-                    )}
+                    <Link href={`/kartu/${featured.id}`}>
+                        <PillButton tone="horizon">Lihat kartu</PillButton>
+                    </Link>
                 </div>
-                <Link
-                    href={`/kartu/${featured.id}`}
-                    className="hidden lg:block"
-                    onClick={() => onTap(featured.rarity, featured.id)}
-                >
-                    <Kartu
-                        name={featured.special_move}
-                        subtitle={subtitle}
-                        km={km}
-                        durasi={durasi}
-                        trimp={trimp}
-                        rarity={featured.rarity}
-                        polyline={detail?.summary_polyline}
-                        paceShape={paceShapeFromDetail(detail)}
-                        edition={featured.edition}
-                        size="lg"
-                        className="rotate-[-3deg]"
-                    />
-                </Link>
+
+                {/* Card — desktop only (tilted) */}
+                <div className="hidden lg:block lg:rotate-[4deg]">
+                    <Kartu {...kartuProps} className="w-[260px]" />
+                </div>
+
+                {/* Mobile: Temari above, card below */}
+                <div className="flex flex-col items-center gap-4 lg:hidden">
+                    <Temari pose={pose} size={100} animate={false} />
+                    <Kartu {...kartuProps} className="w-full max-w-[300px]" />
+                </div>
             </div>
         </HeroPanel>
     );
@@ -267,7 +260,7 @@ function CardCell({
             href={`/kartu/${card.id}`}
             whileTap={pressShrink}
             onClick={() => onTap(card.rarity, card.id)}
-            className="block"
+            className="mx-auto block w-full max-w-[300px]"
         >
             <Kartu
                 name={card.special_move}
@@ -276,7 +269,10 @@ function CardCell({
                 durasi={durasi}
                 trimp={trimp}
                 rarity={card.rarity}
+                mood={card.mood}
                 badges={card.badges ?? []}
+                stats={buildCardStats(detail)}
+                zonePct={zonePctFromDetail(detail)}
                 polyline={detail.summary_polyline}
                 paceShape={paceShapeFromDetail(detail)}
                 edition={card.edition}
@@ -308,7 +304,7 @@ function LegendaryTease() {
                     ★ Legendaris · belum kebuka
                 </div>
                 <p className="mb-1.5 font-display text-2xl leading-tight tracking-[-0.01em] text-ink">
-                    “Ada kartu Legendaris nungguin di sini.” ✨
+                    &ldquo;Ada kartu Legendaris nungguin di sini.&rdquo; ✨
                 </p>
                 <p className="font-display text-sm italic leading-relaxed text-ink-2">
                     Buat buka: PR di 21K, atau 5 lari Nyala beruntun.

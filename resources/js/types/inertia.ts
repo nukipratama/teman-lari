@@ -22,11 +22,14 @@ export interface PendingReveal {
     activity_id: number;
     rarity: Rarity;
     special_move: string;
+    mood: Mood;
     badges: string[] | null;
     detail_name: string | null;
     distance_m: number | null;
     moving_time_sec: number | null;
     trimp_edwards: number | null;
+    average_heartrate?: number | null;
+    stream_summary?: StreamSummary | null;
     summary_polyline?: string | null;
     edition?: CardEdition | null;
     is_pr: boolean;
@@ -95,9 +98,13 @@ export interface StreamSummaryPerKm {
     avg_cadence_spm?: number | null;
 }
 
+/** % of moving time spent in each HR zone, keyed Z1..Z5. Absent for no-HR runs. */
+export type ZonePct = Partial<Record<'Z1' | 'Z2' | 'Z3' | 'Z4' | 'Z5', number>>;
+
 export interface StreamSummary {
     per_km?: StreamSummaryPerKm[];
     negative_split?: boolean;
+    time_in_zone_pct?: ZonePct;
     [key: string]: unknown;
 }
 
