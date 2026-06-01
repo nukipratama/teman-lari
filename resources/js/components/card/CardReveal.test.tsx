@@ -27,6 +27,7 @@ const epicReveal: PendingReveal = {
   activity_id: 99,
   rarity: "epic",
   special_move: "Pembalik Keadaan",
+  mood: "nyala",
   badges: ["negative_split", "hari_panas"],
   detail_name: "10K race-pace",
   distance_m: 10000,
@@ -42,6 +43,7 @@ const commonReveal: PendingReveal = {
   activity_id: 12,
   rarity: "common",
   special_move: "Pagi Santai",
+  mood: "adem",
   badges: null,
   detail_name: "Easy run",
   distance_m: 5000,
@@ -162,10 +164,10 @@ describe("CardReveal", () => {
     const u = userEvent.setup();
     render(<CardReveal pending={commonReveal} />);
     await u.click(screen.getByText("Lanjut")); // jump to last frame
-    // 5000m → 5.00 km, 1800s → 30 menit, trimp 42 (now a demoted footnote)
+    // 5000m → 5.00 km, 1800s → 30 menit, trimp 42 shown as the TRIMP badge number
     expect(screen.getByText("5.00")).toBeInTheDocument();
     expect(screen.getByText("30 menit")).toBeInTheDocument();
-    expect(screen.getByText("TRIMP 42")).toBeInTheDocument();
+    expect(screen.getByText("42")).toBeInTheDocument();
   });
 
   it("shows Bagikan button after the card is revealed and opens the share modal", async () => {

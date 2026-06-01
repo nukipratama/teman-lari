@@ -1,0 +1,41 @@
+import { cn } from '@/lib/cn';
+import { HR_ZONES, HR_ZONE_COLORS } from '@/components/aktivitas/HrZoneCard';
+import type { ZonePct } from '@/types/inertia';
+
+interface ZoneBarProps {
+    zonePct: ZonePct;
+    /** Show tiny Z1..Z5 labels under the bar (full-tier card). Off = bare bar (md). */
+    showLegend?: boolean;
+    className?: string;
+}
+
+/**
+ * A thin HR-zone effort bar for the card stat block: a stacked Z1..Z5 strip
+ * using the shared `HR_ZONE_COLORS`, reading as an "energy gauge". The card-sized
+ * sibling of HrZoneCard's bar — bare on `md`, with tiny labels on the full tier.
+ * Renders nothing when the run has no zone data.
+ */
+export default function ZoneBar({ zonePct, showLegend = false, className }: Readonly<ZoneBarProps>) {
+    const segments = HR_ZONES.map((zone) => ({ zone, pct: Number(zonePct[zone] ?? 0) })).filter((s) => s.pct > 0);
+    if (segments.length === 0) return null;
+
+    return (
+        <div className={cn('flex flex-col gap-1', className)}>
+            <div className="flex h-1.5 overflow-hidden rounded-full bg-cream/10" aria-hidden>
+                {segments.map(({ zone, pct }) => (
+                    <div key={zone} style={{ width: `${pct}%`, background: HR_ZONE_COLORS[zone] }} title={`${zone}: ${pct}%`} />
+                ))}
+            </div>
+            {showLegend && (
+                <div className="flex justify-between font-mono text-[8px] uppercase tracking-[0.08em] text-ink-on-sky">
+                    {HR_ZONES.map((zone) => (
+                        <span key={zone} className="flex items-center gap-0.5">
+                            <span aria-hidden className="h-1.5 w-1.5 rounded-full" style={{ background: HR_ZONE_COLORS[zone] }} />
+                            {zone}
+                        </span>
+                    ))}
+                </div>
+            )}
+        </div>
+    );
+}

@@ -143,12 +143,15 @@
     --color-mood-adem: #8e8579;
     --color-mood-adem-bg: #e5e1d8;
 
-    /* Rarity scale — English keys (per Daybreak handoff). */
-    --color-rarity-common: #a39888;
-    --color-rarity-uncommon: #6b8e6f;
-    --color-rarity-rare: #7b5bb6;
-    --color-rarity-epic: #e8a076;
-    --color-rarity-legendary: #d9b23a;
+    /* Rarity scale — vivid "loot ladder" (gray → green → blue → purple → gold).
+       Deliberately brighter/more saturated than the muted Daybreak hues: rarity
+       is the collectible TCG signal, so it gets to be loud. Used by cards, the
+       rarity filter chips, dots, and section headers alike — one source. */
+    --color-rarity-common: #7d8694;
+    --color-rarity-uncommon: #2fb350;
+    --color-rarity-rare: #2f81f7;
+    --color-rarity-epic: #a855f7;
+    --color-rarity-legendary: #f5a623;
 
     /* Strava brand (untouched, never themed). */
     --color-strava-orange: #fc4c02;
@@ -231,40 +234,34 @@ body {
         @apply font-display text-quote-lg italic text-ink;
     }
 
-    /* Holographic foil sweep for top-tier Kartu (Epik / Legendaris). A
-       translucent diagonal highlight drifts across the card; citrus is the
-       reserved celebration hue. Pairs with `position: relative` on the card. */
-    .kartu-holo::after {
-        content: '';
-        position: absolute;
-        inset: 0;
-        border-radius: inherit;
-        pointer-events: none;
-        background: linear-gradient(
-            115deg,
-            transparent 32%,
-            color-mix(in oklab, var(--color-citrus) 38%, transparent) 47%,
-            color-mix(in oklab, var(--color-cream) 60%, transparent) 50%,
-            color-mix(in oklab, var(--color-citrus) 38%, transparent) 53%,
-            transparent 68%
-        );
-        background-size: 250% 250%;
-        mix-blend-mode: soft-light;
-        animation: kartu-holo-sweep 6s linear infinite;
+    /* 3-D perspective tilt — fires on all cards via JS mousemove setting
+       --tilt-x / --tilt-y custom props. Resets on mouseleave. */
+    .kartu-tilt {
+        transform: perspective(700px)
+                   rotateX(var(--tilt-x, 0deg))
+                   rotateY(var(--tilt-y, 0deg));
+        transition: transform 0.12s ease-out;
+        will-change: transform;
     }
-    @media (prefers-reduced-motion: reduce) {
-        .kartu-holo::after {
-            animation: none;
-        }
-    }
-}
 
-@keyframes kartu-holo-sweep {
-    0% {
-        background-position: 0% 0%;
+    /* Rarity halo — rare+ get a calm, static glow ring around the dark frame,
+       reading `--rarity` (the loot-ladder hex, set per card from JS). This is
+       the ONLY foil treatment: no holo sweep, sparkle, or rainbow flooding the
+       bright art window — so the route stays the hero and legendary stops
+       blowing out. Intensity escalates per tier via the inline `--glow-strength`
+       the card sets (rare faint → legendary a touch stronger). */
+    .kartu-glow {
+        box-shadow:
+            0 0 0 1px color-mix(in oklab, var(--rarity, white) 45%, transparent),
+            0 0 calc(12px * var(--glow-strength, 1)) calc(-3px + 1px * var(--glow-strength, 1))
+                color-mix(in oklab, var(--rarity, white) 60%, transparent);
     }
-    100% {
-        background-position: 100% 100%;
+
+    @media (prefers-reduced-motion: reduce) {
+        .kartu-tilt {
+            transform: none;
+            transition: none;
+        }
     }
 }
 

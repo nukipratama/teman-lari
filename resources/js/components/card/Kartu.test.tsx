@@ -3,24 +3,33 @@ import { describe, expect, it } from 'vitest';
 import Kartu from './Kartu';
 import type { Rarity } from '@/types/inertia';
 
-// Classic Google-encoded polyline sample (decodes to several points).
 const SAMPLE_POLYLINE = '_p~iF~ps|U_ulLnnqC_mqNvxq`@';
 
 describe('Kartu', () => {
-    it('renders name, hero km, duration and demoted TRIMP', () => {
+    it('renders name and hero km', () => {
         render(<Kartu name="Pejuang Subuh" km="8.4" durasi="42:11" trimp={68} />);
         expect(screen.getByText('Pejuang Subuh')).toBeInTheDocument();
         expect(screen.getByText('8.4')).toBeInTheDocument();
-        expect(screen.getByText('42:11')).toBeInTheDocument();
-        expect(screen.getByText('TRIMP 68')).toBeInTheDocument();
+    });
+
+    it('shows duration in the stat row on the full tier', () => {
+        render(<Kartu name="x" km="8.4" durasi="42:11" trimp={68} size="lg" />);
+        // duration joins the stat row only on the full tier
+        expect(screen.getByText(/42:11/)).toBeInTheDocument();
+    });
+
+    it('shows the TRIMP number in the floating badge', () => {
+        render(<Kartu name="x" km="1" durasi="1:00" trimp={68} />);
+        // TRIMP is rendered as a number in the TRIMPBadge, not "TRIMP 68"
+        expect(screen.getByText('68')).toBeInTheDocument();
     });
 
     it.each(['common', 'uncommon', 'rare', 'epic', 'legendary'] satisfies Rarity[])(
-        'renders the rarity ribbon for %s',
+        'renders the rarity set symbol for %s',
         (rarity) => {
             render(<Kartu name="x" km="1" durasi="1:00" trimp={1} rarity={rarity} />);
-            const label = { common: 'Biasa', uncommon: 'Berkesan', rare: 'Langka', epic: 'Luar Biasa', legendary: 'Legendaris' }[rarity];
-            expect(screen.getByText(label)).toBeInTheDocument();
+            const symbol = { common: '●', uncommon: '◆', rare: '★', epic: '✦', legendary: '✺' }[rarity];
+            expect(screen.getByText(symbol)).toBeInTheDocument();
         },
     );
 
@@ -39,34 +48,128 @@ describe('Kartu', () => {
         expect(container.querySelector('[data-variant="route"] path')).not.toBeNull();
     });
 
-    it('collapses the art window on the compact tier when there is no route or pace', () => {
+    it('renders the art zone at all sizes including compact', () => {
+        // Art zone is always present (mascot background + route glyph fallback).
         const { container } = render(<Kartu name="x" km="1" durasi="1:00" trimp={1} size="md" />);
-        expect(container.querySelector('[data-variant]')).toBeNull();
+        // TemariProto always renders an SVG in the art zone.
+        expect(container.querySelector('svg')).not.toBeNull();
     });
 
-    it('shows the rarity motif on the full tier when there is no route or pace', () => {
+    it('shows the route glyph fallback in the art zone when there is no route data', () => {
         const { container } = render(<Kartu name="x" km="1" durasi="1:00" trimp={1} size="lg" />);
+        // Without polyline RouteGlyph falls back to the bunny glyph variant.
         expect(container.querySelector('[data-variant="glyph"]')).not.toBeNull();
     });
 
-    it('shows compact emblem chips (no ability text) at md size', () => {
+    it('does not render badge pips at the compact (md) size', () => {
         render(<Kartu name="x" km="1" durasi="1:00" trimp={1} badges={['negative_split']} size="md" />);
+        // No overlay at compact size — badges are not shown.
+        expect(screen.queryByText('Negative Split')).toBeNull();
+    });
+
+    it('shows badge pips (name only, no description) in the art overlay at the full (lg) size', () => {
+        render(
+            <Kartu
+                name="x"
+                km="1"
+                durasi="1:00"
+                trimp={1}
+                badges={['negative_split']}
+                flavor="Some quote."
+                size="lg"
+            />,
+        );
         expect(screen.getByText('Negative Split')).toBeInTheDocument();
+        // Description lives in the title attribute, not visible DOM text.
         expect(screen.queryByText(/malah lebih ngebut/)).toBeNull();
     });
 
-    it('shows ability rows with descriptions at the full (lg) size', () => {
-        render(<Kartu name="x" km="1" durasi="1:00" trimp={1} badges={['negative_split']} size="lg" />);
-        expect(screen.getByText('Negative Split')).toBeInTheDocument();
-        expect(screen.getByText(/malah lebih ngebut/)).toBeInTheDocument();
-    });
-
-    it('shows the flavor footer only on the full tier', () => {
+    it('shows the flavor quote in the art overlay only on the full tier', () => {
         const { rerender } = render(
             <Kartu name="x" km="1" durasi="1:00" trimp={1} flavor="Comeback paruh kedua." size="md" />,
         );
         expect(screen.queryByText(/Comeback paruh kedua/)).toBeNull();
         rerender(<Kartu name="x" km="1" durasi="1:00" trimp={1} flavor="Comeback paruh kedua." size="lg" />);
         expect(screen.getByText(/Comeback paruh kedua/)).toBeInTheDocument();
+    });
+
+    it('exposes the mood via the TRIMP badge aria-label', () => {
+        render(<Kartu name="x" km="1" durasi="1:00" trimp={1} mood="nyala" size="lg" />);
+        // Mood rides on the TRIMP "power" badge pip as an accessible label.
+        expect(screen.getByLabelText('Vibe Nyala')).toBeInTheDocument();
+    });
+
+    it('shows a mood pip with aria-label but no visible label text on the compact tier', () => {
+        render(<Kartu name="x" km="1" durasi="1:00" trimp={1} mood="lemes" size="md" />);
+        expect(screen.getByLabelText('Vibe Lemes')).toBeInTheDocument();
+        expect(screen.queryByText('Lemes')).toBeNull();
+    });
+
+    it.each([
+        ['common', '●'],
+        ['uncommon', '◆'],
+        ['rare', '★'],
+        ['epic', '✦'],
+        ['legendary', '✺'],
+    ] satisfies Array<[Rarity, string]>)('shows the %s set symbol', (rarity, symbol) => {
+        render(<Kartu name="x" km="1" durasi="1:00" trimp={1} rarity={rarity} />);
+        expect(screen.getByText(symbol)).toBeInTheDocument();
+    });
+
+    it('shows a labeled stat grid on the full tier', () => {
+        render(
+            <Kartu
+                name="x"
+                km="1"
+                durasi="1:00"
+                trimp={1}
+                size="lg"
+                stats={{ pace: '5:30/km', hr: '150 bpm', cadence: '178 spm', fastestKm: '5:02/km' }}
+            />,
+        );
+        // The full tier is a dense, labeled TCG stat block.
+        expect(screen.getByText('Pace')).toBeInTheDocument();
+        expect(screen.getByText('5:30/km')).toBeInTheDocument();
+        expect(screen.getByText('150 bpm')).toBeInTheDocument();
+        expect(screen.getByText('Cadence')).toBeInTheDocument();
+        expect(screen.getByText('178 spm')).toBeInTheDocument();
+        expect(screen.getByText('Best km')).toBeInTheDocument();
+    });
+
+    it('renders the HR-zone effort bar when zone data is present', () => {
+        const { container } = render(
+            <Kartu name="x" km="1" durasi="1:00" trimp={1} size="lg" zonePct={{ Z1: 20, Z2: 50, Z3: 30 }} />,
+        );
+        // The bar segments carry per-zone titles; the legend shows Z labels.
+        expect(container.querySelector('[title="Z2: 50%"]')).not.toBeNull();
+        expect(screen.getByText('Z1')).toBeInTheDocument();
+    });
+
+    it('omits the HR-zone bar when there is no zone data', () => {
+        const { container } = render(<Kartu name="x" km="1" durasi="1:00" trimp={1} size="lg" />);
+        expect(container.querySelector('[title^="Z"]')).toBeNull();
+    });
+
+    it('shows pace/HR but omits duration on the compact tier', () => {
+        render(<Kartu name="x" km="1" durasi="1:00" trimp={1} size="md" stats={{ pace: '5:30/km', hr: '150 bpm' }} />);
+        // Compact tiles carry the core run identity (pace + HR) but not duration.
+        expect(screen.getByText(/5:30\/km/)).toBeInTheDocument();
+        expect(screen.getByText(/150 bpm/)).toBeInTheDocument();
+        expect(screen.queryByText(/1:00/)).toBeNull();
+    });
+
+    it('renders the badge emoji pip in the art overlay at the full (lg) size', () => {
+        render(
+            <Kartu
+                name="x"
+                km="1"
+                durasi="1:00"
+                trimp={1}
+                badges={['negative_split']}
+                flavor="Some quote."
+                size="lg"
+            />,
+        );
+        expect(screen.getByText('👻')).toBeInTheDocument();
     });
 });

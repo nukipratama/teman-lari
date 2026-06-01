@@ -28,6 +28,7 @@ const kartu: ShareKartuData = {
     id: 7,
     name: 'Tendangan Balik',
     rarity: 'epic',
+    mood: 'enteng',
     subtitle: 'Pagi negatif-split · 20 Mei 2026',
     date: '20 Mei 2026\n07:00',
     km: '5.28',
@@ -35,9 +36,13 @@ const kartu: ShareKartuData = {
     pace: '5:30',
     trimp: '87',
     hr: '145 bpm',
+    cadence: '176 spm',
+    fastestKm: '5:02/km',
+    zonePct: { Z1: 8, Z2: 35, Z3: 32, Z4: 18, Z5: 7 },
     location: 'Jakarta Selatan',
     weather: '28°C',
     tags: ['Negative Split', 'Anak Pagi'],
+    tagEmojis: ['👻', '🌅'],
     quote: 'Lari ini bukti kamu bisa lebih jauh.',
     polyline: '_p~iF~ps|U_ulLnnqC_mqNvxq`@',
     edition: { index: 3, total: 25 },
@@ -128,11 +133,13 @@ describe('ShareCardModal', () => {
         render(<ShareCardModal kartu={kartu} onClose={vi.fn()} />);
         const select = screen.getByLabelText('Pilih gaya kartu');
         expect(select).toBeInTheDocument();
-        ['Kartu', 'Bungkus', 'Rute', 'Polaroid', 'Poster', 'Struk'].forEach((label) =>
+        ['Kartu', 'Rute', 'Struk'].forEach((label) =>
             expect(screen.getByRole('option', { name: label })).toBeInTheDocument(),
         );
-        // The trimmed 'Angka' template is gone.
-        expect(screen.queryByRole('option', { name: 'Angka' })).toBeNull();
+        // The trimmed templates are gone.
+        ['Bungkus', 'Polaroid', 'Poster', 'Angka'].forEach((label) =>
+            expect(screen.queryByRole('option', { name: label })).toBeNull(),
+        );
         // Switching to the receipt template renders without crashing.
         fireEvent.change(select, { target: { value: 'struk' } });
         expect(screen.getAllByText(/Tendangan Balik/).length).toBeGreaterThan(0);

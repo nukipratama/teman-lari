@@ -1,4 +1,6 @@
-import type { ActivityDetail, Rarity } from '@/types/inertia';
+import { formatPace, paceSecPerKm } from '@/lib/pace';
+import type { ActivityDetail, Rarity, ZonePct } from '@/types/inertia';
+import type { TemariPose } from '@/components/temari/TemariProto';
 
 export const RARITY_LABELS: Record<Rarity, string> = {
     common: 'Biasa',
@@ -41,6 +43,35 @@ export const RARITY_BORDER: Record<Rarity, string> = {
     legendary: 'border-rarity-legendary',
 };
 
+// Escalating "set symbol" glyph per rarity (circle to star), TCG-style. Colored
+// via RARITY_TEXT. Mirrored as RARITY_SYMBOL in lib/shareCard.ts for the canvas.
+export const RARITY_SYMBOL: Record<Rarity, string> = {
+    common: '●',
+    uncommon: '◆',
+    rare: '★',
+    epic: '✦',
+    legendary: '✺',
+};
+
+// Loot-ladder rarity hex — mirrors the --color-rarity-* tokens in app.css.
+// Lives here so JS/SVG/canvas (RouteGlyph, Kartu CSS var, shareCard) all share
+// one source where a CSS var can't reach (inline SVG fill, canvas fillStyle).
+export const RARITY_HEX: Record<Rarity, string> = {
+    common: '#7d8694',
+    uncommon: '#2fb350',
+    rare: '#2f81f7',
+    epic: '#a855f7',
+    legendary: '#f5a623',
+};
+
+export const RARITY_TEXT: Record<Rarity, string> = {
+    common: 'text-rarity-common',
+    uncommon: 'text-rarity-uncommon',
+    rare: 'text-rarity-rare',
+    epic: 'text-rarity-epic',
+    legendary: 'text-rarity-legendary',
+};
+
 // Static literal Tailwind class maps (so JIT picks them up) for the rarity
 // swatch + surface wash shared by the card and the mini tile.
 export const RARITY_DOT: Record<Rarity, string> = {
@@ -57,6 +88,24 @@ export const RARITY_TINT: Record<Rarity, string> = {
     rare: 'bg-rarity-rare/[0.07]',
     epic: 'bg-rarity-epic/[0.08]',
     legendary: 'bg-rarity-legendary/[0.09]',
+};
+
+// Headband color driven by rarity — wired to TemariProto's `equipped.headband`.
+export const RARITY_HEADBAND: Record<Rarity, 'ember' | 'epik' | 'legendaris'> = {
+    common: 'ember',
+    uncommon: 'ember',
+    rare: 'epik',
+    epic: 'legendaris',
+    legendary: 'legendaris',
+};
+
+// Mascot pose driven by rarity — reinforces the tier hierarchy on cards and detail page.
+export const RARITY_POSE: Record<Rarity, TemariPose> = {
+    common: 'observational',
+    uncommon: 'proud',
+    rare: 'excited',
+    epic: 'pumped',
+    legendary: 'glow',
 };
 
 // Slug → Title Case ("anak_pagi" → "Anak Pagi"). Fallback for unknown slugs.
@@ -98,4 +147,65 @@ export function paceShapeFromDetail(detail?: ActivityDetail | null): number[] {
     return perKm
         .map((split) => parsePaceSeconds(split.pace))
         .filter((seconds): seconds is number => seconds !== null);
+}
+
+// Mean per-km cadence (spm) from stream_summary, rounded. Null when no cadence
+// data exists on any split.
+export function avgCadenceFromDetail(detail?: ActivityDetail | null): number | null {
+    const perKm = detail?.stream_summary?.per_km;
+    if (!perKm?.length) return null;
+    const cadences = perKm
+        .map((split) => split.avg_cadence_spm)
+        .filter((spm): spm is number => spm != null && spm > 0);
+    if (cadences.length === 0) return null;
+    return Math.round(cadences.reduce((sum, spm) => sum + spm, 0) / cadences.length);
+}
+
+// The fastest single km as its "M:SS" pace string. Null when no per-km data.
+export function fastestKmFromDetail(detail?: ActivityDetail | null): string | null {
+    const perKm = detail?.stream_summary?.per_km;
+    if (!perKm?.length) return null;
+    let best: { pace: string; seconds: number } | null = null;
+    for (const split of perKm) {
+        const seconds = parsePaceSeconds(split.pace);
+        if (seconds !== null && (best === null || seconds < best.seconds)) {
+            best = { pace: split.pace, seconds };
+        }
+    }
+    return best?.pace ?? null;
+}
+
+// HR zone distribution (% per Z1..Z5) from stream_summary. Null when the run
+// has no zone data (e.g. no HR), so callers can hide the zone bar.
+export function zonePctFromDetail(detail?: ActivityDetail | null): ZonePct | null {
+    const zones = detail?.stream_summary?.time_in_zone_pct;
+    if (zones == null) return null;
+    const hasData = (['Z1', 'Z2', 'Z3', 'Z4', 'Z5'] as const).some((z) => (zones[z] ?? 0) > 0);
+    return hasData ? zones : null;
+}
+
+/** The display-formatted secondary stats a `Kartu` shows (assignable to KartuStats). */
+export interface CardStatStrings {
+    pace?: string;
+    hr?: string;
+    cadence?: string;
+    fastestKm?: string;
+}
+
+/**
+ * Derive a card's display stats (pace · HR · cadence · fastest km) from a run's
+ * detail, in one place — every `<Kartu stats={...}>` call site feeds from this so
+ * the `${x} bpm` / `${x} spm` / `${pace}/km` formatting can't drift. Each value is
+ * omitted (not "—") when its source is missing, matching the card's honest-cells rule.
+ */
+export function buildCardStats(detail?: ActivityDetail | null): CardStatStrings {
+    const paceSec = paceSecPerKm(detail?.moving_time, detail?.distance);
+    const cadence = avgCadenceFromDetail(detail);
+    const fastestKm = fastestKmFromDetail(detail);
+    return {
+        pace: paceSec != null ? `${formatPace(paceSec)}/km` : undefined,
+        hr: detail?.average_heartrate != null ? `${Math.round(detail.average_heartrate)} bpm` : undefined,
+        cadence: cadence != null ? `${cadence} spm` : undefined,
+        fastestKm: fastestKm != null ? `${fastestKm}/km` : undefined,
+    };
 }

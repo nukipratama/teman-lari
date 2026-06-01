@@ -361,10 +361,14 @@ function FeaturedKartuPanel({
                         durasi={featured.durasi}
                         trimp={featured.trimp}
                         rarity={featured.rarity}
+                        mood={featured.mood}
                         badges={featured.badges}
+                        stats={featured.stats}
+                        zonePct={featured.zonePct}
                         polyline={featured.polyline}
                         paceShape={featured.paceShape}
                         size="md"
+                        className="w-[260px]"
                     />
                 </div>
                 {/* mobile fallback: Temari above, full Kartu below — keep the kartu-as-hero feel */}
@@ -377,11 +381,14 @@ function FeaturedKartuPanel({
                         durasi={featured.durasi}
                         trimp={featured.trimp}
                         rarity={featured.rarity}
+                        mood={featured.mood}
                         badges={featured.badges}
+                        stats={featured.stats}
+                        zonePct={featured.zonePct}
                         polyline={featured.polyline}
                         paceShape={featured.paceShape}
                         size="md"
-                        className="w-full max-w-md"
+                        className="w-full max-w-[300px]"
                     />
                 </div>
             </div>

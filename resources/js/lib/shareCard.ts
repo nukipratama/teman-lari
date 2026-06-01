@@ -1,7 +1,10 @@
-import { DAYBREAK } from '@/lib/chartTokens';
+import { DAYBREAK, hrZone } from '@/lib/chartTokens';
 import { projectPolyline } from '@/lib/route';
-import { RARITY_LABELS } from '@/lib/runcard';
-import type { CardEdition, Rarity } from '@/types/inertia';
+import { RARITY_LABELS, RARITY_SYMBOL } from '@/lib/runcard';
+import { MOOD_FACE, MOOD_LABEL, moodSigilColor } from '@/lib/mood';
+import type { CardEdition, Mood, Rarity, ZonePct } from '@/types/inertia';
+
+const HR_ZONES = ['Z1', 'Z2', 'Z3', 'Z4', 'Z5'] as const;
 
 /**
  * Deterministic, device-independent share-card renderer.
@@ -21,6 +24,8 @@ export interface ShareKartuData {
     id: number;
     name: string;
     rarity: Rarity;
+    /** The run's Temari mood, used as the card's "element/type". */
+    mood: Mood;
     subtitle: string | null;
     date: string | null;
     km: string;
@@ -28,9 +33,17 @@ export interface ShareKartuData {
     pace: string | null;
     trimp: string;
     hr: string | null;
+    /** Avg cadence label, e.g. "178 spm". */
+    cadence: string | null;
+    /** Fastest single km pace, e.g. "5:41/km". */
+    fastestKm: string | null;
+    /** HR zone distribution (Z1..Z5 %) for the effort bar. Null hides it. */
+    zonePct: ZonePct | null;
     location: string | null;
     weather: string | null;
     tags: string[];
+    /** Badge emoji emblems, parallel to tags, for the hero ability pips. */
+    tagEmojis: string[];
     quote: string | null;
     /** Encoded route polyline for the card / route templates (optional). */
     polyline?: string | null;
@@ -40,7 +53,7 @@ export interface ShareKartuData {
 
 export type Theme = 'Dawn' | 'Sky' | 'Cream' | 'Inverted';
 export type Format = 'story' | 'feed';
-export type Layout = 'kartu' | 'pack' | 'rute' | 'polaroid' | 'poster' | 'struk';
+export type Layout = 'kartu' | 'rute' | 'struk';
 
 export interface ShareCardConfig {
     kartu: ShareKartuData;
@@ -49,6 +62,12 @@ export interface ShareCardConfig {
     format: Format;
     showStats: boolean;
     showQuote: boolean;
+    /**
+     * The full Temari mascot (with user accessories) pre-rendered to an image
+     * from the live DOM. When provided, `drawHero` draws this instead of the
+     * fallback flat bunny glyph.
+     */
+    temariImg?: HTMLImageElement | null;
 }
 
 const DIMS: Record<Format, { w: number; h: number }> = {
@@ -57,9 +76,6 @@ const DIMS: Record<Format, { w: number; h: number }> = {
 };
 
 const PAD = 92;
-
-// Card tile aspect (height / width) — shared by every template that draws a tile.
-const TILE_ASPECT = 1.34;
 
 // Daybreak palette as literal hex (canvas can't read CSS vars). Brand hues
 // reference the shared DAYBREAK bridge so they can't drift; the rest are
@@ -77,12 +93,14 @@ const C = {
     surfaceCard: '#f6f1e8',
     surfaceSunken: '#efe8da',
     line: '#e3dccd',
+    inkOnSky: '#b8ad97',
+    // Vivid loot-ladder rarity — mirrors RARITY_HEX / the --color-rarity-* tokens.
     rarity: {
-        common: DAYBREAK.stone,
-        uncommon: DAYBREAK.leaf,
-        rare: DAYBREAK.mumet,
-        epic: DAYBREAK.citrus,
-        legendary: DAYBREAK.ember,
+        common: '#7d8694',
+        uncommon: '#2fb350',
+        rare: '#2f81f7',
+        epic: '#a855f7',
+        legendary: '#f5a623',
     } as Record<string, string>,
 };
 
@@ -230,12 +248,12 @@ function ensureFonts(): Promise<void> {
 
 // Flat, canvas-safe port of BunnyGlyph in components/BrandMark.tsx (no
 // gradients/highlights). Keep the core geometry in sync with that source.
-function bunnySvg(tone: 'ink' | 'cream'): string {
+function bunnySvg(tone: 'ink' | 'cream', bandHex: string = C.horizon): string {
     const isInk = tone === 'ink';
     const face = isInk ? C.ink : C.cream;
     const blush = isInk ? C.horizon : C.horizonDeep;
     const features = isInk ? C.cream : C.ink;
-    return `<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><defs><clipPath id="b"><circle cx="50" cy="58" r="40"/></clipPath></defs><ellipse cx="32" cy="8" rx="9" ry="16" fill="${face}" transform="rotate(-12 32 8)"/><ellipse cx="68" cy="8" rx="9" ry="16" fill="${face}" transform="rotate(12 68 8)"/><ellipse cx="32" cy="10" rx="4" ry="9" fill="${blush}" transform="rotate(-12 32 10)"/><ellipse cx="68" cy="10" rx="4" ry="9" fill="${blush}" transform="rotate(12 68 10)"/><circle cx="50" cy="58" r="40" fill="${face}"/><g clip-path="url(#b)"><rect x="10" y="40" width="80" height="14" fill="${C.horizon}"/></g><circle cx="38" cy="68" r="4.5" fill="${features}"/><circle cx="62" cy="68" r="4.5" fill="${features}"/><path d="M 44 80 Q 50 85 56 80" fill="none" stroke="${features}" stroke-width="2.4" stroke-linecap="round"/></svg>`;
+    return `<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><defs><clipPath id="b"><circle cx="50" cy="58" r="40"/></clipPath></defs><ellipse cx="32" cy="8" rx="9" ry="16" fill="${face}" transform="rotate(-12 32 8)"/><ellipse cx="68" cy="8" rx="9" ry="16" fill="${face}" transform="rotate(12 68 8)"/><ellipse cx="32" cy="10" rx="4" ry="9" fill="${blush}" transform="rotate(-12 32 10)"/><ellipse cx="68" cy="10" rx="4" ry="9" fill="${blush}" transform="rotate(12 68 10)"/><circle cx="50" cy="58" r="40" fill="${face}"/><g clip-path="url(#b)"><rect x="10" y="40" width="80" height="14" fill="${bandHex}"/></g><circle cx="38" cy="68" r="4.5" fill="${features}"/><circle cx="62" cy="68" r="4.5" fill="${features}"/><path d="M 44 80 Q 50 85 56 80" fill="none" stroke="${features}" stroke-width="2.4" stroke-linecap="round"/></svg>`;
 }
 
 function loadImage(src: string): Promise<HTMLImageElement> {
@@ -247,17 +265,19 @@ function loadImage(src: string): Promise<HTMLImageElement> {
     });
 }
 
-// Only two tones exist and the glyph never changes; cache each decoded image
-// so repeated repaints reuse it instead of re-encoding and re-decoding the SVG.
-const bunnyCache: Partial<Record<'ink' | 'cream', HTMLImageElement>> = {};
+// Few tone/band combinations exist and each glyph never changes; cache every
+// decoded image (keyed by tone + headband hex) so repeated repaints reuse it
+// instead of re-encoding and re-decoding the SVG.
+const bunnyCache: Record<string, HTMLImageElement> = {};
 
-async function loadBunny(tone: 'ink' | 'cream'): Promise<HTMLImageElement | null> {
-    if (bunnyCache[tone]) {
-        return bunnyCache[tone];
+async function loadBunny(tone: 'ink' | 'cream', bandHex: string = C.horizon): Promise<HTMLImageElement | null> {
+    const key = `${tone}:${bandHex}`;
+    if (bunnyCache[key]) {
+        return bunnyCache[key];
     }
     try {
-        const img = await loadImage(`data:image/svg+xml;utf8,${encodeURIComponent(bunnySvg(tone))}`);
-        bunnyCache[tone] = img;
+        const img = await loadImage(`data:image/svg+xml;utf8,${encodeURIComponent(bunnySvg(tone, bandHex))}`);
+        bunnyCache[key] = img;
         return img;
     } catch {
         return null;
@@ -309,44 +329,9 @@ interface DrawCtx {
     cfg: ShareCardConfig;
     pal: Palette;
     bunny: HTMLImageElement | null;
+    /** Temari glyph with its headband tinted to the card's mood. */
+    moodBunny: HTMLImageElement | null;
     statItems: Array<{ v: string; l: string }>;
-}
-
-/** Vertical label/value stat rows. Returns total height drawn. */
-function drawStatRows(d: DrawCtx, x: number, y: number, maxW: number, items: Array<{ v: string; l: string }>): number {
-    const { ctx, pal } = d;
-    const rowH = 70;
-    items.forEach((item, i) => {
-        const ry = y + i * rowH + rowH / 2;
-        ctx.textBaseline = 'middle';
-        ctx.font = '700 30px "JetBrains Mono"';
-        ctx.letterSpacing = '2px';
-        ctx.fillStyle = pal.meta;
-        ctx.textAlign = 'left';
-        ctx.fillText(item.l.toUpperCase(), x, ry);
-        ctx.letterSpacing = '0px';
-        ctx.font = '700 40px "Plus Jakarta Sans"';
-        ctx.fillStyle = pal.text;
-        ctx.textAlign = 'right';
-        ctx.fillText(item.v, x + maxW, ry);
-    });
-    return items.length * rowH;
-}
-
-function drawTextBlock(
-    ctx: CanvasRenderingContext2D,
-    lines: string[],
-    x: number,
-    y: number,
-    lineHeight: number,
-    color: string,
-    align: CanvasTextAlign = 'left',
-): number {
-    ctx.textAlign = align;
-    ctx.textBaseline = 'alphabetic';
-    ctx.fillStyle = color;
-    lines.forEach((line, i) => ctx.fillText(line, x, y + i * lineHeight));
-    return lines.length * lineHeight;
 }
 
 /** Bottom-left mono date stamp, shared by the poster and angka templates. */
@@ -362,61 +347,6 @@ function drawDateFooter(d: DrawCtx): void {
     ctx.textBaseline = 'alphabetic';
     ctx.fillText(cfg.kartu.date.replace('\n', ' · '), PAD, h - PAD);
     ctx.letterSpacing = '0px';
-}
-
-function drawPoster(d: DrawCtx): void {
-    const { ctx, w, h, cfg, pal, bunny, statItems } = d;
-    paintGlow(ctx, w / 2, h * 0.44, w * 0.5);
-    drawBrand(ctx, w - PAD, PAD, pal.isDark, bunny);
-    drawRarityFlag(ctx, PAD, PAD, cfg.kartu.rarity);
-
-    // Footer (stat list + date), measured up from the bottom.
-    const items = cfg.format === 'story' ? statItems.slice(0, 4) : statItems.slice(0, 3);
-    const showStats = cfg.showStats && items.length > 0;
-    const statsH = showStats ? items.length * 70 + 30 : 0;
-    const dateH = cfg.kartu.date ? 56 : 0;
-    const footerTop = h - PAD - statsH - dateH;
-
-    if (showStats) {
-        ctx.strokeStyle = pal.divider;
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.moveTo(PAD, footerTop);
-        ctx.lineTo(w - PAD, footerTop);
-        ctx.stroke();
-        drawStatRows(d, PAD, footerTop + 30, w - PAD * 2, items);
-    }
-    drawDateFooter(d);
-
-    // Hero (name + quote), optically centered between header and footer.
-    const heroTop = PAD + 70;
-    const heroBottom = footerTop - 40;
-    const nameSize = cfg.format === 'story' ? 104 : 84;
-    ctx.font = `italic 600 ${nameSize}px "Fraunces"`;
-    const nameLines = wrapText(ctx, `${cfg.kartu.name}.`, w - PAD * 2);
-    const nameLH = nameSize * 0.98;
-    const quote = cfg.format === 'story' && cfg.showQuote ? cfg.kartu.quote : null;
-    let quoteLines: string[] = [];
-    if (quote) {
-        ctx.font = 'italic 500 42px "Fraunces"';
-        quoteLines = wrapText(ctx, quote, w - PAD * 2 - 28);
-    }
-    const blockH = nameLines.length * nameLH + (quoteLines.length ? 36 + quoteLines.length * 54 : 0);
-    let cursorY = heroTop + (heroBottom - heroTop - blockH) / 2 + nameSize * 0.74;
-
-    ctx.font = `italic 600 ${nameSize}px "Fraunces"`;
-    cursorY += drawTextBlock(ctx, nameLines, PAD, cursorY, nameLH, pal.name);
-    if (quoteLines.length) {
-        const qy = cursorY + 36;
-        ctx.strokeStyle = C.horizon;
-        ctx.lineWidth = 5;
-        ctx.beginPath();
-        ctx.moveTo(PAD + 2, qy - 38);
-        ctx.lineTo(PAD + 2, qy - 38 + quoteLines.length * 54);
-        ctx.stroke();
-        ctx.font = 'italic 500 42px "Fraunces"';
-        drawTextBlock(ctx, quoteLines, PAD + 28, qy, 54, pal.quote);
-    }
 }
 
 /** Route-map hero: the run's route as big poster art with name + KM + edition. */
@@ -463,219 +393,444 @@ function drawRute(d: DrawCtx): void {
     drawDateFooter(d);
 }
 
-/** Polaroid: the card tile in an instant-photo frame with a handwritten caption. */
-function drawPolaroid(d: DrawCtx): void {
-    const { ctx, w, h, cfg } = d;
-    const k = cfg.kartu;
-    const tileW = cfg.format === 'story' ? w * 0.62 : w * 0.56;
-    const tileH = tileW * TILE_ASPECT;
-    const frameW = tileW + 88;
-    const frameX = (w - frameW) / 2;
-    const photoTop = cfg.format === 'story' ? h * 0.12 : PAD * 0.7;
-
-    ctx.save();
-    ctx.shadowColor = 'rgba(31,39,71,0.3)';
-    ctx.shadowBlur = 48;
-    ctx.shadowOffsetY = 28;
-    roundRectPath(ctx, frameX, photoTop, frameW, tileH + 210, 14);
-    ctx.fillStyle = C.cream;
-    ctx.fill();
-    ctx.restore();
-
-    drawKartuTile(d, w / 2, photoTop + 44 + tileH / 2, tileW);
-
-    const caption = k.quote ?? k.subtitle ?? `${k.km} km bareng Temari`;
-    ctx.font = 'italic 500 46px "Fraunces"';
-    ctx.fillStyle = C.ink2;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'alphabetic';
-    const capY = photoTop + 44 + tileH + 96;
-    wrapText(ctx, caption, frameW - 60)
-        .slice(0, 2)
-        .forEach((ln, i) => ctx.fillText(ln, w / 2, capY + i * 52));
-}
-
-/** Booster-pack reveal: the card sliding out of a torn rarity-foil wrapper. */
-function drawPack(d: DrawCtx): void {
-    const { ctx, w, h, cfg, pal, bunny } = d;
-    const k = cfg.kartu;
-    paintGlow(ctx, w / 2, h * 0.46, w * 0.5);
-    drawBrand(ctx, w - PAD, PAD, pal.isDark, bunny);
-
-    ctx.font = '700 30px "JetBrains Mono"';
-    ctx.letterSpacing = '3px';
-    ctx.fillStyle = C.horizon;
-    ctx.textAlign = 'left';
-    ctx.textBaseline = 'middle';
-    ctx.fillText('★ BARU NARIK', PAD, PAD + 28);
-    ctx.letterSpacing = '0px';
-
-    // Foil pack (lower portion) with a torn zig-zag top edge.
-    const packTop = h * 0.54;
-    const zig = 30;
-    ctx.beginPath();
-    ctx.moveTo(PAD, packTop);
-    for (let zx = PAD, i = 0; zx < w - PAD; zx += zig * 2, i += 1) {
-        ctx.lineTo(zx + zig, packTop - (i % 2 === 0 ? 24 : 0));
-        ctx.lineTo(zx + zig * 2, packTop);
+function drawHeroShimmer(
+    ctx: CanvasRenderingContext2D,
+    cx: number, artY: number, cw: number, artH: number,
+    rarity: Rarity, rarityCol: string,
+): void {
+    if (rarity !== 'epic' && rarity !== 'legendary') return;
+    const g = ctx.createLinearGradient(cx, artY, cx + cw, artY + artH);
+    if (rarity === 'legendary') {
+        g.addColorStop(0, 'rgba(255,80,80,0.07)');
+        g.addColorStop(0.2, 'rgba(255,200,80,0.07)');
+        g.addColorStop(0.4, 'rgba(80,255,80,0.07)');
+        g.addColorStop(0.6, 'rgba(80,180,255,0.07)');
+        g.addColorStop(0.8, 'rgba(180,80,255,0.07)');
+        g.addColorStop(1, 'rgba(255,80,80,0.07)');
+    } else {
+        g.addColorStop(0, 'transparent');
+        g.addColorStop(0.45, rarityCol + '30');
+        g.addColorStop(0.5, 'rgba(255,255,255,0.18)');
+        g.addColorStop(0.55, rarityCol + '30');
+        g.addColorStop(1, 'transparent');
     }
-    ctx.lineTo(w - PAD, h - PAD);
-    ctx.lineTo(PAD, h - PAD);
-    ctx.closePath();
-    ctx.fillStyle = C.rarity[k.rarity] ?? C.line;
-    ctx.fill();
-
-    ctx.font = '700 40px "JetBrains Mono"';
-    ctx.letterSpacing = '5px';
-    ctx.fillStyle = k.rarity === 'epic' || k.rarity === 'legendary' ? C.ink : C.cream;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText('TEMANLARI', w / 2, h - PAD - 40);
-    ctx.letterSpacing = '0px';
-
-    // Card sliding out above the torn edge.
-    const tileW = cfg.format === 'story' ? w * 0.52 : w * 0.48;
-    drawKartuTile(d, w / 2, packTop - tileW * 0.52, tileW);
+    ctx.fillStyle = g;
+    ctx.globalCompositeOperation = 'soft-light';
+    ctx.fillRect(cx, artY, cw, artH);
+    ctx.globalCompositeOperation = 'source-over';
 }
 
-function drawKartuTile(d: DrawCtx, cx: number, cy: number, tileW: number): void {
-    const { ctx, cfg } = d;
-    const k = cfg.kartu;
-    const tileH = tileW * TILE_ASPECT;
-    const x = cx - tileW / 2;
-    const y = cy - tileH / 2;
-    const pad = tileW * 0.075;
-    const rarityCol = C.rarity[k.rarity] ?? C.line;
+/** Floating edition (L) + TRIMP-power (R) pills over the bright art window. */
+function drawHeroArtBadges(
+    ctx: CanvasRenderingContext2D,
+    k: ShareKartuData,
+    box: { x: number; y: number; w: number },
+    moodCol: string,
+): void {
+    const badgePad = 18;
+    const badgeH = 48;
+    const top = box.y + 18;
+    const mid = top + badgeH / 2;
 
-    ctx.save();
-    ctx.translate(cx, cy);
-    ctx.rotate(-0.035);
-    ctx.translate(-cx, -cy);
-
-    // Card body + rarity frame.
-    ctx.shadowColor = 'rgba(31,39,71,0.35)';
-    ctx.shadowBlur = 40;
-    ctx.shadowOffsetY = 24;
-    roundRectPath(ctx, x, y, tileW, tileH, 28);
-    ctx.fillStyle = C.surfaceCard;
-    ctx.fill();
-    ctx.shadowColor = 'transparent';
-    ctx.shadowBlur = 0;
-    ctx.shadowOffsetY = 0;
-    ctx.lineWidth = 5;
-    ctx.strokeStyle = rarityCol;
-    roundRectPath(ctx, x + 2.5, y + 2.5, tileW - 5, tileH - 5, 26);
-    ctx.stroke();
-
-    let cursor = y + pad;
-
-    // Chrome row: rarity ribbon (left) + edition (right).
-    ctx.font = '700 26px "JetBrains Mono"';
-    ctx.letterSpacing = '2px';
-    const rlabel = (RARITY_LABELS[k.rarity as keyof typeof RARITY_LABELS] ?? k.rarity).toUpperCase();
-    const ribbonW = ctx.measureText(rlabel).width + 44;
-    roundRectPath(ctx, x + pad, cursor, ribbonW, 46, 23);
-    ctx.fillStyle = rarityCol;
-    ctx.fill();
-    ctx.fillStyle = k.rarity === 'epic' || k.rarity === 'legendary' ? C.ink : C.cream;
-    ctx.textAlign = 'left';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(rlabel, x + pad + 22, cursor + 24);
-    ctx.letterSpacing = '0px';
     if (k.edition) {
-        ctx.font = '600 32px "Oswald"';
-        ctx.fillStyle = C.ink3;
-        ctx.textAlign = 'right';
-        ctx.fillText(`#${k.edition.index}/${k.edition.total}`, x + tileW - pad, cursor + 24);
+        ctx.font = '600 28px "JetBrains Mono"';
+        const edText = '#' + String(k.edition.index) + '/' + String(k.edition.total);
+        const edW = ctx.measureText(edText).width + badgePad * 2;
+        roundRectPath(ctx, box.x + 18, top, edW, badgeH, badgeH / 2);
+        ctx.fillStyle = 'rgba(22,27,51,0.82)';
+        ctx.fill();
+        ctx.fillStyle = C.cream;
+        ctx.textBaseline = 'middle';
+        ctx.textAlign = 'left';
+        ctx.fillText(edText, box.x + 18 + badgePad, mid + 1);
     }
-    cursor += 46 + pad * 0.5;
 
-    // Nameplate (Oswald, uppercase, up to 2 lines).
-    const nameSize = tileW * 0.108;
-    ctx.font = `700 ${nameSize}px "Oswald"`;
-    ctx.fillStyle = C.ink;
-    ctx.textAlign = 'left';
-    ctx.textBaseline = 'alphabetic';
-    wrapText(ctx, k.name.toUpperCase(), tileW - pad * 2)
-        .slice(0, 2)
-        .forEach((ln) => {
-            cursor += nameSize;
-            ctx.fillText(ln, x + pad, cursor);
-            cursor += nameSize * 0.08;
-        });
-    cursor += pad * 0.5;
-
-    // Art window: the run's route, rarity-tinted.
-    const artH = tileH * 0.3;
-    const art = { x: x + pad, y: cursor, w: tileW - pad * 2, h: artH };
-    roundRectPath(ctx, art.x, art.y, art.w, art.h, 16);
-    ctx.fillStyle = C.surfaceSunken;
+    ctx.font = '700 28px "JetBrains Mono"';
+    const trimpText = String(k.trimp);
+    const trimpW = ctx.measureText(trimpText).width + badgePad * 2 + 30;
+    const bx = box.x + box.w - 18 - trimpW;
+    roundRectPath(ctx, bx, top, trimpW, badgeH, badgeH / 2);
+    ctx.fillStyle = 'rgba(22,27,51,0.82)';
     ctx.fill();
-    ctx.lineWidth = 2;
-    ctx.strokeStyle = C.line;
-    roundRectPath(ctx, art.x, art.y, art.w, art.h, 16);
-    ctx.stroke();
-    ctx.save();
-    roundRectPath(ctx, art.x, art.y, art.w, art.h, 16);
-    ctx.clip();
-    drawRoute(ctx, k.polyline, art, rarityCol, 6);
-    ctx.restore();
-    cursor = art.y + artH + pad * 0.7;
-
-    // Hero KM (Oswald), with duration/TRIMP demoted to its own line BELOW it
-    // (never on the same baseline — that overlapped the number).
-    const kmSize = tileW * 0.155;
-    ctx.font = `700 ${kmSize}px "Oswald"`;
-    ctx.fillStyle = C.horizonDeep;
+    ctx.beginPath();
+    ctx.arc(bx + badgePad + 9, mid, 9, 0, Math.PI * 2);
+    ctx.fillStyle = moodCol;
+    ctx.fill();
+    ctx.fillStyle = C.cream;
+    ctx.textBaseline = 'middle';
     ctx.textAlign = 'left';
-    ctx.textBaseline = 'alphabetic';
-    const kmBaseline = cursor + kmSize * 0.82;
-    ctx.fillText(k.km, x + pad, kmBaseline);
-    const kmW = ctx.measureText(k.km).width;
-    ctx.font = '700 22px "JetBrains Mono"';
-    ctx.letterSpacing = '2px';
-    ctx.fillStyle = C.ink3;
-    ctx.fillText('KM', x + pad + kmW + 14, kmBaseline);
-    ctx.letterSpacing = '0px';
-    ctx.font = '500 24px "JetBrains Mono"';
-    ctx.fillStyle = C.ink3;
-    ctx.textAlign = 'left';
-    ctx.fillText(`${k.durasi}  ·  TRIMP ${k.trimp}`, x + pad, kmBaseline + 40);
-
-    ctx.restore();
+    ctx.fillText(trimpText, bx + badgePad + 26, mid + 1);
 }
 
-function drawKartu(d: DrawCtx): void {
-    const { ctx, w, h, cfg, pal, bunny } = d;
-    paintGlow(ctx, w / 2, h * 0.46, w * 0.5);
-    drawBrand(ctx, w - PAD, PAD, pal.isDark, bunny);
+/** The bright art window: cream wash, route hero, corner bunny, floating badges. */
+function drawHeroArtWindow(
+    ctx: CanvasRenderingContext2D,
+    k: ShareKartuData,
+    mascot: HTMLImageElement | null,
+    box: { x: number; y: number; w: number; h: number },
+    rarityCol: string,
+    moodCol: string,
+    story: boolean,
+): void {
+    const r = 24;
+    ctx.save();
+    roundRectPath(ctx, box.x, box.y, box.w, box.h, r);
+    ctx.clip();
 
-    ctx.font = '700 30px "JetBrains Mono"';
-    ctx.letterSpacing = '3px';
-    ctx.fillStyle = C.horizon;
-    ctx.textAlign = 'left';
-    ctx.textBaseline = 'middle';
-    ctx.fillText('★ KARTU KAMU', PAD, PAD + 28);
-    ctx.letterSpacing = '0px';
+    // Cream base + a soft mood/rarity wash so it isn't flat.
+    ctx.fillStyle = C.cream;
+    ctx.fillRect(box.x, box.y, box.w, box.h);
+    const wash = ctx.createRadialGradient(
+        box.x + box.w / 2, box.y + box.h * 0.62, 0,
+        box.x + box.w / 2, box.y + box.h * 0.62, box.h * 0.9,
+    );
+    wash.addColorStop(0, moodCol + '22');
+    wash.addColorStop(0.55, rarityCol + '14');
+    wash.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = wash;
+    ctx.fillRect(box.x, box.y, box.w, box.h);
 
-    const story = cfg.format === 'story';
-    const quote = story && cfg.showQuote ? cfg.kartu.quote : null;
-    // Bigger tile, positioned so the tile + quote read as one centered block
-    // (no large dead void below the card).
-    const tileW = story ? w * 0.72 : w * 0.58;
-    const tileH = tileW * TILE_ASPECT;
-    const top = story ? Math.max(PAD + 140, (h - tileH - 150) / 2) : (h - tileH) / 2 + 20;
-    drawKartuTile(d, w / 2, top + tileH / 2, tileW);
+    // Route hero.
+    drawRoute(ctx, k.polyline, box, rarityCol, story ? 16 : 13);
+    drawHeroShimmer(ctx, box.x, box.y, box.w, box.h, k.rarity, rarityCol);
 
-    if (quote) {
-        ctx.font = 'italic 500 40px "Fraunces"';
-        const lines = wrapText(ctx, `“${quote}”`, w - PAD * 2);
-        ctx.textAlign = 'center';
-        ctx.fillStyle = pal.quote;
-        ctx.textBaseline = 'alphabetic';
-        const qy = top + tileH + 78;
-        lines.forEach((ln, i) => ctx.fillText(ln, w / 2, qy + i * 52));
+    // Corner bunny companion.
+    if (mascot) {
+        const ms = Math.round(box.h * 0.34);
+        ctx.drawImage(mascot, box.x + box.w - ms - 14, box.y + box.h - ms - 8, ms, ms);
     }
+    ctx.restore();
+
+    drawHeroArtBadges(ctx, k, box, moodCol);
+}
+
+/**
+ * The dark stat block, mirroring the live Kartu full tier: rarity ribbon, name,
+ * subtitle, KM hero, a labeled PACE · HR · CADENCE · DURASI · BEST grid, a Z1..Z5
+ * HR-zone effort bar, badges, and (story) a flavor quote.
+ *
+ * Returns the total height it consumed from `box.y`. Pass `draw=false` to
+ * measure without painting — `drawHero` uses that to size the art window to the
+ * remaining space, so the block never reserves dead navy below its content.
+ */
+interface HeroBlock {
+    ctx: CanvasRenderingContext2D;
+    k: ShareKartuData;
+    box: { x: number; y: number; w: number; h: number };
+    rarityCol: string;
+    story: boolean;
+    showStats: boolean;
+    showQuote: boolean;
+    /** false = measure only (advance the cursor without painting). */
+    draw: boolean;
+}
+
+function drawHeroBlock(s: HeroBlock): number {
+    let y = s.box.y;
+    y = heroRibbonRow(s, y);
+    y = heroNameRow(s, y);
+    y = heroSubtitleRow(s, y);
+    y = heroKmRow(s, y);
+    y = heroStatGridRow(s, y);
+    y = heroZoneBarRow(s, y);
+    y = heroBadgeRow(s, y);
+    y = heroQuoteRow(s, y);
+    return y - s.box.y;
+}
+
+/** Rarity ribbon (left) + mood (right). */
+function heroRibbonRow(s: HeroBlock, y: number): number {
+    const { ctx, k, box, rarityCol, story, draw } = s;
+    y += story ? 28 : 24;
+    if (draw) {
+        ctx.font = `700 ${story ? 26 : 22}px "JetBrains Mono"`;
+        ctx.letterSpacing = '3px';
+        ctx.fillStyle = rarityCol;
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'alphabetic';
+        ctx.fillText(RARITY_SYMBOL[k.rarity] + '  ' + RARITY_LABELS[k.rarity].toUpperCase(), box.x, y);
+        ctx.textAlign = 'right';
+        ctx.fillStyle = C.inkOnSky;
+        ctx.fillText(MOOD_FACE[k.mood] + '  ' + MOOD_LABEL[k.mood].toUpperCase(), box.x + box.w, y);
+        ctx.letterSpacing = '0px';
+    }
+    return y;
+}
+
+/** Special-move name (wrap counts identically in measure + draw). */
+function heroNameRow(s: HeroBlock, y: number): number {
+    const { ctx, k, box, story, draw } = s;
+    const nameSize = story ? box.w * 0.088 : box.w * 0.072;
+    ctx.font = `700 ${nameSize}px "Oswald"`;
+    ctx.textAlign = 'left';
+    wrapText(ctx, k.name.toUpperCase(), box.w).slice(0, 2).forEach((ln) => {
+        y += nameSize * 1.04;
+        if (draw) {
+            ctx.fillStyle = C.cream;
+            ctx.fillText(ln, box.x, y);
+        }
+    });
+    return y;
+}
+
+function heroSubtitleRow(s: HeroBlock, y: number): number {
+    const { ctx, k, box, story, draw } = s;
+    if (!k.subtitle) {
+        return y;
+    }
+    y += story ? 40 : 34;
+    if (draw) {
+        ctx.font = `500 ${story ? 26 : 22}px "JetBrains Mono"`;
+        ctx.fillStyle = C.inkOnSky;
+        ctx.fillText(k.subtitle, box.x, y);
+    }
+    return y;
+}
+
+/** KM hero number + "KM" suffix. */
+function heroKmRow(s: HeroBlock, y: number): number {
+    const { ctx, k, box, story, draw } = s;
+    const kmSize = story ? box.w * 0.15 : box.w * 0.125;
+    y += kmSize * 0.92;
+    if (draw) {
+        ctx.font = `700 ${kmSize}px "Oswald"`;
+        ctx.fillStyle = C.horizon;
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'alphabetic';
+        ctx.fillText(k.km, box.x, y);
+        const kmW = ctx.measureText(k.km).width;
+        ctx.font = `700 ${story ? 28 : 24}px "JetBrains Mono"`;
+        ctx.fillStyle = C.inkOnSky;
+        ctx.fillText('KM', box.x + kmW + 14, y);
+    }
+    return y;
+}
+
+function heroStatGridRow(s: HeroBlock, y: number): number {
+    const { ctx, k, box, story, showStats, draw } = s;
+    if (!showStats) {
+        return y;
+    }
+    const cells = heroStatCells(k);
+    if (cells.length === 0) {
+        return y;
+    }
+    y += story ? 26 : 20;
+    if (draw) {
+        drawHeroStatGrid(ctx, cells, box.x, y, box.w, story);
+    }
+    return y + Math.ceil(cells.length / 3) * (story ? 70 : 58);
+}
+
+function heroZoneBarRow(s: HeroBlock, y: number): number {
+    const { ctx, k, box, story, draw } = s;
+    if (!k.zonePct) {
+        return y;
+    }
+    const barH = story ? 16 : 12;
+    y += story ? 24 : 18;
+    if (draw) {
+        drawZoneBar(ctx, k.zonePct, box.x, y, box.w, barH);
+    }
+    return y + barH + (story ? 30 : 24);
+}
+
+function heroBadgeRow(s: HeroBlock, y: number): number {
+    const { ctx, k, box, story, draw } = s;
+    if (k.tags.length === 0) {
+        return y;
+    }
+    y += story ? 52 : 44;
+    if (draw) {
+        drawBadgePips(ctx, k, box.x, y, story);
+    }
+    return y;
+}
+
+/** Flavor quote — story format only, when enabled. */
+function heroQuoteRow(s: HeroBlock, y: number): number {
+    const { ctx, k, box, story, showQuote, draw } = s;
+    if (!(story && showQuote && k.quote)) {
+        return y;
+    }
+    y += 52;
+    ctx.font = 'italic 500 34px "Fraunces"';
+    wrapText(ctx, '"' + k.quote + '"', box.w).slice(0, 2).forEach((ln) => {
+        if (draw) {
+            ctx.fillStyle = C.inkOnSky;
+            ctx.textAlign = 'left';
+            ctx.fillText(ln, box.x, y);
+        }
+        y += 44;
+    });
+    return y;
+}
+
+/** PACE · HR · CADENCE · DURASI · BEST cells, present-only (mirrors live StatGrid). */
+function heroStatCells(k: ShareKartuData): Array<{ label: string; value: string }> {
+    const raw: Array<{ label: string; value: string | null }> = [
+        { label: 'PACE', value: k.pace ? k.pace + '/km' : null },
+        { label: 'HR', value: k.hr },
+        { label: 'CADENCE', value: k.cadence },
+        { label: 'DURASI', value: k.durasi },
+        { label: 'BEST', value: k.fastestKm },
+    ];
+    return raw.filter((c): c is { label: string; value: string } => c.value != null && c.value !== '' && c.value !== '—');
+}
+
+/** A 3-column label-over-value stat grid starting at top `y`. */
+function drawHeroStatGrid(
+    ctx: CanvasRenderingContext2D,
+    cells: Array<{ label: string; value: string }>,
+    left: number,
+    y: number,
+    w: number,
+    story: boolean,
+): void {
+    const colW = w / 3;
+    const rowH = story ? 70 : 58;
+    const labelSize = story ? 22 : 18;
+    const valueSize = story ? 36 : 30;
+    cells.forEach((cell, i) => {
+        const cx = left + (i % 3) * colW;
+        const cy = y + Math.floor(i / 3) * rowH;
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'alphabetic';
+        ctx.font = `700 ${labelSize}px "JetBrains Mono"`;
+        ctx.letterSpacing = '2px';
+        ctx.fillStyle = C.inkOnSky;
+        ctx.fillText(cell.label, cx, cy + labelSize);
+        ctx.letterSpacing = '0px';
+        ctx.font = `700 ${valueSize}px "JetBrains Mono"`;
+        ctx.fillStyle = C.cream;
+        ctx.fillText(cell.value, cx, cy + labelSize + valueSize + 4);
+    });
+}
+
+/** Stacked Z1..Z5 effort bar with tiny labels, using the shared HR-zone hexes. */
+function drawZoneBar(
+    ctx: CanvasRenderingContext2D,
+    zonePct: NonNullable<ShareKartuData['zonePct']>,
+    left: number,
+    y: number,
+    w: number,
+    barH: number,
+): void {
+    const total = HR_ZONES.reduce((sum, z) => sum + (zonePct[z] ?? 0), 0);
+    if (total <= 0) {
+        return;
+    }
+    let x = left;
+    HR_ZONES.forEach((zone) => {
+        const pct = zonePct[zone] ?? 0;
+        if (pct <= 0) {
+            return;
+        }
+        const segW = (pct / total) * w;
+        ctx.fillStyle = hrZone[zone];
+        ctx.fillRect(x, y, segW, barH);
+        x += segW;
+    });
+    // Tiny Z labels under the bar.
+    const labelY = y + barH + 22;
+    ctx.font = '700 20px "JetBrains Mono"';
+    ctx.textBaseline = 'alphabetic';
+    ctx.letterSpacing = '1px';
+    HR_ZONES.forEach((zone, i) => {
+        ctx.fillStyle = hrZone[zone];
+        ctx.textAlign = i === HR_ZONES.length - 1 ? 'right' : 'left';
+        const lx = i === HR_ZONES.length - 1 ? left + w : left + (w / HR_ZONES.length) * i;
+        ctx.fillText(zone, lx, labelY);
+    });
+    ctx.letterSpacing = '0px';
+    ctx.textAlign = 'left';
+}
+
+/** A left-aligned row of badge emblem pips at baseline `y`. */
+function drawBadgePips(
+    ctx: CanvasRenderingContext2D,
+    k: ShareKartuData,
+    left: number,
+    y: number,
+    story: boolean,
+): void {
+    ctx.font = `500 ${story ? 26 : 22}px "JetBrains Mono"`;
+    let bx = left;
+    k.tags.slice(0, 4).forEach((tag, i) => {
+        const label = (k.tagEmojis[i] ?? '✦') + ' ' + tag;
+        const lw = ctx.measureText(label).width + 24;
+        roundRectPath(ctx, bx, y - 30, lw, 40, 20);
+        ctx.fillStyle = 'rgba(246,241,232,0.10)';
+        ctx.fill();
+        ctx.fillStyle = 'rgba(246,241,232,0.85)';
+        ctx.textBaseline = 'middle';
+        ctx.textAlign = 'left';
+        ctx.fillText(label, bx + 12, y - 9);
+        bx += lw + 12;
+    });
+    ctx.textBaseline = 'alphabetic';
+}
+
+/**
+ * Dark-frame TCG hero: a dark navy card with a vivid rarity border, a bright
+ * art window up top (route hero + corner bunny + floating edition/TRIMP pills),
+ * and a dark stat block below (rarity ribbon, name, subtitle, KM + stats,
+ * badges). Mirrors the React Kartu component.
+ */
+function drawHero(d: DrawCtx): void {
+    const { ctx, w, h, cfg, moodBunny } = d;
+    const k = cfg.kartu;
+    const story = cfg.format === 'story';
+    const rarityCol = C.rarity[k.rarity] ?? C.line;
+    const moodCol = moodSigilColor(k.mood);
+
+    paintGlow(ctx, w / 2, h * 0.36, w * 0.5);
+
+    const margin = PAD * 0.5;
+    const cx = margin;
+    const cy = margin;
+    const cw = w - margin * 2;
+    const ch = h - margin * 2;
+    const border = 9;
+    const radius = 44;
+    const framePad = border + 18;
+
+    // Dark card body + vivid rarity border.
+    roundRectPath(ctx, cx, cy, cw, ch, radius);
+    ctx.fillStyle = C.skyDeep;
+    ctx.fill();
+    ctx.lineWidth = border;
+    ctx.strokeStyle = rarityCol;
+    roundRectPath(ctx, cx + border / 2, cy + border / 2, cw - border, ch - border, radius - border / 2);
+    ctx.stroke();
+
+    // Inner content frame.
+    const innerX = cx + framePad;
+    const innerW = cw - framePad * 2;
+    const innerTop = cy + framePad;
+    const innerH = ch - framePad * 2;
+    const blockGap = 22;
+
+    // Size the block to its actual content (measure pass), then give the art
+    // window all the remaining space — so the route grows and there's no dead
+    // navy below the stats. Clamp so the art window keeps a healthy minimum.
+    const makeBlock = (y: number, draw: boolean): HeroBlock => ({
+        ctx,
+        k,
+        box: { x: innerX, y, w: innerW, h: 0 },
+        rarityCol,
+        story,
+        showStats: cfg.showStats,
+        showQuote: cfg.showQuote,
+        draw,
+    });
+    const measuredBlockH = drawHeroBlock(makeBlock(innerTop, false)) + (story ? 20 : 14);
+    const maxBlockH = innerH - Math.round(innerH * 0.4) - blockGap;
+    const blockH = Math.min(measuredBlockH, maxBlockH);
+    const artH = innerH - blockH - blockGap;
+
+    drawHeroArtWindow(ctx, k, cfg.temariImg ?? moodBunny, { x: innerX, y: innerTop, w: innerW, h: artH }, rarityCol, moodCol, story);
+    drawHeroBlock(makeBlock(innerTop + artH + blockGap, true));
 }
 
 function drawStruk(d: DrawCtx): void {
@@ -707,7 +862,7 @@ function drawStruk(d: DrawCtx): void {
     ctx.font = '700 30px "JetBrains Mono"';
     ctx.letterSpacing = '3px';
     ctx.fillStyle = C.horizon;
-    ctx.fillText(`★ ${(RARITY_LABELS[cfg.kartu.rarity as keyof typeof RARITY_LABELS] ?? cfg.kartu.rarity).toUpperCase()}`, PAD, y + 26);
+    ctx.fillText(`★ ${(RARITY_LABELS[cfg.kartu.rarity] ?? cfg.kartu.rarity).toUpperCase()}`, PAD, y + 26);
     ctx.letterSpacing = '0px';
     y += 56;
     ctx.font = 'italic 600 64px "Fraunces"';
@@ -762,11 +917,8 @@ function drawStruk(d: DrawCtx): void {
 }
 
 const TEMPLATES: Record<Layout, (d: DrawCtx) => void> = {
-    kartu: drawKartu,
-    pack: drawPack,
+    kartu: drawHero,
     rute: drawRute,
-    polaroid: drawPolaroid,
-    poster: drawPoster,
     struk: drawStruk,
 };
 
@@ -798,11 +950,12 @@ export async function drawShareCard(canvas: HTMLCanvasElement, cfg: ShareCardCon
     await ensureFonts();
     const pal = palette(cfg.theme);
     const bunny = await loadBunny(pal.isDark ? 'cream' : 'ink');
+    const moodBunny = await loadBunny('ink', moodSigilColor(cfg.kartu.mood));
 
     ctx.clearRect(0, 0, w, h);
     paintBackground(ctx, cfg.theme, w, h);
 
-    const d: DrawCtx = { ctx, w, h, cfg, pal, bunny, statItems: statItemsFor(cfg.kartu) };
+    const d: DrawCtx = { ctx, w, h, cfg, pal, bunny, moodBunny, statItems: statItemsFor(cfg.kartu) };
     TEMPLATES[cfg.layout](d);
 }
 

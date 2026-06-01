@@ -10,6 +10,8 @@ interface RouteGlyphProps {
     /** Per-km pace seconds — drawn as a bar shape when there's no polyline. */
     paceShape?: ReadonlyArray<number> | null;
     rarity: Rarity;
+    /** Explicit stroke color (loot-ladder hex). Falls back to the rarity token. */
+    color?: string;
     className?: string;
 }
 
@@ -27,8 +29,11 @@ const MAX_BARS = 16;
  *
  * Variants are tagged via `data-variant` for tests and styling.
  */
-export default function RouteGlyph({ polyline, paceShape, rarity, className }: Readonly<RouteGlyphProps>) {
-    const stroke = `var(--color-rarity-${rarity})`;
+export default function RouteGlyph({ polyline, paceShape, rarity, color, className }: Readonly<RouteGlyphProps>) {
+    const stroke = color ?? `var(--color-rarity-${rarity})`;
+    const fill = color
+        ? `color-mix(in oklab, ${color} 14%, transparent)`
+        : `color-mix(in oklab, var(--color-rarity-${rarity}) 14%, transparent)`;
 
     const route = useMemo(() => projectPolyline(polyline, VB_W, VB_H, PAD, MAX_POINTS), [polyline]);
     if (route !== null) {
@@ -43,14 +48,14 @@ export default function RouteGlyph({ polyline, paceShape, rarity, className }: R
             >
                 <path
                     d={d}
-                    fill="none"
+                    fill={fill}
                     stroke={stroke}
-                    strokeWidth={2.4}
+                    strokeWidth={3.4}
                     strokeLinecap="round"
                     strokeLinejoin="round"
-                    opacity={0.85}
+                    opacity={0.92}
                 />
-                <circle cx={route.start[0]} cy={route.start[1]} r={2.6} fill={stroke} />
+                <circle cx={route.start[0]} cy={route.start[1]} r={3} fill={stroke} />
             </svg>
         );
     }

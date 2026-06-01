@@ -48,6 +48,31 @@ class BlueprintLibrary
     private function scripted(): array
     {
         return $this->scriptedCache ??= [
+            // A plain middling run: HR straddles Z2/Z3 (no zone dominant) and it's
+            // kept under 5K so it dodges every special branch (incl. Anti Ngedrop,
+            // which needs 5K+) and lands the "Lari Santai" default move.
+            new RunBlueprint(
+                startsAt: Carbon::today()->subDays(38)->setTime(6, 10),
+                distanceM: 4_500,
+                targetPaceSecPerKm: 430,
+                hrProfile: HrProfile::Mixed,
+                name: 'Lari biasa aja',
+                tags: ['mixed'],
+                location: $this->loc(2),
+            ),
+            // A hard, even 5K time-trial — fast enough to take the 5K PR, Z4-heavy
+            // so it isn't Tahan Tempo, even pacing so it isn't Tancap di Akhir:
+            // the recipe for the "Pecah Rekor" card.
+            new RunBlueprint(
+                startsAt: Carbon::today()->subDays(31)->setTime(6, 0),
+                distanceM: 5_000,
+                targetPaceSecPerKm: 345,
+                hrProfile: HrProfile::HardEven,
+                cadenceSpm: 172,
+                name: '5K time trial',
+                tags: ['time_trial', 'pecah_rekor'],
+                location: $this->loc(1),
+            ),
             // --- Older base: building from couch to a first half marathon ---
             new RunBlueprint(
                 startsAt: Carbon::today()->subDays(178)->setTime(6, 30),
@@ -491,6 +516,10 @@ class BlueprintLibrary
             HrProfile::Intervals => [$rng->getInt(60, 90) * 100, $rng->getInt(360, 400)],
             HrProfile::NegSplit => [$rng->getInt(50, 100) * 100, $rng->getInt(390, 420)],
             HrProfile::Z2Steady => [$rng->getInt(40, 120) * 100, $rng->getInt(420, 510)],
+            // Mixed / HardEven are only used by hand-scripted runs, never rolled
+            // as fillers; these arms exist solely to keep the match exhaustive.
+            HrProfile::Mixed => [$rng->getInt(50, 80) * 100, $rng->getInt(420, 450)],
+            HrProfile::HardEven => [$rng->getInt(50, 100) * 100, $rng->getInt(350, 380)],
         };
     }
 
@@ -502,6 +531,8 @@ class BlueprintLibrary
             HrProfile::Intervals => 'Interval pagi',
             HrProfile::NegSplit => 'Progresif',
             HrProfile::Z2Steady => 'Easy aerobic',
+            HrProfile::Mixed => 'Lari campur',
+            HrProfile::HardEven => 'Time trial',
         };
 
         return $name.' '.$date->translatedFormat('d M');

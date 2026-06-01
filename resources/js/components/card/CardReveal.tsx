@@ -11,10 +11,10 @@ import type { ShareKartuData } from "@/lib/shareCard";
 import Temari from "@/components/temari/Temari";
 import { type TemariPose } from "@/components/temari/TemariProto";
 import TemariMascot from "@/components/temari/TemariMascot";
-import { RARITY_LABELS, badgeName } from "@/lib/runcard";
+import { RARITY_LABELS, badgeEmblem, badgeName, buildCardStats, paceShapeFromDetail, zonePctFromDetail } from "@/lib/runcard";
 import { formatDuration, formatKm, formatPace, paceSecPerKm } from "@/lib/pace";
 import { csrfToken } from "@/lib/http";
-import type { PendingReveal, Rarity } from "@/types/inertia";
+import type { ActivityDetail, PendingReveal, Rarity } from "@/types/inertia";
 
 interface CardRevealProps {
   pending: PendingReveal;
@@ -207,20 +207,45 @@ export default function CardReveal({
   const onBackdrop = wrapped ? () => {} : advanceOrDismiss;
 
   const sharePaceSec = paceSecPerKm(pending.moving_time_sec, pending.distance_m);
+  const shareBadges = (pending.badges ?? []).slice(0, 2);
+
+  // Build a minimal ActivityDetail shell so the stream_summary helpers can
+  // derive cadence, fastest km, and zone distribution from the reveal payload.
+  const revealDetail: ActivityDetail = {
+    id: 0,
+    activity_id: pending.activity_id,
+    name: pending.detail_name,
+    start_date_local: null,
+    distance: pending.distance_m,
+    moving_time: pending.moving_time_sec,
+    average_heartrate: pending.average_heartrate ?? null,
+    trimp_edwards: pending.trimp_edwards,
+    stream_summary: pending.stream_summary ?? null,
+  };
+
+  const revealStats = buildCardStats(revealDetail);
+  const revealZonePct = zonePctFromDetail(revealDetail);
+  const revealPaceShape = paceShapeFromDetail(revealDetail);
+
   const shareData: ShareKartuData = {
     id: pending.card_id,
     name: pending.special_move,
     rarity: pending.rarity,
+    mood: pending.mood,
     subtitle,
     date: null,
     km,
     durasi,
     pace: sharePaceSec != null ? formatPace(sharePaceSec) : null,
     trimp,
-    hr: null,
+    hr: revealStats.hr ?? null,
+    cadence: revealStats.cadence ?? null,
+    fastestKm: revealStats.fastestKm ?? null,
+    zonePct: revealZonePct,
     location: null,
     weather: null,
-    tags: (pending.badges ?? []).slice(0, 2).map(badgeName),
+    tags: shareBadges.map(badgeName),
+    tagEmojis: shareBadges.map(badgeEmblem),
     quote: null,
     polyline: pending.summary_polyline ?? null,
     edition: pending.edition ?? null,
@@ -283,10 +308,14 @@ export default function CardReveal({
                       durasi={durasi}
                       trimp={trimp}
                       rarity={pending.rarity}
+                      mood={pending.mood}
                       badges={(pending.badges ?? []).slice(0, 3)}
+                      stats={revealStats}
+                      zonePct={revealZonePct}
                       polyline={pending.summary_polyline}
+                      paceShape={revealPaceShape}
                       edition={pending.edition}
-                      size="md"
+                      size="lg"
                     />
                     <AnimatePresence>
                       {wrapped && (

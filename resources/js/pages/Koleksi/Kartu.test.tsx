@@ -18,7 +18,7 @@ function cardWithRel(id: number, rarity: RunCard['rarity'], move = 'Langkah Mant
         activity: { ...activity, run_card: { id, activity_id: id, rarity, special_move: move, badges: ['negative_split'] } },
     };
     return {
-        id, activity_id: id, rarity, special_move: move, badges: ['negative_split'],
+        id, activity_id: id, rarity, mood: 'adem' as const, special_move: move, badges: ['negative_split'],
         share_image_path: null,
         activity: { ...activity, detail },
     };
@@ -55,9 +55,9 @@ describe('Koleksi/Kartu', () => {
         expect(screen.getByText(/Luar Biasa · 2/)).toBeInTheDocument();
     });
 
-    it('renders the featured panel with flavor analysis + badge tags', () => {
+    it('renders the slim banner with the featured flavor quote', () => {
         const featured = {
-            id: 7, activity_id: 99, rarity: 'epic' as const, special_move: 'Pembalik Keadaan', badges: ['negative_split', 'hari_panas'],
+            id: 7, activity_id: 99, rarity: 'epic' as const, mood: 'nyala' as const, special_move: 'Tancap di Akhir', badges: ['negative_split', 'hari_panas'],
             detail: {
                 id: 1, activity_id: 99, name: 'Sub-30', start_date_local: '2026-05-10T06:00',
                 distance: 5000, moving_time: 1751, trimp_edwards: 85, average_heartrate: 150,
@@ -68,21 +68,13 @@ describe('Koleksi/Kartu', () => {
             },
         };
         render(<KoleksiKartu cards={emptyCards()} selectedRarity={null} featuredCard={featured} rarityCounts={rarityCounts} />);
-        expect(screen.getAllByText('Pembalik Keadaan').length).toBeGreaterThan(0);
         expect(screen.getByText(/Highlight minggu ini/)).toBeInTheDocument();
         expect(screen.getByText(/Lari yang menyegarkan/)).toBeInTheDocument();
-        expect(screen.getAllByText('Negative Split').length).toBeGreaterThan(0);
     });
 
-    it('triggers a confetti burst when an epic featured card is tapped', () => {
-        const featured = {
-            id: 7, activity_id: 99, rarity: 'legendary' as const, special_move: 'Legendaris', badges: [],
-            detail: {
-                id: 1, activity_id: 99, name: 'Half marathon', start_date_local: '2026-05-10T06:00',
-                distance: 21097, moving_time: 7200, trimp_edwards: 250, average_heartrate: 160,
-            } as ActivityDetail,
-        };
-        render(<KoleksiKartu cards={emptyCards()} selectedRarity={null} featuredCard={featured} rarityCounts={{ ...rarityCounts, legendary: 1 }} />);
+    it('triggers a confetti burst when an epic grid card is tapped', () => {
+        const cards = { ...emptyCards(), data: [cardWithRel(7, 'epic', 'Tancap di Akhir')] };
+        render(<KoleksiKartu cards={cards} selectedRarity={null} featuredCard={null} rarityCounts={rarityCounts} />);
         const cardLink = screen.getAllByRole('link').find((el) => el.getAttribute('href') === '/kartu/7');
         fireEvent.click(cardLink!);
     });
@@ -95,18 +87,19 @@ describe('Koleksi/Kartu', () => {
         fireEvent.click(links[0]);
     });
 
-    it('falls back gracefully when featured card has null detail / no badges', () => {
+    it('falls back to the special move in the banner when there is no flavor analysis', () => {
         const featured = {
-            id: 7, activity_id: 99, rarity: 'rare' as const, special_move: 'Pemburu Sabar', badges: null,
+            id: 7, activity_id: 99, rarity: 'rare' as const, mood: 'adem' as const, special_move: 'Adem Ayem', badges: null,
             detail: null,
         };
         render(<KoleksiKartu cards={emptyCards()} selectedRarity={null} featuredCard={featured} rarityCounts={rarityCounts} />);
-        expect(screen.getAllByText('Pemburu Sabar').length).toBeGreaterThan(0);
+        // The banner heading renders the name in an <em> — the card also renders it, so use getAllByText.
+        expect(screen.getAllByText(/Adem Ayem/).length).toBeGreaterThan(0);
     });
 
     it('skips grid cells whose card has no detail', () => {
         const cardWithoutDetail = {
-            id: 9, activity_id: 99, rarity: 'common' as const, special_move: 'Tanpa Detail', badges: null,
+            id: 9, activity_id: 99, rarity: 'common' as const, mood: 'adem' as const, special_move: 'Tanpa Detail', badges: null,
             share_image_path: null,
             activity: { id: 99, user_id: 1, analyzed_at: '2026-05-10', strava_external_id: null, detail: undefined as never },
         };

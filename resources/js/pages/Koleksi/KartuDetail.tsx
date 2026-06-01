@@ -14,9 +14,9 @@ import type { ShareKartuData } from '@/lib/shareCard';
 import { cn } from '@/lib/cn';
 import PageContainer from '@/components/ui/PageContainer';
 import { formatDuration, formatIdDate, formatKm, formatPace, paceSecPerKm } from '@/lib/pace';
-import { RARITY_BORDER, RARITY_LABELS, badgeName, paceShapeFromDetail } from '@/lib/runcard';
+import { RARITY_BORDER, RARITY_LABELS, RARITY_POSE, avgCadenceFromDetail, badgeEmblem, badgeName, buildCardStats, fastestKmFromDetail, paceShapeFromDetail, zonePctFromDetail } from '@/lib/runcard';
 import { renderBold } from '@/lib/richText';
-import type { ActivityDetail, AnalysisPayload, CardEdition, Rarity } from '@/types/inertia';
+import type { ActivityDetail, AnalysisPayload, CardEdition, Mood, Rarity } from '@/types/inertia';
 
 // Short Indonesian descriptions for each badge key
 const BADGE_DESCS: Record<string, string> = {
@@ -33,6 +33,7 @@ interface CardPayload {
     activity_id: number;
     rarity: Rarity;
     special_move: string;
+    mood: Mood;
     badges: string[] | null;
     detail: ActivityDetail | null;
     edition?: CardEdition | null;
@@ -44,6 +45,7 @@ interface RelatedCard {
     activity_id: number;
     rarity: Rarity;
     special_move: string;
+    mood: Mood;
     badges: string[] | null;
     detail: ActivityDetail | null;
     edition?: CardEdition | null;
@@ -71,6 +73,10 @@ export default function KartuDetail({
         : null;
     const badges = (card.badges ?? []).slice(0, 3);
     const rarityLabel = RARITY_LABELS[card.rarity];
+    const cadence = avgCadenceFromDetail(detail);
+    const fastestKm = fastestKmFromDetail(detail);
+    const zonePct = zonePctFromDetail(detail);
+    const cardStats = buildCardStats(detail);
 
     const [shareOpen, setShareOpen] = useState(false);
 
@@ -87,6 +93,7 @@ export default function KartuDetail({
         id: card.id,
         name: card.special_move,
         rarity: card.rarity,
+        mood: card.mood,
         subtitle,
         date: shareDate,
         km,
@@ -94,9 +101,13 @@ export default function KartuDetail({
         pace: sharePaceSec != null ? formatPace(sharePaceSec) : null,
         trimp,
         hr: detail?.average_heartrate != null ? `${Math.round(detail.average_heartrate)} bpm` : null,
+        cadence: cadence != null ? `${cadence} spm` : null,
+        fastestKm: fastestKm != null ? `${fastestKm}/km` : null,
+        zonePct,
         location: detail?.location_name ?? null,
         weather: detail?.weather_temp_c != null ? `${Math.round(detail.weather_temp_c)}°C` : null,
         tags: badges.map((b) => badgeName(b)),
+        tagEmojis: badges.map((b) => badgeEmblem(b)),
         quote: card.flavor_analysis.content ?? null,
         polyline: detail?.summary_polyline ?? null,
         edition: card.edition ?? null,
@@ -133,7 +144,7 @@ export default function KartuDetail({
                                 }}
                             />
 
-                            <Temari pose="excited" size={140} className="relative" />
+                            <Temari pose={RARITY_POSE[card.rarity]} size={140} className="relative" />
 
                             <div className="relative w-full max-w-xs rotate-[-2deg] drop-shadow-2xl">
                                 <KartuComponent
@@ -143,6 +154,10 @@ export default function KartuDetail({
                                     durasi={durasi}
                                     trimp={trimp}
                                     rarity={card.rarity}
+                                    mood={card.mood}
+                                    badges={badges}
+                                    stats={cardStats}
+                                    zonePct={zonePct}
                                     polyline={detail?.summary_polyline}
                                     paceShape={paceShapeFromDetail(detail)}
                                     edition={card.edition}
