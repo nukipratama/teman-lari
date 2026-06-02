@@ -7,7 +7,10 @@ const APP_NAME = import.meta.env.VITE_APP_NAME ?? 'TemanLari';
 void createInertiaApp({
     title: (title) => (title ? `${title} · ${APP_NAME}` : APP_NAME),
     resolve: async (name) => {
-        const pages = import.meta.glob<{ default: ComponentType }>('./pages/**/*.tsx');
+        const pages = import.meta.glob<{ default: ComponentType }>([
+            './pages/**/*.tsx',
+            '!./pages/**/*.test.tsx',
+        ]);
         const importer = pages[`./pages/${name}.tsx`];
         if (!importer) {
             throw new Error(`Inertia page not found: ${name}`);
