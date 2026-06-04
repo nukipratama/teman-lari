@@ -248,16 +248,14 @@ jobs:
         run: $COMPOSE run --rm app php artisan migrate --force
 
       - name: Bootstrap + migrate analytics schema (seamless; no manual step)
-        # Make the analytics schema self-bootstrapping so no manual
-        # `make analytics-init` is needed: create the schema as root (the app may
-        # connect as a non-root user) + grant, apply analytics migrations as the
-        # app user, then one-time backfill rows from the old main-schema table.
-        # All idempotent — safe on every deploy. Scripts are piped into the mysql
-        # container to avoid SQL-quoting hell in YAML.
+        # Make the analytics schema self-bootstrapping so no manual step is
+        # needed: create the schema as root (the app may connect as a non-root
+        # user) + grant, then apply analytics migrations as the app user. Both
+        # idempotent — safe on every deploy. The create+grant SQL is piped into
+        # the mysql container to avoid SQL-quoting hell in YAML.
         run: |
           $COMPOSE exec -T mysql sh < docker/mysql/init/01-analytics-db.sh
           $COMPOSE run --rm app php artisan migrate --database=analytics --path=database/migrations/analytics --force
-          $COMPOSE exec -T mysql sh < docker/mysql/analytics-backfill.sh
 
       - name: Roll app, workers + Pulse daemons onto the new image
         # pulse-check (Servers recorder), pulse-work (drains the ingest stream)

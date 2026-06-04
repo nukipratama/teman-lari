@@ -7,7 +7,7 @@ COMPOSE ?= docker compose -f compose.prod.yaml
 
 .DEFAULT_GOAL := help
 .PHONY: help ps logs logs-app logs-horizon logs-pulse tail shell tinker artisan \
-        health pulse-restart pulse-clear analytics-init restart up down test pint stan
+        health pulse-restart pulse-clear restart up down test pint stan
 
 help: ## Show this help
 	@grep -hE '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) \
@@ -53,13 +53,6 @@ pulse-clear: ## Wipe all stored Pulse data
 
 restart: ## Recreate prod containers with the current image
 	$(COMPOSE) up -d
-
-analytics-init: ## Manual analytics bootstrap (the deploy now does this automatically)
-	# Same three steps the deploy runs — create+grant, migrate, backfill — via
-	# the shared scripts. Idempotent; handy for local/dev or an ad-hoc re-run.
-	$(COMPOSE) exec -T mysql sh < docker/mysql/init/01-analytics-db.sh
-	$(COMPOSE) exec -T app php artisan migrate --database=analytics --path=database/migrations/analytics --force
-	$(COMPOSE) exec -T mysql sh < docker/mysql/analytics-backfill.sh
 
 # ---- Dev (Sail) ----
 

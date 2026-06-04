@@ -2,10 +2,10 @@
 # Create the dedicated analytics schema (ai_token_usages cost history that must
 # survive migrate:fresh) and grant the app user access. Idempotent.
 #
-# Runs as root inside the mysql container in three situations, all reusing this
-# one script: automatically on a FRESH volume (mounted into initdb), and on
-# every deploy / `make analytics-init` for existing volumes (piped via
-# `sh < this`). MYSQL_ROOT_PASSWORD is available in the container in all cases.
+# Runs as root inside the mysql container two ways, both reusing this one
+# script: automatically on a FRESH volume (mounted into initdb), and on every
+# deploy for existing volumes (piped via `sh < this`). MYSQL_ROOT_PASSWORD is
+# available in the container in both cases.
 set -e
 
 ANALYTICS_DB="${DB_ANALYTICS_DATABASE:-teman_lari_analytics}"
