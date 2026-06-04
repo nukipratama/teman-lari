@@ -247,11 +247,14 @@ jobs:
         run: $COMPOSE run --rm app php artisan migrate --force
 
       - name: Migrate analytics schema
-        # Create + grant (root, via the piped script) then migrate as the app
-        # user. Idempotent.
-        run: |
-          $COMPOSE exec -T mysql sh < docker/mysql/init/01-analytics-db.sh
-          $COMPOSE run --rm app php artisan migrate --database=analytics --path=database/migrations/analytics --force
+        # Apply pending analytics migrations as the app user. The schema is
+        # created+granted at volume init (docker/mysql/init) or once by an admin
+        # with real root creds — NOT here (prod root password-auth isn't reliable
+        # post-init, and the app user can't CREATE DATABASE). Best-effort: a
+        # not-yet-bootstrapped schema must not block the rest of the deploy (the
+        # usage recorder swallows write failures regardless).
+        continue-on-error: true
+        run: $COMPOSE run --rm app php artisan migrate --database=analytics --path=database/migrations/analytics --force
 
       - name: Roll app, workers + Pulse daemons onto the new image
         # pulse-check (Servers recorder), pulse-work (drains the ingest stream)
