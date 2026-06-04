@@ -3,7 +3,6 @@ import { Icon } from '@iconify/react';
 import AppShell from '@/layouts/AppShell';
 import ConfettiBurst from '@/components/ConfettiBurst';
 import MilestoneBanner, { type PendingMilestone } from '@/components/MilestoneBanner';
-import GuidedTour, { type TourStep } from '@/components/onboarding/GuidedTour';
 import MetricExplainer from '@/components/MetricExplainer';
 import type { MetricKey } from '@/lib/metricGlossary';
 import Card from '@/components/ui/Card';
@@ -79,27 +78,6 @@ const ID_TIME_FMT = new Intl.DateTimeFormat('id-ID', {
     minute: '2-digit',
 });
 
-const TOUR_STEPS: TourStep[] = [
-    {
-        target: 'greeting',
-        title: 'Briefing harian',
-        body: 'Tiap pagi aku kasih briefing kondisi lari kamu: vibe, saran sesi, sama ringkasan lari terakhir.',
-        tipSide: 'below',
-    },
-    {
-        target: 'kartu-strip',
-        title: 'Kartu dari setiap lari',
-        body: 'Tiap lari yang masuk dapat satu kartu. Langka-tidaknya tergantung apa yang kamu keluarin.',
-        tipSide: 'above',
-    },
-    {
-        target: 'bottom-nav-koleksi',
-        title: 'Koleksi kamu',
-        body: 'Semua kartu ngumpul di sini. Makin sering lari, makin banyak kartunya.',
-        tipSide: 'above',
-    },
-];
-
 export default function HariIni({
     briefing,
     load,
@@ -129,21 +107,10 @@ export default function HariIni({
             <Head title="Hari Ini" />
             <ConfettiBurst burstKey={hasNewPr ? 'pr-detected' : null} />
             <PageContainer>
-                {/* Defer onboarding while a card-reveal takeover is pending, or the
-                    coachmark stacks on top of the reveal (a first run that earns an
-                    Epic/Legendaris card, or the demo seed). CardReveal's dismiss does a
-                    partial reload of `pendingReveal`, which remounts the tour once it clears. */}
-                {!props.pendingReveal && (
-                    <GuidedTour
-                        steps={TOUR_STEPS}
-                        storageKey="onboarding_shown"
-                        forceShow={props.onboarding.forceShow}
-                    />
-                )}
                 <MilestoneBanner pending={pendingMilestone} />
 
                 {/* HEADLINE */}
-                <header data-tour="greeting" className="grid items-end gap-9 lg:grid-cols-[1.4fr_1fr]">
+                <header className="grid items-end gap-9 lg:grid-cols-[1.4fr_1fr]">
                     <div>
                         <div className="mb-3.5 font-mono text-[11px] font-bold uppercase tracking-[0.18em] text-ink-2">
                             {dateLine}
@@ -169,7 +136,7 @@ export default function HariIni({
                         <div className="mt-6 flex flex-col gap-4 lg:grid lg:grid-cols-[3fr_2fr] lg:gap-8">
                             {/* 60% — kartu strip (conditionally rendered; VitalChips uses lg:col-start-2 to stay in col 2) */}
                             {cardStrip.length > 0 && (
-                                <section data-tour="kartu-strip">
+                                <section>
                                     <SectionLabel>Kartu terakhir</SectionLabel>
                                     {/* Mobile: horizontal scroll */}
                                     <div className="-mx-5 flex items-stretch gap-3 overflow-x-auto px-5 pb-1 scrollbar-hide sm:-mx-8 sm:px-8 lg:hidden">

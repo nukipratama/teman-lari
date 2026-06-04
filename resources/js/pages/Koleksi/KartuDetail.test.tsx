@@ -56,7 +56,6 @@ beforeEach(() => {
         auth: { user: { id: 1, name: 'Ada', first_name: 'Ada', avatar_url: null } },
         flash: {},
         demoLoginEnabled: false,
-        onboarding: { forceShow: false },
     });
 });
 

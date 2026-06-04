@@ -53,9 +53,6 @@ class HandleInertiaRequests extends Middleware
                 'unlock' => fn () => $request->session()->get('unlock'),
             ],
             'demoLoginEnabled' => (bool) config('demo.login_enabled'),
-            'onboarding' => [
-                'forceShow' => (bool) config('onboarding.force_show'),
-            ],
             'equippedAccessories' => fn () => app(EquippedAccessories::class)->forUser($user),
             'pendingReveal' => fn () => $this->pendingRevealFor($user),
             'stravaSync' => fn () => $this->stravaSyncFor($user),

@@ -56,7 +56,6 @@ export interface SharedProps {
     auth: { user: AuthUser | null };
     flash: { success: string | null; error: string | null; info: string | null };
     demoLoginEnabled: boolean;
-    onboarding: { forceShow: boolean };
     pendingReveal?: PendingReveal | null;
     equippedAccessories?: EquippedAccessories | null;
     stravaSync?: StravaSync | null;
