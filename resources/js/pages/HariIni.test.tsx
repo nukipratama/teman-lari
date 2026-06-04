@@ -1,5 +1,5 @@
 import { render, screen } from '@testing-library/react';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 import HariIni from './HariIni';
 import { makeUser, setMockPage } from '@/test/setup';
 import type { ActivityDetail, BriefingResult, TrainingLoad, WeeklySnapshot } from '@/types/inertia';
@@ -103,7 +103,6 @@ beforeEach(() => {
         auth: { user: makeUser() },
         flash: {},
         demoLoginEnabled: false,
-        onboarding: { forceShow: false },
     });
 });
 
@@ -164,59 +163,6 @@ describe('HariIni', () => {
             <HariIni briefing={briefing} load={load} snapshot={snapshot} recentRuns={[detailWithCard]} />,
         );
         expect(screen.getAllByText(/bukti kamu bisa lebih jauh/).length).toBeGreaterThan(0);
-    });
-
-    // GuidedTour only renders once it measures a non-zero target rect; jsdom
-    // reports all-zero rects, so stub one in to exercise the reveal/tour gate.
-    describe('onboarding vs card-reveal coordination', () => {
-        const pendingReveal = {
-            card_id: 7,
-            activity_id: 99,
-            rarity: 'legendary' as const,
-            special_move: 'Half Marathon',
-            badges: ['long_slow_distance'],
-            detail_name: 'Half marathon perdana',
-            distance_m: 21300,
-            moving_time_sec: 10224,
-            trimp_edwards: 210,
-            is_pr: false,
-            pr_category_label: null,
-            pr_time_display: null,
-        };
-
-        beforeEach(() => {
-            vi.spyOn(Element.prototype, 'getBoundingClientRect').mockReturnValue({
-                width: 240, height: 48, top: 120, left: 80, right: 320, bottom: 168, x: 80, y: 120,
-                toJSON: () => ({}),
-            } as DOMRect);
-        });
-
-        afterEach(() => {
-            vi.restoreAllMocks();
-        });
-
-        it('shows the onboarding tour when no card reveal is pending', () => {
-            setMockPage({
-                auth: { user: makeUser() },
-                flash: {},
-                demoLoginEnabled: false,
-                onboarding: { forceShow: true },
-            });
-            render(<HariIni briefing={briefing} load={load} snapshot={snapshot} recentRuns={[]} />);
-            expect(screen.getByRole('dialog', { name: 'Briefing harian' })).toBeInTheDocument();
-        });
-
-        it('defers the onboarding tour while a card reveal is pending', () => {
-            setMockPage({
-                auth: { user: makeUser() },
-                flash: {},
-                demoLoginEnabled: false,
-                onboarding: { forceShow: true },
-                pendingReveal,
-            });
-            render(<HariIni briefing={briefing} load={load} snapshot={snapshot} recentRuns={[]} />);
-            expect(screen.queryByRole('dialog', { name: 'Briefing harian' })).not.toBeInTheDocument();
-        });
     });
 
     it('renders without crashing when suggestion content is empty', () => {

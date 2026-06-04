@@ -15,7 +15,6 @@ const DEFAULT_PAGE_PROPS: Record<string, unknown> = {
     auth: { user: null },
     flash: { success: null, error: null, info: null },
     demoLoginEnabled: false,
-    onboarding: { forceShow: false },
 };
 const DEFAULT_URL = '/';
 

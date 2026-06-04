@@ -33,8 +33,6 @@ export const CTA = {
     bacaUlang: 'Baca ulang',
     /** Trigger first LLM narration. Replaces "Analisis sekarang". */
     mintaTemariBacain: 'Minta Temari bacain',
-    /** Acknowledge tooltip / onboarding. Replaces "Baik, ditunggu". */
-    sipDitunggu: 'Sip, ditunggu',
     /** Acknowledge / start. */
     sipMulai: 'Sip, mulai',
     /** Retry after failure. */
