@@ -12,9 +12,6 @@ use App\Services\Gamification\UnlockEngine;
 use App\Services\AI\AnalysisType;
 use App\Services\AI\AnalysisService;
 use Illuminate\Support\Carbon;
-use Illuminate\Support\Facades\Log;
-
-use function count;
 
 class PersonalRecords
 {
@@ -53,10 +50,10 @@ class PersonalRecords
 
         foreach (PrCategory::distances() as $category) {
             $targetMeters = $category->distanceMeters();
-            if ($targetMeters === null || $distance < $targetMeters * 0.95) {
+            if ($targetMeters === null || $distance < $targetMeters * 0.99) {
                 continue;
             }
-            $value = $this->timeAtDistance($splits, $targetMeters, $distance);
+            $value = $this->timeAtDistance($splits, $targetMeters);
             if ($value === null || $value <= 0) {
                 continue;
             }
@@ -99,10 +96,8 @@ class PersonalRecords
 
     /**
      * @param  array<int, array<string, mixed>>  $splits
-     * @param  float  $totalDistance  the run's recorded total distance, used to
-     *          distinguish "splits are inconsistent" from "run is simply shorter"
      */
-    public function timeAtDistance(array $splits, float $targetMeters, float $totalDistance = 0.0): ?float
+    public function timeAtDistance(array $splits, float $targetMeters): ?float
     {
         $accDist = 0.0;
         $accTime = 0.0;
@@ -119,14 +114,6 @@ class PersonalRecords
             }
             $accDist += $distance;
             $accTime += $time;
-        }
-
-        if ($totalDistance >= $targetMeters) {
-            Log::warning('PersonalRecords: per-km splits did not reach target distance', [
-                'target_meters' => $targetMeters,
-                'accumulated_meters' => $accDist,
-                'split_count' => count($splits),
-            ]);
         }
 
         return null;
