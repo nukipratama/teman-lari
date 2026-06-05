@@ -48,7 +48,7 @@ it('interpolates time at distance from splits (no walk-past inflation)', functio
     expect($secs)->toBeFloat()->toEqualWithDelta(10167.75, 1.0);
 });
 
-it('returns null and logs when splits do not cover the target distance', function (): void {
+it('returns null and logs when splits do not cover the target distance and run covers it', function (): void {
     Log::shouldReceive('warning')
         ->once()
         ->with('PersonalRecords: per-km splits did not reach target distance', Mockery::type('array'));
@@ -58,13 +58,10 @@ it('returns null and logs when splits do not cover the target distance', functio
         ['split' => 2, 'distance' => 1000, 'elapsed_time' => 410],
     ];
 
-    expect($this->records->timeAtDistance($splits, 10_000))->toBeNull();
+    expect($this->records->timeAtDistance($splits, 10_000, 10_000))->toBeNull();
 });
 
 it('logs the anomaly when truncated splits fall short of a target the run distance cleared', function (): void {
-    // The run "covers" 5 km by total distance, but only 3 km of splits arrived
-    // (truncated / dropped segments). Interpolation can't reach 5 km, so it
-    // returns null and surfaces the inconsistency rather than skipping silently.
     Log::shouldReceive('warning')
         ->once()
         ->with('PersonalRecords: per-km splits did not reach target distance', Mockery::on(
@@ -79,7 +76,17 @@ it('logs the anomaly when truncated splits fall short of a target the run distan
         ['split' => 3, 'distance' => 1000, 'elapsed_time' => 420],
     ];
 
-    expect($this->records->timeAtDistance($splits, 5000.0))->toBeNull();
+    expect($this->records->timeAtDistance($splits, 5000.0, 5000.0))->toBeNull();
+});
+
+it('does not log when run is simply shorter than the target', function (): void {
+    $splits = [
+        ['split' => 1, 'distance' => 1000, 'elapsed_time' => 400],
+        ['split' => 2, 'distance' => 1000, 'elapsed_time' => 410],
+        ['split' => 3, 'distance' => 1000, 'elapsed_time' => 420],
+    ];
+
+    expect($this->records->timeAtDistance($splits, 5000.0, 3500.0))->toBeNull();
 });
 
 it('inserts a fresh distance PR when none exists', function (): void {

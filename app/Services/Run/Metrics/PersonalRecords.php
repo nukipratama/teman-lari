@@ -56,7 +56,7 @@ class PersonalRecords
             if ($targetMeters === null || $distance < $targetMeters * 0.95) {
                 continue;
             }
-            $value = $this->timeAtDistance($splits, $targetMeters);
+            $value = $this->timeAtDistance($splits, $targetMeters, $distance);
             if ($value === null || $value <= 0) {
                 continue;
             }
@@ -98,11 +98,11 @@ class PersonalRecords
     }
 
     /**
-     * Interpolates elapsed_time at exactly $targetMeters using per-km splits.
-     *
      * @param  array<int, array<string, mixed>>  $splits
+     * @param  float  $totalDistance  the run's recorded total distance, used to
+     *          distinguish "splits are inconsistent" from "run is simply shorter"
      */
-    public function timeAtDistance(array $splits, float $targetMeters): ?float
+    public function timeAtDistance(array $splits, float $targetMeters, float $totalDistance = 0.0): ?float
     {
         $accDist = 0.0;
         $accTime = 0.0;
@@ -121,15 +121,13 @@ class PersonalRecords
             $accTime += $time;
         }
 
-        // Callers only invoke this once the run's total distance has already
-        // cleared the target, so failing to reach it here means the per-km
-        // splits are inconsistent with the recorded distance (missing, out of
-        // order, or truncated). Surface it instead of silently skipping the PR.
-        Log::warning('PersonalRecords: per-km splits did not reach target distance', [
-            'target_meters' => $targetMeters,
-            'accumulated_meters' => $accDist,
-            'split_count' => count($splits),
-        ]);
+        if ($totalDistance >= $targetMeters) {
+            Log::warning('PersonalRecords: per-km splits did not reach target distance', [
+                'target_meters' => $targetMeters,
+                'accumulated_meters' => $accDist,
+                'split_count' => count($splits),
+            ]);
+        }
 
         return null;
     }
