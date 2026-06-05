@@ -243,25 +243,13 @@ jobs:
             echo "Analytics schema not present yet — skipping (first deploy)."
           fi
 
-      - name: Ensure databases (root, idempotent)
-        # Run the create + grant INSIDE the mysql container as root via 127.0.0.1 — the
-        # exact connection the healthcheck proves works (prod root is localhost-only, and
-        # the homelab runner is docker-out-of-docker so bind-mounting a script is unreliable).
-        # Creates the main + analytics schemas and grants the app user. Idempotent + blocking;
-        # heals existing volumes too. `-e` makes a real failure stop the deploy.
-        run: |
-          $COMPOSE exec -T mysql sh -ec '
-            for db in "${DB_DATABASE:-teman_lari}" "${DB_ANALYTICS_DATABASE:-teman_lari_analytics}"; do
-              mysql -h 127.0.0.1 -uroot -p"$MYSQL_ROOT_PASSWORD" -e "CREATE DATABASE IF NOT EXISTS $db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci; GRANT ALL PRIVILEGES ON $db.* TO '"'"'$DB_USERNAME'"'"'@'"'"'%'"'"';"
-              echo "schema $db ready"
-            done
-            mysql -h 127.0.0.1 -uroot -p"$MYSQL_ROOT_PASSWORD" -e "FLUSH PRIVILEGES;"'
-
       - name: Migrate (one-shot, on the new image)
         run: $COMPOSE run --rm app php artisan migrate --force
 
       - name: Migrate analytics schema
-        # Schema guaranteed by the Ensure databases step above; just migrate. Blocking.
+        # The analytics schema + app-user grant are a one-time bootstrap, not a per-deploy
+        # concern: docker/mysql/init/01-databases.sh (see its header for the one-liner).
+        # This step just migrates as the app user; blocking, so it fails loudly if missing.
         run: $COMPOSE run --rm app php artisan migrate --database=analytics --path=database/migrations/analytics --force
 
       - name: Roll app, workers + Pulse daemons onto the new image
