@@ -1,18 +1,48 @@
 #!/bin/sh
-# Dev/local initdb only (fresh volume): create the app's schemas and grant the app user,
-# as root via the socket. Runs inside the mysql container during initdb on local Docker
-# Desktop, where bind mounts work. Prod does NOT use this — the homelab runner is
-# docker-out-of-docker (bind mounts are unreliable) and bootstraps via the CI
-# "Ensure databases" step instead. The app USER is created by the image's MYSQL_USER.
+# Idempotent DB bootstrap (early-exit) — ensure the app's schemas, user and grants
+# exist, as root. Safe to run any number of times.
+#
+# Runs in two contexts:
+#   - dev: auto-runs at initdb on a FRESH volume (mounted into
+#     /docker-entrypoint-initdb.d by compose.yaml; connects over the socket).
+#   - prod: run once after (re)initializing the mysql data, piped over stdin so no
+#     bind mount is needed on the self-hosted homelab runner:
+#
+#       docker compose -f compose.prod.yaml exec -T mysql sh < docker/mysql/init/01-databases.sh
+#
+# To reinitialize prod from scratch (data is disposable): stop + remove the mysql
+# container, `docker volume rm teman-lari-prod_mysql_data`, `up -d mysql`, then run
+# the one-liner above.
 set -e
 
-MAIN_DB="${MYSQL_DATABASE:-${DB_DATABASE:-teman_lari}}"
+# Prefer the app's (Laravel) DB_* names; fall back to the image's MYSQL_* (dev initdb,
+# where only those are present in the container env).
+MAIN_DB="${DB_DATABASE:-${MYSQL_DATABASE:-teman_lari}}"
 ANALYTICS_DB="${DB_ANALYTICS_DATABASE:-teman_lari_analytics}"
-APP_USER="${MYSQL_USER:-${DB_USERNAME:-sail}}"
+APP_USER="${DB_USERNAME:-${MYSQL_USER:-sail}}"
+APP_PW="${DB_PASSWORD:-${MYSQL_PASSWORD}}"
 
-for db in "$MAIN_DB" "$ANALYTICS_DB"; do
-  mysql -uroot -p"${MYSQL_ROOT_PASSWORD}" \
-    -e "CREATE DATABASE IF NOT EXISTS $db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci; GRANT ALL PRIVILEGES ON $db.* TO '${APP_USER}'@'%';"
-  echo "schema '$db' ready for '${APP_USER}'"
-done
-mysql -uroot -p"${MYSQL_ROOT_PASSWORD}" -e "FLUSH PRIVILEGES;"
+# Connect as root over TCP once the server is listening (prod, via exec); fall back to
+# the socket during initdb, when the temporary server runs with --skip-networking.
+if mysql -h 127.0.0.1 -uroot -p"${MYSQL_ROOT_PASSWORD}" -e "SELECT 1" >/dev/null 2>&1; then
+  set -- -h 127.0.0.1 -uroot -p"${MYSQL_ROOT_PASSWORD}"
+else
+  set -- -uroot -p"${MYSQL_ROOT_PASSWORD}"
+fi
+
+# Early exit if already bootstrapped (analytics schema present).
+if mysql "$@" -e "USE ${ANALYTICS_DB}" >/dev/null 2>&1; then
+  echo "db-init: '${ANALYTICS_DB}' already present — skipping"
+  exit 0
+fi
+
+mysql "$@" <<SQL
+CREATE DATABASE IF NOT EXISTS ${MAIN_DB} CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE DATABASE IF NOT EXISTS ${ANALYTICS_DB} CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE USER IF NOT EXISTS '${APP_USER}'@'%' IDENTIFIED BY '${APP_PW}';
+GRANT ALL PRIVILEGES ON ${MAIN_DB}.* TO '${APP_USER}'@'%';
+GRANT ALL PRIVILEGES ON ${ANALYTICS_DB}.* TO '${APP_USER}'@'%';
+FLUSH PRIVILEGES;
+SQL
+
+echo "db-init: '${MAIN_DB}' + '${ANALYTICS_DB}' ready for '${APP_USER}'"
