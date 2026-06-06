@@ -253,7 +253,7 @@ final class RuleBasedNarrationFiller
 
     private function akuProfileVoice(): string
     {
-        return 'Aku catat semua perjalanan kamu di sini: kartu, rekor, aksesori, ceritanya. Ayo terus jalan.';
+        return 'Aku catat semua perjalanan kamu di sini: **kartu**, **rekor**, **aksesori**, ceritanya. Ayo terus jalan.';
     }
 
     private function personaSummary(): string
