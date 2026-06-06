@@ -64,62 +64,97 @@ export function equippedToKeys(equipped: EquippedAccessories | null | undefined)
 // (e.g. `accessory.ikat_kepala_legendaris`) to the typed TemariEquipped
 // variants (e.g. `legendaris`). Shared by Temari.tsx, Aksesori.tsx, and
 // AksesoriUnlockModal.tsx.
+//
+// Keys follow the pattern `accessory.{slot}_{suffix}`. The variant is
+// extracted by splitting on `.` and then looking up the last segment in a
+// per-slot map, so renames or ambiguous substrings cannot cause false
+// matches.
+
+/** Key-suffix → variant for each slot. The suffix is the full segment after `accessory.`. */
+const VARIANT_MAPS = {
+    ikat_kepala: {
+        ikat_kepala_legendaris: 'legendaris',
+        ikat_kepala_epik: 'epik',
+        ikat_kepala_langka: 'epik',
+        ikat_kepala_berkesan: 'ember',
+    } as Record<string, TemariEquipped['headband']>,
+    medal: {
+        medal_platina: 'platina',
+        medal_perak: 'perak',
+        medal_emas: 'emas',
+        medal_pertama: 'pertama',
+    } as Record<string, TemariEquipped['medal']>,
+    pita: {
+        pita_maraton: 'maraton',
+        pita_malam: 'malam',
+        pita_jarak: 'jarak',
+        pita_konsisten: 'konsisten',
+    } as Record<string, TemariEquipped['pita']>,
+    kaus: {
+        kaus_legendaris: 'legendaris',
+        kaus_hujan: 'hujan',
+        kaus_pagi: 'pagi',
+        kaus_pemula: 'pemula',
+    } as Record<string, TemariEquipped['kaus']>,
+    celana: {
+        celana_maraton: 'maraton',
+        celana_split: 'split',
+        celana_jarak: 'jarak',
+        celana_ringan: 'ringan',
+    } as Record<string, TemariEquipped['celana']>,
+    sepatu: {
+        sepatu_legendaris: 'legendaris',
+        sepatu_tahan: 'tahan',
+        sepatu_cepat: 'cepat',
+        sepatu_basic: 'basic',
+    } as Record<string, TemariEquipped['sepatu']>,
+    aura: {
+        aura_jagoan: 'jagoan',
+        aura_tenang: 'tenang',
+        aura_gerah: 'gerah',
+        aura_pemanasan: 'pemanasan',
+    } as Record<string, TemariEquipped['aura']>,
+} as const;
+
+/** Extract the segment after `accessory.` from a full unlock key. */
+function suffixOf(key: string): string {
+    const dotIndex = key.indexOf('.');
+    return dotIndex === -1 ? key : key.slice(dotIndex + 1);
+}
 
 export function mapHeadband(key: string | null): TemariEquipped['headband'] {
     if (!key) return null;
-    if (key.includes('legendaris')) return 'legendaris';
-    if (key.includes('epik')) return 'epik';
-    if (key.includes('langka')) return 'epik';
-    if (key.includes('berkesan')) return 'ember';
-    return 'ember';
+    return VARIANT_MAPS.ikat_kepala[suffixOf(key)] ?? 'ember';
 }
 
 export function mapMedal(key: string | null): TemariEquipped['medal'] {
     if (!key) return 'none';
-    if (key.includes('platina')) return 'platina';
-    if (key.includes('perak')) return 'perak';
-    if (key.includes('emas')) return 'emas';
-    return 'pertama';
+    return VARIANT_MAPS.medal[suffixOf(key)] ?? 'pertama';
 }
 
 export function mapPita(key: string | null): TemariEquipped['pita'] {
     if (!key) return null;
-    if (key.includes('maraton')) return 'maraton';
-    if (key.includes('malam')) return 'malam';
-    if (key.includes('jarak')) return 'jarak';
-    return 'konsisten';
+    return VARIANT_MAPS.pita[suffixOf(key)] ?? 'konsisten';
 }
 
 export function mapKaus(key: string | null): TemariEquipped['kaus'] {
     if (!key) return null;
-    if (key.includes('legendaris')) return 'legendaris';
-    if (key.includes('hujan')) return 'hujan';
-    if (key.includes('pagi')) return 'pagi';
-    return 'pemula';
+    return VARIANT_MAPS.kaus[suffixOf(key)] ?? 'pemula';
 }
 
 export function mapCelana(key: string | null): TemariEquipped['celana'] {
     if (!key) return null;
-    if (key.includes('maraton')) return 'maraton';
-    if (key.includes('split')) return 'split';
-    if (key.includes('jarak')) return 'jarak';
-    return 'ringan';
+    return VARIANT_MAPS.celana[suffixOf(key)] ?? 'ringan';
 }
 
 export function mapSepatu(key: string | null): TemariEquipped['sepatu'] {
     if (!key) return null;
-    if (key.includes('legendaris')) return 'legendaris';
-    if (key.includes('tahan')) return 'tahan';
-    if (key.includes('cepat')) return 'cepat';
-    return 'basic';
+    return VARIANT_MAPS.sepatu[suffixOf(key)] ?? 'basic';
 }
 
 export function mapAura(key: string | null): TemariEquipped['aura'] {
     if (!key) return null;
-    if (key.includes('jagoan')) return 'jagoan';
-    if (key.includes('tenang')) return 'tenang';
-    if (key.includes('gerah')) return 'gerah';
-    return 'pemanasan';
+    return VARIANT_MAPS.aura[suffixOf(key)] ?? 'pemanasan';
 }
 
 /**
@@ -143,15 +178,50 @@ export function serverToEquipped(ea: EquippedAccessories): TemariEquipped {
  * Converts a single unlock key into a TemariEquipped that shows only the
  * relevant slot. Used by AksesoriUnlockModal and the Aksesori card previews.
  */
+/** Slot prefixes in priority order (longest first to avoid partial matches). */
+const SLOT_PREFIXES = [
+    'ikat_kepala',
+    'medal',
+    'pita',
+    'kaus',
+    'celana',
+    'sepatu',
+    'aura',
+] as const;
+
+type SlotName = typeof SLOT_PREFIXES[number];
+
+const SLOT_MAPPER: Record<SlotName, (key: string) => TemariEquipped[keyof TemariEquipped]> = {
+    ikat_kepala: (key) => mapHeadband(key),
+    medal: (key) => mapMedal(key),
+    pita: (key) => mapPita(key),
+    kaus: (key) => mapKaus(key),
+    celana: (key) => mapCelana(key),
+    sepatu: (key) => mapSepatu(key),
+    aura: (key) => mapAura(key),
+};
+
+/** Slots where the default is `{ medal: 'none' }` (slots other than medal are absent/null). */
+const SLOT_KEYS: Record<SlotName, keyof TemariEquipped> = {
+    ikat_kepala: 'headband',
+    medal: 'medal',
+    pita: 'pita',
+    kaus: 'kaus',
+    celana: 'celana',
+    sepatu: 'sepatu',
+    aura: 'aura',
+};
+
 export function keyToPreviewEquipped(key: string): TemariEquipped {
     const base: TemariEquipped = { medal: 'none' };
+    const suffix = suffixOf(key);
 
-    if (key.includes('ikat_kepala')) return { ...base, headband: mapHeadband(key) };
-    if (key.includes('medal')) return { medal: mapMedal(key) };
-    if (key.includes('pita')) return { ...base, pita: mapPita(key) };
-    if (key.includes('kaus')) return { ...base, kaus: mapKaus(key) };
-    if (key.includes('celana')) return { ...base, celana: mapCelana(key) };
-    if (key.includes('sepatu')) return { ...base, sepatu: mapSepatu(key) };
-    if (key.includes('aura')) return { ...base, aura: mapAura(key) };
+    for (const prefix of SLOT_PREFIXES) {
+        if (suffix.startsWith(prefix + '_') || suffix === prefix) {
+            const slotKey = SLOT_KEYS[prefix];
+            return { ...base, [slotKey]: SLOT_MAPPER[prefix](key) };
+        }
+    }
+
     return { headband: 'epik' };
 }

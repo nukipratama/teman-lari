@@ -107,7 +107,7 @@ class HandleInertiaRequests extends Middleware
     {
         $resolver = app(GoalResolver::class);
         $goals = $resolver->forUser($user);
-        $completed = count(array_filter($goals, fn (array $g): bool => $g['is_completed']));
+        $completed = $resolver->completedCount($goals);
         $closest = $resolver->closestToCompletion($user, 3, $goals);
 
         return [

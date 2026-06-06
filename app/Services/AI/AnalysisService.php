@@ -168,14 +168,25 @@ class AnalysisService
     /** Generate deterministic content for rule-based analysis types. */
     private function ruleBasedContent(Analysis $row): string
     {
-        return match ($row->analysis_type) {
-            AnalysisType::TrendCaption => $this->insightBuilder->trendCaption(
+        if ($row->analysis_type === AnalysisType::TrendCaption) {
+            return $this->insightBuilder->trendCaption(
                 User::query()->findOrFail($row->subject_id),
                 $row->discriminator !== null ? Carbon::parse($row->discriminator) : Carbon::today(),
-            ),
-            AnalysisType::RunInsightTechnical,
-            AnalysisType::RunInsightSplits,
-            AnalysisType::RunInsightZones => $this->filler->fillFor($row),
+            );
+        }
+
+        $activity = Activity::query()->with('detail')->findOrFail($row->subject_id);
+        $detail = $activity->detail;
+
+        if ($detail === null) {
+            return $this->filler->fillFor($row);
+        }
+
+        return match ($row->analysis_type) {
+            AnalysisType::RunInsightTechnical => $this->insightBuilder->runInsightTechnical($activity, $detail),
+            AnalysisType::RunInsightSplits => $this->insightBuilder->runInsightSplits($detail),
+            AnalysisType::RunInsightZones => $this->insightBuilder->runInsightZones($detail),
+            default => $this->filler->fillFor($row),
         };
     }
 

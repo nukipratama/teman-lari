@@ -22,7 +22,7 @@ class GoalController extends Controller
         $user = $request->user();
 
         $goals = $this->goals->forUser($user);
-        $completed = count(array_filter($goals, fn (array $g): bool => $g['is_completed']));
+        $completed = $this->goals->completedCount($goals);
 
         return Inertia::render('Target', [
             'goals' => $goals,

@@ -24,6 +24,29 @@ use Illuminate\Support\Carbon;
  */
 final class RuleBasedInsightBuilder
 {
+    // Cadence thresholds (spm, already doubled)
+    private const int CADENCE_IDEAL = 180;
+    private const int CADENCE_MODERATE = 170;
+    private const int CADENCE_LOW = 160;
+
+    // HR reserve (% of max)
+    private const int HR_RESERVE_EASY = 70;
+    private const int HR_RESERVE_MODERATE = 80;
+    private const int HR_RESERVE_HARD = 90;
+
+    // Decoupling (% pace drift)
+    private const int DECOUPLING_HIGH = 5;
+    private const int DECOUPLING_OK = 2;
+
+    // Pace variability (seconds)
+    private const int VARIABILITY_CONSISTENT = 8;
+    private const int VARIABILITY_MODERATE = 15;
+    private const int VARIABILITY_HIGH = 20;
+
+    // Pace diff vs user average (sec/km)
+    private const int PACE_DIFF_NOTICEABLE = 15;
+    private const int PACE_DIFF_WIDE = 30;
+
     /**
      * @return array{technical: string, splits: string, zones: string}
      */
@@ -71,9 +94,9 @@ final class RuleBasedInsightBuilder
         }
 
         $label = match (true) {
-            $cadence >= 180 => 'ideal',
-            $cadence >= 170 => 'lumayan',
-            $cadence >= 160 => 'masih bisa dinaikin',
+            $cadence >= self::CADENCE_IDEAL => 'ideal',
+            $cadence >= self::CADENCE_MODERATE => 'lumayan',
+            $cadence >= self::CADENCE_LOW => 'masih bisa dinaikin',
             default => 'cukup rendah',
         };
         $parts[] = "cadence {$cadence} spm ({$label})";
@@ -100,9 +123,9 @@ final class RuleBasedInsightBuilder
 
         $hrReserve = round(($avgHr / $maxHr) * 100);
         $label = match (true) {
-            $hrReserve <= 70 => 'zona nyaman',
-            $hrReserve <= 80 => 'zona sedang',
-            $hrReserve <= 90 => 'intens tinggi',
+            $hrReserve <= self::HR_RESERVE_EASY => 'zona nyaman',
+            $hrReserve <= self::HR_RESERVE_MODERATE => 'zona sedang',
+            $hrReserve <= self::HR_RESERVE_HARD => 'intens tinggi',
             default => 'sangat intens',
         };
         $parts[] = "HR rata-rata {$avgHr} ({$label})";
@@ -120,9 +143,9 @@ final class RuleBasedInsightBuilder
         }
 
         $decoupling = (float) $raw;
-        if ($decoupling > 5) {
+        if ($decoupling > self::DECOUPLING_HIGH) {
             $parts[] = 'decoupling +' . number_format($decoupling, 1) . '%, aerobik base belum solid';
-        } elseif ($decoupling > 2) {
+        } elseif ($decoupling > self::DECOUPLING_OK) {
             $parts[] = 'decoupling +' . number_format($decoupling, 1) . '%, masih wajar';
         }
     }
@@ -146,7 +169,7 @@ final class RuleBasedInsightBuilder
     private function appendPaceVariabilityPart(array $summary, array &$parts): void
     {
         $raw = $summary['pace_variability_sec'] ?? null;
-        if ($raw !== null && (float) $raw > 20) {
+        if ($raw !== null && (float) $raw > self::VARIABILITY_HIGH) {
             $parts[] = 'pace agak bervariasi, coba jaga konsistensi';
         }
     }
@@ -163,9 +186,9 @@ final class RuleBasedInsightBuilder
         }
 
         $diff = $userAvg - $currentPace; // positive = faster than average
-        if ($diff > 15) {
+        if ($diff > self::PACE_DIFF_NOTICEABLE) {
             $parts[] = 'lebih cepat dari rata-rata kamu';
-        } elseif ($diff < -15) {
+        } elseif ($diff < -self::PACE_DIFF_NOTICEABLE) {
             $parts[] = 'lebih santai dari biasanya';
         }
     }
@@ -228,8 +251,8 @@ final class RuleBasedInsightBuilder
         $rangeSec = max(array_values($paces)) - min(array_values($paces));
 
         $parts[] = match (true) {
-            $rangeSec > 30 => $this->kmRangeWide($perKm, $fastest, $slowest),
-            $rangeSec > 15 => "km {$fastest} tercepat, gap-nya wajar",
+            $rangeSec > self::PACE_DIFF_WIDE => $this->kmRangeWide($perKm, $fastest, $slowest),
+            $rangeSec > self::PACE_DIFF_NOTICEABLE => "km {$fastest} tercepat, gap-nya wajar",
             default => 'gap antar km sangat kecil, pacing sangat konsisten',
         };
     }
@@ -240,7 +263,7 @@ final class RuleBasedInsightBuilder
     private function kmRangeWide(array $perKm, int $fastest, int $slowest): string
     {
         $idx = array_search($fastest, array_column($perKm, 'km'), true);
-        $fastestPace = $perKm[$idx ?: 0]['pace'] ?? '?';
+        $fastestPace = $perKm[$idx !== false ? $idx : 0]['pace'] ?? '?';
 
         return "km {$fastest} tercepat ({$fastestPace}), km {$slowest} paling lambat, selisih cukup besar";
     }
@@ -257,9 +280,9 @@ final class RuleBasedInsightBuilder
         }
 
         $variability = (float) $raw;
-        if ($variability <= 8) {
+        if ($variability <= self::VARIABILITY_CONSISTENT) {
             $parts[] = 'konsistensi pace sangat bagus';
-        } elseif ($variability <= 15) {
+        } elseif ($variability <= self::VARIABILITY_MODERATE) {
             $parts[] = 'konsistensi pace cukup baik';
         }
     }

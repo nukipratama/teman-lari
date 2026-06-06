@@ -29,16 +29,26 @@ readonly class GoalResolver
             ->where('user_id', $user->id)
             ->pluck('unlock_key')
             ->all());
+        /** @var array<string, array{rarity?: string}> $catalog */
+        $catalog = (array) config('temari_unlocks', []);
 
         return [
-            ...$this->medalGoals($ctx, $unlockedKeys),
-            ...$this->ikatKepalaGoals($ctx, $unlockedKeys),
-            ...$this->pitaGoals($ctx, $unlockedKeys),
-            ...$this->kausGoals($ctx, $unlockedKeys),
-            ...$this->celanaGoals($ctx, $unlockedKeys),
-            ...$this->sepatuGoals($ctx, $unlockedKeys),
-            ...$this->auraGoals($ctx, $unlockedKeys),
+            ...$this->medalGoals($ctx, $unlockedKeys, $catalog),
+            ...$this->ikatKepalaGoals($ctx, $unlockedKeys, $catalog),
+            ...$this->pitaGoals($ctx, $unlockedKeys, $catalog),
+            ...$this->kausGoals($ctx, $unlockedKeys, $catalog),
+            ...$this->celanaGoals($ctx, $unlockedKeys, $catalog),
+            ...$this->sepatuGoals($ctx, $unlockedKeys, $catalog),
+            ...$this->auraGoals($ctx, $unlockedKeys, $catalog),
         ];
+    }
+
+    /**
+     * @param  list<array{id: string, title: string, description: string, slot: string, rarity: string, current: int|float, target: int|float, unit: string, is_completed: bool}>  $goals
+     */
+    public function completedCount(array $goals): int
+    {
+        return count(array_filter($goals, fn (array $g): bool => $g['is_completed']));
     }
 
     /**
@@ -73,9 +83,10 @@ readonly class GoalResolver
 
     /**
      * @param  list<string>  $unlockedKeys
+     * @param  array<string, array{rarity?: string}>  $catalog
      * @return list<array{id: string, title: string, description: string, slot: string, rarity: string, current: int|float, target: int|float, unit: string, is_completed: bool}>
      */
-    private function medalGoals(GamificationContext $ctx, array $unlockedKeys): array
+    private function medalGoals(GamificationContext $ctx, array $unlockedKeys, array $catalog): array
     {
         $goals = [
             ['id' => 'accessory.medal_pertama', 'target' => 1, 'description' => 'Catat 1 PR di kategori apapun.'],
@@ -89,7 +100,7 @@ readonly class GoalResolver
             'title' => 'Catat PR ke-' . $g['target'],
             'description' => $g['description'],
             'slot' => 'medal',
-            'rarity' => $this->rarityForKey($g['id']),
+            'rarity' => $this->rarityForKey($g['id'], $catalog),
             'current' => min($ctx->prCount, $g['target']),
             'target' => $g['target'],
             'unit' => 'PR',
@@ -99,9 +110,10 @@ readonly class GoalResolver
 
     /**
      * @param  list<string>  $unlockedKeys
+     * @param  array<string, array{rarity?: string}>  $catalog
      * @return list<array{id: string, title: string, description: string, slot: string, rarity: string, current: int|float, target: int|float, unit: string, is_completed: bool}>
      */
-    private function ikatKepalaGoals(GamificationContext $ctx, array $unlockedKeys): array
+    private function ikatKepalaGoals(GamificationContext $ctx, array $unlockedKeys, array $catalog): array
     {
         $rc = $ctx->rarityCounts;
         $items = [
@@ -111,7 +123,7 @@ readonly class GoalResolver
             ['id' => 'accessory.ikat_kepala_legendaris', 'rarityValue' => Rarity::Legendary->value, 'target' => 1, 'label' => 'Legendaris'],
         ];
 
-        return array_map(function (array $g) use ($rc, $unlockedKeys): array {
+        return array_map(function (array $g) use ($rc, $unlockedKeys, $catalog): array {
             $current = $rc[$g['rarityValue']] ?? 0;
 
             return [
@@ -119,7 +131,7 @@ readonly class GoalResolver
                 'title' => "Kumpulkan {$g['target']} kartu {$g['label']}",
                 'description' => "Dapatkan {$g['target']} kartu {$g['label']}.",
                 'slot' => 'ikat_kepala',
-                'rarity' => $this->rarityForKey($g['id']),
+                'rarity' => $this->rarityForKey($g['id'], $catalog),
                 'current' => min($current, $g['target']),
                 'target' => $g['target'],
                 'unit' => 'kartu',
@@ -130,9 +142,10 @@ readonly class GoalResolver
 
     /**
      * @param  list<string>  $unlockedKeys
+     * @param  array<string, array{rarity?: string}>  $catalog
      * @return list<array{id: string, title: string, description: string, slot: string, rarity: string, current: int|float, target: int|float, unit: string, is_completed: bool}>
      */
-    private function pitaGoals(GamificationContext $ctx, array $unlockedKeys): array
+    private function pitaGoals(GamificationContext $ctx, array $unlockedKeys, array $catalog): array
     {
         $bc = $ctx->badgeCounts;
 
@@ -142,7 +155,7 @@ readonly class GoalResolver
                 'title' => '4 minggu beruntun lari',
                 'description' => 'Lari di 4 minggu berturut-turut.',
                 'slot' => 'pita',
-                'rarity' => $this->rarityForKey('accessory.pita_konsisten'),
+                'rarity' => $this->rarityForKey('accessory.pita_konsisten', $catalog),
                 'current' => min($ctx->streakWeeks, 4),
                 'target' => 4,
                 'unit' => 'minggu',
@@ -153,7 +166,7 @@ readonly class GoalResolver
                 'title' => 'Akumulasi jarak 100 km',
                 'description' => 'Akumulasi jarak 100 km.',
                 'slot' => 'pita',
-                'rarity' => $this->rarityForKey('accessory.pita_jarak'),
+                'rarity' => $this->rarityForKey('accessory.pita_jarak', $catalog),
                 'current' => min($ctx->totalDistanceKm(), 100),
                 'target' => 100,
                 'unit' => 'km',
@@ -164,7 +177,7 @@ readonly class GoalResolver
                 'title' => '5 lari malam',
                 'description' => 'Selesaikan 5 lari malam (setelah jam 9 malam).',
                 'slot' => 'pita',
-                'rarity' => $this->rarityForKey('accessory.pita_malam'),
+                'rarity' => $this->rarityForKey('accessory.pita_malam', $catalog),
                 'current' => min($bc[Badge::AnakMalam->value] ?? 0, 5),
                 'target' => 5,
                 'unit' => 'lari',
@@ -175,7 +188,7 @@ readonly class GoalResolver
                 'title' => 'Akumulasi jarak 500 km',
                 'description' => 'Akumulasi jarak 500 km.',
                 'slot' => 'pita',
-                'rarity' => $this->rarityForKey('accessory.pita_maraton'),
+                'rarity' => $this->rarityForKey('accessory.pita_maraton', $catalog),
                 'current' => min($ctx->totalDistanceKm(), 500),
                 'target' => 500,
                 'unit' => 'km',
@@ -186,9 +199,10 @@ readonly class GoalResolver
 
     /**
      * @param  list<string>  $unlockedKeys
+     * @param  array<string, array{rarity?: string}>  $catalog
      * @return list<array{id: string, title: string, description: string, slot: string, rarity: string, current: int|float, target: int|float, unit: string, is_completed: bool}>
      */
-    private function kausGoals(GamificationContext $ctx, array $unlockedKeys): array
+    private function kausGoals(GamificationContext $ctx, array $unlockedKeys, array $catalog): array
     {
         $bc = $ctx->badgeCounts;
 
@@ -198,7 +212,7 @@ readonly class GoalResolver
                 'title' => 'Catat lari pertama',
                 'description' => 'Catat 1 aktivitas lari.',
                 'slot' => 'kaus',
-                'rarity' => $this->rarityForKey('accessory.kaus_pemula'),
+                'rarity' => $this->rarityForKey('accessory.kaus_pemula', $catalog),
                 'current' => min($ctx->activityCount, 1),
                 'target' => 1,
                 'unit' => 'lari',
@@ -209,7 +223,7 @@ readonly class GoalResolver
                 'title' => '5 lari pagi',
                 'description' => 'Selesaikan 5 lari pagi (sebelum jam 6).',
                 'slot' => 'kaus',
-                'rarity' => $this->rarityForKey('accessory.kaus_pagi'),
+                'rarity' => $this->rarityForKey('accessory.kaus_pagi', $catalog),
                 'current' => min($bc[Badge::AnakPagi->value] ?? 0, 5),
                 'target' => 5,
                 'unit' => 'lari',
@@ -220,7 +234,7 @@ readonly class GoalResolver
                 'title' => '3 lari pas hujan',
                 'description' => 'Selesaikan 3 lari pas hujan.',
                 'slot' => 'kaus',
-                'rarity' => $this->rarityForKey('accessory.kaus_hujan'),
+                'rarity' => $this->rarityForKey('accessory.kaus_hujan', $catalog),
                 'current' => min($bc[Badge::PejuangHujan->value] ?? 0, 3),
                 'target' => 3,
                 'unit' => 'lari',
@@ -231,7 +245,7 @@ readonly class GoalResolver
                 'title' => 'Catat 50 lari',
                 'description' => 'Catat 50 aktivitas lari.',
                 'slot' => 'kaus',
-                'rarity' => $this->rarityForKey('accessory.kaus_legendaris'),
+                'rarity' => $this->rarityForKey('accessory.kaus_legendaris', $catalog),
                 'current' => min($ctx->activityCount, 50),
                 'target' => 50,
                 'unit' => 'lari',
@@ -242,9 +256,10 @@ readonly class GoalResolver
 
     /**
      * @param  list<string>  $unlockedKeys
+     * @param  array<string, array{rarity?: string}>  $catalog
      * @return list<array{id: string, title: string, description: string, slot: string, rarity: string, current: int|float, target: int|float, unit: string, is_completed: bool}>
      */
-    private function celanaGoals(GamificationContext $ctx, array $unlockedKeys): array
+    private function celanaGoals(GamificationContext $ctx, array $unlockedKeys, array $catalog): array
     {
         $bc = $ctx->badgeCounts;
 
@@ -254,7 +269,7 @@ readonly class GoalResolver
                 'title' => 'Lari 5 km pertama',
                 'description' => 'Catat 1 lari sejauh 5 km atau lebih.',
                 'slot' => 'celana',
-                'rarity' => $this->rarityForKey('accessory.celana_ringan'),
+                'rarity' => $this->rarityForKey('accessory.celana_ringan', $catalog),
                 'current' => min($ctx->fiveKPlus, 1),
                 'target' => 1,
                 'unit' => 'lari',
@@ -265,7 +280,7 @@ readonly class GoalResolver
                 'title' => 'Lari 10 km pertama',
                 'description' => 'Catat 1 lari sejauh 10 km atau lebih.',
                 'slot' => 'celana',
-                'rarity' => $this->rarityForKey('accessory.celana_jarak'),
+                'rarity' => $this->rarityForKey('accessory.celana_jarak', $catalog),
                 'current' => min($ctx->tenKPlus, 1),
                 'target' => 1,
                 'unit' => 'lari',
@@ -276,7 +291,7 @@ readonly class GoalResolver
                 'title' => '3 negative split',
                 'description' => 'Catat 3 lari negative split.',
                 'slot' => 'celana',
-                'rarity' => $this->rarityForKey('accessory.celana_split'),
+                'rarity' => $this->rarityForKey('accessory.celana_split', $catalog),
                 'current' => min($bc[Badge::NegativeSplit->value] ?? 0, 3),
                 'target' => 3,
                 'unit' => 'lari',
@@ -287,7 +302,7 @@ readonly class GoalResolver
                 'title' => 'Lari 21 km',
                 'description' => 'Catat 1 lari sejauh 21 km atau lebih.',
                 'slot' => 'celana',
-                'rarity' => $this->rarityForKey('accessory.celana_maraton'),
+                'rarity' => $this->rarityForKey('accessory.celana_maraton', $catalog),
                 'current' => min($ctx->halfMarathon, 1),
                 'target' => 1,
                 'unit' => 'lari',
@@ -298,9 +313,10 @@ readonly class GoalResolver
 
     /**
      * @param  list<string>  $unlockedKeys
+     * @param  array<string, array{rarity?: string}>  $catalog
      * @return list<array{id: string, title: string, description: string, slot: string, rarity: string, current: int|float, target: int|float, unit: string, is_completed: bool}>
      */
-    private function sepatuGoals(GamificationContext $ctx, array $unlockedKeys): array
+    private function sepatuGoals(GamificationContext $ctx, array $unlockedKeys, array $catalog): array
     {
         return [
             [
@@ -308,7 +324,7 @@ readonly class GoalResolver
                 'title' => 'Catat 10 lari',
                 'description' => 'Catat 10 aktivitas lari.',
                 'slot' => 'sepatu',
-                'rarity' => $this->rarityForKey('accessory.sepatu_basic'),
+                'rarity' => $this->rarityForKey('accessory.sepatu_basic', $catalog),
                 'current' => min($ctx->activityCount, 10),
                 'target' => 10,
                 'unit' => 'lari',
@@ -319,7 +335,7 @@ readonly class GoalResolver
                 'title' => 'Pace di bawah 5:30/km',
                 'description' => 'Catat 1 lari dengan rata-rata pace di bawah 5:30/km.',
                 'slot' => 'sepatu',
-                'rarity' => $this->rarityForKey('accessory.sepatu_cepat'),
+                'rarity' => $this->rarityForKey('accessory.sepatu_cepat', $catalog),
                 'current' => min($ctx->fastPace, 1),
                 'target' => 1,
                 'unit' => 'lari',
@@ -330,7 +346,7 @@ readonly class GoalResolver
                 'title' => '5 lari 10 km+',
                 'description' => 'Catat 5 lari sejauh 10 km atau lebih.',
                 'slot' => 'sepatu',
-                'rarity' => $this->rarityForKey('accessory.sepatu_tahan'),
+                'rarity' => $this->rarityForKey('accessory.sepatu_tahan', $catalog),
                 'current' => min($ctx->tenKPlus, 5),
                 'target' => 5,
                 'unit' => 'lari',
@@ -341,7 +357,7 @@ readonly class GoalResolver
                 'title' => 'Akumulasi jarak 1000 km',
                 'description' => 'Akumulasi jarak 1000 km.',
                 'slot' => 'sepatu',
-                'rarity' => $this->rarityForKey('accessory.sepatu_legendaris'),
+                'rarity' => $this->rarityForKey('accessory.sepatu_legendaris', $catalog),
                 'current' => min($ctx->totalDistanceKm(), 1000),
                 'target' => 1000,
                 'unit' => 'km',
@@ -352,9 +368,10 @@ readonly class GoalResolver
 
     /**
      * @param  list<string>  $unlockedKeys
+     * @param  array<string, array{rarity?: string}>  $catalog
      * @return list<array{id: string, title: string, description: string, slot: string, rarity: string, current: int|float, target: int|float, unit: string, is_completed: bool}>
      */
-    private function auraGoals(GamificationContext $ctx, array $unlockedKeys): array
+    private function auraGoals(GamificationContext $ctx, array $unlockedKeys, array $catalog): array
     {
         $bc = $ctx->badgeCounts;
         $rc = $ctx->rarityCounts;
@@ -365,7 +382,7 @@ readonly class GoalResolver
                 'title' => '2 minggu beruntun lari',
                 'description' => 'Lari di 2 minggu berturut-turut.',
                 'slot' => 'aura',
-                'rarity' => $this->rarityForKey('accessory.aura_pemanasan'),
+                'rarity' => $this->rarityForKey('accessory.aura_pemanasan', $catalog),
                 'current' => min($ctx->twoWeekStreak, 2),
                 'target' => 2,
                 'unit' => 'minggu',
@@ -376,7 +393,7 @@ readonly class GoalResolver
                 'title' => '3 lari pas gerah',
                 'description' => 'Selesaikan 3 lari saat suhu di atas 31\u{00b0}C.',
                 'slot' => 'aura',
-                'rarity' => $this->rarityForKey('accessory.aura_gerah'),
+                'rarity' => $this->rarityForKey('accessory.aura_gerah', $catalog),
                 'current' => min($bc[Badge::HariPanas->value] ?? 0, 3),
                 'target' => 3,
                 'unit' => 'lari',
@@ -387,7 +404,7 @@ readonly class GoalResolver
                 'title' => '5 lari HR Zone 2',
                 'description' => 'Catat 5 lari di HR Zone 2 (bawah 70% HRmax).',
                 'slot' => 'aura',
-                'rarity' => $this->rarityForKey('accessory.aura_tenang'),
+                'rarity' => $this->rarityForKey('accessory.aura_tenang', $catalog),
                 'current' => min($bc[Badge::Z2Master->value] ?? 0, 5),
                 'target' => 5,
                 'unit' => 'lari',
@@ -398,7 +415,7 @@ readonly class GoalResolver
                 'title' => '3 kartu Legendaris',
                 'description' => 'Dapatkan 3 kartu Legendaris.',
                 'slot' => 'aura',
-                'rarity' => $this->rarityForKey('accessory.aura_jagoan'),
+                'rarity' => $this->rarityForKey('accessory.aura_jagoan', $catalog),
                 'current' => min($rc[Rarity::Legendary->value] ?? 0, 3),
                 'target' => 3,
                 'unit' => 'kartu',
@@ -407,10 +424,11 @@ readonly class GoalResolver
         ];
     }
 
-    private function rarityForKey(string $key): string
+    /**
+     * @param  array<string, array{rarity?: string}>  $catalog
+     */
+    private function rarityForKey(string $key, array $catalog): string
     {
-        $catalog = (array) config('temari_unlocks', []);
-
         return (string) ($catalog[$key]['rarity'] ?? 'common');
     }
 }

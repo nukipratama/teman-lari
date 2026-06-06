@@ -27,7 +27,7 @@ class EquippedAccessories
     }
 
     /**
-     * @return array{medal: ?string, ikat_kepala: ?string, pita: ?string, kaus: ?string, celana: ?string, sepatu: ?string, aura: ?string}
+     * @return array<string, string|null>
      */
     public function forUser(?User $user): array
     {
@@ -42,27 +42,28 @@ class EquippedAccessories
 
     /**
      * @param  Collection<int, UserUnlock>  $unlocks
-     * @return array{medal: string|null, ikat_kepala: string|null, pita: string|null, kaus: string|null, celana: string|null, sepatu: string|null, aura: string|null}
+     * @return array<string, string|null>
      */
     public function resolve(Collection $unlocks): array
     {
+        $catalog = $this->catalogLookup();
         $equipped = $unlocks->filter(fn (UserUnlock $u): bool => (bool) $u->equipped);
 
-        return [
-            'medal' => $this->equippedKeyForSlot($equipped, 'medal'),
-            'ikat_kepala' => $this->equippedKeyForSlot($equipped, 'ikat_kepala'),
-            'pita' => $this->equippedKeyForSlot($equipped, 'pita'),
-            'kaus' => $this->equippedKeyForSlot($equipped, 'kaus'),
-            'celana' => $this->equippedKeyForSlot($equipped, 'celana'),
-            'sepatu' => $this->equippedKeyForSlot($equipped, 'sepatu'),
-            'aura' => $this->equippedKeyForSlot($equipped, 'aura'),
-        ];
+        $result = $this->empty();
+
+        foreach ($this->slots() as $slot) {
+            $result[$slot] = $this->equippedKeyForSlot($equipped, $slot, $catalog);
+        }
+
+        return $result;
     }
 
-    /** @param  Collection<int, UserUnlock>  $equipped */
-    private function equippedKeyForSlot(Collection $equipped, string $slot): ?string
+    /**
+     * @param  Collection<int, UserUnlock>  $equipped
+     * @param  array<string, array{slot?: string}>  $catalog
+     */
+    private function equippedKeyForSlot(Collection $equipped, string $slot, array $catalog): ?string
     {
-        $catalog = $this->catalogLookup();
         $item = $equipped->first(function (UserUnlock $u) use ($catalog, $slot): bool {
             $meta = $catalog[$u->unlock_key] ?? null;
 
@@ -77,11 +78,7 @@ class EquippedAccessories
         $catalog = $this->catalogLookup();
         $meta = $catalog[$key] ?? null;
 
-        if (isset($meta['slot'])) {
-            return $meta['slot'];
-        }
-
-        return null;
+        return $meta['slot'] ?? null;
     }
 
     /** @return array<string, array{slot?: string}> */
@@ -91,18 +88,10 @@ class EquippedAccessories
     }
 
     /**
-     * @return array{medal: null, ikat_kepala: null, pita: null, kaus: null, celana: null, sepatu: null, aura: null}
+     * @return array<string, null>
      */
     private function empty(): array
     {
-        return [
-            'medal' => null,
-            'ikat_kepala' => null,
-            'pita' => null,
-            'kaus' => null,
-            'celana' => null,
-            'sepatu' => null,
-            'aura' => null,
-        ];
+        return array_fill_keys($this->slots(), null);
     }
 }
