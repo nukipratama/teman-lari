@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services\Run\Story;
 
+use App\Enums\Badge;
 use App\Enums\Rarity;
 use App\Models\Activity;
 use App\Models\ActivityDetail;
@@ -265,22 +266,22 @@ class RunCardFactory
         $badges = [];
 
         if (($detail->weather_temp_c ?? 0) >= 31) {
-            $badges[] = RunCard::BADGE_HARI_PANAS;
+            $badges[] = Badge::HariPanas->value;
         }
         if ($detail->weather_rain_detected === true) {
-            $badges[] = RunCard::BADGE_PEJUANG_HUJAN;
+            $badges[] = Badge::PejuangHujan->value;
         }
         if ($detail->start_date_local !== null && (int) $detail->start_date_local->format('H') < 6) {
-            $badges[] = RunCard::BADGE_ANAK_PAGI;
+            $badges[] = Badge::AnakPagi->value;
         }
         if ($this->isLongSlowDistance($detail, $summary)) {
-            $badges[] = RunCard::BADGE_LONG_SLOW_DISTANCE;
+            $badges[] = Badge::LongSlowDistance->value;
         }
         if (($summary['negative_split'] ?? false) === true) {
-            $badges[] = RunCard::BADGE_NEGATIVE_SPLIT;
+            $badges[] = Badge::NegativeSplit->value;
         }
         if ($this->isAerobicDiscipline($detail, $summary)) {
-            $badges[] = RunCard::BADGE_TAHAN_DIRI;
+            $badges[] = Badge::TahanDiri->value;
         }
 
         return $badges;
@@ -300,33 +301,33 @@ class RunCardFactory
         $hour = $this->startHour($detail);
 
         if ($hour !== null && ($hour < 5 || $hour >= 21)) {
-            $badges[] = RunCard::BADGE_ANAK_MALAM;
+            $badges[] = Badge::AnakMalam->value;
         }
         if (($detail->total_elevation_gain ?? 0) >= self::ELEVATION_GAIN_M) {
-            $badges[] = RunCard::BADGE_PENDAKI;
+            $badges[] = Badge::Pendaki->value;
         }
         if ($this->isFirstRunEver($activity)) {
-            $badges[] = RunCard::BADGE_PERTAMA_KALI;
+            $badges[] = Badge::PertamaKali->value;
         }
         if ($streak + 1 >= self::CONSECUTIVE_DAYS_RAJIN) {
-            $badges[] = RunCard::BADGE_RAJIN;
+            $badges[] = Badge::Rajin->value;
         }
 
         $paceSec = $detail->paceSecPerKm();
         if ($paceSec !== null && $paceSec < self::PACE_KILAT_SEC_PER_KM) {
-            $badges[] = RunCard::BADGE_KILAT;
+            $badges[] = Badge::Kilat->value;
         }
         if ($distance >= 21_097.5) {
-            $badges[] = RunCard::BADGE_JAUH;
+            $badges[] = Badge::Jauh->value;
         }
 
         $badges = array_merge($badges, $this->zoneAndEffortBadges($detail, $summary, $hour));
 
         if ($streak + 1 >= self::CONSECUTIVE_DAYS_BERTURUT) {
-            $badges[] = RunCard::BADGE_BERTURUT;
+            $badges[] = Badge::Berturut->value;
         }
         if ($this->isIndonesianHoliday($detail)) {
-            $badges[] = RunCard::BADGE_HARI_SPESIAL;
+            $badges[] = Badge::HariSpesial->value;
         }
 
         return $badges;
@@ -344,16 +345,16 @@ class RunCardFactory
 
         $zonePct = StreamSummary::zonePct($summary);
         if (($zonePct['Z2'] ?? 0) > 80.0) {
-            $badges[] = RunCard::BADGE_Z2_MASTER;
+            $badges[] = Badge::Z2Master->value;
         }
         if ($hour !== null && $hour < 6) {
-            $badges[] = RunCard::BADGE_ANAK_DINGIN;
+            $badges[] = Badge::AnakDingin->value;
         }
         if ($this->isHardEffort($detail)) {
-            $badges[] = RunCard::BADGE_KERAS;
+            $badges[] = Badge::Keras->value;
         }
         if ($this->isEasyEffort($detail)) {
-            $badges[] = RunCard::BADGE_SANTAI;
+            $badges[] = Badge::Santai->value;
         }
 
         return $badges;

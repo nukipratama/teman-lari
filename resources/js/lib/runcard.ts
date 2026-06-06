@@ -14,7 +14,7 @@ export const RARITY_ORDER: Rarity[] = ['common', 'uncommon', 'rare', 'epic', 'le
 
 // Slug → display name (emoji emblem + casual-Jakarta name). The two English ones
 // are running terms (code-switch rule), the rest are ID-first. Mirrored in PHP
-// RunCard::BADGE_LABELS — keep both runtimes in sync.
+// Badge::labels() — keep both runtimes in sync.
 export const BADGE_LABELS: Record<string, string> = {
     hari_panas: '🔥 Tahan Gerah',
     pejuang_hujan: '🌧️ Pejuang Hujan',

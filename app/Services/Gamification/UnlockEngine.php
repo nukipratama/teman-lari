@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Services\Gamification;
 
+use App\Enums\Badge;
 use App\Enums\Rarity;
-use App\Models\RunCard;
 use App\Models\User;
 use App\Models\UserUnlock;
 use Illuminate\Support\Carbon;
@@ -168,7 +168,7 @@ class UnlockEngine
         if ($ctx->totalDistanceM >= 500_000) {
             $keys[] = 'accessory.pita_maraton';
         }
-        if (($ctx->badgeCounts[RunCard::BADGE_ANAK_MALAM] ?? 0) >= 5) {
+        if (($ctx->badgeCounts[Badge::AnakMalam->value] ?? 0) >= 5) {
             $keys[] = 'accessory.pita_malam';
         }
 
@@ -183,10 +183,10 @@ class UnlockEngine
         if ($ctx->activityCount >= 1) {
             $keys[] = 'accessory.kaus_pemula';
         }
-        if (($ctx->badgeCounts[RunCard::BADGE_ANAK_PAGI] ?? 0) >= 5) {
+        if (($ctx->badgeCounts[Badge::AnakPagi->value] ?? 0) >= 5) {
             $keys[] = 'accessory.kaus_pagi';
         }
-        if (($ctx->badgeCounts[RunCard::BADGE_PEJUANG_HUJAN] ?? 0) >= 3) {
+        if (($ctx->badgeCounts[Badge::PejuangHujan->value] ?? 0) >= 3) {
             $keys[] = 'accessory.kaus_hujan';
         }
         if ($ctx->activityCount >= 50) {
@@ -207,7 +207,7 @@ class UnlockEngine
         if ($ctx->tenKPlus >= 1) {
             $keys[] = 'accessory.celana_jarak';
         }
-        if (($ctx->badgeCounts[RunCard::BADGE_NEGATIVE_SPLIT] ?? 0) >= 3) {
+        if (($ctx->badgeCounts[Badge::NegativeSplit->value] ?? 0) >= 3) {
             $keys[] = 'accessory.celana_split';
         }
         if ($ctx->halfMarathon >= 1) {
@@ -248,10 +248,10 @@ class UnlockEngine
         if ($ctx->twoWeekStreak >= 2) {
             $keys[] = 'accessory.aura_pemanasan';
         }
-        if (($ctx->badgeCounts[RunCard::BADGE_HARI_PANAS] ?? 0) >= 3) {
+        if (($ctx->badgeCounts[Badge::HariPanas->value] ?? 0) >= 3) {
             $keys[] = 'accessory.aura_gerah';
         }
-        if (($ctx->badgeCounts[RunCard::BADGE_Z2_MASTER] ?? 0) >= 5) {
+        if (($ctx->badgeCounts[Badge::Z2Master->value] ?? 0) >= 5) {
             $keys[] = 'accessory.aura_tenang';
         }
         if (($ctx->rarityCounts[Rarity::Legendary->value] ?? 0) >= 3) {

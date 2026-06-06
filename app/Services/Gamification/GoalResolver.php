@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Services\Gamification;
 
+use App\Enums\Badge;
 use App\Enums\Rarity;
-use App\Models\RunCard;
 use App\Models\User;
 use App\Models\UserUnlock;
 
@@ -165,7 +165,7 @@ readonly class GoalResolver
                 'description' => 'Selesaikan 5 lari malam (setelah jam 9 malam).',
                 'slot' => 'pita',
                 'rarity' => $this->rarityForKey('accessory.pita_malam'),
-                'current' => min($bc[RunCard::BADGE_ANAK_MALAM] ?? 0, 5),
+                'current' => min($bc[Badge::AnakMalam->value] ?? 0, 5),
                 'target' => 5,
                 'unit' => 'lari',
                 'is_completed' => \in_array('accessory.pita_malam', $unlockedKeys, true),
@@ -210,7 +210,7 @@ readonly class GoalResolver
                 'description' => 'Selesaikan 5 lari pagi (sebelum jam 6).',
                 'slot' => 'kaus',
                 'rarity' => $this->rarityForKey('accessory.kaus_pagi'),
-                'current' => min($bc[RunCard::BADGE_ANAK_PAGI] ?? 0, 5),
+                'current' => min($bc[Badge::AnakPagi->value] ?? 0, 5),
                 'target' => 5,
                 'unit' => 'lari',
                 'is_completed' => \in_array('accessory.kaus_pagi', $unlockedKeys, true),
@@ -221,7 +221,7 @@ readonly class GoalResolver
                 'description' => 'Selesaikan 3 lari pas hujan.',
                 'slot' => 'kaus',
                 'rarity' => $this->rarityForKey('accessory.kaus_hujan'),
-                'current' => min($bc[RunCard::BADGE_PEJUANG_HUJAN] ?? 0, 3),
+                'current' => min($bc[Badge::PejuangHujan->value] ?? 0, 3),
                 'target' => 3,
                 'unit' => 'lari',
                 'is_completed' => \in_array('accessory.kaus_hujan', $unlockedKeys, true),
@@ -277,7 +277,7 @@ readonly class GoalResolver
                 'description' => 'Catat 3 lari negative split.',
                 'slot' => 'celana',
                 'rarity' => $this->rarityForKey('accessory.celana_split'),
-                'current' => min($bc[RunCard::BADGE_NEGATIVE_SPLIT] ?? 0, 3),
+                'current' => min($bc[Badge::NegativeSplit->value] ?? 0, 3),
                 'target' => 3,
                 'unit' => 'lari',
                 'is_completed' => \in_array('accessory.celana_split', $unlockedKeys, true),
@@ -377,7 +377,7 @@ readonly class GoalResolver
                 'description' => 'Selesaikan 3 lari saat suhu di atas 31\u{00b0}C.',
                 'slot' => 'aura',
                 'rarity' => $this->rarityForKey('accessory.aura_gerah'),
-                'current' => min($bc[RunCard::BADGE_HARI_PANAS] ?? 0, 3),
+                'current' => min($bc[Badge::HariPanas->value] ?? 0, 3),
                 'target' => 3,
                 'unit' => 'lari',
                 'is_completed' => \in_array('accessory.aura_gerah', $unlockedKeys, true),
@@ -388,7 +388,7 @@ readonly class GoalResolver
                 'description' => 'Catat 5 lari di HR Zone 2 (bawah 70% HRmax).',
                 'slot' => 'aura',
                 'rarity' => $this->rarityForKey('accessory.aura_tenang'),
-                'current' => min($bc[RunCard::BADGE_Z2_MASTER] ?? 0, 5),
+                'current' => min($bc[Badge::Z2Master->value] ?? 0, 5),
                 'target' => 5,
                 'unit' => 'lari',
                 'is_completed' => \in_array('accessory.aura_tenang', $unlockedKeys, true),

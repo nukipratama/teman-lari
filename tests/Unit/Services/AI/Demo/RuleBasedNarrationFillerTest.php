@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Enums\Badge;
 use App\Enums\Rarity;
 use App\Models\Activity;
 use App\Models\ActivityDetail;
@@ -68,7 +69,7 @@ it('varies the flavor across rarities', function (): void {
 });
 
 it('appends a badge coda when the card carries a known badge', function (): void {
-    $card = seededCard(Rarity::Uncommon, 'Closing Kick', [RunCard::BADGE_NEGATIVE_SPLIT]);
+    $card = seededCard(Rarity::Uncommon, 'Closing Kick', [Badge::NegativeSplit->value]);
 
     $flavor = (new RuleBasedNarrationFiller())->fillFor(fillerRow(AnalysisType::CardFlavor, $card->id));
 
@@ -93,7 +94,7 @@ it('varies the ecosystem briefing voices by seed deterministically', function ()
 });
 
 it('keeps all copy free of em-dashes', function (): void {
-    $card = seededCard(Rarity::Legendary, 'Marathon Perdana', [RunCard::BADGE_LONG_SLOW_DISTANCE], 42_195.0);
+    $card = seededCard(Rarity::Legendary, 'Marathon Perdana', [Badge::LongSlowDistance->value], 42_195.0);
     $filler = new RuleBasedNarrationFiller();
 
     $samples = [

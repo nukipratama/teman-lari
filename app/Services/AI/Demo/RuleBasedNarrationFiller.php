@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services\AI\Demo;
 
+use App\Enums\Badge;
 use App\Models\ActivityDetail;
 use App\Models\AI\Analysis;
 use App\Models\RunCard;
@@ -213,24 +214,24 @@ final class RuleBasedNarrationFiller
         }
 
         $clauses = [
-            RunCard::BADGE_NEGATIVE_SPLIT => 'Paruh kedua malah makin nyala.',
-            RunCard::BADGE_HARI_PANAS => 'Padahal hari lagi gerah-gerahnya.',
-            RunCard::BADGE_PEJUANG_HUJAN => 'Hujan pun gak bikin kamu mundur.',
-            RunCard::BADGE_ANAK_PAGI => 'Berangkat pas dunia masih sepi.',
-            RunCard::BADGE_LONG_SLOW_DISTANCE => 'Jarak panjang, sabar dijaga.',
-            RunCard::BADGE_TAHAN_DIRI => 'Pace ditahan rapi dari awal.',
-            RunCard::BADGE_ANAK_MALAM => 'Malam makin larut, kamu makin jalan.',
-            RunCard::BADGE_PENDAKI => 'Elevasi gede, tenaga ekstra.',
-            RunCard::BADGE_PERTAMA_KALI => 'Langkah pertama yang gak bakal dilupain.',
-            RunCard::BADGE_RAJIN => 'Tiga hari berturut, disiplin abis.',
-            RunCard::BADGE_KILAT => 'Pace di bawah 5 per km, kencang.',
-            RunCard::BADGE_JAUH => 'Half marathon ke atas, jarak serius.',
-            RunCard::BADGE_Z2_MASTER => 'Mayoritas waktu di Z2, sabar banget.',
-            RunCard::BADGE_ANAK_DINGIN => 'Pagi buta tapi semangat udah nyala.',
-            RunCard::BADGE_KERAS => 'HR tinggi dari awal sampai akhir.',
-            RunCard::BADGE_SANTAI => 'Beneran easy, HR dijaga rendah.',
-            RunCard::BADGE_BERTURUT => 'Seminggu penuh tanpa skip, keren.',
-            RunCard::BADGE_HARI_SPESIAL => 'Lari pas hari libur nasional.',
+            Badge::NegativeSplit->value => 'Paruh kedua malah makin nyala.',
+            Badge::HariPanas->value => 'Padahal hari lagi gerah-gerahnya.',
+            Badge::PejuangHujan->value => 'Hujan pun gak bikin kamu mundur.',
+            Badge::AnakPagi->value => 'Berangkat pas dunia masih sepi.',
+            Badge::LongSlowDistance->value => 'Jarak panjang, sabar dijaga.',
+            Badge::TahanDiri->value => 'Pace ditahan rapi dari awal.',
+            Badge::AnakMalam->value => 'Malam makin larut, kamu makin jalan.',
+            Badge::Pendaki->value => 'Elevasi gede, tenaga ekstra.',
+            Badge::PertamaKali->value => 'Langkah pertama yang gak bakal dilupain.',
+            Badge::Rajin->value => 'Tiga hari berturut, disiplin abis.',
+            Badge::Kilat->value => 'Pace di bawah 5 per km, kencang.',
+            Badge::Jauh->value => 'Half marathon ke atas, jarak serius.',
+            Badge::Z2Master->value => 'Mayoritas waktu di Z2, sabar banget.',
+            Badge::AnakDingin->value => 'Pagi buta tapi semangat udah nyala.',
+            Badge::Keras->value => 'HR tinggi dari awal sampai akhir.',
+            Badge::Santai->value => 'Beneran easy, HR dijaga rendah.',
+            Badge::Berturut->value => 'Seminggu penuh tanpa skip, keren.',
+            Badge::HariSpesial->value => 'Lari pas hari libur nasional.',
         ];
 
         // Highlight one of the card's badges, chosen by seed so multi-badge

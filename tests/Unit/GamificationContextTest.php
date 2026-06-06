@@ -38,7 +38,11 @@ it('returns zero counts for a user with no data', function (): void {
 
 it('accumulates stats from activities and PRs', function (): void {
     $user = User::factory()->create();
-    PersonalRecord::factory()->for($user)->count(3)->create();
+    PersonalRecord::factory()->for($user)->count(3)->sequence(
+        ['category' => '5km'],
+        ['category' => '10km'],
+        ['category' => 'half_marathon'],
+    )->create();
     Activity::factory()->for($user)->count(5)->create();
 
     $ctx = GamificationContext::forUser($user);
