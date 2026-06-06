@@ -428,7 +428,7 @@ function LastLariCard({ run, pose, note }: Readonly<{ run: ActivityDetail; pose:
             </div>
             <div className="grid grid-cols-3 gap-3">
                 <Stat l="KM" v={km} />
-                <Stat l="PACE" v={paceSec != null ? formatPace(paceSec) : '—'} />
+                <Stat l="PACE" v={paceSec != null ? `${formatPace(paceSec)}/km` : '—'} />
                 <Stat l="TRIMP" v={trimp != null ? String(trimp) : '—'} />
             </div>
             {note && (
