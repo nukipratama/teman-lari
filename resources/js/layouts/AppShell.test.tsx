@@ -66,7 +66,7 @@ describe('AppShell', () => {
         await act(async () => { fireEvent.click(screen.getByText('Nanti aja')); });
     });
 
-    it('fires PR modal when CardReveal skip is clicked on a PR run', async () => {
+    it('fires PR modal when CardReveal is dismissed on a PR run', async () => {
         setMockPage({
             auth: { user: andiUser },
             flash: {},
@@ -82,7 +82,9 @@ describe('AppShell', () => {
             { preload: () => {} },
         ) as typeof fetch;
         render(<AppShell><p>x</p></AppShell>);
-        await act(async () => { fireEvent.click(screen.getByRole('button', { name: /Lewati/i })); });
+        // The foil-wrapped card always shows a ghost "Tutup" button; dismissing
+        // a PR reveal fires onPrMoment → PRMomentModal.
+        await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Tutup' })); });
         // PRMomentModal fires — PR time is visible
         expect(screen.getByText('22:15')).toBeInTheDocument();
         // Clicking close triggers the onClose callback (covers () => setPrModal(null))

@@ -62,7 +62,13 @@ describe('TemariBubble', () => {
         const { container } = render(
             <TemariBubble line={makeLine()} speechAnalysis={makeAnalysis()} size="sm" />,
         );
-        expect(container.querySelector('.h-20')).toBeTruthy();
+        // sm uses the tighter p-3 bubble padding (lg uses p-5)
+        const bubble = container.firstChild as HTMLElement;
+        expect(bubble.classList.contains('p-3')).toBe(true);
+        expect(bubble.classList.contains('p-5')).toBe(false);
+        // and renders the mascot at the smaller 80px size
+        const mascot = container.querySelector('.temari-root') as HTMLElement;
+        expect(mascot.style.width).toBe('80px');
     });
 
     it('renders the mascot SVG inside the bubble', () => {

@@ -190,7 +190,7 @@ function ExpandableQuote({ text }: Readonly<{ text: string }>) {
 }
 
 
-function VitalChips({ briefing, load, onSky = false }: Readonly<{ briefing: BriefingResult; load: TrainingLoad | null; onSky?: boolean }>) {
+function VitalChips({ briefing, load }: Readonly<{ briefing: BriefingResult; load: TrainingLoad | null }>) {
     // Vibe primary value: use the absolute form score as a numeric proxy
     // (no dedicated numeric vibe score in the data model). Qualitative label
     // moves to the sub-line.
@@ -204,7 +204,6 @@ function VitalChips({ briefing, load, onSky = false }: Readonly<{ briefing: Brie
                 value={vibeValue}
                 sub={vibeSub}
                 tone="horizon"
-                onSky={onSky}
                 explainerKey="vibe_vs_mood"
             />
             <VitalChip
@@ -212,7 +211,6 @@ function VitalChips({ briefing, load, onSky = false }: Readonly<{ briefing: Brie
                 value={load ? formatSignedForm(load.form) : '—'}
                 sub={load ? formStatusLabel(load.form_status) : ''}
                 tone="leaf"
-                onSky={onSky}
                 explainerKey="form"
             />
             <VitalChip
@@ -220,7 +218,6 @@ function VitalChips({ briefing, load, onSky = false }: Readonly<{ briefing: Brie
                 value={briefing.recoveryHoursLabel ?? briefing.streakLabel ?? briefing.recoveryLabel}
                 sub="dari lari terakhir"
                 tone="ink"
-                onSky={onSky}
             />
         </div>
     );
@@ -231,31 +228,23 @@ function VitalChip({
     value,
     sub,
     tone,
-    onSky = false,
     explainerKey,
-}: Readonly<{ label: string; value: string; sub: string; tone: 'horizon' | 'leaf' | 'ink'; onSky?: boolean; explainerKey?: MetricKey }>) {
+}: Readonly<{ label: string; value: string; sub: string; tone: 'horizon' | 'leaf' | 'ink'; explainerKey?: MetricKey }>) {
     // Color the tiny label dot, not the number — keeps the page from feeling
     // like a paint-store sample card while still tagging the metric's family.
     const dotClass = {
         horizon: 'bg-horizon',
         leaf: 'bg-leaf',
-        ink: onSky ? 'bg-cream/50' : 'bg-ink-3',
+        ink: 'bg-ink-3',
     }[tone];
     const valueClass = {
-        horizon: onSky ? 'text-cream' : 'text-horizon-deep',
-        leaf:    onSky ? 'text-cream' : 'text-leaf',
-        ink:     onSky ? 'text-cream' : 'text-ink',
+        horizon: 'text-horizon-deep',
+        leaf: 'text-leaf',
+        ink: 'text-ink',
     }[tone];
     return (
-        <div
-            className={cn(
-                'flex h-full flex-col justify-between rounded-xl px-3.5 py-4',
-                onSky
-                    ? 'border border-cream/15 bg-cream/[0.08] backdrop-blur-sm'
-                    : 'border border-line bg-surface-card',
-            )}
-        >
-            <div className={cn('mb-1 flex items-center gap-1.5 font-mono font-bold text-[11px] uppercase tracking-[0.14em]', onSky ? 'text-cream/70' : 'text-ink-2')}>
+        <div className="flex h-full flex-col justify-between rounded-xl border border-line bg-surface-card px-3.5 py-4">
+            <div className="mb-1 flex items-center gap-1.5 font-mono font-bold text-[11px] uppercase tracking-[0.14em] text-ink-2">
                 <span aria-hidden className={cn('h-1.5 w-1.5 rounded-full', dotClass)} />
                 <span>{label}</span>
                 {explainerKey && <MetricExplainer metricKey={explainerKey} size="xs" />}
@@ -263,7 +252,7 @@ function VitalChip({
             <div className={cn('min-w-0 font-sans text-[40px] font-bold leading-none tabular-nums tracking-[-0.02em]', valueClass)}>
                 {value}
             </div>
-            {sub !== '' && <div className={cn('mt-1 font-display text-xs italic', onSky ? 'text-ink-on-sky' : 'text-ink-3')}>{sub}</div>}
+            {sub !== '' && <div className="mt-1 font-display text-xs italic text-ink-3">{sub}</div>}
         </div>
     );
 }

@@ -135,19 +135,21 @@ describe('Runs/Show', () => {
     it('embeds the kartu in the side panel when one exists', () => {
         renderShow();
         expect(screen.getByText('Paru-paru Baja')).toBeInTheDocument();
-        expect(screen.getByText('Kartu buat lari ini')).toBeInTheDocument();
+        const cardLink = screen.getAllByRole('link').find((el) => el.getAttribute('href') === '/kartu/1');
+        expect(cardLink).toBeDefined();
     });
 
-    it('shows a "no kartu yet" placeholder when card is null', () => {
+    it('omits the kartu side panel when card is null', () => {
         renderShow({ card: null });
-        expect(screen.getByText(/Belum ada kartu/)).toBeInTheDocument();
+        expect(screen.queryByText('Paru-paru Baja')).not.toBeInTheDocument();
+        const cardLink = screen.queryAllByRole('link').find((el) => el.getAttribute('href') === '/kartu/1');
+        expect(cardLink).toBeUndefined();
     });
 
     it('renders the map+weather panel with temp + location when present', () => {
         renderShow();
-        expect(screen.getByText('Rute lari')).toBeInTheDocument();
         expect(screen.getByText(/32°/)).toBeInTheDocument();
-        expect(screen.getByText(/80% LEMBAB/)).toBeInTheDocument();
+        expect(screen.getByText(/80% lembab/)).toBeInTheDocument();
         expect(screen.getByText('Senayan, Jakarta Pusat')).toBeInTheDocument();
     });
 

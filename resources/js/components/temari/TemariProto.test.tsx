@@ -76,7 +76,7 @@ describe('TemariProto', () => {
     it('renders the full-body viewBox with torso and legs', () => {
         const { container } = render(<TemariProto />);
         const svg = container.querySelector('svg');
-        expect(svg?.getAttribute('viewBox')).toBe('0 -12 120 150');
+        expect(svg?.getAttribute('viewBox')).toBe('0 -12 120 146');
     });
 
     it('renders kaus layer when equipped.kaus is set', () => {

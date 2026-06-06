@@ -42,12 +42,13 @@ export default function CardReveal({
   const rarityHex = RARITY_HEX[pending.rarity];
   const [confettiKey, setConfettiKey] = useState<string | null>(null);
   const [shareOpen, setShareOpen] = useState(false);
-  const [showButtons, setShowButtons] = useState(false);
   const buttonTimer = useRef<ReturnType<typeof setTimeout>>(null);
-  // The card starts wrapped in foil; reduced-motion users skip straight to it.
-  const [opened, setOpened] = useState(
-    () => globalThis.matchMedia?.("(prefers-reduced-motion: reduce)").matches === true,
-  );
+  // The card starts wrapped in foil; reduced-motion users skip straight to it
+  // (and therefore to its action buttons, since openPack never runs for them).
+  const prefersReducedMotion =
+    globalThis.matchMedia?.("(prefers-reduced-motion: reduce)").matches === true;
+  const [opened, setOpened] = useState(prefersReducedMotion);
+  const [showButtons, setShowButtons] = useState(prefersReducedMotion);
   const sentRef = useRef(false);
 
   // /api/kartu/{card}/seen returns plain JSON, so Inertia's router can't

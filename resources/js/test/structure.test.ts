@@ -20,8 +20,6 @@ const EXEMPT = new Set<string>([
     'components/card/PrCard.tsx',
     'components/koleksi/CollectionHeader.tsx',
     'components/koleksi/KoleksiTabs.tsx',
-    'components/koleksi/MilestoneStrip.tsx',
-    'components/koleksi/ProgressionChart.tsx',
     'components/riwayat/RiwayatTabs.tsx',
     'components/run/EmptyRunsState.tsx',
     'components/temari/UnavailableNote.tsx',
