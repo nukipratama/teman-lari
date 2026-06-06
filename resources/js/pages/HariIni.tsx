@@ -432,9 +432,16 @@ function LastLariCard({ run, pose, note }: Readonly<{ run: ActivityDetail; pose:
                 <Stat l="TRIMP" v={trimp != null ? String(trimp) : '—'} />
             </div>
             {note && (
-                <p className="font-display text-sm italic leading-relaxed text-ink-2">
-                    &ldquo;{note.oneline}&rdquo;
-                </p>
+                <div className="flex items-start gap-2 rounded-xl bg-surface-warm/60 px-3 py-2 text-xs leading-relaxed text-ink">
+                    <Icon
+                        icon="mdi:comment-quote-outline"
+                        width={14}
+                        height={14}
+                        aria-hidden
+                        className="mt-0.5 shrink-0 text-leaf-deep"
+                    />
+                    <p className="min-w-0">{renderBold(note.oneline)}</p>
+                </div>
             )}
             <span className="mt-auto font-mono text-[11px] font-semibold uppercase tracking-[0.12em] text-horizon-deep">
                 Lihat detail lari →
