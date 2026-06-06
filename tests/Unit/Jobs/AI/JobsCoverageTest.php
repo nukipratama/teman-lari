@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Jobs\AI\AnalyzeBriefingJob;
+use App\Jobs\AI\AnalyzeAkuProfileVoiceJob;
 use App\Jobs\AI\AnalyzeCardFlavorJob;
 use App\Jobs\AI\AnalyzeDailyGreetingJob;
 use App\Jobs\AI\AnalyzeMonthlyRecapJob;
@@ -18,6 +19,7 @@ use App\Models\WeeklySnapshot;
 use App\Services\AI\AnalysisService;
 use App\Services\AI\AnalysisStatus;
 use App\Services\AI\AnalysisType;
+use App\Services\AI\Narrators\AkuProfileVoiceNarrator;
 use App\Services\AI\Narrators\BriefingNarrator;
 use App\Services\AI\Narrators\CardFlavorNarrator;
 use App\Services\AI\Narrators\DailyGreetingNarrator;
@@ -235,6 +237,25 @@ it('AnalyzePersonaSummaryJob returns summary', function (): void {
 it('AnalyzePersonaSummaryJob fails when user missing', function (): void {
     $row = rowOf(AnalysisType::PERSONA_SUMMARY_SUBJECT_TYPE, 99999, AnalysisType::PersonaSummary);
     (new AnalyzePersonaSummaryJob($row->id))->handle(app(AnalysisService::class));
+
+    expect($row->fresh()->status)->toBe(AnalysisStatus::Failed);
+});
+
+// ── AnalyzeAkuProfileVoiceJob (row) ───────────────────────────────────
+
+it('AnalyzeAkuProfileVoiceJob returns profile voice', function (): void {
+    $user = User::factory()->create();
+    mockNarrator(AkuProfileVoiceNarrator::class, 'profile voice narrative');
+
+    $row = rowOf(AnalysisType::AKU_PROFILE_VOICE_SUBJECT_TYPE, $user->id, AnalysisType::AkuProfileVoice);
+    (new AnalyzeAkuProfileVoiceJob($row->id))->handle(app(AnalysisService::class));
+
+    expect($row->fresh()->content)->toBe('profile voice narrative');
+});
+
+it('AnalyzeAkuProfileVoiceJob fails when user missing', function (): void {
+    $row = rowOf(AnalysisType::AKU_PROFILE_VOICE_SUBJECT_TYPE, 99999, AnalysisType::AkuProfileVoice);
+    (new AnalyzeAkuProfileVoiceJob($row->id))->handle(app(AnalysisService::class));
 
     expect($row->fresh()->status)->toBe(AnalysisStatus::Failed);
 });

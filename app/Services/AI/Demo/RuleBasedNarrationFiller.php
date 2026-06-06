@@ -37,6 +37,7 @@ final class RuleBasedNarrationFiller
             AnalysisType::TrendCaption => $this->trendCaption(),
             AnalysisType::CardFlavor => $this->cardFlavor($row->subject_id),
             AnalysisType::PersonaSummary => $this->personaSummary(),
+            AnalysisType::AkuProfileVoice => $this->akuProfileVoice(),
             AnalysisType::MonthlyRecap => $this->monthlyRecap(),
         };
     }
@@ -248,6 +249,11 @@ final class RuleBasedNarrationFiller
     private function select(array $pool, int $seed): string
     {
         return $pool[abs($seed) % count($pool)];
+    }
+
+    private function akuProfileVoice(): string
+    {
+        return 'Aku catat semua perjalanan kamu di sini: kartu, rekor, aksesori, ceritanya. Ayo terus jalan.';
     }
 
     private function personaSummary(): string

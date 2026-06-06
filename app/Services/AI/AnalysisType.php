@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Services\AI;
 
 use App\Jobs\AI\AnalyzeActivityJob;
+use App\Jobs\AI\AnalyzeAkuProfileVoiceJob;
 use App\Jobs\AI\AnalyzeBaseJob;
 use App\Jobs\AI\AnalyzeBriefingJob;
 use App\Jobs\AI\AnalyzeBriefingFeaturedKartuVoiceJob;
@@ -37,12 +38,14 @@ enum AnalysisType: string
     case TrendCaption = 'trend_caption';
     case CardFlavor = 'card_flavor';
     case PersonaSummary = 'persona_summary';
+    case AkuProfileVoice = 'aku_profile_voice';
     case MonthlyRecap = 'monthly_recap';
 
     public const string BRIEFING_SUBJECT_TYPE = 'briefing_user_day';
     public const string DAILY_GREETING_SUBJECT_TYPE = 'daily_greeting_user_day';
     public const string TREND_CAPTION_SUBJECT_TYPE = 'trend_caption_user_day';
     public const string PERSONA_SUMMARY_SUBJECT_TYPE = 'persona_summary_user';
+    public const string AKU_PROFILE_VOICE_SUBJECT_TYPE = 'aku_profile_voice_user';
     public const string MONTHLY_RECAP_SUBJECT_TYPE = 'monthly_recap_user_month';
 
     /** @return class-string<AnalyzeBaseJob> */
@@ -63,6 +66,7 @@ enum AnalysisType: string
             self::TrendCaption => AnalyzeTrendCaptionJob::class,
             self::CardFlavor => AnalyzeCardFlavorJob::class,
             self::PersonaSummary => AnalyzePersonaSummaryJob::class,
+            self::AkuProfileVoice => AnalyzeAkuProfileVoiceJob::class,
             self::MonthlyRecap => AnalyzeMonthlyRecapJob::class,
         };
     }
@@ -95,6 +99,7 @@ enum AnalysisType: string
             self::PrContext => PersonalRecord::class,
             self::CardFlavor => RunCard::class,
             self::PersonaSummary => self::PERSONA_SUMMARY_SUBJECT_TYPE,
+            self::AkuProfileVoice => self::AKU_PROFILE_VOICE_SUBJECT_TYPE,
             self::MonthlyRecap => self::MONTHLY_RECAP_SUBJECT_TYPE,
         };
     }
