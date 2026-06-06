@@ -10,9 +10,8 @@ import MoodChip from '@/components/ui/MoodChip';
 import SectionLabel from '@/components/ui/SectionLabel';
 import Temari from '@/components/temari/Temari';
 import { type TemariPose } from '@/components/temari/TemariProto';
-import PastYouStrip from '@/components/run/PastYouStrip';
 import { cn } from '@/lib/cn';
-import { kartuUrl } from '@/lib/routes';
+import { aktivitasUrl, kartuUrl } from '@/lib/routes';
 import PageContainer from '@/components/ui/PageContainer';
 import { moodFromActivity } from '@/lib/moodFromActivity';
 import { formatDurationHMS, formatIdDate, formatKm, formatPace, paceSecPerKm } from '@/lib/pace';
@@ -137,6 +136,35 @@ export default function RunsShow({
                                 <HeroStat label="HR" value={hr != null ? `${hr}` : '—'} unit="bpm" />
                                 <HeroStat label="TRIMP" value={trimp != null ? `${trimp}` : '—'} unit="Edwards" />
                             </div>
+
+                            {/* KAMU VS KAMU DULU — inline in hero */}
+                            {pastYou && (
+                                <div className="mt-5 flex items-center justify-between gap-3 rounded-xl border border-cream/15 bg-cream/[0.08] px-4 py-3 backdrop-blur-sm">
+                                    <div className="min-w-0">
+                                        <div className="font-mono text-[11px] font-bold uppercase tracking-[0.14em] text-cream/60">
+                                            Kamu vs {pastYou.days_ago} hari lalu
+                                        </div>
+                                        <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-sm text-cream/90">
+                                            <span className={cn('font-bold tabular-nums', pastYou.pace_diff_sec > 0 ? 'text-leaf' : 'text-citrus')}>
+                                                {Math.abs(Math.round(pastYou.pace_diff_sec))}d/km {pastYou.pace_diff_sec > 0 ? 'lebih cepat' : 'lebih lambat'}
+                                            </span>
+                                            {pastYou.hr_diff_bpm !== null && (
+                                                <span className={cn('font-bold tabular-nums', pastYou.hr_diff_bpm < 0 ? 'text-leaf' : 'text-citrus')}>
+                                                    {Math.abs(Math.round(pastYou.hr_diff_bpm))} bpm {pastYou.hr_diff_bpm < 0 ? 'lebih rendah' : 'lebih tinggi'}
+                                                </span>
+                                            )}
+                                        </div>
+                                    </div>
+                                    {pastYou.past.activity_id != null && (
+                                        <Link
+                                            href={aktivitasUrl({ activity_id: pastYou.past.activity_id })}
+                                            className="shrink-0 rounded-full border border-cream/20 px-3 py-1.5 font-mono text-[11px] font-semibold uppercase tracking-[0.1em] text-cream/70 transition hover:border-cream/40 hover:text-cream"
+                                        >
+                                            Lihat →
+                                        </Link>
+                                    )}
+                                </div>
+                            )}
                         </div>
                     </HeroPanel>
                     <MapWeatherPanel detail={detail} />
@@ -200,13 +228,6 @@ export default function RunsShow({
                 <section className="mt-10">
                     <DetailTiles detail={detail} summary={summary} />
                 </section>
-
-                {/* KAMU VS KAMU DULU */}
-                {pastYou && (
-                    <section className="mt-10">
-                        <PastYouStrip match={pastYou} currentDistance={detail.distance} />
-                    </section>
-                )}
 
                 {/* SPLITS */}
                 {perKm.length > 0 && <SplitsTable rows={perKm} className="mt-10" />}
