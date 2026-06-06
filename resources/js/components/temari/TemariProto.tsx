@@ -210,9 +210,11 @@ export default function TemariProto({
     className,
 }: Readonly<TemariProtoProps>) {
     // Full-body viewBox: head at y~0..56, body at y~56..96, legs at y~96..130,
-    // with padding for ears/sparkles/aura. ViewBox: x[0..120], y[-12..138] = 150 tall.
+    // with padding for ears/sparkles/aura. ViewBox: x[0..120], y[-12..134] = 146 tall.
+    // Tight fit — ground shadow bottom is at y≈133.5; overflow:visible handles
+    // decorative elements (ears, sparkles, aura) that extend beyond the box.
     const viewW = 120;
-    const viewH = 150;
+    const viewH = 146;
     const aspectHeight = (size * viewH) / viewW;
 
     const headbandKey = equipped?.headband ?? 'ember';
