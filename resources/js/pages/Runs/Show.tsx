@@ -262,25 +262,24 @@ function MapWeatherPanel({ detail }: Readonly<{ detail: DetailedActivityDetail }
     const hasPolyline = detail.summary_polyline != null && detail.summary_polyline.length > 0;
 
     return (
-        <div className="relative flex flex-col gap-5 overflow-hidden rounded-2xl bg-sky px-6 py-5 text-cream">
-            <SectionLabel onSky>Rute lari</SectionLabel>
+        <div className="relative flex flex-col gap-4 overflow-hidden rounded-2xl bg-sky px-5 py-4 text-cream">
             {(temp != null || location != null) && (
-                <div className="flex items-baseline gap-4">
+                <div className="flex items-baseline gap-3">
                     {temp != null && (
                         <div>
-                            <div className="font-sans text-4xl font-bold leading-none">
-                                {Math.round(temp)}°<span className="text-lg font-medium">C</span>
+                            <div className="font-sans text-2xl font-bold leading-none">
+                                {Math.round(temp)}°<span className="text-sm font-medium">C</span>
                             </div>
                             {humidity != null && (
-                                <div className="mt-1.5 font-mono text-[11px] uppercase tracking-[0.14em] text-ink-on-sky">
-                                    {Math.round(humidity)}% LEMBAB
+                                <div className="mt-1 font-mono text-[10px] uppercase tracking-[0.12em] text-ink-on-sky">
+                                    {Math.round(humidity)}% lembab
                                 </div>
                             )}
                         </div>
                     )}
                     {location != null && (
-                        <div className="min-w-0 flex-1 border-l border-cream/15 pl-4">
-                            <div className="truncate font-display text-lg leading-tight tracking-[-0.005em]">{location}</div>
+                        <div className="min-w-0 flex-1 border-l border-cream/15 pl-3">
+                            <div className="truncate font-display text-sm leading-tight tracking-[-0.005em]">{location}</div>
                         </div>
                     )}
                 </div>
