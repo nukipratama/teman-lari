@@ -5,17 +5,6 @@ declare(strict_types=1);
 return [
     'auto_dispatch' => filter_var(env('AI_AUTO_DISPATCH', true), FILTER_VALIDATE_BOOLEAN),
 
-    /*
-    |--------------------------------------------------------------------------
-    | Admin Emails
-    |--------------------------------------------------------------------------
-    |
-    | Comma-separated list of email addresses allowed to view the AI Usage
-    | dashboard. When empty, no user can access the page.
-    |
-    */
-
-    'admin_emails' => array_filter(array_map(trim(...), explode(',', (string) env('ADMIN_EMAILS', '')))),
     'queue' => (string) env('AI_QUEUE', 'default'),
 
     // Minimum seconds between successful re-runs of the same analysis row.

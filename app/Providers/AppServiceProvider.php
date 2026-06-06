@@ -9,7 +9,7 @@ use App\Services\AI\AnalysisService;
 use App\Services\Run\Story\Contracts\VerdictNarrator;
 use App\Services\Run\Story\VerdictTimeline;
 use Illuminate\Cache\RateLimiting\Limit;
-use App\Models\User;
+use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Foundation\Events\DiagnosingHealth;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Event;
@@ -48,10 +48,10 @@ class AppServiceProvider extends ServiceProvider
         // Deepen the `/up` health route to fail when MySQL or Redis is unreachable.
         Event::listen(DiagnosingHealth::class, VerifyDependencies::class);
 
-        // Admin-only access to monitoring dashboards. Gate resolves the concrete
-        // User model so the $email property is available to static analysis.
-        Gate::define('viewPulse', fn (User $user): bool => in_array($user->email, config('pulse.admin_emails', [])));
-        Gate::define('viewAiUsage', fn (User $user): bool => in_array($user->email, config('ai.admin_emails', [])));
+        // Edge basicauth (docker/Caddyfile) gates these in prod. The `?Authenticatable`
+        // param is what makes the gate accept guests — a zero-param closure 403s them.
+        Gate::define('viewPulse', fn (?Authenticatable $user = null): bool => true);
+        Gate::define('viewAiUsage', fn (?Authenticatable $user = null): bool => true);
 
         RateLimiter::for('analysis-trigger', function (Request $request): Limit {
             $perMinute = max(1, (int) config('ai.rate_limit_per_minute', 8));
