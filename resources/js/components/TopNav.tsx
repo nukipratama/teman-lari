@@ -23,7 +23,7 @@ const ITEMS: ReadonlyArray<NavItem> = [
     id: "koleksi",
     label: "Koleksi",
     href: "/kartu",
-    prefixes: ["/koleksi", "/kartu", "/aksesori", "/rekor"],
+    prefixes: ["/koleksi", "/kartu", "/aksesori", "/rekor", "/target"],
   },
   {
     id: "riwayat",

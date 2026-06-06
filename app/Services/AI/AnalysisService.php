@@ -13,6 +13,7 @@ use App\Models\Activity;
 use App\Models\AI\Analysis;
 use App\Models\User;
 use App\Services\AI\Demo\RuleBasedNarrationFiller;
+use App\Services\AI\RuleBased\RuleBasedInsightBuilder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Foundation\Bus\PendingDispatch;
 use Illuminate\Support\Carbon;
@@ -23,8 +24,10 @@ class AnalysisService
 {
     private bool $dispatchSuppressed = false;
 
-    public function __construct(private readonly RuleBasedNarrationFiller $filler)
-    {
+    public function __construct(
+        private readonly RuleBasedNarrationFiller $filler,
+        private readonly RuleBasedInsightBuilder $insightBuilder,
+    ) {
     }
 
     /**
@@ -132,11 +135,10 @@ class AnalysisService
         $row = $this->upsertRow($subjectType, $subjectId, $type, $discriminator);
         $justCreated = $row->wasRecentlyCreated;
 
-        if (! $this->autoDispatchEnabled()) {
-            // When Azure is unconfigured, fill synchronously so "Saran lain" /
-            // "Baca ulang" still return fresh content in local / demo setups.
+        if ($type->isRuleBased() || ! $this->autoDispatchEnabled()) {
             if ($justCreated || ($invalidate && $row->status === AnalysisStatus::Done)) {
-                $this->markDone($row, $this->filler->fillFor($row));
+                $content = $type->isRuleBased() ? $this->ruleBasedContent($row) : $this->filler->fillFor($row);
+                $this->markDone($row, $content);
                 $row->refresh();
             }
 
@@ -163,6 +165,18 @@ class AnalysisService
         return $row;
     }
 
+    /** Generate deterministic content for rule-based analysis types. */
+    private function ruleBasedContent(Analysis $row): string
+    {
+        return match ($row->analysis_type) {
+            AnalysisType::TrendCaption => $this->insightBuilder->trendCaption(
+                User::query()->findOrFail($row->subject_id),
+                $row->discriminator !== null ? Carbon::parse($row->discriminator) : Carbon::today(),
+            ),
+            default => $this->filler->fillFor($row),
+        };
+    }
+
     /**
      * @param  class-string<AnalyzeGroupJob>  $jobClass
      */
@@ -184,7 +198,7 @@ class AnalysisService
             $this->invalidateDoneRows($rows);
         }
 
-        if (! $anyJustCreated && ! $this->groupNeedsDispatch($rows)) {
+        if (! $anyJustCreated && ! $rows->contains(fn (Analysis $row): bool => $this->rowNeedsDispatch($row))) {
             return;
         }
 
@@ -282,12 +296,6 @@ class AnalysisService
             [AnalysisStatus::Pending, AnalysisStatus::Failed],
             strict: true,
         );
-    }
-
-    /** @param Collection<array-key, Analysis> $rows */
-    private function groupNeedsDispatch(Collection $rows): bool
-    {
-        return $rows->contains(fn (Analysis $row): bool => $this->rowNeedsDispatch($row));
     }
 
     private function markQueued(Analysis $row): void

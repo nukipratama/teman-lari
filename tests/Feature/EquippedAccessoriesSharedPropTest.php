@@ -11,18 +11,18 @@ uses(RefreshDatabase::class);
 
 it('shares the equipped accessories on every authenticated page', function (): void {
     $user = User::factory()->create();
-    UserUnlock::factory()->for($user)->equipped()->create(['unlock_key' => 'accessory.headband_epik']);
-    UserUnlock::factory()->for($user)->equipped()->create(['unlock_key' => 'accessory.medal_gold']);
+    UserUnlock::factory()->for($user)->equipped()->create(['unlock_key' => 'accessory.ikat_kepala_epik']);
+    UserUnlock::factory()->for($user)->equipped()->create(['unlock_key' => 'accessory.medal_emas']);
     // Unlocked but not equipped — must not leak into the shared set.
-    UserUnlock::factory()->for($user)->create(['unlock_key' => 'accessory.headband_legendaris', 'equipped' => false]);
+    UserUnlock::factory()->for($user)->create(['unlock_key' => 'accessory.ikat_kepala_legendaris', 'equipped' => false]);
 
     $this->actingAs($user)->get('/rekor')
         ->assertSuccessful()
         ->assertInertia(fn (Assert $page) => $page
-            ->where('equippedAccessories.headband', 'epik')
-            ->where('equippedAccessories.medal', 'emas')
-            ->where('equippedAccessories.pita', false)
-            ->where('equippedAccessories.aura', false));
+            ->where('equippedAccessories.ikat_kepala', 'accessory.ikat_kepala_epik')
+            ->where('equippedAccessories.medal', 'accessory.medal_emas')
+            ->where('equippedAccessories.pita', null)
+            ->where('equippedAccessories.aura', null));
 });
 
 it('shares an empty equipped set when nothing is equipped', function (): void {
@@ -31,6 +31,6 @@ it('shares an empty equipped set when nothing is equipped', function (): void {
     $this->actingAs($user)->get('/rekor')
         ->assertSuccessful()
         ->assertInertia(fn (Assert $page) => $page
-            ->where('equippedAccessories.headband', null)
+            ->where('equippedAccessories.ikat_kepala', null)
             ->where('equippedAccessories.medal', null));
 });

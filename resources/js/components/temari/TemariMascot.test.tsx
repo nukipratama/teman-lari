@@ -7,7 +7,15 @@ import { setMockPage } from '@/test/setup';
 describe('TemariMascot', () => {
     it('draws the equipped accessories from shared state by default', () => {
         setMockPage({
-            equippedAccessories: { headband: 'legendaris', medal: null, pita: false, aura: false },
+            equippedAccessories: {
+                medal: null,
+                ikat_kepala: 'accessory.ikat_kepala_legendaris',
+                pita: null,
+                kaus: null,
+                celana: null,
+                sepatu: null,
+                aura: null,
+            },
         });
         // legendaris headband band is the rect at y=20.5 in UnlockedExtras.
         const { container } = render(<TemariMascot mood="adem" />);
@@ -16,7 +24,15 @@ describe('TemariMascot', () => {
 
     it('does not draw an accessory the user has not equipped', () => {
         setMockPage({
-            equippedAccessories: { headband: 'epik', medal: null, pita: false, aura: false },
+            equippedAccessories: {
+                medal: null,
+                ikat_kepala: 'accessory.ikat_kepala_epik',
+                pita: null,
+                kaus: null,
+                celana: null,
+                sepatu: null,
+                aura: null,
+            },
         });
         const { container } = render(<TemariMascot mood="adem" />);
         // epik flag is present, legendaris band (y=20.5) is not.
@@ -97,7 +113,7 @@ describe('TemariMascot', () => {
         const { container } = render(
             <TemariMascot
                 mood="adem"
-                unlockedAccessories={['accessory.headband_legendaris']}
+                unlockedAccessories={['accessory.ikat_kepala_legendaris']}
             />,
         );
         expect(container.innerHTML).toContain('y="20.5"');
@@ -108,7 +124,7 @@ describe('TemariMascot', () => {
             <TemariMascot
                 mood="adem"
                 showUnlocks={false}
-                unlockedAccessories={['accessory.headband_legendaris']}
+                unlockedAccessories={['accessory.ikat_kepala_legendaris']}
             />,
         );
         expect(container.innerHTML).not.toContain('y="20.5"');

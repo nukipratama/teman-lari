@@ -1,4 +1,5 @@
 import { Head } from '@inertiajs/react';
+import { Icon } from '@iconify/react';
 import AppShell from '@/layouts/AppShell';
 import MotionLink from '@/components/MotionLink';
 import ConfettiBurst from '@/components/ConfettiBurst';
@@ -13,7 +14,7 @@ import PageContainer from '@/components/ui/PageContainer';
 import { formatDuration, formatIdDate, formatKm } from '@/lib/pace';
 import { RARITY_LABELS, RARITY_ORDER, buildCardStats, paceShapeFromDetail, zonePctFromDetail } from '@/lib/runcard';
 import { renderBold } from '@/lib/richText';
-import { useState, type ReactNode } from 'react';
+import { useState, useMemo, type ReactNode } from 'react';
 import AnalysisStatus from '@/components/temari/AnalysisStatus';
 import type {
     Activity,
@@ -50,6 +51,22 @@ interface KartuProps {
     rarityCounts: Record<Rarity, number>;
 }
 
+type SortMode = 'date' | 'rarity' | 'name';
+
+const SORT_OPTIONS: ReadonlyArray<{ value: SortMode; label: string }> = [
+    { value: 'date', label: 'Terbaru' },
+    { value: 'rarity', label: 'Tingkat' },
+    { value: 'name', label: 'Nama' },
+];
+
+const RARITY_RANK: Record<Rarity, number> = {
+    legendary: 5,
+    epic: 4,
+    rare: 3,
+    uncommon: 2,
+    common: 1,
+};
+
 export default function KoleksiKartu({
     cards,
     selectedRarity,
@@ -57,6 +74,8 @@ export default function KoleksiKartu({
     rarityCounts,
 }: Readonly<KartuProps>) {
     const [burstKey, setBurstKey] = useState<string | null>(null);
+    const [search, setSearch] = useState('');
+    const [sortBy, setSortBy] = useState<SortMode>('date');
 
     const totalKartu = Object.values(rarityCounts).reduce((sum, n) => sum + n, 0);
     const epicCount = rarityCounts.epic + rarityCounts.legendary;
@@ -64,7 +83,26 @@ export default function KoleksiKartu({
 
     // One flat, newest-first grid (the controller orders by id desc). Filter
     // tabs narrow to a single rarity; otherwise it's the whole collection.
-    const grid = cards.data;
+    const rawGrid = cards.data;
+
+    const grid = useMemo(() => {
+        let filtered = rawGrid;
+        if (search.trim() !== '') {
+            const q = search.toLowerCase();
+            filtered = filtered.filter((card) =>
+                card.special_move.toLowerCase().includes(q)
+                || (card.activity?.detail?.name ?? '').toLowerCase().includes(q),
+            );
+        }
+        const sorted = [...filtered];
+        if (sortBy === 'rarity') {
+            sorted.sort((a, b) => RARITY_RANK[b.rarity] - RARITY_RANK[a.rarity]);
+        } else if (sortBy === 'name') {
+            sorted.sort((a, b) => a.special_move.localeCompare(b.special_move));
+        }
+        // 'date' = server order (id desc), no re-sort needed
+        return sorted;
+    }, [rawGrid, search, sortBy]);
 
     const triggerBurstFor = (rarity: Rarity, id: number) => {
         if (rarity === 'epic' || rarity === 'legendary') {
@@ -100,7 +138,14 @@ export default function KoleksiKartu({
 
                 {featuredCard && <SlimBanner featured={featuredCard} />}
 
-                <RarityFilter selected={selectedRarity} counts={rarityCounts} />
+                <RarityFilter
+                    selected={selectedRarity}
+                    counts={rarityCounts}
+                    search={search}
+                    onSearchChange={setSearch}
+                    sortBy={sortBy}
+                    onSortChange={setSortBy}
+                />
 
                 {gridBody}
 
@@ -164,7 +209,18 @@ function SlimBanner({ featured }: Readonly<{ featured: FeaturedCardPayload }>) {
 function RarityFilter({
     selected,
     counts,
-}: Readonly<{ selected: string | null; counts: Record<Rarity, number> }>) {
+    search,
+    onSearchChange,
+    sortBy,
+    onSortChange,
+}: Readonly<{
+    selected: string | null;
+    counts: Record<Rarity, number>;
+    search: string;
+    onSearchChange: (v: string) => void;
+    sortBy: SortMode;
+    onSortChange: (v: SortMode) => void;
+}>) {
     return (
         <nav aria-label="Filter kartu" className="mt-8 flex flex-wrap items-center gap-2">
             <span className="mr-1.5 font-mono font-bold text-[11px] uppercase tracking-[0.14em] text-ink-2">
@@ -180,6 +236,29 @@ function RarityFilter({
                     dot={r}
                 />
             ))}
+
+            {/* Search + Sort */}
+            <div className="ml-auto flex items-center gap-2">
+                <div className="relative">
+                    <Icon icon="mdi:magnify" width={14} height={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-ink-3" aria-hidden />
+                    <input
+                        type="text"
+                        value={search}
+                        onChange={(e) => onSearchChange(e.target.value)}
+                        placeholder="Cari kartu..."
+                        className="w-36 rounded-full border border-cream-deep bg-cream py-1.5 pl-8 pr-3 text-xs text-ink placeholder:text-ink-3 focus:border-horizon focus:outline-none sm:w-44"
+                    />
+                </div>
+                <select
+                    value={sortBy}
+                    onChange={(e) => onSortChange(e.target.value as SortMode)}
+                    className="rounded-full border border-cream-deep bg-cream px-3 py-1.5 text-xs font-medium text-ink-2 focus:border-horizon focus:outline-none"
+                >
+                    {SORT_OPTIONS.map((opt) => (
+                        <option key={opt.value} value={opt.value}>{opt.label}</option>
+                    ))}
+                </select>
+            </div>
         </nav>
     );
 }
@@ -232,7 +311,7 @@ function CardCell({
             href={kartuUrl(card)}
             whileTap={pressShrink}
             onClick={() => onTap(card.rarity, card.id)}
-            className="mx-auto block w-full max-w-[300px]"
+            className="mx-auto block w-full max-w-[300px] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md focus-visible:ring-2 focus-visible:ring-horizon focus-visible:ring-offset-2 focus-visible:outline-none"
         >
             <Kartu
                 name={card.special_move}

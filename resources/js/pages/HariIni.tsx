@@ -170,6 +170,9 @@ export default function HariIni({
                             {lastRun && <LastLariCard run={lastRun} pose={poseForRun(lastRun)} note={lastRunNote} />}
                             <KondisiCard load={load} snapshot={snapshot} />
                         </section>
+
+                        {/* TARGET TERDEKAT */}
+                        <GoalsCard />
                     </>
                 )}
             </PageContainer>
@@ -228,7 +231,7 @@ function VitalChips({ briefing, load, onSky = false }: Readonly<{ briefing: Brie
     const vibeSub = briefing.vibeLabel.toLowerCase();
 
     return (
-        <div className="grid h-full grid-cols-3 gap-2">
+        <div className="grid h-full grid-cols-3 gap-3">
             <VitalChip
                 label="Vibe"
                 value={vibeValue}
@@ -290,7 +293,7 @@ function VitalChip({
                 <span>{label}</span>
                 {explainerKey && <MetricExplainer metricKey={explainerKey} size="xs" />}
             </div>
-            <div className={cn('font-sans text-stat font-bold leading-none tabular-nums tracking-[-0.02em]', valueClass)}>
+            <div className={cn('min-w-0 font-sans text-stat font-bold leading-none tabular-nums tracking-[-0.02em]', valueClass)}>
                 {value}
             </div>
             {sub !== '' && <div className={cn('mt-1 font-display text-xs italic', onSky ? 'text-ink-on-sky' : 'text-ink-3')}>{sub}</div>}
@@ -320,7 +323,7 @@ function FeaturedKartuPanel({
                     allowReanalyze={false}
                     onSky
                     renderContent={(text) => (
-                        <p className="font-display italic text-cream/85">
+                        <p className="font-display text-base italic leading-relaxed text-cream">
                             &ldquo;{renderBold(text)}&rdquo;
                         </p>
                     )}
@@ -535,6 +538,59 @@ function KondisiCard({
                 Detail teknis →
             </Link>
         </Card>
+    );
+}
+
+function GoalsCard() {
+    const { props } = usePage<SharedProps>();
+    const summary = props.goalsSummary;
+
+    if (!summary || summary.closest.length === 0) {
+        return null;
+    }
+
+    return (
+        <section className="mt-8">
+            <SectionLabel>
+                <span className="inline-flex items-center gap-2">
+                    <Icon icon="mdi:target" width={14} height={14} aria-hidden />
+                    Target terdekat
+                </span>
+            </SectionLabel>
+            <div className="grid gap-3 sm:grid-cols-3">
+                {summary.closest.map((goal) => {
+                    const pct = goal.target > 0 ? Math.min((goal.current / goal.target) * 100, 100) : 0;
+                    const isCurrentDecimal = goal.current % 1 > 0;
+                    const isTargetDecimal = goal.target % 1 > 0;
+                    const currentDisplay = isCurrentDecimal ? goal.current.toFixed(1) : goal.current;
+                    const targetDisplay = isTargetDecimal ? goal.target.toFixed(1) : goal.target;
+
+                    return (
+                        <LinkCard key={goal.id} href="/target" padding="md" className="flex h-full flex-col gap-2">
+                            <div className="font-display text-base leading-tight tracking-[-0.01em] text-ink">
+                                {goal.title}
+                            </div>
+                            <div className="mt-auto">
+                                <div className="mb-1.5 flex items-baseline justify-between">
+                                    <span className="font-sans text-sm font-semibold tabular-nums text-ink">
+                                        {currentDisplay}<span className="text-ink-3">/</span>{targetDisplay}
+                                    </span>
+                                    <span className="font-mono text-[11px] font-semibold uppercase tracking-[0.1em] text-ink-3">
+                                        {goal.unit}
+                                    </span>
+                                </div>
+                                <div className="h-1.5 overflow-hidden rounded-full bg-cream-deep">
+                                    <div
+                                        className="h-full rounded-full bg-horizon transition-all duration-500"
+                                        style={{ width: `${pct}%` }}
+                                    />
+                                </div>
+                            </div>
+                        </LinkCard>
+                    );
+                })}
+            </div>
+        </section>
     );
 }
 

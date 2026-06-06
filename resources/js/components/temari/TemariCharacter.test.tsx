@@ -137,7 +137,7 @@ describe('TemariCharacter', () => {
         const { container } = render(
             <TemariCharacter
                 mood="nyala"
-                unlockedAccessories={['accessory.headband_legendaris', 'accessory.medal_gold']}
+                unlockedAccessories={['accessory.ikat_kepala_legendaris', 'accessory.medal_emas']}
             />,
         );
         // Headband legendaris draws a rect with fill="#e0a639" at y=20.5
@@ -148,11 +148,11 @@ describe('TemariCharacter', () => {
 
     it('re-renders when unlockedAccessories array changes content', () => {
         const { container, rerender } = render(
-            <TemariCharacter mood="nyala" unlockedAccessories={['accessory.headband_legendaris']} />,
+            <TemariCharacter mood="nyala" unlockedAccessories={['accessory.ikat_kepala_legendaris']} />,
         );
         const before = container.innerHTML;
         rerender(
-            <TemariCharacter mood="nyala" unlockedAccessories={['accessory.medal_gold']} />,
+            <TemariCharacter mood="nyala" unlockedAccessories={['accessory.medal_emas']} />,
         );
         expect(container.innerHTML).not.toBe(before);
     });

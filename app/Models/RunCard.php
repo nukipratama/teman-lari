@@ -45,6 +45,30 @@ class RunCard extends Model
 
     public const string BADGE_TAHAN_DIRI = 'tahan_diri';
 
+    public const string BADGE_ANAK_MALAM = 'anak_malam';
+
+    public const string BADGE_PENDAKI = 'pendaki';
+
+    public const string BADGE_PERTAMA_KALI = 'pertama_kali';
+
+    public const string BADGE_RAJIN = 'rajin';
+
+    public const string BADGE_KILAT = 'kilat';
+
+    public const string BADGE_JAUH = 'jauh';
+
+    public const string BADGE_Z2_MASTER = 'z2_master';
+
+    public const string BADGE_ANAK_DINGIN = 'anak_dingin';
+
+    public const string BADGE_KERAS = 'keras';
+
+    public const string BADGE_SANTAI = 'santai';
+
+    public const string BADGE_BERTURUT = 'berturut';
+
+    public const string BADGE_HARI_SPESIAL = 'hari_spesial';
+
     public const array BADGE_LABELS = [
         self::BADGE_HARI_PANAS => '🔥 Tahan Gerah',
         self::BADGE_PEJUANG_HUJAN => '🌧️ Pejuang Hujan',
@@ -52,6 +76,18 @@ class RunCard extends Model
         self::BADGE_LONG_SLOW_DISTANCE => '🐢 Long Slow Distance',
         self::BADGE_NEGATIVE_SPLIT => '👻 Negative Split',
         self::BADGE_TAHAN_DIRI => '🧘 Anti Kalap',
+        self::BADGE_ANAK_MALAM => '🌙 Anak Malam',
+        self::BADGE_PENDAKI => '⛰️ Pendaki',
+        self::BADGE_PERTAMA_KALI => '🏅 Pertama Kali',
+        self::BADGE_RAJIN => '💪 Rajin',
+        self::BADGE_KILAT => '⚡ Kilat',
+        self::BADGE_JAUH => '🗺️ Jauh',
+        self::BADGE_Z2_MASTER => '🫀 Z2 Master',
+        self::BADGE_ANAK_DINGIN => '❄️ Anak Dingin',
+        self::BADGE_KERAS => '😤 Keras',
+        self::BADGE_SANTAI => '☺️ Santai',
+        self::BADGE_BERTURUT => '🔥 Berturut',
+        self::BADGE_HARI_SPESIAL => '🎉 Hari Spesial',
     ];
 
     /**

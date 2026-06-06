@@ -1,6 +1,7 @@
 import { usePage } from '@inertiajs/react';
-import TemariProto, { type TemariEquipped, type TemariProtoProps } from './TemariProto';
+import TemariProto, { type TemariProtoProps } from './TemariProto';
 import type { SharedProps } from '@/types/inertia';
+import { serverToEquipped } from '@/lib/equippedAccessories';
 
 /**
  * The mascot as the signed-in user has dressed it — reads the globally-shared
@@ -13,13 +14,8 @@ import type { SharedProps } from '@/types/inertia';
 export default function Temari(props: Readonly<Omit<TemariProtoProps, 'equipped'>>) {
     const equippedAccessories = usePage<SharedProps>().props.equippedAccessories ?? null;
 
-    const equipped: TemariEquipped | null = equippedAccessories
-        ? {
-              headband: equippedAccessories.headband,
-              medal: equippedAccessories.medal ?? 'none',
-              pita: equippedAccessories.pita,
-              aura: equippedAccessories.aura,
-          }
+    const equipped = equippedAccessories
+        ? serverToEquipped(equippedAccessories)
         : null;
 
     return <TemariProto {...props} equipped={equipped} />;

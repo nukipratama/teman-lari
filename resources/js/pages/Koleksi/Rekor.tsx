@@ -284,10 +284,10 @@ function ProgressionSection({
 function Caption({ label, value }: Readonly<{ label: string; value: ReactNode }>) {
     return (
         <div>
-            <div className="mb-1.5 font-mono text-[11px] uppercase tracking-[0.14em] text-ink-on-sky">
+            <div className="mb-1.5 font-mono text-sm uppercase tracking-[0.14em] text-ink-on-sky">
                 {label}
             </div>
-            <div className="font-sans text-[13px] font-medium leading-tight text-cream">{value}</div>
+            <div className="font-sans text-sm font-medium leading-tight text-cream">{value}</div>
         </div>
     );
 }
@@ -370,7 +370,7 @@ function PaceCell({ pr }: Readonly<{ pr: ExtendedPR }>) {
             </div>
             <div className="border-t border-cream/10 pt-2.5">
                 <div className="font-sans text-xs text-cream/85">{runName}</div>
-                <div className="font-mono text-[11px] uppercase tracking-[0.12em] text-ink-on-sky">
+                <div className="font-mono text-xs uppercase tracking-[0.12em] text-ink-on-sky">
                     {formatIdDate(pr.set_at, 'short')}
                 </div>
             </div>

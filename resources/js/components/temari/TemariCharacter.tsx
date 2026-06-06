@@ -847,7 +847,7 @@ function UnlockedExtras({ unlocks }: Readonly<UnlockedExtrasProps>) {
 
     return (
         <g>
-            {has(ACCESSORY_KEYS.headbandLegendaris) && (
+            {has(ACCESSORY_KEYS.ikatKepalaLegendaris) && (
                 <rect
                     x={26}
                     y={20.5}
@@ -859,7 +859,7 @@ function UnlockedExtras({ unlocks }: Readonly<UnlockedExtrasProps>) {
                     strokeWidth={0.4}
                 />
             )}
-            {has(ACCESSORY_KEYS.headbandEpik) && (
+            {has(ACCESSORY_KEYS.ikatKepalaEpik) && (
                 <path
                     d="M 70 22 L 80 22 L 78 27 L 74 27 Z"
                     fill="#7c4baf"
@@ -867,19 +867,19 @@ function UnlockedExtras({ unlocks }: Readonly<UnlockedExtrasProps>) {
                     strokeWidth={0.5}
                 />
             )}
-            {has(ACCESSORY_KEYS.medalFirstPr) && (
+            {has(ACCESSORY_KEYS.medalPertama) && (
                 <g>
                     <line x1={43} y1={51} x2={43} y2={58} stroke={MEDAL_RIBBON} strokeWidth={0.8} />
                     <circle cx={43} cy={60} r={2.2} fill={MEDAL_COLOR} stroke={OUTLINE} strokeWidth={0.5} />
                 </g>
             )}
-            {has(ACCESSORY_KEYS.medalGold) && (
+            {has(ACCESSORY_KEYS.medalEmas) && (
                 <g>
                     <line x1={48} y1={51} x2={48} y2={58} stroke="#0e7a4c" strokeWidth={0.8} />
                     <circle cx={48} cy={60} r={2.2} fill="#f4d160" stroke={OUTLINE} strokeWidth={0.5} />
                 </g>
             )}
-            {has(ACCESSORY_KEYS.weeklyStreak4) && (
+            {has(ACCESSORY_KEYS.pitaKonsisten) && (
                 <g>
                     <path
                         d="M 32 70 L 30 76 L 34 74 L 32 70 Z"

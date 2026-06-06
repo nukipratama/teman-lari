@@ -268,7 +268,7 @@ function DayCellView({
 
     const cellChrome = cn(
         'group relative flex min-h-[120px] flex-col gap-1.5 border-l border-line/50 p-2.5 transition lg:min-h-[140px] lg:p-3',
-        muted && 'opacity-40',
+        muted && 'opacity-60',
         filteredOut && 'opacity-30',
         hasRun && cell.mood && !filteredOut ? MOOD_SOFT_FILL[cell.mood] : 'bg-surface-elev',
     );

@@ -263,7 +263,7 @@ export default function Kartu({
                     </div>
                 )}
                 {isFull && flavor != null && flavor !== '' && (
-                    <p className="mt-1.5 font-display text-[11px] italic leading-snug text-ink-on-sky">
+                    <p className="mt-1.5 font-display text-base italic leading-relaxed text-ink-on-sky">
                         &ldquo;{flavor}&rdquo;
                     </p>
                 )}
@@ -286,7 +286,7 @@ function TRIMPBadge({ trimp, mood }: Readonly<{ trimp: string | number; mood: Mo
         <span className="inline-flex items-center gap-1 rounded-full bg-sky-deep/80 px-2 py-0.5 backdrop-blur-sm leading-none">
             <span
                 aria-label={`Vibe ${MOOD_LABEL[mood]}`}
-                className={cn('h-2.5 w-2.5 shrink-0 rounded-full', MOOD_FILL[mood])}
+                className={cn('h-3 w-3 shrink-0 rounded-full', MOOD_FILL[mood])}
             />
             <span aria-hidden className="font-mono text-[11px] font-bold tabular-nums text-cream">
                 {trimp}

@@ -11,6 +11,7 @@ import { RARITY_LABELS } from '@/lib/runcard';
 import { MOOD_TO_POSE } from '@/lib/temariPose';
 import { drawShareCard, shareCardBlob, type Format, type Layout, type ShareKartuData } from '@/lib/shareCard';
 import TemariProto, { type TemariEquipped } from '@/components/temari/TemariProto';
+import { serverToEquipped } from '@/lib/equippedAccessories';
 import type { SharedProps } from '@/types/inertia';
 
 export type { ShareKartuData };
@@ -44,7 +45,7 @@ export default function ShareCardModal({ kartu, onClose }: Readonly<ShareCardMod
     try {
         const acc = usePage<SharedProps>().props.equippedAccessories;
         if (acc) {
-            equipped = { headband: acc.headband, medal: acc.medal ?? 'none', pita: acc.pita, aura: acc.aura };
+            equipped = serverToEquipped(acc);
         }
     } catch {
         equipped = null;

@@ -2,7 +2,6 @@
 
 declare(strict_types=1);
 
-use App\Jobs\AI\AnalyzeTrendCaptionJob;
 use App\Jobs\AI\AnalyzeActivityJob;
 use App\Jobs\AI\AnalyzeBriefingJob;
 use App\Jobs\AI\AnalyzeWeeklyRecapJob;
@@ -26,21 +25,20 @@ beforeEach(function (): void {
 });
 
 it('creates a pending row and queues a row job on first request', function (): void {
-    $user = User::factory()->create();
+    $snap = WeeklySnapshot::factory()->create();
 
     $row = $this->service->request(
-        subjectOrType: AnalysisType::TREND_CAPTION_SUBJECT_TYPE,
-        subjectId: $user->id,
-        type: AnalysisType::TrendCaption,
-        discriminator: '2026-05-18',
+        subjectOrType: WeeklySnapshot::class,
+        subjectId: $snap->id,
+        type: AnalysisType::WeeklyRecap,
     );
 
     expect($row->status)->toBe(AnalysisStatus::Queued)
         ->and($row->queued_at)->not->toBeNull();
 
     Bus::assertDispatched(
-        AnalyzeTrendCaptionJob::class,
-        fn (AnalyzeTrendCaptionJob $job): bool => $job->analysisId === $row->id,
+        AnalyzeWeeklyRecapJob::class,
+        fn (AnalyzeWeeklyRecapJob $job): bool => $job->analysisId === $row->id,
     );
 });
 
@@ -282,18 +280,18 @@ it('does not dispatch when Azure config is missing', function (): void {
 
 it('applies delaySeconds when dispatching (row)', function (): void {
     Carbon::setTestNow('2026-05-18 12:00:00');
-    $user = User::factory()->create();
+    $snap = WeeklySnapshot::factory()->create();
 
     $this->service->request(
-        subjectOrType: AnalysisType::TREND_CAPTION_SUBJECT_TYPE,
-        subjectId: $user->id,
-        type: AnalysisType::TrendCaption,
+        subjectOrType: WeeklySnapshot::class,
+        subjectId: $snap->id,
+        type: AnalysisType::WeeklyRecap,
         delaySeconds: 90,
     );
 
     Bus::assertDispatched(
-        AnalyzeTrendCaptionJob::class,
-        fn (AnalyzeTrendCaptionJob $job): bool => $job->delay === 90,
+        AnalyzeWeeklyRecapJob::class,
+        fn (AnalyzeWeeklyRecapJob $job): bool => $job->delay === 90,
     );
     Carbon::setTestNow();
 });

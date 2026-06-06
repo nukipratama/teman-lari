@@ -218,6 +218,18 @@ final class RuleBasedNarrationFiller
             RunCard::BADGE_ANAK_PAGI => 'Berangkat pas dunia masih sepi.',
             RunCard::BADGE_LONG_SLOW_DISTANCE => 'Jarak panjang, sabar dijaga.',
             RunCard::BADGE_TAHAN_DIRI => 'Pace ditahan rapi dari awal.',
+            RunCard::BADGE_ANAK_MALAM => 'Malam makin larut, kamu makin jalan.',
+            RunCard::BADGE_PENDAKI => 'Elevasi gede, tenaga ekstra.',
+            RunCard::BADGE_PERTAMA_KALI => 'Langkah pertama yang gak bakal dilupain.',
+            RunCard::BADGE_RAJIN => 'Tiga hari berturut, disiplin abis.',
+            RunCard::BADGE_KILAT => 'Pace di bawah 5 per km, kencang.',
+            RunCard::BADGE_JAUH => 'Half marathon ke atas, jarak serius.',
+            RunCard::BADGE_Z2_MASTER => 'Mayoritas waktu di Z2, sabar banget.',
+            RunCard::BADGE_ANAK_DINGIN => 'Pagi buta tapi semangat udah nyala.',
+            RunCard::BADGE_KERAS => 'HR tinggi dari awal sampai akhir.',
+            RunCard::BADGE_SANTAI => 'Beneran easy, HR dijaga rendah.',
+            RunCard::BADGE_BERTURUT => 'Seminggu penuh tanpa skip, keren.',
+            RunCard::BADGE_HARI_SPESIAL => 'Lari pas hari libur nasional.',
         ];
 
         // Highlight one of the card's badges, chosen by seed so multi-badge

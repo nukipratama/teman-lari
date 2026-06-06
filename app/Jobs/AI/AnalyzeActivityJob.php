@@ -9,7 +9,7 @@ use App\Models\Activity;
 use App\Models\StoryLine;
 use App\Services\AI\AnalysisType;
 use App\Services\AI\Narrators\PostRunSpeechNarrator;
-use App\Services\AI\Narrators\RunInsightNarrator;
+use App\Services\AI\RuleBased\RuleBasedInsightBuilder;
 use Override;
 
 class AnalyzeActivityJob extends AnalyzeGroupJob
@@ -60,7 +60,7 @@ class AnalyzeActivityJob extends AnalyzeGroupJob
         $speech = app(PostRunSpeechNarrator::class)
             ->generate($subject, $detail, $storyLine->mood);
 
-        $insights = app(RunInsightNarrator::class)->generate($subject, $detail);
+        $insights = app(RuleBasedInsightBuilder::class)->runInsights($subject, $detail);
 
         return [
             AnalysisType::PostRunSpeech->value => $speech,

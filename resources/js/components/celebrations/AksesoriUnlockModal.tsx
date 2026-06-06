@@ -1,7 +1,7 @@
 import { router } from '@inertiajs/react';
 import { AnimatePresence, motion } from 'framer-motion';
 import TemariProto from '@/components/temari/TemariProto';
-import type { TemariEquipped } from '@/components/temari/TemariProto';
+import { keyToPreviewEquipped } from '@/lib/equippedAccessories';
 
 interface UnlockFlash {
     unlock_key: string;
@@ -15,22 +15,11 @@ interface AksesoriUnlockModalProps {
     onClose: () => void;
 }
 
-const KEY_TO_EQUIPPED: Record<string, TemariEquipped> = {
-    'accessory.headband_epik': { headband: 'epik' },
-    'accessory.headband_legendaris': { headband: 'legendaris' },
-};
-
-const KEY_TO_CRITERIA: Record<string, string> = {
-    'accessory.headband_epik': '3 kartu Luar Biasa · ✓ kelar',
-    'accessory.headband_legendaris': '1 kartu Legendaris · ✓ kelar',
-};
-
 export default function AksesoriUnlockModal({
     unlock,
     onClose,
 }: Readonly<AksesoriUnlockModalProps>) {
-    const equipped = KEY_TO_EQUIPPED[unlock?.unlock_key ?? ''] ?? { headband: 'epik' as const };
-    const criteria = KEY_TO_CRITERIA[unlock?.unlock_key ?? ''] ?? null;
+    const equipped = unlock ? keyToPreviewEquipped(unlock.unlock_key) : { headband: 'epik' as const };
 
     const handleEquip = () => {
         onClose();
@@ -125,13 +114,6 @@ export default function AksesoriUnlockModal({
                     <div className="relative mb-7 flex justify-center">
                         <TemariProto pose="glow" size={200} equipped={equipped} />
                     </div>
-
-                    {/* Criteria label */}
-                    {criteria && (
-                        <div className="relative mb-5 text-center font-mono text-[11px] uppercase tracking-[0.14em] text-ink-on-sky">
-                            Syarat: {criteria}
-                        </div>
-                    )}
 
                     {/* CTAs */}
                     <div className="relative flex flex-col gap-2.5">

@@ -42,6 +42,7 @@ class AksesoriController extends Controller
             $items[] = [
                 'unlock_key' => (string) $key,
                 'slot' => $slot,
+                'rarity' => (string) ($meta['rarity'] ?? 'common'),
                 'name' => (string) ($meta['name'] ?? $key),
                 'icon' => (string) ($meta['icon'] ?? 'mdi:medal'),
                 'description' => (string) ($meta['description'] ?? ''),

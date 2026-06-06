@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\Services\AI\AnalysisType;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -17,6 +18,7 @@ class TokenUsageController extends Controller
         $validated = $request->validate([
             'from' => 'sometimes|date_format:Y-m-d',
             'to' => 'sometimes|date_format:Y-m-d',
+            'kind' => 'sometimes|string',
         ]);
 
         $from = isset($validated['from'])
@@ -25,9 +27,16 @@ class TokenUsageController extends Controller
         $to = isset($validated['to'])
             ? Carbon::parse($validated['to'])->endOfDay()
             : Carbon::now();
+        $kind = $validated['kind'] ?? null;
 
-        $rows = DB::connection('analytics')->table('ai_token_usages')
-            ->whereBetween('created_at', [$from, $to])
+        $baseQuery = DB::connection('analytics')->table('ai_token_usages')
+            ->whereBetween('created_at', [$from, $to]);
+
+        if ($kind !== null) {
+            $baseQuery->where('kind', $kind);
+        }
+
+        $rows = (clone $baseQuery)
             ->selectRaw(
                 'kind, SUM(prompt_tokens) as prompt, SUM(completion_tokens) as completion, '.
                 'SUM(total_tokens) as total, COUNT(*) as calls, '.
@@ -62,8 +71,7 @@ class TokenUsageController extends Controller
         // user_id lives in the analytics schema; users in the app schema. A
         // cross-schema join is fragile, so aggregate first, then resolve names
         // from the default connection and stitch in PHP.
-        $userRows = DB::connection('analytics')->table('ai_token_usages')
-            ->whereBetween('created_at', [$from, $to])
+        $userRows = (clone $baseQuery)
             ->whereNotNull('user_id')
             ->selectRaw(
                 'user_id, SUM(prompt_tokens) as prompt, SUM(completion_tokens) as completion, '.
@@ -90,12 +98,51 @@ class TokenUsageController extends Controller
             ];
         }
 
+        // Daily breakdown for the bar chart (unfiltered by kind so the chart
+        // always shows the full picture regardless of the kind filter).
+        $dailyRows = DB::connection('analytics')->table('ai_token_usages')
+            ->whereBetween('created_at', [$from, $to])
+            ->selectRaw(
+                'DATE(created_at) as day, '.
+                'SUM(prompt_tokens) as prompt, SUM(completion_tokens) as completion, '.
+                'SUM(total_tokens) as total, COUNT(*) as calls'
+            )
+            ->groupByRaw('DATE(created_at)')
+            ->orderBy('day')
+            ->get();
+
+        $daily = [];
+        foreach ($dailyRows as $row) {
+            $daily[] = [
+                'day' => (string) $row->day,
+                'prompt' => (int) $row->prompt,
+                'completion' => (int) $row->completion,
+                'total' => (int) $row->total,
+                'calls' => (int) $row->calls,
+            ];
+        }
+
+        // All distinct kinds for the filter dropdown (within the date range).
+        $availableKinds = DB::connection('analytics')->table('ai_token_usages')
+            ->whereBetween('created_at', [$from, $to])
+            ->distinct()
+            ->orderBy('kind')
+            ->pluck('kind')
+            ->map(fn (string $k): array => [
+                'value' => $k,
+                'label' => AnalysisType::tryFrom($k)?->name ?? $k,
+            ])
+            ->all();
+
         return Inertia::render('AiUsage', [
             'from' => $from->toDateString(),
             'to' => $to->toDateString(),
+            'kind' => $kind,
             'totals' => $totals,
             'byKind' => $byKind,
             'byUser' => $byUser,
+            'daily' => $daily,
+            'availableKinds' => array_values($availableKinds),
         ]);
     }
 }

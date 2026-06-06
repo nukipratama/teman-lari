@@ -21,15 +21,15 @@ export default function ZoneBar({ zonePct, showLegend = false, className }: Read
 
     return (
         <div className={cn('flex flex-col gap-1', className)}>
-            <div className="flex h-1.5 overflow-hidden rounded-full bg-cream/10" aria-hidden>
+            <div className="flex h-3 gap-0.5 overflow-hidden rounded-full bg-cream/10" aria-hidden>
                 {segments.map(({ zone, pct }) => (
-                    <div key={zone} style={{ width: `${pct}%`, background: HR_ZONE_COLORS[zone] }} title={`${zone}: ${pct}%`} />
+                    <div key={zone} className="min-w-[4px]" style={{ width: `${pct}%`, background: HR_ZONE_COLORS[zone] }} title={`${zone}: ${pct}%`} />
                 ))}
             </div>
             {showLegend && (
                 <div className="flex justify-between font-mono text-[8px] uppercase tracking-[0.08em] text-ink-on-sky">
                     {HR_ZONES.map((zone) => (
-                        <span key={zone} className="flex items-center gap-0.5">
+                        <span key={zone} className="flex min-w-[24px] items-center gap-0.5">
                             <span aria-hidden className="h-1.5 w-1.5 rounded-full" style={{ background: HR_ZONE_COLORS[zone] }} />
                             {zone}
                         </span>

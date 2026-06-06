@@ -22,6 +22,18 @@ export const BADGE_LABELS: Record<string, string> = {
     long_slow_distance: '🐢 Long Slow Distance',
     negative_split: '👻 Negative Split',
     tahan_diri: '🧘 Anti Kalap',
+    anak_malam: '🌙 Anak Malam',
+    pendaki: '⛰️ Pendaki',
+    pertama_kali: '🏅 Pertama Kali',
+    rajin: '💪 Rajin',
+    kilat: '⚡ Kilat',
+    jauh: '🗺️ Jauh',
+    z2_master: '🫀 Z2 Master',
+    anak_dingin: '❄️ Anak Dingin',
+    keras: '😤 Keras',
+    santai: '☺️ Santai',
+    berturut: '🔥 Berturut',
+    hari_spesial: '🎉 Hari Spesial',
 };
 
 // One-line "ability" meaning per badge, accurate to RunCardFactory::badges()
@@ -33,6 +45,18 @@ export const BADGE_ABILITY: Record<string, string> = {
     long_slow_distance: 'Jarak jauh 12K+ santai, mayoritas pelan.',
     negative_split: 'Paruh kedua malah lebih ngebut.',
     tahan_diri: '10K+ sabar, gak kepancing buat ngebut.',
+    anak_malam: 'Lari malam, sebelum subuh atau setelah jam 9.',
+    pendaki: 'Elevasi total 200m ke atas, kayak naik gunung.',
+    pertama_kali: 'Lari pertama yang tercatat.',
+    rajin: 'Lari 3 hari berturut-turut.',
+    kilat: 'Pace di bawah 5:00/km, kencang.',
+    jauh: 'Jarak half marathon ke atas, 21K+.',
+    z2_master: 'Lebih dari 80% waktu di Z2.',
+    anak_dingin: 'Lari sebelum jam 6 pagi, still dark still cold.',
+    keras: 'HR rata-rata di atas 85% max, full effort.',
+    santai: 'HR rata-rata di bawah 70% max, beneran easy.',
+    berturut: 'Lari 7 hari berturut-turut, tanpa skip.',
+    hari_spesial: 'Lari pas hari libur nasional.',
 };
 
 export const RARITY_BORDER: Record<Rarity, string> = {

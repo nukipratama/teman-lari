@@ -33,25 +33,53 @@ interface UserRow {
     calls: number;
 }
 
+interface DailyRow {
+    day: string;
+    prompt: number;
+    completion: number;
+    total: number;
+    calls: number;
+}
+
+interface KindOption {
+    value: string;
+    label: string;
+}
+
 interface AiUsageProps {
     from: string;
     to: string;
+    kind: string | null;
     totals: UsageTotals;
     byKind: UsageRow[];
     byUser: UserRow[];
+    daily: DailyRow[];
+    availableKinds: KindOption[];
 }
 
 const COLUMNS = ['Jenis', 'Panggilan', 'Prompt', 'Completion', 'Total', 'Rata-rata', 'Latency (avg/max)', 'Terpotong'] as const;
 const USER_COLUMNS = ['User', 'Panggilan', 'Prompt', 'Completion', 'Total', 'Rata-rata'] as const;
 
 const numberFmt = new Intl.NumberFormat('id-ID');
+const costFmt = new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 function fmt(n: number): string {
     return numberFmt.format(n);
 }
 
-function navigate(from: string, to: string): void {
-    router.get('/ai-usage', { from, to }, { preserveState: true, preserveScroll: true });
+/** Cost per 1K tokens (GPT-4o-mini equivalent). */
+const COST_PER_1K = 0.01;
+
+function estimateCost(tokens: number): number {
+    return (tokens / 1000) * COST_PER_1K;
+}
+
+function navigate(from: string, to: string, kind: string | null): void {
+    const params: Record<string, string> = { from, to };
+    if (kind !== null) {
+        params.kind = kind;
+    }
+    router.get('/ai-usage', params, { preserveState: true, preserveScroll: true });
 }
 
 function todayISO(): string {
@@ -69,13 +97,39 @@ function isoStartOfMonth(): string {
     return new Date(d.getFullYear(), d.getMonth(), 1).toISOString().slice(0, 10);
 }
 
-export default function AiUsage({ from, to, totals, byKind, byUser }: Readonly<AiUsageProps>) {
+function formatDayLabel(day: string): string {
+    const d = new Date(day + 'T00:00:00');
+    return d.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
+}
+
+function formatDayLabelShort(day: string): string {
+    const d = new Date(day + 'T00:00:00');
+    return d.toLocaleDateString('id-ID', { weekday: 'short', day: 'numeric' });
+}
+
+export default function AiUsage({
+    from,
+    to,
+    kind,
+    totals,
+    byKind,
+    byUser,
+    daily,
+    availableKinds,
+}: Readonly<AiUsageProps>) {
     const [fromInput, setFromInput] = useState<string>(from);
     const [toInput, setToInput] = useState<string>(to);
+    const [kindInput, setKindInput] = useState<string>(kind ?? '');
 
     const promptShare = totals.total > 0 ? Math.round((totals.prompt / totals.total) * 100) : 0;
     const avgPerCall = totals.calls > 0 ? Math.round(totals.total / totals.calls) : 0;
     const truncatedShare = totals.calls > 0 ? Math.round((totals.truncated_calls / totals.calls) * 100) : 0;
+    const totalCost = estimateCost(totals.total);
+
+    function handleSubmit(e: React.FormEvent): void {
+        e.preventDefault();
+        navigate(fromInput, toInput, kindInput || null);
+    }
 
     return (
         <div className="min-h-screen bg-surface text-ink">
@@ -100,14 +154,16 @@ export default function AiUsage({ from, to, totals, byKind, byUser }: Readonly<A
 
             <PageContainer>
                 <form
-                    onSubmit={(e) => {
-                        e.preventDefault();
-                        navigate(fromInput, toInput);
-                    }}
+                    onSubmit={handleSubmit}
                     className="flex flex-wrap items-end gap-3 rounded-2xl border border-line bg-surface-elev p-4 shadow-sm"
                 >
                     <DateField id="from" label="Dari" value={fromInput} onChange={setFromInput} />
                     <DateField id="to" label="Sampai" value={toInput} onChange={setToInput} />
+
+                    {availableKinds.length > 0 && (
+                        <KindFilter kinds={availableKinds} value={kindInput} onChange={setKindInput} />
+                    )}
+
                     <button
                         type="submit"
                         className="focus-ring inline-flex items-center gap-1 rounded-full bg-leaf-deep px-4 py-2 text-sm font-semibold text-cream transition hover:opacity-90"
@@ -127,6 +183,13 @@ export default function AiUsage({ from, to, totals, byKind, byUser }: Readonly<A
                 <p className="mt-3 text-xs text-ink-3">
                     Rentang aktif: <span className="font-semibold text-ink">{from}</span> sampai{' '}
                     <span className="font-semibold text-ink">{to}</span>
+                    {kind && (
+                        <>
+                            {' '}
+                            <span className="text-ink-2">|</span>{' '}
+                            Filter: <span className="font-semibold text-ink">{kind}</span>
+                        </>
+                    )}
                 </p>
 
                 <section className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -143,11 +206,28 @@ export default function AiUsage({ from, to, totals, byKind, byUser }: Readonly<A
 
                 <p className="mt-2 text-xs text-ink-3">
                     Rata-rata per call: <span className="font-semibold text-ink">{fmt(avgPerCall)}</span> token.
+                    {' '}
+                    Estimasi biaya total: <span className="font-semibold text-ink">${costFmt.format(totalCost)}</span>
+                    {' '}
+                    <span className="text-ink-3">(@ ${COST_PER_1K}/1K token)</span>
                 </p>
+
+                {daily.length > 0 && (
+                    <section className="mt-10">
+                        <SectionHeading
+                            icon="mdi:chart-bar"
+                            title="Konsumsi Harian"
+                            subtitle="Token per hari dalam rentang yang dipilih."
+                            tone="accent"
+                        />
+
+                        <DailyChart data={daily} />
+                    </section>
+                )}
 
                 <section className="mt-10">
                     <SectionHeading
-                        icon="mdi:chart-bar"
+                        icon="mdi:shape"
                         title="Breakdown per Kind"
                         subtitle="Jenis analisis yang paling banyak makan token."
                         tone="brand"
@@ -212,6 +292,105 @@ export default function AiUsage({ from, to, totals, byKind, byUser }: Readonly<A
         </div>
     );
 }
+
+/* ─── Daily Bar Chart ─────────────────────────────────────────────── */
+
+function DailyChart({ data }: Readonly<{ data: DailyRow[] }>) {
+    const maxTotal = Math.max(...data.map((d) => d.total), 1);
+    const totalTokens = data.reduce((sum, d) => sum + d.total, 0);
+    const totalCost = estimateCost(totalTokens);
+
+    return (
+        <div className="mt-4 rounded-2xl border border-line bg-surface-elev p-5 shadow-sm">
+            <div className="mb-4 flex flex-wrap items-baseline justify-between gap-2">
+                <span className="text-label-small text-ink-3">{data.length} hari</span>
+                <span className="text-sm text-ink-2">
+                    Estimasi biaya: <span className="font-semibold text-ink">${costFmt.format(totalCost)}</span>
+                </span>
+            </div>
+
+            <div className="flex items-end gap-1.5" style={{ height: 180 }}>
+                {data.map((d) => {
+                    const heightPct = Math.max((d.total / maxTotal) * 100, 2);
+                    const dayCost = estimateCost(d.total);
+
+                    return (
+                        <div
+                            key={d.day}
+                            className="group relative flex flex-1 flex-col items-center justify-end"
+                            style={{ minWidth: 0 }}
+                        >
+                            {/* Tooltip */}
+                            <div className="pointer-events-none absolute bottom-full left-1/2 z-10 mb-2 -translate-x-1/2 whitespace-nowrap rounded-lg border border-line bg-surface-elev px-3 py-2 text-xs opacity-0 shadow-lg transition-opacity group-hover:opacity-100">
+                                <div className="font-semibold text-ink">{formatDayLabel(d.day)}</div>
+                                <div className="text-ink-2">{fmt(d.total)} token</div>
+                                <div className="text-ink-3">{d.calls} call</div>
+                                <div className="text-ink-3">${costFmt.format(dayCost)}</div>
+                            </div>
+
+                            {/* Bar */}
+                            <div
+                                className="w-full rounded-t-sm bg-horizon transition-colors group-hover:bg-horizon-deep"
+                                style={{ height: `${heightPct}%` }}
+                                aria-label={`${formatDayLabel(d.day)}: ${fmt(d.total)} token`}
+                            />
+                        </div>
+                    );
+                })}
+            </div>
+
+            {/* X-axis labels */}
+            <div className="mt-2 flex gap-1.5">
+                {data.map((d) => (
+                    <div key={d.day} className="flex-1 text-center">
+                        {data.length <= 14 ? (
+                            <span className="text-meta">{formatDayLabelShort(d.day)}</span>
+                        ) : (
+                            <span
+                                className="text-meta block truncate"
+                                title={formatDayLabel(d.day)}
+                            >
+                                {formatDayLabel(d.day)}
+                            </span>
+                        )}
+                    </div>
+                ))}
+            </div>
+        </div>
+    );
+}
+
+/* ─── Kind Filter Dropdown ────────────────────────────────────────── */
+
+function KindFilter({
+    kinds,
+    value,
+    onChange,
+}: Readonly<{ kinds: KindOption[]; value: string; onChange: (v: string) => void }>) {
+    return (
+        <label
+            htmlFor="kind-filter"
+            className="flex flex-col gap-1 font-mono text-xs font-bold uppercase tracking-wider text-ink-2"
+        >
+            Jenis
+            <select
+                id="kind-filter"
+                value={value}
+                onChange={(e) => onChange(e.target.value)}
+                className="rounded-xl border border-line bg-surface-sunken px-3 py-2 text-sm font-medium text-ink focus:border-leaf focus:outline-none"
+            >
+                <option value="">Semua</option>
+                {kinds.map((k) => (
+                    <option key={k.value} value={k.value}>
+                        {k.label}
+                    </option>
+                ))}
+            </select>
+        </label>
+    );
+}
+
+/* ─── Supporting components (unchanged) ───────────────────────────── */
 
 function UserRowView({ row, grandTotal }: Readonly<{ row: UserRow; grandTotal: number }>) {
     const share = grandTotal > 0 ? (row.total / grandTotal) * 100 : 0;
@@ -278,7 +457,7 @@ function KindRow({ row, grandTotal }: Readonly<{ row: UsageRow; grandTotal: numb
     const latencyLabel =
         row.avg_latency_ms === null
             ? '—'
-            : `${fmt(row.avg_latency_ms)} / ${fmt(row.max_latency_ms ?? row.avg_latency_ms)} dtk`;
+            : `${fmt(Math.round(row.avg_latency_ms / 1000))} / ${fmt(Math.round((row.max_latency_ms ?? row.avg_latency_ms) / 1000))} dtk`;
 
     return (
         <tr className="border-b border-line last:border-b-0">

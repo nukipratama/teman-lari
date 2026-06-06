@@ -1,30 +1,50 @@
 import { describe, expect, it } from 'vitest';
 import { ACCESSORY_KEYS, equippedToKeys } from './equippedAccessories';
+import type { EquippedAccessories } from '@/types/inertia';
+
+const emptyEquipped: EquippedAccessories = {
+    medal: null,
+    ikat_kepala: null,
+    pita: null,
+    kaus: null,
+    celana: null,
+    sepatu: null,
+    aura: null,
+};
+
+describe('ACCESSORY_KEYS', () => {
+    it('contains all 28 unlock keys', () => {
+        const keys = Object.values(ACCESSORY_KEYS);
+        expect(keys).toHaveLength(28);
+    });
+});
 
 describe('equippedToKeys', () => {
     it('returns no keys for null/empty equipped sets', () => {
         expect(equippedToKeys(null)).toEqual([]);
         expect(equippedToKeys(undefined)).toEqual([]);
-        expect(equippedToKeys({ headband: null, medal: null, pita: false, aura: false })).toEqual([]);
+        expect(equippedToKeys(emptyEquipped)).toEqual([]);
     });
 
     it('maps each equipped slot to its unlock key', () => {
-        expect(
-            equippedToKeys({ headband: 'legendaris', medal: 'emas', pita: true, aura: false }),
-        ).toEqual([
-            ACCESSORY_KEYS.headbandLegendaris,
-            ACCESSORY_KEYS.medalGold,
-            ACCESSORY_KEYS.weeklyStreak4,
-        ]);
+        const result = equippedToKeys({
+            ...emptyEquipped,
+            ikat_kepala: ACCESSORY_KEYS.ikatKepalaLegendaris,
+            medal: ACCESSORY_KEYS.medalEmas,
+            pita: ACCESSORY_KEYS.pitaKonsisten,
+        });
+        expect(result).toContain(ACCESSORY_KEYS.ikatKepalaLegendaris);
+        expect(result).toContain(ACCESSORY_KEYS.medalEmas);
+        expect(result).toContain(ACCESSORY_KEYS.pitaKonsisten);
+        expect(result).toHaveLength(3);
     });
 
-    it('maps the lower-tier variants', () => {
+    it('returns only the equipped keys, skipping null slots', () => {
         expect(
-            equippedToKeys({ headband: 'epik', medal: 'pertama', pita: false, aura: false }),
-        ).toEqual([ACCESSORY_KEYS.headbandEpik, ACCESSORY_KEYS.medalFirstPr]);
-    });
-
-    it('treats the base ember headband as no overlay', () => {
-        expect(equippedToKeys({ headband: 'ember', medal: null, pita: false, aura: false })).toEqual([]);
+            equippedToKeys({
+                ...emptyEquipped,
+                sepatu: ACCESSORY_KEYS.sepatuBasic,
+            }),
+        ).toEqual([ACCESSORY_KEYS.sepatuBasic]);
     });
 });

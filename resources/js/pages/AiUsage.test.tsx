@@ -17,6 +17,7 @@ vi.mock('@inertiajs/react', () => ({
 const baseProps = {
     from: '2026-05-01',
     to: '2026-05-19',
+    kind: null as string | null,
     totals: { prompt: 600, completion: 280, total: 880, calls: 3, truncated_calls: 0 },
     byKind: [
         { kind: 'run-insight', prompt: 300, completion: 150, total: 450, calls: 1, truncated_calls: 0, avg_latency_ms: 800, max_latency_ms: 800 },
@@ -25,6 +26,14 @@ const baseProps = {
     byUser: [
         { user_id: 1, user_name: 'Alice', prompt: 500, completion: 230, total: 730, calls: 2 },
         { user_id: 2, user_name: 'Bob', prompt: 100, completion: 50, total: 150, calls: 1 },
+    ],
+    daily: [
+        { day: '2026-05-18', prompt: 300, completion: 150, total: 450, calls: 1 },
+        { day: '2026-05-19', prompt: 300, completion: 130, total: 430, calls: 2 },
+    ],
+    availableKinds: [
+        { value: 'briefing', label: 'BriefingHeadline' },
+        { value: 'run-insight', label: 'RunInsightTechnical' },
     ],
 };
 
@@ -98,6 +107,18 @@ describe('AiUsage page', () => {
         expect(routerGet).toHaveBeenCalledWith(
             '/ai-usage',
             { from: '2026-05-01', to: '2026-05-19' },
+            { preserveState: true, preserveScroll: true },
+        );
+    });
+
+    it('sends kind filter when one is selected', () => {
+        render(<AiUsage {...baseProps} kind="briefing" />);
+
+        fireEvent.click(screen.getByRole('button', { name: /terapkan/i }));
+
+        expect(routerGet).toHaveBeenCalledWith(
+            '/ai-usage',
+            { from: '2026-05-01', to: '2026-05-19', kind: 'briefing' },
             { preserveState: true, preserveScroll: true },
         );
     });

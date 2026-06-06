@@ -24,15 +24,13 @@ class StravaClient
 
     private const int REFRESH_LOCK_SECONDS = 15;
 
-    /**
-     * Per-app shared rate limits (app-wide, not per-user).
-     *
-     * @var array<string, array{int, int}>
-     */
-    private const array RATE_LIMITS = [
-        'strava-api:15min' => [200, 15 * 60],
-        'strava-api:daily' => [2000, 24 * 60 * 60],
-    ];
+    private const int RATE_LIMIT_15MIN_MAX = 200;
+
+    private const int RATE_LIMIT_15MIN_DECAY = 15 * 60;
+
+    private const int RATE_LIMIT_DAILY_MAX = 2000;
+
+    private const int RATE_LIMIT_DAILY_DECAY = 24 * 60 * 60;
 
     /**
      * @param  array<string, mixed>  $query
@@ -41,12 +39,25 @@ class StravaClient
     {
         $connection = $this->refreshIfExpired($connection);
 
-        $this->guardRateLimit();
+        $this->guardRateLimit($connection->user_id);
 
         return Http::baseUrl(self::API_BASE_URL)
             ->withToken($connection->access_token)
             ->get($path, $query)
             ->throw();
+    }
+
+    /**
+     * Remaining headroom for a user's rate-limit buckets.
+     *
+     * @return array{15min: int, daily: int}
+     */
+    public function rateLimitRemaining(int $userId): array
+    {
+        return [
+            '15min' => max(0, RateLimiter::remaining($this->rateLimitKey($userId, '15min'), self::RATE_LIMIT_15MIN_MAX)),
+            'daily' => max(0, RateLimiter::remaining($this->rateLimitKey($userId, 'daily'), self::RATE_LIMIT_DAILY_MAX)),
+        ];
     }
 
     public function refreshIfExpired(StravaConnection $connection): StravaConnection
@@ -101,11 +112,15 @@ class StravaClient
         return $connection;
     }
 
-    private function guardRateLimit(): void
+    private function guardRateLimit(int $userId): void
     {
-        foreach (self::RATE_LIMITS as $key => [$max]) {
+        $buckets = [
+            ['key' => $this->rateLimitKey($userId, '15min'), 'max' => self::RATE_LIMIT_15MIN_MAX, 'decay' => self::RATE_LIMIT_15MIN_DECAY],
+            ['key' => $this->rateLimitKey($userId, 'daily'), 'max' => self::RATE_LIMIT_DAILY_MAX, 'decay' => self::RATE_LIMIT_DAILY_DECAY],
+        ];
+
+        foreach ($buckets as ['key' => $key, 'max' => $max]) {
             if (RateLimiter::tooManyAttempts($key, $max)) {
-                // Surface exhaustion as a trend on the /pulse Strava-health card.
                 Pulse::record('strava_rate_limited', $key)->count();
 
                 throw new StravaRateLimitedException(
@@ -114,8 +129,13 @@ class StravaClient
             }
         }
 
-        foreach (self::RATE_LIMITS as $key => [, $decay]) {
+        foreach ($buckets as ['key' => $key, 'decay' => $decay]) {
             RateLimiter::hit($key, $decay);
         }
+    }
+
+    private function rateLimitKey(int $userId, string $bucket): string
+    {
+        return "strava-api:{$userId}:{$bucket}";
     }
 }

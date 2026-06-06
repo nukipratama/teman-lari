@@ -58,16 +58,16 @@ it('seeds a full-featured, login-ready demo: rarity ladder, unlocks, persona, va
     // Every defined accessory should unlock from the seeded dataset.
     $unlocked = UserUnlock::query()->where('user_id', $user->id)->pluck('unlock_key')->all();
     expect($unlocked)->toContain(
-        'accessory.medal_first_pr',
-        'accessory.medal_gold',
-        'accessory.headband_legendaris',
-        'accessory.headband_epik',
-        'accessory.weekly_streak_4',
+        'accessory.medal_pertama',
+        'accessory.medal_emas',
+        'accessory.ikat_kepala_legendaris',
+        'accessory.ikat_kepala_epik',
+        'accessory.pita_konsisten',
     );
 
     // Best-in-slot accessories are equipped so the demo mascot shows them off.
     $equipped = UserUnlock::query()->where('user_id', $user->id)->where('equipped', true)->pluck('unlock_key')->all();
-    expect($equipped)->toContain('accessory.headband_legendaris', 'accessory.medal_gold', 'accessory.weekly_streak_4');
+    expect($equipped)->toContain('accessory.ikat_kepala_legendaris', 'accessory.medal_emas', 'accessory.pita_konsisten');
 
     $persona = Analysis::query()
         ->where('subject_type', AnalysisType::PERSONA_SUMMARY_SUBJECT_TYPE)

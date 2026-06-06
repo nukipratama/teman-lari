@@ -259,8 +259,8 @@ function MapWeatherPanel({ detail }: Readonly<{ detail: DetailedActivityDetail }
                         </div>
                     )}
                     {location != null && (
-                        <div className="flex-1 border-l border-cream/15 pl-4">
-                            <div className="font-display text-lg leading-tight tracking-[-0.005em]">{location}</div>
+                        <div className="min-w-0 flex-1 border-l border-cream/15 pl-4">
+                            <div className="truncate font-display text-lg leading-tight tracking-[-0.005em]">{location}</div>
                         </div>
                     )}
                 </div>
@@ -422,15 +422,17 @@ function SplitsTable({ rows, className }: Readonly<{ rows: PerKmRow[]; className
                             className={cn(
                                 'grid grid-cols-[40px_1fr_70px_70px_70px] items-center gap-3',
                                 idx > 0 && !isFast && 'border-t border-cream-deep',
+                                // Alternating row background for readability
+                                idx % 2 === 1 && !isFast && 'bg-cream-deep/30',
                                 // Fast row: tint bleeds out via -mx-3 while px-3 keeps content
                                 // aligned with the other rows, so its bar isn't narrowed.
-                                isFast ? '-mx-3 rounded-lg bg-horizon/[0.08] px-3 py-2.5' : 'py-2.5',
+                                isFast ? '-mx-3 rounded-lg bg-horizon/[0.08] px-3 py-2.5' : 'px-3 py-2.5',
                             )}
                         >
                             <div className="font-mono text-[12px] uppercase tracking-[0.1em] text-ink-2">
                                 KM {row.km ?? '?'}
                             </div>
-                            <div className="h-2 overflow-hidden rounded bg-sky/[0.06]">
+                            <div className="h-3 overflow-hidden rounded bg-sky/[0.06]">
                                 <div
                                     className={cn('h-full rounded', isFast ? 'bg-horizon' : 'bg-sky')}
                                     style={{ width: `${pctWidth}%` }}

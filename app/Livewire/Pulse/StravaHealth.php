@@ -7,13 +7,12 @@ namespace App\Livewire\Pulse;
 use App\Livewire\Pulse\Concerns\SumsPulseTotals;
 use Illuminate\Contracts\Support\Renderable;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\View;
 use Laravel\Pulse\Livewire\Card;
 
 /**
  * Strava integration health, on the /pulse dashboard: the always-on complement
- * to the on-demand `strava:doctor` command. Live connection states + live
+ * to the on-demand `strava:doctor` command. Live connection states + per-user
  * rate-limit headroom + stranded-activity count, plus webhook / revocation /
  * rate-limit trends recorded across the Strava code.
  *
@@ -38,11 +37,6 @@ class StravaHealth extends Card
             ->where('detail_fail_count', '<', 5)
             ->count();
 
-        $rateLimits = [
-            '15 min' => $this->headroom('strava-api:15min', 200),
-            'daily' => $this->headroom('strava-api:daily', 2000),
-        ];
-
         [$trends, $time, $runAt] = $this->remember(fn (): array => [
             'webhook' => $this->asCount($this->aggregateTotal('strava_webhook', 'count')),
             'revoked' => $this->asCount($this->aggregateTotal('strava_revoked', 'count')),
@@ -50,6 +44,8 @@ class StravaHealth extends Card
             // Activities ingested by the hourly poll / "Sync now" (sum of inserts).
             'synced' => $this->asCount($this->aggregateTotal('strava_sync', 'sum')),
         ]);
+
+        $perUser = $this->perUserSyncHistory();
 
         return View::make('livewire.pulse.strava-health', [
             'cols' => $this->cols,
@@ -63,18 +59,55 @@ class StravaHealth extends Card
                 'revoked' => (int) ($connections->revoked ?? 0),
             ],
             'stranded' => $stranded,
-            'rateLimits' => $rateLimits,
             'trends' => $trends,
+            'perUser' => $perUser,
             'webhookStatus' => $this->webhookStatus(),
         ]);
     }
 
     /**
-     * @return array{remaining: int, max: int}
+     * @return list<array{user_id: int, user_name: string, last_sync: string|null, status: string, 15min_remaining: int|null, daily_remaining: int|null, is_failed: bool}>
      */
-    private function headroom(string $key, int $max): array
+    private function perUserSyncHistory(): array
     {
-        return ['remaining' => max(0, RateLimiter::remaining($key, $max)), 'max' => $max];
+        $latestSyncs = DB::connection('analytics')
+            ->table('strava_sync_logs')
+            ->select('user_id', 'status', 'synced_at', 'rate_limit_15min_remaining', 'rate_limit_daily_remaining')
+            ->whereIn(
+                'id',
+                fn (\Illuminate\Database\Query\Builder $q): \Illuminate\Database\Query\Builder => $q
+                ->selectRaw('MAX(id)')
+                ->from('strava_sync_logs')
+                ->whereColumn('user_id', 'strava_sync_logs.user_id')
+                ->groupBy('user_id')
+            )
+            ->get()
+            ->keyBy('user_id');
+
+        $activeUserIds = DB::table('strava_connections')
+            ->whereNull('revoked_at')
+            ->pluck('user_id');
+
+        $userNames = DB::table('users')
+            ->whereIn('id', $activeUserIds)
+            ->pluck('name', 'id');
+
+        $rows = [];
+        foreach ($activeUserIds as $userId) {
+            $sync = $latestSyncs->get($userId);
+
+            $rows[] = [
+                'user_id' => (int) $userId,
+                'user_name' => (string) ($userNames[$userId] ?? "User {$userId}"),
+                'last_sync' => $sync?->synced_at,
+                'status' => $sync?->status ?? 'pending',
+                '15min_remaining' => $sync?->rate_limit_15min_remaining,
+                'daily_remaining' => $sync?->rate_limit_daily_remaining,
+                'is_failed' => $sync !== null && \in_array($sync->status, ['error', 'rate_limited', 'token_expired', 'revoked'], true),
+            ];
+        }
+
+        return $rows;
     }
 
     /**

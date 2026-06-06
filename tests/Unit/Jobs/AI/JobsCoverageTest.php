@@ -24,7 +24,6 @@ use App\Services\AI\Narrators\DailyGreetingNarrator;
 use App\Services\AI\Narrators\MonthlyRecapNarrator;
 use App\Services\AI\Narrators\PersonaSummaryNarrator;
 use App\Services\AI\Narrators\PrContextNarrator;
-use App\Services\AI\Narrators\TrendCaptionNarrator;
 use App\Services\AI\Narrators\WeeklyRecapNarrator;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
@@ -159,22 +158,30 @@ it('AnalyzeWeeklyRecapJob throws when snapshot missing', function (): void {
 
 it('AnalyzeTrendCaptionJob returns caption with discriminator', function (): void {
     $user = User::factory()->create();
-    mockNarrator(TrendCaptionNarrator::class, 'trend caption');
+    // Seed two weekly snapshots so RuleBasedInsightBuilder can produce a caption.
+    WeeklySnapshot::factory()->create(['user_id' => $user->id, 'week_ending' => '2026-05-11', 'distance_km' => 20, 'form' => 10]);
+    WeeklySnapshot::factory()->create(['user_id' => $user->id, 'week_ending' => '2026-05-18', 'distance_km' => 25, 'form' => 12]);
 
     $row = rowOf(AnalysisType::TREND_CAPTION_SUBJECT_TYPE, $user->id, AnalysisType::TrendCaption, '2026-05-18');
     (new AnalyzeTrendCaptionJob($row->id))->handle(app(AnalysisService::class));
 
-    expect($row->fresh()->content)->toBe('trend caption');
+    expect($row->fresh()->content)->not->toBeEmpty()
+        ->and($row->fresh()->status)->toBe(AnalysisStatus::Done);
 });
 
 it('AnalyzeTrendCaptionJob falls back to today when discriminator is null', function (): void {
+    Carbon::setTestNow('2026-05-19 12:00:00');
     $user = User::factory()->create();
-    mockNarrator(TrendCaptionNarrator::class, 'today caption');
+    // Seed two weekly snapshots so RuleBasedInsightBuilder can produce a caption.
+    WeeklySnapshot::factory()->create(['user_id' => $user->id, 'week_ending' => '2026-05-11', 'distance_km' => 20, 'form' => 10]);
+    WeeklySnapshot::factory()->create(['user_id' => $user->id, 'week_ending' => '2026-05-18', 'distance_km' => 25, 'form' => 12]);
 
     $row = rowOf(AnalysisType::TREND_CAPTION_SUBJECT_TYPE, $user->id, AnalysisType::TrendCaption, null);
     (new AnalyzeTrendCaptionJob($row->id))->handle(app(AnalysisService::class));
 
-    expect($row->fresh()->content)->toBe('today caption');
+    expect($row->fresh()->content)->not->toBeEmpty()
+        ->and($row->fresh()->status)->toBe(AnalysisStatus::Done);
+    Carbon::setTestNow();
 });
 
 it('AnalyzeTrendCaptionJob throws when user missing', function (): void {

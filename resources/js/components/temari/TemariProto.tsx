@@ -14,9 +14,12 @@ export type TemariPose =
 
 export interface TemariEquipped {
     headband?: 'ember' | 'epik' | 'legendaris' | null;
-    medal?: 'pertama' | 'emas' | 'none';
-    pita?: boolean;
-    aura?: boolean;
+    medal?: 'pertama' | 'emas' | 'perak' | 'platina' | 'none';
+    pita?: 'konsisten' | 'jarak' | 'malam' | 'maraton' | boolean | null;
+    kaus?: 'pemula' | 'pagi' | 'hujan' | 'legendaris' | null;
+    celana?: 'ringan' | 'jarak' | 'split' | 'maraton' | null;
+    sepatu?: 'basic' | 'cepat' | 'tahan' | 'legendaris' | null;
+    aura?: 'pemanasan' | 'gerah' | 'tenang' | 'jagoan' | boolean | null;
 }
 
 export interface TemariProtoProps {
@@ -30,21 +33,83 @@ export interface TemariProtoProps {
     className?: string;
 }
 
+// ── Palette constants ───────────────────────────────────────────────
+
+const FUR = '#F2DAB6';
+const FUR_SHADE = '#DCC097';
+const INNER_EAR = '#E8A076';
+const EYE = '#1A1812';
+const CHEEK = '#E89B8E';
+const OUTLINE = '#3b2f1f';
+
+// ── Headband palette ────────────────────────────────────────────────
+
 interface HeadbandPalette {
     band: string;
     accent: string;
 }
 
-const HEADBAND_PALETTE: Record<NonNullable<TemariEquipped['headband']>, HeadbandPalette> = {
+const HEADBAND_PALETTE: Record<string, HeadbandPalette> = {
     ember: { band: '#C4623F', accent: '#A8512C' },
     epik: { band: '#7B5BB6', accent: '#5E4490' },
     legendaris: { band: '#D9B23A', accent: '#B8941E' },
 };
 
-const MEDAL_PALETTE = {
-    pertama: { coin: '#C77F4A', glow: '#E0A06E' },
-    emas: { coin: '#D9B23A', glow: '#F5D365' },
-} as const;
+// ── Medal palette ───────────────────────────────────────────────────
+
+const MEDAL_PALETTE: Record<string, { coin: string; glow: string; ring: boolean }> = {
+    pertama: { coin: '#C77F4A', glow: '#E0A06E', ring: false },
+    emas: { coin: '#D9B23A', glow: '#F5D365', ring: false },
+    perak: { coin: '#A8B4C0', glow: '#C8D4E0', ring: true },
+    platina: { coin: '#B8D4E8', glow: '#D8F0FF', ring: true },
+};
+
+// ── Kaus (shirt/jersey) palette ─────────────────────────────────────
+
+const KAUS_PALETTE: Record<string, { fill: string; trim: string; emblem: string }> = {
+    pemula: { fill: '#E8E4DC', trim: '#CCC8C0', emblem: '#A09888' },
+    pagi: { fill: '#F5D365', trim: '#D9B23A', emblem: '#B8941E' },
+    hujan: { fill: '#5E89B5', trim: '#4A6F94', emblem: '#8CB4D8' },
+    legendaris: { fill: '#D9B23A', trim: '#B8941E', emblem: '#F5D365' },
+};
+
+// ── Celana (pants/shorts) palette ───────────────────────────────────
+
+const CELANA_PALETTE: Record<string, { fill: string; stripe: string }> = {
+    ringan: { fill: '#3d362a', stripe: '#6e6452' },
+    jarak: { fill: '#07492d', stripe: '#d9764a' },
+    split: { fill: '#2c355c', stripe: '#e8a076' },
+    maraton: { fill: '#1a1812', stripe: '#d9b23a' },
+};
+
+// ── Sepatu (shoes) palette ──────────────────────────────────────────
+
+const SEPATU_PALETTE: Record<string, { upper: string; sole: string; accent: string }> = {
+    basic: { upper: '#A09888', sole: '#ffffff', accent: '#6e6452' },
+    cepat: { upper: '#d9764a', sole: '#ffffff', accent: '#b75f37' },
+    tahan: { upper: '#3d5a4f', sole: '#ffffff', accent: '#6b8e6f' },
+    legendaris: { upper: '#D9B23A', sole: '#ffffff', accent: '#F5D365' },
+};
+
+// ── Aura palette ────────────────────────────────────────────────────
+
+const AURA_PALETTE: Record<string, { inner: string; mid: string; outer: string }> = {
+    pemanasan: { inner: '#F5D365', mid: '#D9B23A', outer: '#D9B23A' },
+    gerah: { inner: '#E8A076', mid: '#C4623F', outer: '#C4623F' },
+    tenang: { inner: '#8CB4D8', mid: '#5E89B5', outer: '#5E89B5' },
+    jagoan: { inner: '#D8F0FF', mid: '#D9B23A', outer: '#B8941E' },
+};
+
+// ── Pita (ribbon) palette ───────────────────────────────────────────
+
+const PITA_PALETTE: Record<string, { fill: string; stroke: string; knot: string }> = {
+    konsisten: { fill: '#6B8E6F', stroke: '#5C7C60', knot: '#5C7C60' },
+    jarak: { fill: '#D9764A', stroke: '#B75F37', knot: '#B75F37' },
+    malam: { fill: '#5E89B5', stroke: '#4A6F94', knot: '#4A6F94' },
+    maraton: { fill: '#D9B23A', stroke: '#B8941E', knot: '#B8941E' },
+};
+
+// ── Pose configs ────────────────────────────────────────────────────
 
 const EAR_TILT: Record<TemariPose, [number, number]> = {
     proud: [-8, 8],
@@ -96,11 +161,45 @@ const POSE_ANIM: Record<TemariPose, string> = {
 const DEFAULT_MEDAL_POSES = new Set<TemariPose>(['proud', 'pumped', 'holding', 'observational', 'glow']);
 const SPARKLE_POSES = new Set<TemariPose>(['pumped', 'excited', 'glow']);
 
-const FUR = '#F2DAB6';
-const FUR_SHADE = '#DCC097';
-const INNER_EAR = '#E8A076';
-const EYE = '#1A1812';
-const CHEEK = '#E89B8E';
+// ── Arm swing per pose ──────────────────────────────────────────────
+
+const ARM_ROTATION: Record<TemariPose, [number, number]> = {
+    proud: [-15, 15],
+    pumped: [-30, 30],
+    excited: [-40, 40],
+    holding: [-10, 10],
+    reading: [-5, 20],
+    wobble: [20, -20],
+    observational: [-12, 12],
+    glow: [-25, 25],
+};
+
+// ── Helpers ─────────────────────────────────────────────────────────
+
+function resolveMedalKey(
+    pose: TemariPose,
+    equipped: TemariEquipped | null,
+): string | null {
+    if (equipped?.medal) {
+        if (equipped.medal === 'none') return null;
+        return equipped.medal;
+    }
+    return DEFAULT_MEDAL_POSES.has(pose) ? 'pertama' : null;
+}
+
+function resolveAuraKey(equipped: TemariEquipped | null): string | null {
+    if (!equipped?.aura) return null;
+    if (typeof equipped.aura === 'string') return equipped.aura;
+    return 'pemanasan';
+}
+
+function resolvePitaKey(equipped: TemariEquipped | null): string | null {
+    if (!equipped?.pita) return null;
+    if (typeof equipped.pita === 'string') return equipped.pita;
+    return 'konsisten';
+}
+
+// ── Main component ──────────────────────────────────────────────────
 
 export default function TemariProto({
     pose = 'proud',
@@ -110,23 +209,39 @@ export default function TemariProto({
     animate = false,
     className,
 }: Readonly<TemariProtoProps>) {
-    // viewBox tightly + evenly frames the artwork with ~5px of margin on every
-    // side: ear tips reach y≈-4, the medal/pita reach y≈121, and the aura/sparkles
-    // reach x≈5 and x≈115. So the box runs x[0..120], y[-9..126] (height 135).
-    // The old 0/0/120/150 clipped the ears at the top and left a dead strip below.
-    const aspectHeight = (size * 135) / 120;
+    // Full-body viewBox: head at y~0..56, body at y~56..96, legs at y~96..130,
+    // with padding for ears/sparkles/aura. ViewBox: x[0..120], y[-12..138] = 150 tall.
+    const viewW = 120;
+    const viewH = 150;
+    const aspectHeight = (size * viewH) / viewW;
+
     const headbandKey = equipped?.headband ?? 'ember';
-    const hb = HEADBAND_PALETTE[headbandKey];
+    const hb = HEADBAND_PALETTE[headbandKey] ?? HEADBAND_PALETTE.ember;
 
     const medalKey = resolveMedalKey(pose, equipped);
-    const medal = medalKey ? MEDAL_PALETTE[medalKey] : null;
+    const medal = medalKey ? (MEDAL_PALETTE[medalKey] ?? MEDAL_PALETTE.pertama) : null;
 
-    const showAura = equipped?.aura === true;
+    const auraKey = resolveAuraKey(equipped);
+    const showAura = auraKey !== null;
+    const auraColors = auraKey ? (AURA_PALETTE[auraKey] ?? AURA_PALETTE.pemanasan) : null;
+
     const showSparkle = SPARKLE_POSES.has(pose) || showAura;
-    const showPita = equipped?.pita === true;
+    const pitaKey = resolvePitaKey(equipped);
+    const pitaColors = pitaKey ? (PITA_PALETTE[pitaKey] ?? PITA_PALETTE.konsisten) : null;
+
+    const kausKey = equipped?.kaus ?? null;
+    const kausColors = kausKey ? (KAUS_PALETTE[kausKey] ?? KAUS_PALETTE.pemula) : null;
+
+    const celanaKey = equipped?.celana ?? null;
+    const celanaColors = celanaKey ? (CELANA_PALETTE[celanaKey] ?? CELANA_PALETTE.ringan) : null;
+
+    const sepatuKey = equipped?.sepatu ?? null;
+    const sepatuColors = sepatuKey ? (SEPATU_PALETTE[sepatuKey] ?? SEPATU_PALETTE.basic) : null;
+
     const earTilt = EAR_TILT[pose];
     const eyeShape = EYE_BY_POSE[pose];
     const mouthShape = MOUTH_BY_POSE[pose];
+    const armRot = ARM_ROTATION[pose];
 
     let rootAnim: CSSProperties['animation'] = 'none';
     if (animate !== false) {
@@ -141,164 +256,299 @@ export default function TemariProto({
             data-tone={tone}
         >
             <svg
-                viewBox="0 -9 120 135"
+                viewBox={`0 -12 ${viewW} ${viewH}`}
                 width={size}
                 height={aspectHeight}
                 style={{ display: 'block', overflow: 'visible' }}
                 aria-hidden
             >
-                {showAura && <Aura />}
-                <Ears tilt={earTilt} />
-                <ellipse cx="60" cy="60" rx="34" ry="32" fill={FUR} stroke={FUR_SHADE} strokeWidth="1.2" />
-                <Headband band={hb.band} legendary={headbandKey === 'legendaris'} />
-                <Cheeks />
-                <Eyes shape={eyeShape} />
-                <ellipse cx="60" cy="74" rx="2.5" ry="2" fill={hb.band} />
-                <Mouth shape={mouthShape} />
-                {showPita && <Pita />}
-                {medal && <Medal coin={medal.coin} glow={medal.glow} ringGlow={medalKey === 'emas'} />}
+                {/* Aura (behind everything) */}
+                {showAura && auraColors && <AuraLayer colors={auraColors} />}
+
+                {/* Ground shadow */}
+                <ellipse cx="60" cy="130" rx="22" ry="2.5" fill={EYE} opacity="0.12" />
+
+                {/* Legs */}
+                <Legs sepatuColors={sepatuColors} />
+
+                {/* Body (torso) */}
+                <Body
+                    kausColors={kausColors}
+                    celanaColors={celanaColors}
+                    hb={hb}
+                />
+
+                {/* Arms */}
+                <Arms armRot={armRot} kausColors={kausColors} hb={hb} />
+
+                {/* Head */}
+                <Head
+                    earTilt={earTilt}
+                    hb={hb}
+                    headbandKey={headbandKey}
+                    eyeShape={eyeShape}
+                    mouthShape={mouthShape}
+                />
+
+                {/* Medal (on chest) */}
+                {medal && <MedalLayer medal={medal} />}
+
+                {/* Pita (sash across body) */}
+                {pitaColors && <PitaLayer colors={pitaColors} />}
+
+                {/* Sparkles */}
                 {showSparkle && <Sparkles innerEarHex={INNER_EAR} />}
             </svg>
         </div>
     );
 }
 
-function resolveMedalKey(pose: TemariPose, equipped: TemariEquipped | null): keyof typeof MEDAL_PALETTE | null {
-    if (equipped?.medal) {
-        if (equipped.medal === 'none') return null;
-        return equipped.medal;
-    }
-    return DEFAULT_MEDAL_POSES.has(pose) ? 'pertama' : null;
-}
+// ── Aura ─────────────────────────────────────────────────────────────
 
-function Aura() {
+function AuraLayer({ colors }: Readonly<{ colors: { inner: string; mid: string; outer: string } }>) {
     return (
         <g
-            style={{ animation: 'temari-aura-pulse 2.4s ease-in-out infinite', transformOrigin: '60px 55px' }}
+            style={{ animation: 'temari-aura-pulse 2.4s ease-in-out infinite', transformOrigin: '60px 60px' }}
         >
             <defs>
                 <radialGradient id="temari-aura-grad">
-                    <stop offset="0%" stopColor="#F5D365" stopOpacity="0.7" />
-                    <stop offset="60%" stopColor="#D9B23A" stopOpacity="0.2" />
-                    <stop offset="100%" stopColor="#D9B23A" stopOpacity="0" />
+                    <stop offset="0%" stopColor={colors.inner} stopOpacity="0.7" />
+                    <stop offset="60%" stopColor={colors.mid} stopOpacity="0.2" />
+                    <stop offset="100%" stopColor={colors.outer} stopOpacity="0" />
                 </radialGradient>
             </defs>
-            <circle cx="60" cy="55" r="55" fill="url(#temari-aura-grad)" opacity="0.7" />
+            <circle cx="60" cy="60" r="68" fill="url(#temari-aura-grad)" opacity="0.7" />
         </g>
     );
 }
 
-function Ears({ tilt }: Readonly<{ tilt: [number, number] }>) {
-    return (
-        <>
-            <g transform={`translate(35, 18) rotate(${tilt[0]})`}>
-                <ellipse cx="0" cy="0" rx="9" ry="22" fill={FUR} stroke={FUR_SHADE} strokeWidth="1.2" />
-                <ellipse cx="0" cy="2" rx="4" ry="14" fill={INNER_EAR} opacity="0.55" />
-            </g>
-            <g transform={`translate(85, 18) rotate(${tilt[1]})`}>
-                <ellipse cx="0" cy="0" rx="9" ry="22" fill={FUR} stroke={FUR_SHADE} strokeWidth="1.2" />
-                <ellipse cx="0" cy="2" rx="4" ry="14" fill={INNER_EAR} opacity="0.55" />
-            </g>
-        </>
-    );
-}
+// ── Head (with ears, headband, eyes, mouth) ──────────────────────────
 
-function Headband({ band, legendary }: Readonly<{ band: string; legendary: boolean }>) {
-    return (
-        <>
-            <rect x="26" y="46" width="68" height="9" rx="2" fill={band} />
-            <rect x="60" y="42" width="8" height="6" rx="1" fill={band} transform="rotate(28 64 45)" />
-            <rect x="64" y="44" width="6" height="14" rx="1" fill={band} transform="rotate(28 67 51)" />
-            {legendary && (
-                <path
-                    d="M 60 49 l 1 -3 l 1 3 l 3 1 l -3 1 l -1 3 l -1 -3 l -3 -1 z"
-                    fill="#fff"
-                    opacity="0.95"
-                />
-            )}
-        </>
-    );
-}
-
-function Cheeks() {
-    return (
-        <>
-            <ellipse cx="42" cy="72" rx="5" ry="3" fill={CHEEK} opacity="0.6" />
-            <ellipse cx="78" cy="72" rx="5" ry="3" fill={CHEEK} opacity="0.6" />
-        </>
-    );
-}
-
-function Eyes({ shape }: Readonly<{ shape: EyeShape }>) {
-    if (shape === 'big') {
-        return (
-            <>
-                <circle cx="48" cy="65" r="4" fill={EYE} />
-                <circle cx="72" cy="65" r="4" fill={EYE} />
-                <circle cx="49.5" cy="63.5" r="1.5" fill="#fff" />
-                <circle cx="73.5" cy="63.5" r="1.5" fill="#fff" />
-            </>
-        );
-    }
-    if (shape === 'side') {
-        return (
-            <>
-                <circle cx="50" cy="65" r="3" fill={EYE} />
-                <circle cx="74" cy="65" r="3" fill={EYE} />
-            </>
-        );
-    }
-    if (shape === 'sad') {
-        return (
-            <>
-                <path d="M 45 64 Q 48 68 51 64" stroke={EYE} strokeWidth="2" fill="none" strokeLinecap="round" />
-                <path d="M 69 64 Q 72 68 75 64" stroke={EYE} strokeWidth="2" fill="none" strokeLinecap="round" />
-            </>
-        );
-    }
-    return (
-        <>
-            <circle cx="48" cy="65" r="3" fill={EYE} />
-            <circle cx="72" cy="65" r="3" fill={EYE} />
-            <circle cx="49" cy="64" r="1" fill="#fff" />
-            <circle cx="73" cy="64" r="1" fill="#fff" />
-        </>
-    );
-}
-
-function Mouth({ shape }: Readonly<{ shape: MouthShape }>) {
-    if (shape === 'open') {
-        return <ellipse cx="60" cy="83" rx="5" ry="4" fill={EYE} />;
-    }
-    if (shape === 'small') {
-        return <path d="M 56 81 Q 60 83 64 81" stroke={EYE} strokeWidth="1.4" fill="none" strokeLinecap="round" />;
-    }
-    if (shape === 'frown') {
-        return <path d="M 53 84 Q 60 78 67 84" stroke={EYE} strokeWidth="1.6" fill="none" strokeLinecap="round" />;
-    }
-    return <path d="M 53 80 Q 60 86 67 80" stroke={EYE} strokeWidth="1.6" fill="none" strokeLinecap="round" />;
-}
-
-function Pita() {
+function Head({
+    earTilt,
+    hb,
+    headbandKey,
+    eyeShape,
+    mouthShape,
+}: Readonly<{
+    earTilt: [number, number];
+    hb: HeadbandPalette;
+    headbandKey: string;
+    eyeShape: EyeShape;
+    mouthShape: MouthShape;
+}>) {
     return (
         <g>
-            <path d="M 32 94 L 88 110 L 86 116 L 30 100 Z" fill="#6B8E6F" />
-            <path d="M 32 94 L 88 110" stroke="#5C7C60" strokeWidth="0.6" />
-            <circle cx="88" cy="113" r="3" fill="#5C7C60" />
+            {/* Ears */}
+            <Ears tilt={earTilt} />
+            {/* Head circle */}
+            <ellipse cx="60" cy="28" rx="34" ry="30" fill={FUR} stroke={FUR_SHADE} strokeWidth="1.2" />
+            {/* Headband */}
+            <Headband band={hb.band} legendary={headbandKey === 'legendaris'} />
+            {/* Cheeks */}
+            <Cheeks />
+            {/* Eyes */}
+            <Eyes shape={eyeShape} />
+            {/* Nose dot */}
+            <ellipse cx="60" cy="42" rx="2.5" ry="2" fill={hb.band} />
+            {/* Mouth */}
+            <Mouth shape={mouthShape} />
         </g>
     );
 }
 
-function Medal({
-    coin,
-    glow,
-    ringGlow,
-}: Readonly<{ coin: string; glow: string; ringGlow: boolean }>) {
+// ── Body (torso) ─────────────────────────────────────────────────────
+
+function Body({
+    kausColors,
+    celanaColors,
+    hb,
+}: Readonly<{
+    kausColors: { fill: string; trim: string; emblem: string } | null;
+    celanaColors: { fill: string; stripe: string } | null;
+    hb: HeadbandPalette;
+}>) {
     return (
-        <g transform="translate(60, 100)">
+        <g>
+            {/* Torso shape */}
+            <path
+                d="M 36 56 Q 32 70 34 86 Q 36 92 44 92 L 76 92 Q 84 92 86 86 Q 88 70 84 56 Z"
+                fill={FUR}
+                stroke={FUR_SHADE}
+                strokeWidth="1.2"
+                strokeLinejoin="round"
+            />
+
+            {/* Celana (pants/shorts) — lower torso */}
+            {celanaColors ? (
+                <g>
+                    <path
+                        d="M 34 78 Q 33 84 34 86 Q 36 92 44 92 L 76 92 Q 84 92 86 86 Q 87 84 86 78 Z"
+                        fill={celanaColors.fill}
+                        stroke={OUTLINE}
+                        strokeWidth={0.8}
+                        strokeLinejoin="round"
+                    />
+                    {/* Side stripes */}
+                    <rect x="36" y="80" width="1.4" height="10" fill={celanaColors.stripe} />
+                    <rect x="83" y="80" width="1.4" height="10" fill={celanaColors.stripe} />
+                </g>
+            ) : (
+                <path
+                    d="M 34 78 Q 33 84 34 86 Q 36 92 44 92 L 76 92 Q 84 92 86 86 Q 87 84 86 78 Z"
+                    fill="#07492d"
+                    stroke={OUTLINE}
+                    strokeWidth={0.8}
+                    strokeLinejoin="round"
+                />
+            )}
+
+            {/* Kaus (shirt/jersey) — upper torso */}
+            {kausColors ? (
+                <g>
+                    <path
+                        d="M 36 55 Q 35 64 34 78 L 86 78 Q 85 64 84 55 Q 76 58 60 58 Q 44 58 36 55 Z"
+                        fill={kausColors.fill}
+                        stroke={OUTLINE}
+                        strokeWidth={0.8}
+                        strokeLinejoin="round"
+                    />
+                    {/* Collar trim */}
+                    <path
+                        d="M 44 55 Q 52 60 60 58 Q 68 60 76 55"
+                        stroke={kausColors.trim}
+                        strokeWidth="1.4"
+                        fill="none"
+                        strokeLinecap="round"
+                    />
+                    {/* Chest emblem — small "T" */}
+                    <circle cx="60" cy="66" r="3.2" fill={hb.band} stroke={OUTLINE} strokeWidth="0.6" />
+                    <text
+                        x="60"
+                        y="67.5"
+                        textAnchor="middle"
+                        fontSize="3.2"
+                        fontWeight="bold"
+                        fill="#ffffff"
+                        fontFamily="sans-serif"
+                    >
+                        T
+                    </text>
+                </g>
+            ) : (
+                <g>
+                    <path
+                        d="M 36 55 Q 35 64 34 78 L 86 78 Q 85 64 84 55 Q 76 58 60 58 Q 44 58 36 55 Z"
+                        fill="#0e7a4c"
+                        stroke={OUTLINE}
+                        strokeWidth={0.8}
+                        strokeLinejoin="round"
+                    />
+                    {/* Collar trim */}
+                    <path
+                        d="M 44 55 Q 52 60 60 58 Q 68 60 76 55"
+                        stroke="#094d30"
+                        strokeWidth="1.4"
+                        fill="none"
+                        strokeLinecap="round"
+                    />
+                    {/* Default chest emblem */}
+                    <circle cx="60" cy="66" r="3.2" fill={hb.band} stroke={OUTLINE} strokeWidth="0.6" />
+                    <text
+                        x="60"
+                        y="67.5"
+                        textAnchor="middle"
+                        fontSize="3.2"
+                        fontWeight="bold"
+                        fill="#ffffff"
+                        fontFamily="sans-serif"
+                    >
+                        T
+                    </text>
+                </g>
+            )}
+        </g>
+    );
+}
+
+// ── Arms ──────────────────────────────────────────────────────────────
+
+function Arms({
+    armRot,
+    kausColors,
+    hb,
+}: Readonly<{
+    armRot: [number, number];
+    kausColors: { fill: string; trim: string; emblem: string } | null;
+    hb: HeadbandPalette;
+}>) {
+    const sleeveColor = kausColors ? kausColors.fill : '#0e7a4c';
+    return (
+        <>
+            {/* Left arm */}
+            <g transform={`translate(36, 58) rotate(${armRot[0]})`}>
+                <ellipse cx="-4" cy="8" rx="5" ry="7" fill={FUR} stroke={FUR_SHADE} strokeWidth="1" />
+                {/* Sleeve band */}
+                <rect x="-8.5" y="3" width="9" height="2.8" fill={sleeveColor} stroke={OUTLINE} strokeWidth="0.5" rx="0.5" />
+                {/* Wristband */}
+                <rect x="-8" y="10" width="8" height="2" fill={hb.band} stroke={OUTLINE} strokeWidth="0.3" rx="0.5" />
+            </g>
+            {/* Right arm */}
+            <g transform={`translate(84, 58) rotate(${armRot[1]})`}>
+                <ellipse cx="4" cy="8" rx="5" ry="7" fill={FUR} stroke={FUR_SHADE} strokeWidth="1" />
+                {/* Sleeve band */}
+                <rect x="-0.5" y="3" width="9" height="2.8" fill={sleeveColor} stroke={OUTLINE} strokeWidth="0.5" rx="0.5" />
+                {/* Wristband */}
+                <rect x="0" y="10" width="8" height="2" fill={hb.band} stroke={OUTLINE} strokeWidth="0.3" rx="0.5" />
+            </g>
+        </>
+    );
+}
+
+// ── Legs ──────────────────────────────────────────────────────────────
+
+function Legs({ sepatuColors }: Readonly<{ sepatuColors: { upper: string; sole: string; accent: string } | null }>) {
+    const shoe = sepatuColors ?? { upper: '#A09888', sole: '#ffffff', accent: '#6e6452' };
+    return (
+        <g>
+            {/* Left leg */}
+            <g transform="translate(48, 92)">
+                {/* Thigh stub */}
+                <rect x="-3.5" y="0" width="7" height="14" rx="3" fill={FUR} stroke={FUR_SHADE} strokeWidth="0.8" />
+                {/* Shoe */}
+                <g stroke={OUTLINE} strokeWidth="0.8" strokeLinejoin="round">
+                    <path d="M -8 12 L 6 12 Q 8 15 6 18 Q 6 21 4 21 L -6 21 Q -9 21 -9 18 Q -10 14 -8 12 Z" fill={shoe.upper} />
+                    <path d="M -8 12 L 6 12 L 6 15 L -8 15 Z" fill={shoe.accent} opacity="0.4" stroke="none" />
+                    <rect x="-9" y="18" width="16" height="3" rx="1.2" fill={shoe.sole} />
+                </g>
+            </g>
+            {/* Right leg */}
+            <g transform="translate(72, 92)">
+                {/* Thigh stub */}
+                <rect x="-3.5" y="0" width="7" height="14" rx="3" fill={FUR} stroke={FUR_SHADE} strokeWidth="0.8" />
+                {/* Shoe */}
+                <g stroke={OUTLINE} strokeWidth="0.8" strokeLinejoin="round">
+                    <path d="M -6 12 L 8 12 Q 10 14 9 18 Q 9 21 6 21 L -4 21 Q -7 21 -7 18 Q -8 14 -6 12 Z" fill={shoe.upper} />
+                    <path d="M -6 12 L 8 12 L 8 15 L -6 15 Z" fill={shoe.accent} opacity="0.4" stroke="none" />
+                    <rect x="-7" y="18" width="16" height="3" rx="1.2" fill={shoe.sole} />
+                </g>
+            </g>
+        </g>
+    );
+}
+
+// ── Medal ─────────────────────────────────────────────────────────────
+
+function MedalLayer({
+    medal,
+}: Readonly<{ medal: { coin: string; glow: string; ring: boolean } }>) {
+    return (
+        <g transform="translate(60, 96)">
+            {/* Ribbon */}
             <path d="M -10 -8 L -3 4 L 0 -2 Z" fill="#6B8E6F" />
             <path d="M 10 -8 L 3 4 L 0 -2 Z" fill="#6B8E6F" opacity="0.85" />
-            <circle cx="0" cy="8" r="9" fill={coin} stroke={FUR_SHADE} strokeWidth="1" />
+            {/* Coin */}
+            <circle cx="0" cy="8" r="9" fill={medal.coin} stroke={FUR_SHADE} strokeWidth="1" />
             <circle cx="0" cy="8" r="6" fill="none" stroke="#fff" strokeWidth="0.8" opacity="0.5" />
             <text
                 x="0"
@@ -312,23 +562,131 @@ function Medal({
             >
                 T
             </text>
-            {ringGlow && (
-                <circle cx="0" cy="8" r="13" fill="none" stroke={glow} strokeWidth="1.5" opacity="0.6" />
+            {/* Platina/perak glow ring */}
+            {medal.ring && (
+                <circle cx="0" cy="8" r="13" fill="none" stroke={medal.glow} strokeWidth="1.5" opacity="0.6" />
             )}
         </g>
     );
 }
 
+// ── Pita (ribbon sash) ────────────────────────────────────────────────
+
+function PitaLayer({ colors }: Readonly<{ colors: { fill: string; stroke: string; knot: string } }>) {
+    return (
+        <g>
+            <path d="M 32 62 L 88 78 L 86 84 L 30 68 Z" fill={colors.fill} />
+            <path d="M 32 62 L 88 78" stroke={colors.stroke} strokeWidth="0.6" />
+            <circle cx="88" cy="81" r="3" fill={colors.knot} />
+        </g>
+    );
+}
+
+// ── Head sub-components ───────────────────────────────────────────────
+
+function Ears({ tilt }: Readonly<{ tilt: [number, number] }>) {
+    return (
+        <>
+            <g transform={`translate(35, 8) rotate(${tilt[0]})`}>
+                <ellipse cx="0" cy="-10" rx="8" ry="18" fill={FUR} stroke={FUR_SHADE} strokeWidth="1.2" />
+                <ellipse cx="0" cy="-8" rx="3.5" ry="12" fill={INNER_EAR} opacity="0.55" />
+            </g>
+            <g transform={`translate(85, 8) rotate(${tilt[1]})`}>
+                <ellipse cx="0" cy="-10" rx="8" ry="18" fill={FUR} stroke={FUR_SHADE} strokeWidth="1.2" />
+                <ellipse cx="0" cy="-8" rx="3.5" ry="12" fill={INNER_EAR} opacity="0.55" />
+            </g>
+        </>
+    );
+}
+
+function Headband({ band, legendary }: Readonly<{ band: string; legendary: boolean }>) {
+    return (
+        <>
+            <rect x="26" y="14" width="68" height="8" rx="2" fill={band} />
+            <rect x="60" y="10" width="7" height="5" rx="1" fill={band} transform="rotate(28 64 13)" />
+            <rect x="63" y="12" width="5" height="12" rx="1" fill={band} transform="rotate(28 66 18)" />
+            {legendary && (
+                <path
+                    d="M 60 17 l 1 -3 l 1 3 l 3 1 l -3 1 l -1 3 l -1 -3 l -3 -1 z"
+                    fill="#fff"
+                    opacity="0.95"
+                />
+            )}
+        </>
+    );
+}
+
+function Cheeks() {
+    return (
+        <>
+            <ellipse cx="42" cy="40" rx="5" ry="3" fill={CHEEK} opacity="0.6" />
+            <ellipse cx="78" cy="40" rx="5" ry="3" fill={CHEEK} opacity="0.6" />
+        </>
+    );
+}
+
+function Eyes({ shape }: Readonly<{ shape: EyeShape }>) {
+    if (shape === 'big') {
+        return (
+            <>
+                <circle cx="48" cy="33" r="4" fill={EYE} />
+                <circle cx="72" cy="33" r="4" fill={EYE} />
+                <circle cx="49.5" cy="31.5" r="1.5" fill="#fff" />
+                <circle cx="73.5" cy="31.5" r="1.5" fill="#fff" />
+            </>
+        );
+    }
+    if (shape === 'side') {
+        return (
+            <>
+                <circle cx="50" cy="33" r="3" fill={EYE} />
+                <circle cx="74" cy="33" r="3" fill={EYE} />
+            </>
+        );
+    }
+    if (shape === 'sad') {
+        return (
+            <>
+                <path d="M 45 32 Q 48 36 51 32" stroke={EYE} strokeWidth="2" fill="none" strokeLinecap="round" />
+                <path d="M 69 32 Q 72 36 75 32" stroke={EYE} strokeWidth="2" fill="none" strokeLinecap="round" />
+            </>
+        );
+    }
+    return (
+        <>
+            <circle cx="48" cy="33" r="3" fill={EYE} />
+            <circle cx="72" cy="33" r="3" fill={EYE} />
+            <circle cx="49" cy="32" r="1" fill="#fff" />
+            <circle cx="73" cy="32" r="1" fill="#fff" />
+        </>
+    );
+}
+
+function Mouth({ shape }: Readonly<{ shape: MouthShape }>) {
+    if (shape === 'open') {
+        return <ellipse cx="60" cy="51" rx="5" ry="4" fill={EYE} />;
+    }
+    if (shape === 'small') {
+        return <path d="M 56 49 Q 60 51 64 49" stroke={EYE} strokeWidth="1.4" fill="none" strokeLinecap="round" />;
+    }
+    if (shape === 'frown') {
+        return <path d="M 53 52 Q 60 46 67 52" stroke={EYE} strokeWidth="1.6" fill="none" strokeLinecap="round" />;
+    }
+    return <path d="M 53 48 Q 60 54 67 48" stroke={EYE} strokeWidth="1.6" fill="none" strokeLinecap="round" />;
+}
+
+// ── Sparkles ──────────────────────────────────────────────────────────
+
 function Sparkles({ innerEarHex }: Readonly<{ innerEarHex: string }>) {
     return (
         <g style={{ animation: 'temari-spin-sparkle 6s linear infinite', transformOrigin: '60px 60px' }}>
             <path
-                d="M 12 30 l 2 -6 l 2 6 l 6 2 l -6 2 l -2 6 l -2 -6 l -6 -2 z"
+                d="M 12 10 l 2 -6 l 2 6 l 6 2 l -6 2 l -2 6 l -2 -6 l -6 -2 z"
                 fill="#D9B23A"
                 opacity="0.85"
             />
             <path
-                d="M 102 38 l 1.5 -4 l 1.5 4 l 4 1.5 l -4 1.5 l -1.5 4 l -1.5 -4 l -4 -1.5 z"
+                d="M 102 18 l 1.5 -4 l 1.5 4 l 4 1.5 l -4 1.5 l -1.5 4 l -1.5 -4 l -4 -1.5 z"
                 fill={innerEarHex}
                 opacity="0.9"
             />

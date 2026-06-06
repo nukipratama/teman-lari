@@ -1,7 +1,7 @@
 import { Link } from '@inertiajs/react';
 import { cn } from '@/lib/cn';
 
-export type KoleksiTab = 'kartu' | 'rekor' | 'aksesori';
+export type KoleksiTab = 'kartu' | 'rekor' | 'aksesori' | 'target';
 
 interface TabItem {
     id: KoleksiTab;
@@ -21,6 +21,7 @@ const TABS: ReadonlyArray<TabItem> = [
     { id: 'kartu', label: 'Kartu', href: '/kartu' },
     { id: 'rekor', label: 'Rekor', href: '/rekor' },
     { id: 'aksesori', label: 'Aksesori', href: '/aksesori' },
+    { id: 'target', label: 'Target', href: '/target' },
 ];
 
 export default function KoleksiTabs({ active, activeCount, className }: Readonly<KoleksiTabsProps>) {

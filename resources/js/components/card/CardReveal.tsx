@@ -44,6 +44,7 @@ export default function CardReveal({
   const [confettiKey, setConfettiKey] = useState<string | null>(null);
   const [shareOpen, setShareOpen] = useState(false);
   const [showButtons, setShowButtons] = useState(false);
+  const buttonTimer = useRef<ReturnType<typeof setTimeout>>(null);
   // The card starts wrapped in foil; reduced-motion users skip straight to it.
   const [opened, setOpened] = useState(
     () => globalThis.matchMedia?.("(prefers-reduced-motion: reduce)").matches === true,
@@ -97,8 +98,15 @@ export default function CardReveal({
       setConfettiKey(`reveal-${pending.card_id}`);
     }
     // Stagger button appearance after card animation settles (~600ms).
-    setTimeout(() => setShowButtons(true), 600);
+    buttonTimer.current = setTimeout(() => setShowButtons(true), 600);
   }, [theatrical, pending.card_id]);
+
+  // Clean up button timer on unmount.
+  useEffect(() => {
+    return () => {
+      if (buttonTimer.current !== null) clearTimeout(buttonTimer.current);
+    };
+  }, []);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {

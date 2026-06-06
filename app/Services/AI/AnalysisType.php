@@ -67,6 +67,17 @@ enum AnalysisType: string
         };
     }
 
+    public function isRuleBased(): bool
+    {
+        return match ($this) {
+            self::RunInsightTechnical,
+            self::RunInsightSplits,
+            self::RunInsightZones,
+            self::TrendCaption => true,
+            default => false,
+        };
+    }
+
     public function subjectType(): string
     {
         return match ($this) {

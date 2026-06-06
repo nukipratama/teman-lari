@@ -130,9 +130,9 @@ class DemoRunSeeder
             UserUnlock::query()
                 ->where('user_id', $user->id)
                 ->whereIn('unlock_key', [
-                    'accessory.headband_legendaris',
-                    'accessory.medal_gold',
-                    'accessory.weekly_streak_4',
+                    'accessory.ikat_kepala_legendaris',
+                    'accessory.medal_emas',
+                    'accessory.pita_konsisten',
                 ])
                 ->update(['equipped' => true]);
 

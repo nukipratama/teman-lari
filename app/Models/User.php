@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Models\Analytics\StravaSyncLog;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
@@ -13,6 +14,7 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Log;
 use Override;
 
 /**
@@ -26,6 +28,24 @@ class User extends Authenticatable
     /** @use HasFactory<UserFactory> */
     use HasFactory;
     use Notifiable;
+
+    #[Override]
+    protected static function booted(): void
+    {
+        static::deleting(function (User $user): void {
+            $connection = $user->stravaConnection;
+
+            if ($connection !== null && ! $connection->isRevoked()) {
+                $connection->markRevoked();
+            }
+
+            StravaSyncLog::log($user->id, 'deleted', error: 'User model deleted');
+
+            Log::info('strava user deleted — connection revoked and sync log written', [
+                'user_id' => $user->id,
+            ]);
+        });
+    }
 
     /** @return array<string, string> */
     #[Override]
