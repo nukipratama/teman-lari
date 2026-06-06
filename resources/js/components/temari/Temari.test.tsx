@@ -22,26 +22,58 @@ describe('Temari', () => {
         );
     });
 
-    it("forwards the user's equipped accessories to the mascot", () => {
+    it("maps the server-side equipped payload to TemariEquipped variants", () => {
         setMockPage({
-            equippedAccessories: { headband: 'legendaris', medal: 'emas', pita: true, aura: false },
+            equippedAccessories: {
+                ikat_kepala: 'accessory.ikat_kepala_legendaris',
+                medal: 'accessory.medal_emas',
+                pita: 'accessory.pita_maraton',
+                kaus: 'accessory.kaus_hujan',
+                celana: 'accessory.celana_split',
+                sepatu: 'accessory.sepatu_cepat',
+                aura: 'accessory.aura_jagoan',
+            },
         });
         render(<Temari pose="glow" size={180} />);
         expect(protoSpy).toHaveBeenCalledWith(
             expect.objectContaining({
-                equipped: { headband: 'legendaris', medal: 'emas', pita: true, aura: false },
+                equipped: {
+                    headband: 'legendaris',
+                    medal: 'emas',
+                    pita: 'maraton',
+                    kaus: 'hujan',
+                    celana: 'split',
+                    sepatu: 'cepat',
+                    aura: 'jagoan',
+                },
             }),
         );
     });
 
     it("maps a null medal to 'none' so TemariProto reads it as bare", () => {
         setMockPage({
-            equippedAccessories: { headband: 'epik', medal: null, pita: false, aura: false },
+            equippedAccessories: {
+                ikat_kepala: 'accessory.ikat_kepala_epik',
+                medal: null,
+                pita: null,
+                kaus: null,
+                celana: null,
+                sepatu: null,
+                aura: null,
+            },
         });
         render(<Temari pose="proud" size={120} />);
         expect(protoSpy).toHaveBeenCalledWith(
             expect.objectContaining({
-                equipped: { headband: 'epik', medal: 'none', pita: false, aura: false },
+                equipped: {
+                    headband: 'epik',
+                    medal: 'none',
+                    pita: null,
+                    kaus: null,
+                    celana: null,
+                    sepatu: null,
+                    aura: null,
+                },
             }),
         );
     });

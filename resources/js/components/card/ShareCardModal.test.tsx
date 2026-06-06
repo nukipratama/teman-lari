@@ -1,5 +1,6 @@
-import { render, screen, fireEvent, act } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { render, screen, fireEvent, act, waitFor } from '@testing-library/react';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { setMockPage } from '@/test/setup';
 
 // The canvas renderer is unit-tested on its own; here we stub it so the modal
 // tests don't depend on a real 2d context (jsdom doesn't implement one).
@@ -124,5 +125,197 @@ describe('ShareCardModal', () => {
         expect(screen.queryByRole('button', { name: 'Rute' })).toBeNull();
         expect(screen.queryByRole('button', { name: 'Kartu' })).toBeNull();
         expect(screen.queryByText('Gaya')).toBeNull();
+    });
+
+    it('switches the export format when a format button is clicked', () => {
+        render(<ShareCardModal kartu={kartu} onClose={vi.fn()} />);
+        const canvas = screen.getByLabelText(/Pratinjau kartu/) as HTMLCanvasElement;
+        // Story (9:16) is the default — the canvas is 1080x1920.
+        expect(canvas.height).toBe(1920);
+        fireEvent.click(screen.getByText(/Persegi/));
+        // Switching to feed (1:1) repaints the canvas at 1080x1080.
+        expect(canvas.height).toBe(1080);
+    });
+
+    it('dresses the mascot from the shared equipped accessories', () => {
+        setMockPage({
+            equippedAccessories: {
+                ikat_kepala: 'accessory.ikat_kepala_legendaris',
+                medal: null,
+                pita: null,
+                kaus: null,
+                celana: null,
+                sepatu: null,
+                aura: null,
+            },
+        });
+        // Exercises the serverToEquipped branch — just needs to render cleanly.
+        render(<ShareCardModal kartu={kartu} onClose={vi.fn()} />);
+        expect(screen.getAllByText(/Tendangan Balik/).length).toBeGreaterThan(0);
+    });
+
+    describe('native share (Web Share API)', () => {
+        const original = {
+            share: Object.getOwnPropertyDescriptor(navigator, 'share'),
+            clipboard: Object.getOwnPropertyDescriptor(navigator, 'clipboard'),
+        };
+
+        afterEach(() => {
+            if (original.share) {
+                Object.defineProperty(navigator, 'share', original.share);
+            }
+            if (original.clipboard) {
+                Object.defineProperty(navigator, 'clipboard', original.clipboard);
+            }
+        });
+
+        function clickBagikan() {
+            return fireEvent.click(
+                screen.getAllByRole('button').find((b) => b.textContent === 'Bagikan') ?? document.body,
+            );
+        }
+
+        it('shares the rendered image file when the platform can share files', async () => {
+            const share = vi.fn(() => Promise.resolve());
+            const canShare = vi.fn(() => true);
+            Object.defineProperty(navigator, 'share', { value: share, configurable: true });
+            Object.defineProperty(navigator, 'canShare', { value: canShare, configurable: true });
+            stubDataUrlFetch();
+            render(<ShareCardModal kartu={kartu} onClose={vi.fn()} />);
+            await act(async () => { clickBagikan(); });
+            expect(canShare).toHaveBeenCalledWith({ files: [expect.any(File)] });
+            expect(share).toHaveBeenCalledWith(
+                expect.objectContaining({ files: [expect.any(File)] }),
+            );
+        });
+
+        it('falls back to a URL share when files cannot be shared', async () => {
+            const share = vi.fn(() => Promise.resolve());
+            Object.defineProperty(navigator, 'share', { value: share, configurable: true });
+            // canShare returns false → file share skipped, URL share path taken.
+            Object.defineProperty(navigator, 'canShare', { value: () => false, configurable: true });
+            stubDataUrlFetch();
+            render(<ShareCardModal kartu={kartu} onClose={vi.fn()} />);
+            await act(async () => { clickBagikan(); });
+            expect(share).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    url: expect.stringContaining('/kartu/7'),
+                    // The card has a quote, so it rides along as the share text.
+                    text: kartu.quote,
+                }),
+            );
+        });
+
+        it('uses the rarity label as share text when the card has no quote', async () => {
+            const share = vi.fn(() => Promise.resolve());
+            Object.defineProperty(navigator, 'share', { value: share, configurable: true });
+            Object.defineProperty(navigator, 'canShare', { value: () => false, configurable: true });
+            stubDataUrlFetch();
+            // quote=null exercises the `?? RARITY_LABELS[...]` fallback.
+            render(<ShareCardModal kartu={{ ...kartu, quote: null }} onClose={vi.fn()} />);
+            await act(async () => { clickBagikan(); });
+            expect(share).toHaveBeenCalledWith(
+                expect.objectContaining({ text: expect.stringContaining(kartu.name) }),
+            );
+        });
+
+        it('shows a copied-link toast when share is unavailable but clipboard works', async () => {
+            const writeText = vi.fn(() => Promise.resolve());
+            Object.defineProperty(navigator, 'share', { value: undefined, configurable: true });
+            Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
+            render(<ShareCardModal kartu={kartu} onClose={vi.fn()} />);
+            await act(async () => { clickBagikan(); });
+            expect(await screen.findByText('Link kartu kesalin.')).toBeInTheDocument();
+        });
+
+        it('shows an error toast when copying the link to the clipboard fails', async () => {
+            const writeText = vi.fn(() => Promise.reject(new Error('denied')));
+            Object.defineProperty(navigator, 'share', { value: undefined, configurable: true });
+            Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
+            render(<ShareCardModal kartu={kartu} onClose={vi.fn()} />);
+            await act(async () => { clickBagikan(); });
+            expect(await screen.findByText('Gagal nyalin link.')).toBeInTheDocument();
+        });
+
+        it('shows an unsupported toast when neither share nor clipboard exist', async () => {
+            Object.defineProperty(navigator, 'share', { value: undefined, configurable: true });
+            Object.defineProperty(navigator, 'clipboard', { value: undefined, configurable: true });
+            render(<ShareCardModal kartu={kartu} onClose={vi.fn()} />);
+            await act(async () => { clickBagikan(); });
+            expect(await screen.findByText('Browser ini belum dukung berbagi.')).toBeInTheDocument();
+        });
+    });
+
+    describe('copy image', () => {
+        const originalClipboard = Object.getOwnPropertyDescriptor(navigator, 'clipboard');
+        const originalClipboardItem = (globalThis as { ClipboardItem?: unknown }).ClipboardItem;
+
+        afterEach(() => {
+            if (originalClipboard) {
+                Object.defineProperty(navigator, 'clipboard', originalClipboard);
+            }
+            (globalThis as { ClipboardItem?: unknown }).ClipboardItem = originalClipboardItem;
+        });
+
+        it('shows an unsupported toast when ClipboardItem is missing', async () => {
+            (globalThis as { ClipboardItem?: unknown }).ClipboardItem = undefined;
+            render(<ShareCardModal kartu={kartu} onClose={vi.fn()} />);
+            await act(async () => { fireEvent.click(screen.getByText(/Salin gambar/)); });
+            expect(await screen.findByText(/belum dukung salin gambar/)).toBeInTheDocument();
+        });
+
+        it('shows an error toast when writing the image to the clipboard fails', async () => {
+            const write = vi.fn(() => Promise.reject(new Error('blocked')));
+            Object.defineProperty(navigator, 'clipboard', { value: { write }, configurable: true });
+            stubDataUrlFetch();
+            render(<ShareCardModal kartu={kartu} onClose={vi.fn()} />);
+            await act(async () => { fireEvent.click(screen.getByText(/Salin gambar/)); });
+            expect(await screen.findByText(/Gagal nyalin gambar/)).toBeInTheDocument();
+        });
+    });
+
+    describe('transient status + mascot serialisation effects', () => {
+        afterEach(() => {
+            vi.useRealTimers();
+            vi.restoreAllMocks();
+        });
+
+        it('auto-clears the status toast after its timeout', async () => {
+            const write = vi.fn(() => Promise.resolve());
+            Object.defineProperty(navigator, 'clipboard', { value: { write }, configurable: true });
+            stubDataUrlFetch();
+            render(<ShareCardModal kartu={kartu} onClose={vi.fn()} />);
+            await act(async () => { fireEvent.click(screen.getByText(/Salin gambar/)); });
+            expect(await screen.findByText('Gambar kartu kesalin.')).toBeInTheDocument();
+            // The status line is a transient toast; it removes itself after 2.6s.
+            await waitFor(
+                () => expect(screen.queryByText('Gambar kartu kesalin.')).toBeNull(),
+                { timeout: 4000 },
+            );
+        });
+
+        it('serialises the live mascot SVG into an image for the canvas', async () => {
+            // Capture the Image instance the effect builds so we can fire onload.
+            const images: Array<{ onload: (() => void) | null; src: string }> = [];
+            class FakeImage {
+                onload: (() => void) | null = null;
+                #src = '';
+                get src() {
+                    return this.#src;
+                }
+                set src(value: string) {
+                    this.#src = value;
+                    images.push(this);
+                    // Resolve the data: URL asynchronously, as a real image would.
+                    queueMicrotask(() => this.onload?.());
+                }
+            }
+            vi.stubGlobal('Image', FakeImage);
+            render(<ShareCardModal kartu={kartu} onClose={vi.fn()} />);
+            // The serialisation runs behind a 60ms timeout after the SVG renders.
+            await waitFor(() => expect(images.length).toBeGreaterThan(0), { timeout: 2000 });
+            // onload fired → setTemariImg ran without throwing.
+            expect(images[0].src).toContain('data:image/svg+xml');
+        });
     });
 });

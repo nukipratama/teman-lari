@@ -56,17 +56,17 @@ describe('AppShell', () => {
         setMockPage({
             auth: { user: andiUser },
             flash: {
-                unlock: { unlock_key: 'accessory.headband_epik', name: 'Headband Epik', icon: 'mdi:star', is_major: true },
+                unlock: { unlock_key: 'accessory.ikat_kepala_epik', name: 'Ikat Kepala Luar Biasa', icon: 'mdi:star', is_major: true },
             },
             demoLoginEnabled: false,
         });
         render(<AppShell><p>x</p></AppShell>);
-        expect(screen.getByText(/Headband Epik/)).toBeInTheDocument();
+        expect(screen.getByText(/Ikat Kepala Luar Biasa/)).toBeInTheDocument();
         // Clicking "Nanti aja" triggers onClose (covers () => setMajorUnlock(null))
         await act(async () => { fireEvent.click(screen.getByText('Nanti aja')); });
     });
 
-    it('fires PR modal when CardReveal skip is clicked on a PR run', async () => {
+    it('fires PR modal when CardReveal is dismissed on a PR run', async () => {
         setMockPage({
             auth: { user: andiUser },
             flash: {},
@@ -82,7 +82,9 @@ describe('AppShell', () => {
             { preload: () => {} },
         ) as typeof fetch;
         render(<AppShell><p>x</p></AppShell>);
-        await act(async () => { fireEvent.click(screen.getByRole('button', { name: /Lewati/i })); });
+        // The foil-wrapped card always shows a ghost "Tutup" button; dismissing
+        // a PR reveal fires onPrMoment → PRMomentModal.
+        await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Tutup' })); });
         // PRMomentModal fires — PR time is visible
         expect(screen.getByText('22:15')).toBeInTheDocument();
         // Clicking close triggers the onClose callback (covers () => setPrModal(null))

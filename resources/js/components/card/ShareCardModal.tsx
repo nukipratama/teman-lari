@@ -11,6 +11,7 @@ import { RARITY_LABELS } from '@/lib/runcard';
 import { MOOD_TO_POSE } from '@/lib/temariPose';
 import { drawShareCard, shareCardBlob, type Format, type Layout, type ShareKartuData } from '@/lib/shareCard';
 import TemariProto, { type TemariEquipped } from '@/components/temari/TemariProto';
+import { serverToEquipped } from '@/lib/equippedAccessories';
 import type { SharedProps } from '@/types/inertia';
 
 export type { ShareKartuData };
@@ -38,13 +39,13 @@ export default function ShareCardModal({ kartu, onClose }: Readonly<ShareCardMod
     const temariContainerRef = useRef<HTMLDivElement>(null);
 
     // The mascot is dressed exactly as the user has it elsewhere. Read the
-    // shared equip state defensively (mirrors TemariMascot) so this still renders
+    // shared equip state defensively (mirrors Temari component) so this still renders
     // a bare bunny when there's no Inertia page context (e.g. unit tests).
     let equipped: TemariEquipped | null = null;
     try {
         const acc = usePage<SharedProps>().props.equippedAccessories;
         if (acc) {
-            equipped = { headband: acc.headband, medal: acc.medal ?? 'none', pita: acc.pita, aura: acc.aura };
+            equipped = serverToEquipped(acc);
         }
     } catch {
         equipped = null;
@@ -60,7 +61,7 @@ export default function ShareCardModal({ kartu, onClose }: Readonly<ShareCardMod
         const container = temariContainerRef.current;
         if (!container) return;
 
-        // Give React a tick to render the TemariMascot into the hidden container.
+        // Give React a tick to render the Temari into the hidden container.
         const id = globalThis.setTimeout(() => {
             const svg = container.querySelector('svg');
             if (!svg) return;

@@ -24,7 +24,7 @@ describe('UnlockToast', () => {
 
     it('renders toast when flash.unlock is present', () => {
         setMockPage({
-            flash: flashWithUnlock({ unlock_key: 'accessory.medal_gold', name: 'Medali Emas', icon: 'mdi:medal' }),
+            flash: flashWithUnlock({ unlock_key: 'accessory.medal_emas', name: 'Medali Emas', icon: 'mdi:medal' }),
         });
         render(<UnlockToast />);
         expect(screen.getByText('Medali Emas')).toBeInTheDocument();

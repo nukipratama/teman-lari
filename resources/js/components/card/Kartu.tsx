@@ -202,11 +202,11 @@ export default function Kartu({
             {/* ── STAT BLOCK ── dark, high-contrast text */}
             <div className={cn('px-2 text-cream', isFull ? 'pt-2 pb-1.5' : 'pt-1.5 pb-1')}>
                 {/* Rarity ribbon */}
-                <div className="flex items-center gap-1">
-                    <span aria-hidden className={cn('text-[10px] leading-none', RARITY_TEXT[rarity])}>
+                <div className="flex min-w-0 items-center gap-1">
+                    <span aria-hidden className={cn('shrink-0 text-[10px] leading-none', RARITY_TEXT[rarity])}>
                         {RARITY_SYMBOL[rarity]}
                     </span>
-                    <span className={cn('font-mono text-[9px] font-bold uppercase tracking-[0.14em]', RARITY_TEXT[rarity])}>
+                    <span className={cn('min-w-0 shrink-0 whitespace-nowrap font-mono text-[9px] font-bold uppercase tracking-[0.14em]', RARITY_TEXT[rarity])}>
                         {RARITY_LABELS[rarity]}
                     </span>
                 </div>
@@ -263,7 +263,7 @@ export default function Kartu({
                     </div>
                 )}
                 {isFull && flavor != null && flavor !== '' && (
-                    <p className="mt-1.5 font-display text-[11px] italic leading-snug text-ink-on-sky">
+                    <p className="mt-1.5 font-display text-base italic leading-relaxed text-ink-on-sky">
                         &ldquo;{flavor}&rdquo;
                     </p>
                 )}
@@ -286,7 +286,7 @@ function TRIMPBadge({ trimp, mood }: Readonly<{ trimp: string | number; mood: Mo
         <span className="inline-flex items-center gap-1 rounded-full bg-sky-deep/80 px-2 py-0.5 backdrop-blur-sm leading-none">
             <span
                 aria-label={`Vibe ${MOOD_LABEL[mood]}`}
-                className={cn('h-2.5 w-2.5 shrink-0 rounded-full', MOOD_FILL[mood])}
+                className={cn('h-3 w-3 shrink-0 rounded-full', MOOD_FILL[mood])}
             />
             <span aria-hidden className="font-mono text-[11px] font-bold tabular-nums text-cream">
                 {trimp}

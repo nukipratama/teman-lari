@@ -35,27 +35,26 @@ describe('TemariProto', () => {
     it('renders the legendary headband star detail when equipped', () => {
         const { container } = render(<TemariProto equipped={{ headband: 'legendaris' }} />);
         const paths = Array.from(container.querySelectorAll('path'));
-        const hasStar = paths.some((p) => p.getAttribute('d')?.includes('M 60 49'));
+        const hasStar = paths.some((p) => p.getAttribute('d')?.includes('l 1 -3 l 1 3 l 3 1'));
         expect(hasStar).toBe(true);
     });
 
-    it('renders an aura layer when equipped.aura is true', () => {
-        const { container } = render(<TemariProto equipped={{ aura: true }} />);
+    it('renders an aura layer when equipped.aura is set', () => {
+        const { container } = render(<TemariProto equipped={{ aura: 'pemanasan' }} />);
         expect(container.querySelector('#temari-aura-grad')).toBeInTheDocument();
     });
 
-    it('renders the pita sash when equipped.pita is true', () => {
-        const { container } = render(<TemariProto equipped={{ pita: true }} />);
+    it('renders the pita sash when equipped.pita is set', () => {
+        const { container } = render(<TemariProto equipped={{ pita: 'konsisten' }} />);
         const paths = Array.from(container.querySelectorAll('path'));
-        const hasPita = paths.some((p) => p.getAttribute('d')?.startsWith('M 32 94'));
+        const hasPita = paths.some((p) => p.getAttribute('d')?.startsWith('M 32 62'));
         expect(hasPita).toBe(true);
     });
 
     it('renders a default bronze medal for proud / pumped / etc.', () => {
         const { container } = render(<TemariProto pose="proud" />);
-        // Default medal is the pertama (bronze) coin at translate(60, 100).
         const transformed = Array.from(container.querySelectorAll('g')).find(
-            (g) => g.getAttribute('transform') === 'translate(60, 100)',
+            (g) => g.getAttribute('transform') === 'translate(60, 96)',
         );
         expect(transformed).toBeTruthy();
     });
@@ -63,7 +62,7 @@ describe('TemariProto', () => {
     it('skips the medal when equipped.medal === "none"', () => {
         const { container } = render(<TemariProto pose="proud" equipped={{ medal: 'none' }} />);
         const transformed = Array.from(container.querySelectorAll('g')).find(
-            (g) => g.getAttribute('transform') === 'translate(60, 100)',
+            (g) => g.getAttribute('transform') === 'translate(60, 96)',
         );
         expect(transformed).toBeFalsy();
     });
@@ -72,5 +71,46 @@ describe('TemariProto', () => {
         const { container } = render(<TemariProto size={200} />);
         const outer = container.firstChild as HTMLElement;
         expect(outer.style.width).toBe('200px');
+    });
+
+    it('renders the full-body viewBox with torso and legs', () => {
+        const { container } = render(<TemariProto />);
+        const svg = container.querySelector('svg');
+        expect(svg?.getAttribute('viewBox')).toBe('0 -12 120 146');
+    });
+
+    it('renders kaus layer when equipped.kaus is set', () => {
+        const { container } = render(<TemariProto equipped={{ kaus: 'hujan' }} />);
+        // The kaus layer should render with the "hujan" fill color (#5E89B5)
+        const paths = Array.from(container.querySelectorAll('path'));
+        const hasKaus = paths.some((p) => p.getAttribute('fill') === '#5E89B5');
+        expect(hasKaus).toBe(true);
+    });
+
+    it('renders celana layer when equipped.celana is set', () => {
+        const { container } = render(<TemariProto equipped={{ celana: 'split' }} />);
+        // The celana layer should render with the "split" fill color (#2c355c)
+        const paths = Array.from(container.querySelectorAll('path'));
+        const hasCelana = paths.some((p) => p.getAttribute('fill') === '#2c355c');
+        expect(hasCelana).toBe(true);
+    });
+
+    it('renders sepatu layer when equipped.sepatu is set', () => {
+        const { container } = render(<TemariProto equipped={{ sepatu: 'legendaris' }} />);
+        // The sepatu layer should render with the "legendaris" upper color (#D9B23A)
+        const paths = Array.from(container.querySelectorAll('path'));
+        const hasSepatu = paths.some((p) => p.getAttribute('fill') === '#D9B23A');
+        expect(hasSepatu).toBe(true);
+    });
+
+    it('renders platina medal with a glow ring', () => {
+        const { container } = render(<TemariProto equipped={{ medal: 'platina' }} />);
+        const medalGroup = Array.from(container.querySelectorAll('g')).find(
+            (g) => g.getAttribute('transform') === 'translate(60, 96)',
+        );
+        expect(medalGroup).toBeTruthy();
+        const rings = Array.from(medalGroup!.querySelectorAll('circle'));
+        const glowRing = rings.find((c) => c.getAttribute('r') === '13');
+        expect(glowRing).toBeTruthy();
     });
 });

@@ -9,6 +9,7 @@ use App\Models\PersonalRecord;
 use App\Models\RunCard;
 use App\Models\User;
 use App\Services\Gamification\EquippedAccessories;
+use App\Services\Gamification\GoalResolver;
 use App\Services\Run\Story\Temari;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -26,6 +27,13 @@ class HandleInertiaRequests extends Middleware
      * a tiny staleness window for far fewer per-request queries.
      */
     private const int STRAVA_SYNC_CACHE_SECONDS = 120;
+
+    /**
+     * TTL for the goals summary share. Goals only change when an activity is
+     * ingested (minutes apart), so a short cache trades negligible staleness
+     * for eliminating ~10 DB queries per page load.
+     */
+    private const int GOALS_SUMMARY_CACHE_SECONDS = 120;
 
     /**
      * @return array<string, mixed>
@@ -56,6 +64,7 @@ class HandleInertiaRequests extends Middleware
             'equippedAccessories' => fn () => app(EquippedAccessories::class)->forUser($user),
             'pendingReveal' => fn () => $this->pendingRevealFor($user),
             'stravaSync' => fn () => $this->stravaSyncFor($user),
+            'goalsSummary' => fn () => $this->goalsSummaryFor($user),
         ];
     }
 
@@ -73,6 +82,45 @@ class HandleInertiaRequests extends Middleware
             self::STRAVA_SYNC_CACHE_SECONDS,
             fn (): array => $this->computeStravaSyncFor($user),
         );
+    }
+
+    /**
+     * @return array{total: int, completed: int, closest: list<array{id: string, title: string, current: int|float, target: int|float, unit: string}>}|null
+     */
+    private function goalsSummaryFor(?User $user): ?array
+    {
+        if ($user === null) {
+            return null;
+        }
+
+        return Cache::remember(
+            "goals-summary:{$user->id}",
+            self::GOALS_SUMMARY_CACHE_SECONDS,
+            fn (): array => $this->computeGoalsSummary($user),
+        );
+    }
+
+    /**
+     * @return array{total: int, completed: int, closest: list<array{id: string, title: string, current: int|float, target: int|float, unit: string}>}
+     */
+    private function computeGoalsSummary(User $user): array
+    {
+        $resolver = app(GoalResolver::class);
+        $goals = $resolver->forUser($user);
+        $completed = $resolver->completedCount($goals);
+        $closest = $resolver->closestToCompletion($user, 3, $goals);
+
+        return [
+            'total' => count($goals),
+            'completed' => $completed,
+            'closest' => array_map(fn (array $g): array => [
+                'id' => $g['id'],
+                'title' => $g['title'],
+                'current' => $g['current'],
+                'target' => $g['target'],
+                'unit' => $g['unit'],
+            ], $closest),
+        ];
     }
 
     /**

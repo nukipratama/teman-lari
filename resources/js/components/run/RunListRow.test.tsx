@@ -45,17 +45,20 @@ describe('RunListRow', () => {
 
     it('derives a mood from TRIMP when none is provided', () => {
         // TRIMP=70 (default fixture) falls in the `nyala` aerobic bucket.
+        // Mood surfaces as the MoodChip label text now (the Temari aria-label was dropped in the Badge refactor).
         render(<RunListRow detail={detail()} />);
-        expect(screen.getByLabelText('mood Nyala')).toBeInTheDocument();
+        expect(screen.getByText('Nyala')).toBeInTheDocument();
     });
 
     it('uses passed mood when provided (overrides derivation)', () => {
+        // TRIMP=70 would derive `nyala`, but the explicit `mood` prop wins.
         render(<RunListRow detail={detail()} mood="adem" />);
-        expect(screen.getByLabelText('mood Adem')).toBeInTheDocument();
+        expect(screen.getByText('Adem')).toBeInTheDocument();
+        expect(screen.queryByText('Nyala')).not.toBeInTheDocument();
     });
 
     it('derives lemes for a crushing TRIMP', () => {
         render(<RunListRow detail={detail({ trimp_edwards: 220 })} />);
-        expect(screen.getByLabelText('mood Lemes')).toBeInTheDocument();
+        expect(screen.getByText('Lemes')).toBeInTheDocument();
     });
 });

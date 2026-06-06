@@ -1,0 +1,155 @@
+import { Head } from '@inertiajs/react';
+import { Icon } from '@iconify/react';
+import AppShell from '@/layouts/AppShell';
+import CollectionHeader from '@/components/koleksi/CollectionHeader';
+import Card from '@/components/ui/Card';
+import SectionLabel from '@/components/ui/SectionLabel';
+import PageContainer from '@/components/ui/PageContainer';
+import { cn } from '@/lib/cn';
+import { RARITY_TEXT } from '@/lib/runcard';
+import type { Rarity } from '@/types/inertia';
+
+interface Goal {
+    id: string;
+    title: string;
+    description: string;
+    slot: string;
+    rarity: Rarity;
+    current: number;
+    target: number;
+    unit: string;
+    is_completed: boolean;
+}
+
+interface TargetProps {
+    goals: Goal[];
+    completedCount: number;
+    totalCount: number;
+}
+
+const SLOT_LABEL: Record<string, string> = {
+    medal: 'Medali',
+    ikat_kepala: 'Ikat Kepala',
+    pita: 'Pita',
+    kaus: 'Kaus',
+    celana: 'Celana',
+    sepatu: 'Sepatu',
+    aura: 'Aura',
+};
+
+const SLOT_ORDER = ['medal', 'ikat_kepala', 'pita', 'kaus', 'celana', 'sepatu', 'aura'] as const;
+
+const SLOT_ICONS: Record<string, string> = {
+    medal: 'mdi:medal',
+    ikat_kepala: 'mdi:bandage',
+    pita: 'mdi:ribbon',
+    kaus: 'mdi:tshirt-crew',
+    celana: 'mdi:lingerie',
+    sepatu: 'mdi:shoe-sneaker',
+    aura: 'mdi:blur',
+};
+
+export default function Target({ goals, completedCount, totalCount }: Readonly<TargetProps>) {
+    const eyebrow = `Koleksi · ${completedCount} / ${totalCount} target tercapai`;
+
+    const goalsBySlot: Record<string, Goal[]> = Object.fromEntries(
+        SLOT_ORDER.map((s) => [s, []]),
+    );
+    for (const goal of goals) {
+        if (goalsBySlot[goal.slot]) {
+            goalsBySlot[goal.slot].push(goal);
+        }
+    }
+
+    return (
+        <AppShell>
+            <Head title="Koleksi · Target" />
+            <PageContainer>
+                <CollectionHeader
+                    active="target"
+                    eyebrow={eyebrow}
+                    headline1="Target kamu,"
+                    headline2="langkah demi langkah."
+                    activeCount={`${completedCount} / ${totalCount}`}
+                />
+
+                {SLOT_ORDER.map((slot) =>
+                    goalsBySlot[slot].length > 0 ? (
+                        <section key={slot} className="mt-8">
+                            <SectionLabel>
+                                <span className="inline-flex items-center gap-2">
+                                    <Icon icon={SLOT_ICONS[slot]} width={14} height={14} aria-hidden />
+                                    {SLOT_LABEL[slot]}
+                                </span>
+                            </SectionLabel>
+                            <div className="grid gap-3.5 sm:grid-cols-2 lg:grid-cols-4">
+                                {goalsBySlot[slot].map((goal) => (
+                                    <GoalCard key={goal.id} goal={goal} />
+                                ))}
+                            </div>
+                        </section>
+                    ) : null,
+                )}
+            </PageContainer>
+        </AppShell>
+    );
+}
+
+function GoalCard({ goal }: Readonly<{ goal: Goal }>) {
+    const pct = goal.target > 0 ? Math.min((goal.current / goal.target) * 100, 100) : 0;
+
+    return (
+        <Card
+            padding="md"
+            className={cn(
+                'flex h-full flex-col gap-3',
+                goal.is_completed && 'border-horizon/30 bg-horizon/[0.06]',
+            )}
+        >
+            <div className="flex items-start justify-between gap-2">
+                <h3
+                    className={cn(
+                        'font-display text-lg leading-tight tracking-[-0.01em]',
+                        RARITY_TEXT[goal.rarity],
+                        goal.is_completed ? 'text-ink' : 'text-ink',
+                    )}
+                >
+                    {goal.title}
+                </h3>
+                {goal.is_completed && (
+                    <span className="flex h-6 w-6 flex-none items-center justify-center rounded-full bg-horizon text-cream">
+                        <Icon icon="mdi:check" width={14} height={14} />
+                    </span>
+                )}
+            </div>
+            <p className="font-sans text-sm text-ink-2">{goal.description}</p>
+
+            {/* Progress bar */}
+            <div className="mt-auto">
+                <div className="mb-1.5 flex items-baseline justify-between">
+                    <span className="font-sans text-sm font-semibold tabular-nums text-ink">
+                        {typeof goal.current === 'number' && goal.current % 1 !== 0
+                            ? goal.current.toFixed(1)
+                            : goal.current}
+                        <span className="text-ink-3">/</span>
+                        {typeof goal.target === 'number' && goal.target % 1 !== 0
+                            ? goal.target.toFixed(1)
+                            : goal.target}
+                    </span>
+                    <span className="font-mono text-[11px] font-semibold uppercase tracking-[0.1em] text-ink-3">
+                        {goal.unit}
+                    </span>
+                </div>
+                <div className="h-2 overflow-hidden rounded-full bg-cream-deep">
+                    <div
+                        className={cn(
+                            'h-full rounded-full transition-all duration-500',
+                            goal.is_completed ? 'bg-horizon' : 'bg-sky',
+                        )}
+                        style={{ width: `${pct}%` }}
+                    />
+                </div>
+            </div>
+        </Card>
+    );
+}

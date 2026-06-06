@@ -6,7 +6,7 @@ import RiwayatFilter, { type MoodOption } from '@/components/riwayat/RiwayatFilt
 import RiwayatTabs from '@/components/riwayat/RiwayatTabs';
 import { cn } from '@/lib/cn';
 import PageContainer from '@/components/ui/PageContainer';
-import { MOOD_FILL, MOOD_HINT, MOOD_LABEL, MOOD_ORDER, MOOD_SOFT_FILL } from '@/lib/mood';
+import { MOOD_FILL, MOOD_HINT, MOOD_LABEL, MOOD_ORDER, MOOD_SOFT_FILL, moodSigilColor } from '@/lib/mood';
 import { formatPace, formatShortDateId } from '@/lib/pace';
 import { aktivitasUrl } from '@/lib/routes';
 import type { Mood } from '@/types/inertia';
@@ -268,7 +268,7 @@ function DayCellView({
 
     const cellChrome = cn(
         'group relative flex min-h-[120px] flex-col gap-1.5 border-l border-line/50 p-2.5 transition lg:min-h-[140px] lg:p-3',
-        muted && 'opacity-40',
+        muted && 'opacity-60',
         filteredOut && 'opacity-30',
         hasRun && cell.mood && !filteredOut ? MOOD_SOFT_FILL[cell.mood] : 'bg-surface-elev',
     );
@@ -396,9 +396,10 @@ function Legend({ className }: Readonly<{ className?: string }>) {
                 Mood
             </span>
             {MOOD_ORDER.map((mood) => (
-                <span key={mood} className="inline-flex items-center gap-2 text-xs lg:text-sm">
+                <span key={mood} className="inline-flex whitespace-nowrap items-center gap-2 text-xs lg:text-sm">
                     <span
-                        className={cn('inline-block h-3.5 w-3.5 rounded-sm lg:h-4 lg:w-4', MOOD_FILL[mood])}
+                        className={cn('inline-block h-3.5 w-3.5 rounded-sm border lg:h-4 lg:w-4', MOOD_SOFT_FILL[mood])}
+                        style={{ borderColor: moodSigilColor(mood) }}
                         aria-hidden
                     />
                     <span className="font-medium text-ink">{MOOD_LABEL[mood]}</span>

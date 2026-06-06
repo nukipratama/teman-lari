@@ -69,6 +69,7 @@ class ProfileController extends Controller
             'unlockCatalog' => config('temari_unlocks'),
             'personaMix' => $personaNarrator->personaMix($user),
             'personaSummary' => $this->resolvePersonaSummary($user),
+            'profileVoice' => $this->resolveProfileVoice($user),
         ]);
     }
 
@@ -87,6 +88,20 @@ class ProfileController extends Controller
             ->first();
 
         return Analysis::toPayload($row, AnalysisType::PersonaSummary, $subjectType, $user->id, $discriminator);
+    }
+
+    /**
+     * @return array{id: int|null, status: string, content: string|null, type: string, subject_type: string, subject_id: int, discriminator: string|null}
+     */
+    private function resolveProfileVoice(User $user): array
+    {
+        $subjectType = AnalysisType::AKU_PROFILE_VOICE_SUBJECT_TYPE;
+
+        $row = Analysis::query()
+            ->forSubject($subjectType, $user->id, AnalysisType::AkuProfileVoice)
+            ->first();
+
+        return Analysis::toPayload($row, AnalysisType::AkuProfileVoice, $subjectType, $user->id);
     }
 
     /**

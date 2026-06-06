@@ -3,14 +3,26 @@ import { describe, expect, it, vi } from 'vitest';
 import { router } from '@inertiajs/react';
 import KoleksiAksesori from './Aksesori';
 import { setMockPage } from '@/test/setup';
+import type { EquippedAccessories } from '@/types/inertia';
 
-type Slot = 'headband' | 'medal' | 'pita' | 'aura';
+type Slot = 'medal' | 'ikat_kepala' | 'pita' | 'kaus' | 'celana' | 'sepatu' | 'aura';
+
+const emptyEquipped: EquippedAccessories = {
+    medal: null,
+    ikat_kepala: null,
+    pita: null,
+    kaus: null,
+    celana: null,
+    sepatu: null,
+    aura: null,
+};
 
 function item(unlock_key: string, slot: Slot, unlocked: boolean, equipped: boolean) {
     return {
         unlock_key,
         slot,
         name: unlock_key,
+        rarity: 'common' as const,
         icon: 'mdi:medal',
         description: 'desc',
         criteria: 'criteria',
@@ -30,26 +42,31 @@ beforeEach(() => {
 describe('Koleksi/Aksesori', () => {
     it('renders headers + equipped slot labels when nothing is equipped', () => {
         const items = [
-            item('accessory.headband_epik', 'headband', false, false),
-            item('accessory.medal_first_pr', 'medal', false, false),
+            item('accessory.ikat_kepala_epik', 'ikat_kepala', false, false),
+            item('accessory.medal_pertama', 'medal', false, false),
         ];
-        render(<KoleksiAksesori items={items} equipped={{ headband: null, medal: null, pita: false, aura: false }} />);
+        render(<KoleksiAksesori items={items} equipped={emptyEquipped} />);
         expect(screen.getByText(/Dandanin Temari/)).toBeInTheDocument();
-        // 4 slot labels appear in the equipped strip with "belum dipake" status.
-        expect(screen.getAllByText(/belum dipake/).length).toBeGreaterThan(0);
+        // 7 slot labels appear in the equipped strip with "belum dipake" status.
+        expect(screen.getAllByText(/belum dipake/).length).toBe(7);
     });
 
     it('renders unlocked + equipped state per item', () => {
         const items = [
-            item('accessory.headband_legendaris', 'headband', true, true),
-            item('accessory.headband_epik', 'headband', true, false),
-            item('accessory.medal_gold', 'medal', true, true),
-            item('accessory.weekly_streak_4', 'pita', true, true),
+            item('accessory.ikat_kepala_legendaris', 'ikat_kepala', true, true),
+            item('accessory.ikat_kepala_epik', 'ikat_kepala', true, false),
+            item('accessory.medal_emas', 'medal', true, true),
+            item('accessory.pita_konsisten', 'pita', true, true),
         ];
         render(
             <KoleksiAksesori
                 items={items}
-                equipped={{ headband: 'legendaris', medal: 'emas', pita: true, aura: false }}
+                equipped={{
+                    ...emptyEquipped,
+                    ikat_kepala: 'accessory.ikat_kepala_legendaris',
+                    medal: 'accessory.medal_emas',
+                    pita: 'accessory.pita_konsisten',
+                }}
             />,
         );
         expect(screen.getAllByText(/Legendaris/i).length).toBeGreaterThan(0);
@@ -57,64 +74,67 @@ describe('Koleksi/Aksesori', () => {
         expect(screen.getAllByText(/dipake/).length).toBeGreaterThan(0);
     });
 
-    it('renders the medal=pertama label when first PR medal is equipped', () => {
+    it('renders the medal name when equipped', () => {
         render(
             <KoleksiAksesori
-                items={[]}
-                equipped={{ headband: null, medal: 'pertama', pita: false, aura: false }}
+                items={[item('accessory.medal_pertama', 'medal', true, true)]}
+                equipped={{ ...emptyEquipped, medal: 'accessory.medal_pertama' }}
             />,
         );
-        expect(screen.getByText(/Pertama/)).toBeInTheDocument();
+        // The equipped panel and the card both render the name
+        const matches = screen.getAllByText('accessory.medal_pertama');
+        expect(matches.length).toBeGreaterThanOrEqual(1);
     });
 
-    it('renders ember headband variant when only the base headband is equipped', () => {
+    it('shows the item name label for equipped aura', () => {
         render(
             <KoleksiAksesori
-                items={[]}
-                equipped={{ headband: 'ember', medal: null, pita: false, aura: true }}
+                items={[item('accessory.aura_pemanasan', 'aura', true, true)]}
+                equipped={{ ...emptyEquipped, aura: 'accessory.aura_pemanasan' }}
             />,
         );
-        expect(screen.getByText(/Ember/)).toBeInTheDocument();
-        expect(screen.getByText(/aktif/)).toBeInTheDocument();
+        // The equipped panel and the card both render the name
+        const matches = screen.getAllByText('accessory.aura_pemanasan');
+        expect(matches.length).toBeGreaterThanOrEqual(1);
     });
 
     it('posts to the equip endpoint when an unlocked-but-not-equipped Pasang button is clicked', () => {
         vi.mocked(router.post).mockReset();
         const items = [
-            item('accessory.headband_epik', 'headband', true, false),
+            item('accessory.ikat_kepala_epik', 'ikat_kepala', true, false),
         ];
         render(
             <KoleksiAksesori
                 items={items}
-                equipped={{ headband: null, medal: null, pita: false, aura: false }}
+                equipped={emptyEquipped}
             />,
         );
         fireEvent.click(screen.getByText('Pasang'));
         expect(router.post).toHaveBeenCalledWith(
             '/api/aksesori/equip',
-            { unlock_key: 'accessory.headband_epik' },
+            { unlock_key: 'accessory.ikat_kepala_epik' },
             expect.objectContaining({ preserveScroll: true }),
         );
     });
 
     it('renders the default preview (no slot variant) for unknown unlock keys', () => {
-        const items = [item('accessory.aura_legendaris', 'aura', true, false)];
+        const items = [item('accessory.sepatu_basic', 'sepatu', true, false)];
         render(
             <KoleksiAksesori
                 items={items}
-                equipped={{ headband: null, medal: null, pita: false, aura: false }}
+                equipped={emptyEquipped}
             />,
         );
-        expect(screen.getByText('accessory.aura_legendaris')).toBeInTheDocument();
+        expect(screen.getByText('accessory.sepatu_basic')).toBeInTheDocument();
     });
 
     it('toggles the locked items list when the "belum kebuka" button is clicked', () => {
         const items = [
-            item('accessory.headband_epik', 'headband', true, false),
-            item('accessory.headband_legendaris', 'headband', false, false),
-            item('accessory.medal_first_pr', 'medal', false, false),
+            item('accessory.ikat_kepala_epik', 'ikat_kepala', true, false),
+            item('accessory.ikat_kepala_legendaris', 'ikat_kepala', false, false),
+            item('accessory.medal_pertama', 'medal', false, false),
         ];
-        render(<KoleksiAksesori items={items} equipped={{ headband: null, medal: null, pita: false, aura: false }} />);
+        render(<KoleksiAksesori items={items} equipped={emptyEquipped} />);
         const btn = screen.getAllByRole('button').find((b) => /belum kebuka/.test(b.textContent ?? ''));
         fireEvent.click(btn ?? document.body);
         fireEvent.click(btn ?? document.body);

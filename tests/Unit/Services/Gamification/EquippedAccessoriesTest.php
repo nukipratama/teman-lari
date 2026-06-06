@@ -13,54 +13,68 @@ beforeEach(function (): void {
     $this->service = new EquippedAccessories();
 });
 
-it('maps unlock keys to mascot slots', function (string $key, ?string $slot): void {
+it('maps unlock keys to slots via the catalog config', function (string $key, ?string $slot): void {
     expect($this->service->slotFor($key))->toBe($slot);
 })->with([
-    ['accessory.headband_legendaris', 'headband'],
-    ['accessory.headband_epik', 'headband'],
-    ['accessory.medal_gold', 'medal'],
-    ['accessory.medal_first_pr', 'medal'],
-    ['accessory.weekly_streak_4', 'pita'],
-    ['accessory.aura_something', 'aura'],
+    ['accessory.ikat_kepala_legendaris', 'ikat_kepala'],
+    ['accessory.ikat_kepala_epik', 'ikat_kepala'],
+    ['accessory.medal_emas', 'medal'],
+    ['accessory.medal_pertama', 'medal'],
+    ['accessory.pita_konsisten', 'pita'],
+    ['accessory.kaus_pemula', 'kaus'],
+    ['accessory.celana_ringan', 'celana'],
+    ['accessory.sepatu_basic', 'sepatu'],
+    ['accessory.aura_pemanasan', 'aura'],
     ['accessory.unknown_thing', null],
 ]);
 
 it('returns an empty equipped set for a null user', function (): void {
-    expect($this->service->forUser(null))->toBe([
-        'headband' => null,
+    $result = $this->service->forUser(null);
+    expect($result)->toBe([
         'medal' => null,
-        'pita' => false,
-        'aura' => false,
+        'ikat_kepala' => null,
+        'pita' => null,
+        'kaus' => null,
+        'celana' => null,
+        'sepatu' => null,
+        'aura' => null,
     ]);
 });
 
 it('returns an empty equipped set when nothing is equipped', function (): void {
     $user = User::factory()->create();
     UserUnlock::factory()->for($user)->create([
-        'unlock_key' => 'accessory.headband_legendaris',
+        'unlock_key' => 'accessory.ikat_kepala_legendaris',
         'equipped' => false,
     ]);
 
-    expect($this->service->forUser($user))->toBe([
-        'headband' => null,
+    $result = $this->service->forUser($user);
+    expect($result)->toBe([
         'medal' => null,
-        'pita' => false,
-        'aura' => false,
+        'ikat_kepala' => null,
+        'pita' => null,
+        'kaus' => null,
+        'celana' => null,
+        'sepatu' => null,
+        'aura' => null,
     ]);
 });
 
-it('resolves equipped accessories into mascot variants', function (): void {
+it('resolves equipped accessories into unlock keys per slot', function (): void {
     $user = User::factory()->create();
-    UserUnlock::factory()->for($user)->equipped()->create(['unlock_key' => 'accessory.headband_legendaris']);
-    UserUnlock::factory()->for($user)->equipped()->create(['unlock_key' => 'accessory.medal_gold']);
-    UserUnlock::factory()->for($user)->equipped()->create(['unlock_key' => 'accessory.weekly_streak_4']);
+    UserUnlock::factory()->for($user)->equipped()->create(['unlock_key' => 'accessory.ikat_kepala_legendaris']);
+    UserUnlock::factory()->for($user)->equipped()->create(['unlock_key' => 'accessory.medal_emas']);
+    UserUnlock::factory()->for($user)->equipped()->create(['unlock_key' => 'accessory.pita_konsisten']);
     // An unlocked-but-unequipped medal must not leak into the result.
-    UserUnlock::factory()->for($user)->create(['unlock_key' => 'accessory.medal_first_pr', 'equipped' => false]);
+    UserUnlock::factory()->for($user)->create(['unlock_key' => 'accessory.medal_pertama', 'equipped' => false]);
 
     expect($this->service->forUser($user))->toBe([
-        'headband' => 'legendaris',
-        'medal' => 'emas',
-        'pita' => true,
-        'aura' => false,
+        'medal' => 'accessory.medal_emas',
+        'ikat_kepala' => 'accessory.ikat_kepala_legendaris',
+        'pita' => 'accessory.pita_konsisten',
+        'kaus' => null,
+        'celana' => null,
+        'sepatu' => null,
+        'aura' => null,
     ]);
 });

@@ -111,6 +111,7 @@ class AnalysisController extends Controller
             AnalysisType::DailyGreeting,
             AnalysisType::TrendCaption,
             AnalysisType::PersonaSummary,
+            AnalysisType::AkuProfileVoice,
             AnalysisType::MonthlyRecap => $subjectId === $user->id,
             AnalysisType::PostRunSpeech,
             AnalysisType::RunInsightTechnical,

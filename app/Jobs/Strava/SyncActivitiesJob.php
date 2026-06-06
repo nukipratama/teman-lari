@@ -6,6 +6,7 @@ namespace App\Jobs\Strava;
 
 use App\Models\User;
 use App\Services\Run\Ingest\SyncOrchestrator;
+use App\Services\Strava\Exceptions\StravaRateLimitedException;
 use App\Services\Strava\Exceptions\StravaTokenRefreshFailedException;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
@@ -50,6 +51,13 @@ class SyncActivitiesJob implements ShouldQueue
             }
 
             $orchestrator->syncUser($user);
+        } catch (StravaRateLimitedException $e) {
+            Log::warning('strava-sync rate-limited', [
+                'user_id' => $user->id,
+                'reason' => $e->getMessage(),
+            ]);
+
+            $this->release(60);
         } catch (StravaTokenRefreshFailedException $e) {
             // A rejected refresh means the athlete revoked us (or rotated the
             // refresh token out from under us). Mark the connection revoked so

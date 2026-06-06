@@ -5,7 +5,6 @@ declare(strict_types=1);
 use App\Jobs\AI\AnalyzeActivityJob;
 use App\Jobs\AI\AnalyzeBriefingJob;
 use App\Jobs\AI\AnalyzeDailyGreetingJob;
-use App\Jobs\AI\AnalyzeTrendCaptionJob;
 use App\Jobs\AI\AnalyzeWeeklyRecapJob;
 use App\Models\Activity;
 use App\Models\StravaConnection;
@@ -14,14 +13,11 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Facades\RateLimiter;
 
 uses(RefreshDatabase::class);
 
 beforeEach(function (): void {
     Bus::fake();
-    RateLimiter::clear('strava-api:15min');
-    RateLimiter::clear('strava-api:daily');
     $this->pipeline = app(ActivityPipeline::class);
 });
 
@@ -53,7 +49,7 @@ function ingestSeed(): Activity
     return $activity;
 }
 
-it('cascades 5 dispatches after a successful ingest (activity + briefing + greeting + trend + weekly)', function (): void {
+it('cascades 4 dispatches after a successful ingest (activity + briefing + greeting + weekly)', function (): void {
     $activity = ingestSeed();
 
     $this->pipeline->ingest($activity);
@@ -61,7 +57,6 @@ it('cascades 5 dispatches after a successful ingest (activity + briefing + greet
     Bus::assertDispatched(AnalyzeActivityJob::class);
     Bus::assertDispatched(AnalyzeBriefingJob::class);
     Bus::assertDispatched(AnalyzeDailyGreetingJob::class);
-    Bus::assertDispatched(AnalyzeTrendCaptionJob::class);
     Bus::assertDispatched(AnalyzeWeeklyRecapJob::class);
 });
 

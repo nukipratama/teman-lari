@@ -13,6 +13,7 @@ use App\Models\StoryLine;
 use App\Models\User;
 use App\Models\WeeklySnapshot;
 use App\Services\AI\AzureOpenAIClient;
+use App\Services\AI\Narrators\AkuProfileVoiceNarrator;
 use App\Services\AI\Narrators\CardFlavorNarrator;
 use App\Services\AI\Narrators\DailyGreetingNarrator;
 use App\Services\AI\Narrators\MonthlyRecapNarrator;
@@ -364,3 +365,43 @@ it('MonthlyRecapNarrator pulls month totals + mood mix into the context payload'
     expect($context['mood_mix'][0]['mood'])->toBe('nyala');
     expect($narrator->generate($user, $month))->toBe('Bulan ini mostly nyala.');
 });
+
+// ── AkuProfileVoiceNarrator ───────────────────────────────────────────
+
+it('AkuProfileVoiceNarrator returns profile voice on valid JSON', function (): void {
+    $user = User::factory()->create();
+    $caller = fakeCaller(json_encode(['profile_voice' => 'Kamu udah lari 50 km, keren.'], JSON_THROW_ON_ERROR));
+    $narrator = new AkuProfileVoiceNarrator($caller);
+    expect($narrator->generate($user))->toBe('Kamu udah lari 50 km, keren.');
+});
+
+it('AkuProfileVoiceNarrator builds context from user stats', function (): void {
+    $user = User::factory()->create();
+    $activity = Activity::factory()->for($user)->analyzed()->create();
+    ActivityDetail::factory()->for($activity)->create([
+        'distance' => 5000.0,
+        'start_date_local' => Carbon::parse('2026-05-12T07:00'),
+    ]);
+
+    $caller = fakeCaller(json_encode(['profile_voice' => 'x'], JSON_THROW_ON_ERROR));
+    $narrator = new AkuProfileVoiceNarrator($caller);
+
+    $context = $narrator->context($user->fresh());
+    expect($context['total_runs'])->toBe(1)
+        ->and($context['total_km'])->toBe(5.0)
+        ->and($context['longest_run_km'])->toBe(5.0);
+});
+
+it('AkuProfileVoiceNarrator throws on missing profile_voice key', function (): void {
+    $user = User::factory()->create();
+    $caller = fakeCaller(json_encode(['other' => 'x'], JSON_THROW_ON_ERROR));
+    $narrator = new AkuProfileVoiceNarrator($caller);
+    $narrator->generate($user);
+})->throws(UnavailableException::class);
+
+it('AkuProfileVoiceNarrator throws on non-JSON', function (): void {
+    $user = User::factory()->create();
+    $caller = fakeCaller('not json');
+    $narrator = new AkuProfileVoiceNarrator($caller);
+    $narrator->generate($user);
+})->throws(UnavailableException::class, 'non-JSON');

@@ -10,13 +10,12 @@ import MoodChip from '@/components/ui/MoodChip';
 import SectionLabel from '@/components/ui/SectionLabel';
 import Temari from '@/components/temari/Temari';
 import { type TemariPose } from '@/components/temari/TemariProto';
-import PastYouStrip from '@/components/run/PastYouStrip';
 import { cn } from '@/lib/cn';
-import { kartuUrl } from '@/lib/routes';
+import { aktivitasUrl, kartuUrl } from '@/lib/routes';
 import PageContainer from '@/components/ui/PageContainer';
 import { moodFromActivity } from '@/lib/moodFromActivity';
 import { formatDurationHMS, formatIdDate, formatKm, formatPace, paceSecPerKm } from '@/lib/pace';
-import { RARITY_LABELS, buildCardStats, paceShapeFromDetail, zonePctFromDetail } from '@/lib/runcard';
+import { buildCardStats, paceShapeFromDetail, zonePctFromDetail } from '@/lib/runcard';
 import { emberGlowStyle } from '@/lib/styles';
 import { MOOD_TO_POSE } from '@/lib/temariPose';
 import type {
@@ -108,8 +107,8 @@ export default function RunsShow({
                     Riwayat · Jejak
                 </BackLink>
 
-                {/* HERO + EMBEDDED KARTU */}
-                <section className="grid items-stretch gap-4 lg:grid-cols-[1.5fr_1fr]">
+                {/* HERO — stats left + route map right */}
+                <section className="grid items-stretch gap-4 lg:grid-cols-[1.4fr_1fr]">
                     <HeroPanel className="lg:px-9 lg:py-8">
                         <span
                             aria-hidden
@@ -137,16 +136,66 @@ export default function RunsShow({
                                 <HeroStat label="HR" value={hr != null ? `${hr}` : '—'} unit="bpm" />
                                 <HeroStat label="TRIMP" value={trimp != null ? `${trimp}` : '—'} unit="Edwards" />
                             </div>
+
+                            {/* KAMU VS KAMU DULU — inline in hero */}
+                            {pastYou && (
+                                <div className="mt-5 flex items-center justify-between gap-3 rounded-xl border border-cream/15 bg-cream/[0.08] px-4 py-3 backdrop-blur-sm">
+                                    <div className="min-w-0">
+                                        <div className="font-mono text-[11px] font-bold uppercase tracking-[0.14em] text-cream/60">
+                                            Kamu vs {pastYou.days_ago} hari lalu
+                                        </div>
+                                        <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-sm text-cream/90">
+                                            <span className={cn('font-bold tabular-nums', pastYou.pace_diff_sec > 0 ? 'text-leaf' : 'text-citrus')}>
+                                                {Math.abs(Math.round(pastYou.pace_diff_sec))}d/km {pastYou.pace_diff_sec > 0 ? 'lebih cepat' : 'lebih lambat'}
+                                            </span>
+                                            {pastYou.hr_diff_bpm !== null && (
+                                                <span className={cn('font-bold tabular-nums', pastYou.hr_diff_bpm < 0 ? 'text-leaf' : 'text-citrus')}>
+                                                    {Math.abs(Math.round(pastYou.hr_diff_bpm))} bpm {pastYou.hr_diff_bpm < 0 ? 'lebih rendah' : 'lebih tinggi'}
+                                                </span>
+                                            )}
+                                        </div>
+                                    </div>
+                                    {pastYou.past.activity_id != null && (
+                                        <Link
+                                            href={aktivitasUrl({ activity_id: pastYou.past.activity_id })}
+                                            className="shrink-0 rounded-full border border-cream/20 px-3 py-1.5 font-mono text-[11px] font-semibold uppercase tracking-[0.1em] text-cream/70 transition hover:border-cream/40 hover:text-cream"
+                                        >
+                                            Lihat →
+                                        </Link>
+                                    )}
+                                </div>
+                            )}
                         </div>
                     </HeroPanel>
+                    <MapWeatherPanel detail={detail} />
+                </section>
 
-                    {/* EMBEDDED KARTU */}
-                    <Card as="aside" padding="lg" className="flex flex-col gap-3.5">
-                        <SectionLabel>Kartu buat lari ini</SectionLabel>
-                        {card ? (
+                {/* KATA TEMARI (70%) + KARTU (30%) */}
+                <section className="mt-8 grid gap-6 lg:grid-cols-[7fr_3fr]">
+                    <div>
+                        <header className="mb-4 flex items-center gap-3.5">
+                            <Temari pose="observational" size={48} animate={false} />
+                            <div>
+                                <h2 className="font-display text-headline-sm text-ink">
+                                    Kata Temari
+                                </h2>
+                                <p className="mt-1 font-sans text-xs text-ink-3">Empat cara liat lari ini.</p>
+                            </div>
+                        </header>
+                        <FourLensGrid
+                            cerita={speechAnalysis}
+                            terjemahan={insightTechnical}
+                            split={insightSplits}
+                            hr={insightZones}
+                        />
+                    </div>
+
+                    {/* Kartu sidebar */}
+                    <div className="flex items-center justify-center">
+                        {card && (
                             <Link
                                 href={kartuUrl(card)}
-                                className="mx-auto block w-full max-w-[260px]"
+                                className="block w-full max-w-[320px]"
                             >
                                 <Kartu
                                     name={card.special_move}
@@ -164,50 +213,14 @@ export default function RunsShow({
                                     size="md"
                                 />
                             </Link>
-                        ) : (
-                            <p className="font-display text-base italic text-ink-3">
-                                Belum ada kartu buat lari ini.
-                            </p>
                         )}
-                        {card && (
-                            <p className="border-t border-dashed border-cream-deep pt-3 font-display text-sm italic leading-relaxed text-ink-2">
-                                “{RARITY_LABELS[card.rarity]}, aku catat karena {detail.name ?? 'lari ini'} layak.”
-                            </p>
-                        )}
-                    </Card>
+                    </div>
                 </section>
 
-                {/* KATA TEMARI header + 4-LENS GRID */}
+                {/* DETAIL TILES */}
                 <section className="mt-10">
-                    <header className="mb-4 flex items-center gap-3.5">
-                        <Temari pose="observational" size={48} animate={false} />
-                        <div>
-                            <h2 className="font-display text-headline-sm text-ink">
-                                Kata Temari
-                            </h2>
-                            <p className="mt-1 font-sans text-xs text-ink-3">Empat cara liat lari ini.</p>
-                        </div>
-                    </header>
-                    <FourLensGrid
-                        cerita={speechAnalysis}
-                        terjemahan={insightTechnical}
-                        split={insightSplits}
-                        hr={insightZones}
-                    />
-                </section>
-
-                {/* MAP + WEATHER + DETAIL TILES */}
-                <section className="mt-10 grid gap-3.5 lg:grid-cols-[1.4fr_1fr]">
-                    <MapWeatherPanel detail={detail} />
                     <DetailTiles detail={detail} summary={summary} />
                 </section>
-
-                {/* KAMU VS KAMU DULU */}
-                {pastYou && (
-                    <section className="mt-10">
-                        <PastYouStrip match={pastYou} currentDistance={detail.distance} />
-                    </section>
-                )}
 
                 {/* SPLITS */}
                 {perKm.length > 0 && <SplitsTable rows={perKm} className="mt-10" />}
@@ -242,25 +255,24 @@ function MapWeatherPanel({ detail }: Readonly<{ detail: DetailedActivityDetail }
     const hasPolyline = detail.summary_polyline != null && detail.summary_polyline.length > 0;
 
     return (
-        <div className="relative flex flex-col gap-5 overflow-hidden rounded-2xl bg-sky px-6 py-5 text-cream">
-            <SectionLabel onSky>Rute lari</SectionLabel>
+        <div className="relative flex flex-col gap-4 overflow-hidden rounded-2xl bg-sky px-5 py-4 text-cream">
             {(temp != null || location != null) && (
-                <div className="flex items-baseline gap-4">
+                <div className="flex items-baseline gap-3">
                     {temp != null && (
                         <div>
-                            <div className="font-sans text-4xl font-bold leading-none">
-                                {Math.round(temp)}°<span className="text-lg font-medium">C</span>
+                            <div className="font-sans text-2xl font-bold leading-none">
+                                {Math.round(temp)}°<span className="text-sm font-medium">C</span>
                             </div>
                             {humidity != null && (
-                                <div className="mt-1.5 font-mono text-[11px] uppercase tracking-[0.14em] text-ink-on-sky">
-                                    {Math.round(humidity)}% LEMBAB
+                                <div className="mt-1 font-mono text-[10px] uppercase tracking-[0.12em] text-ink-on-sky">
+                                    {Math.round(humidity)}% lembab
                                 </div>
                             )}
                         </div>
                     )}
                     {location != null && (
-                        <div className="flex-1 border-l border-cream/15 pl-4">
-                            <div className="font-display text-lg leading-tight tracking-[-0.005em]">{location}</div>
+                        <div className="min-w-0 flex-1 border-l border-cream/15 pl-3">
+                            <div className="truncate font-display text-sm leading-tight tracking-[-0.005em]">{location}</div>
                         </div>
                     )}
                 </div>
@@ -422,15 +434,17 @@ function SplitsTable({ rows, className }: Readonly<{ rows: PerKmRow[]; className
                             className={cn(
                                 'grid grid-cols-[40px_1fr_70px_70px_70px] items-center gap-3',
                                 idx > 0 && !isFast && 'border-t border-cream-deep',
+                                // Alternating row background for readability
+                                idx % 2 === 1 && !isFast && 'bg-cream-deep/30',
                                 // Fast row: tint bleeds out via -mx-3 while px-3 keeps content
                                 // aligned with the other rows, so its bar isn't narrowed.
-                                isFast ? '-mx-3 rounded-lg bg-horizon/[0.08] px-3 py-2.5' : 'py-2.5',
+                                isFast ? '-mx-3 rounded-lg bg-horizon/[0.08] px-3 py-2.5' : 'px-3 py-2.5',
                             )}
                         >
                             <div className="font-mono text-[12px] uppercase tracking-[0.1em] text-ink-2">
                                 KM {row.km ?? '?'}
                             </div>
-                            <div className="h-2 overflow-hidden rounded bg-sky/[0.06]">
+                            <div className="h-3 overflow-hidden rounded bg-sky/[0.06]">
                                 <div
                                     className={cn('h-full rounded', isFast ? 'bg-horizon' : 'bg-sky')}
                                     style={{ width: `${pctWidth}%` }}

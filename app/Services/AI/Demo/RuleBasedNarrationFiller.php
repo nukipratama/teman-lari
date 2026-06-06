@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services\AI\Demo;
 
+use App\Enums\Badge;
 use App\Models\ActivityDetail;
 use App\Models\AI\Analysis;
 use App\Models\RunCard;
@@ -37,6 +38,7 @@ final class RuleBasedNarrationFiller
             AnalysisType::TrendCaption => $this->trendCaption(),
             AnalysisType::CardFlavor => $this->cardFlavor($row->subject_id),
             AnalysisType::PersonaSummary => $this->personaSummary(),
+            AnalysisType::AkuProfileVoice => $this->akuProfileVoice(),
             AnalysisType::MonthlyRecap => $this->monthlyRecap(),
         };
     }
@@ -212,12 +214,24 @@ final class RuleBasedNarrationFiller
         }
 
         $clauses = [
-            RunCard::BADGE_NEGATIVE_SPLIT => 'Paruh kedua malah makin nyala.',
-            RunCard::BADGE_HARI_PANAS => 'Padahal hari lagi gerah-gerahnya.',
-            RunCard::BADGE_PEJUANG_HUJAN => 'Hujan pun gak bikin kamu mundur.',
-            RunCard::BADGE_ANAK_PAGI => 'Berangkat pas dunia masih sepi.',
-            RunCard::BADGE_LONG_SLOW_DISTANCE => 'Jarak panjang, sabar dijaga.',
-            RunCard::BADGE_TAHAN_DIRI => 'Pace ditahan rapi dari awal.',
+            Badge::NegativeSplit->value => 'Paruh kedua malah makin nyala.',
+            Badge::HariPanas->value => 'Padahal hari lagi gerah-gerahnya.',
+            Badge::PejuangHujan->value => 'Hujan pun gak bikin kamu mundur.',
+            Badge::AnakPagi->value => 'Berangkat pas dunia masih sepi.',
+            Badge::LongSlowDistance->value => 'Jarak panjang, sabar dijaga.',
+            Badge::TahanDiri->value => 'Pace ditahan rapi dari awal.',
+            Badge::AnakMalam->value => 'Malam makin larut, kamu makin jalan.',
+            Badge::Pendaki->value => 'Elevasi gede, tenaga ekstra.',
+            Badge::PertamaKali->value => 'Langkah pertama yang gak bakal dilupain.',
+            Badge::Rajin->value => 'Tiga hari berturut, disiplin abis.',
+            Badge::Kilat->value => 'Pace di bawah 5 per km, kencang.',
+            Badge::Jauh->value => 'Half marathon ke atas, jarak serius.',
+            Badge::Z2Master->value => 'Mayoritas waktu di Z2, sabar banget.',
+            Badge::AnakDingin->value => 'Pagi buta tapi semangat udah nyala.',
+            Badge::Keras->value => 'HR tinggi dari awal sampai akhir.',
+            Badge::Santai->value => 'Beneran easy, HR dijaga rendah.',
+            Badge::Berturut->value => 'Seminggu penuh tanpa skip, keren.',
+            Badge::HariSpesial->value => 'Lari pas hari libur nasional.',
         ];
 
         // Highlight one of the card's badges, chosen by seed so multi-badge
@@ -236,6 +250,11 @@ final class RuleBasedNarrationFiller
     private function select(array $pool, int $seed): string
     {
         return $pool[abs($seed) % count($pool)];
+    }
+
+    private function akuProfileVoice(): string
+    {
+        return 'Aku catat semua perjalanan kamu di sini: **kartu**, **rekor**, **aksesori**, ceritanya. Ayo terus jalan.';
     }
 
     private function personaSummary(): string

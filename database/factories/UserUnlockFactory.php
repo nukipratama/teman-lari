@@ -22,7 +22,7 @@ class UserUnlockFactory extends Factory
     {
         return [
             'user_id' => User::factory(),
-            'unlock_key' => 'accessory.medal_first_pr',
+            'unlock_key' => 'accessory.medal_pertama',
             'unlocked_at' => now(),
             'metadata' => null,
         ];

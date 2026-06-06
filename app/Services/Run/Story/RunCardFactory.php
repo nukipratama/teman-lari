@@ -4,23 +4,58 @@ declare(strict_types=1);
 
 namespace App\Services\Run\Story;
 
+use App\Enums\Badge;
 use App\Enums\Rarity;
 use App\Models\Activity;
 use App\Models\ActivityDetail;
 use App\Models\PersonalRecord;
 use App\Models\RunCard;
-use App\Services\Gamification\UnlockEngine;
-use App\Services\AI\AnalysisType;
 use App\Services\AI\AnalysisService;
+use App\Services\AI\AnalysisType;
+use App\Services\Gamification\UnlockEngine;
 use App\Services\Run\Metrics\StreamSummary;
-
-use function is_array;
+use Illuminate\Support\Carbon;
 
 class RunCardFactory
 {
     private const int LONG_SLOW_DISTANCE_THRESHOLD_M = 12_000;
 
     private const int LONG_SLOW_DISTANCE_DURATION_S = 3_600;
+
+    private const int PACE_KILAT_SEC_PER_KM = 300;
+
+    private const int ELEVATION_GAIN_M = 200;
+
+    private const int CONSECUTIVE_DAYS_RAJIN = 3;
+
+    private const int CONSECUTIVE_DAYS_BERTURUT = 7;
+
+    private const int WEEKLY_CONSISTENCY_RUNS = 3;
+
+    /** Distance brackets (metres) for first-bracket tracking. */
+    private const array DISTANCE_BRACKETS = [
+        5_000,
+        10_000,
+        15_000,
+        21_097.5,
+        42_195.0,
+    ];
+
+    /**
+     * Indonesian national holidays (month-day). Covers fixed-date public
+     * holidays; Easter-based ones are excluded because they shift each year.
+     */
+    private const array INDONESIAN_HOLIDAYS_MD = [
+        '01-01', // Tahun Baru
+        '01-29', // Tahun Baru Imlek (2025 approx; fixed 01-29 for simplicity)
+        '03-31', // Hari Nyepi (approx; fixed for simplicity)
+        '05-01', // Hari Buruh
+        '05-20', // Hari Kebangkitan Nasional
+        '06-01', // Hari Lahir Pancasila
+        '08-17', // Hari Kemerdekaan
+        '10-01', // Hari Kesaktian Pancasila
+        '12-25', // Natal
+    ];
 
     public function __construct(
         private readonly SpecialMoves $specialMoves,
@@ -33,14 +68,17 @@ class RunCardFactory
     {
         $summary = $detail->streamSummary();
         $prSet = $this->hasPrFromThisActivity($activity);
-        $isLongest = $this->isAllTimeLongest($activity, $detail);
 
-        $rarity = $this->rarity($detail, $summary, $prSet, $isLongest);
-        $badges = $this->badges($detail, $summary);
+        // Badges compute first so rarity can derive from badge count.
+        $badges = $this->badges($activity, $detail, $summary);
+        $rarity = $this->rarityFromScore(
+            $this->rarityScore($activity, $detail, $summary, $badges, $prSet),
+        );
+
         $move = $this->specialMoves->pick($summary, [
             'distance_m' => $detail->distance,
             'pr_set' => $prSet,
-            'seed' => $activity->id, // stable per activity so the name never reshuffles
+            'seed' => $activity->id,
         ]);
 
         $existing = RunCard::query()->where('activity_id', $activity->id)->first();
@@ -66,9 +104,6 @@ class RunCardFactory
             $this->unlockEngine->grantEligible($activity->user);
         }
 
-        // Queue this card for the reveal modal when it's freshly created or
-        // its rarity climbed since the last build. Re-running build with the
-        // same rarity does NOT re-trigger the reveal.
         if ($card->rarity->rank() > $previousRarityRank) {
             $this->queueRevealFor($activity, $card);
         }
@@ -77,10 +112,124 @@ class RunCardFactory
     }
 
     /**
+     * Compute the rarity score from point sources.
+     *
+     * Point sources:
+     *  +3 PR set
+     *  +2 negative split
+     *  +2 long run (>=12km)
+     *  +1 first distance bracket
+     *  +1 per badge earned
+     *  +1 zone discipline (<10% Z3+ on >=10km)
+     *  +1 weekly consistency (>=3 runs this week)
+     *
+     * @param  array<string, mixed>  $summary
+     * @param  array<int, string>  $badges
+     */
+    public function rarityScore(
+        Activity $activity,
+        ActivityDetail $detail,
+        array $summary,
+        array $badges,
+        bool $prSet,
+    ): int {
+        $score = 0;
+        $distance = (float) ($detail->distance ?? 0);
+        $negativeSplit = ($summary['negative_split'] ?? false) === true;
+
+        if ($prSet) {
+            $score += 3;
+        }
+        if ($negativeSplit) {
+            $score += 2;
+        }
+        if ($distance >= self::LONG_SLOW_DISTANCE_THRESHOLD_M) {
+            $score += 2;
+        }
+        if ($this->isFirstDistanceBracket($activity, $detail)) {
+            $score += 1;
+        }
+        $score += count($badges);
+        if ($this->isAerobicDiscipline($detail, $summary)) {
+            $score += 1;
+        }
+        if ($this->weeklyConsistency($activity)) {
+            $score += 1;
+        }
+
+        return $score;
+    }
+
+    /**
+     * Map a point total to a rarity tier.
+     *
+     * Tiers: 0-1 Biasa, 2-3 Berkesan, 4-5 Langka, 6-7 Luar Biasa, 8+ Legendaris
+     */
+    public function rarityFromScore(int $score): Rarity
+    {
+        return match (true) {
+            $score >= 8 => Rarity::Legendary,
+            $score >= 6 => Rarity::Epic,
+            $score >= 4 => Rarity::Rare,
+            $score >= 2 => Rarity::Uncommon,
+            default => Rarity::Common,
+        };
+    }
+
+    /**
+     * Whether this is the user's first run crossing one of the standard
+     * distance brackets (5K / 10K / 15K / 21K / 42K).
+     */
+    public function isFirstDistanceBracket(Activity $activity, ActivityDetail $detail): bool
+    {
+        $distance = (float) ($detail->distance ?? 0);
+        if ($distance <= 0) {
+            return false;
+        }
+
+        $reachedBracket = $this->highestReachedBracket($distance);
+
+        if ($reachedBracket === null) {
+            return false;
+        }
+
+        $previousAtBracket = ActivityDetail::query()
+            ->join('activities', 'activities.id', '=', 'activity_details.activity_id')
+            ->where('activities.user_id', $activity->user_id)
+            ->where('activities.id', '!=', $activity->id)
+            ->where('activity_details.distance', '>=', $reachedBracket)
+            ->exists();
+
+        return ! $previousAtBracket;
+    }
+
+    /**
+     * Whether the user has >=3 runs in the same ISO week as this activity.
+     */
+    public function weeklyConsistency(Activity $activity): bool
+    {
+        $startDate = $activity->detail?->start_date_local;
+
+        if ($startDate === null) {
+            return false;
+        }
+
+        $weekStart = $startDate->copy()->startOfWeek();
+        $weekEnd = $startDate->copy()->endOfWeek();
+
+        $runCount = Activity::query()
+            ->where('user_id', $activity->user_id)
+            ->whereHas('detail', function ($q) use ($weekStart, $weekEnd): void {
+                $q->whereBetween('start_date_local', [$weekStart, $weekEnd]);
+            })
+            ->count();
+
+        return $runCount >= self::WEEKLY_CONSISTENCY_RUNS;
+    }
+
+    /**
      * Stash the card id on the user so the next page load can pop the reveal
-     * modal. Only one reveal can be pending at a time: if an unseen reveal is
-     * already queued we leave it (the earlier one wins), and this newer card is
-     * not shown via the modal. It still lands in the collection normally.
+     * modal. Only one reveal can be pending at a time.
      */
     private function queueRevealFor(Activity $activity, RunCard $card): void
     {
@@ -92,55 +241,231 @@ class RunCardFactory
     }
 
     /**
-     * @param  array<string, mixed>  $summary
-     */
-    private function rarity(ActivityDetail $detail, array $summary, bool $prSet, bool $isLongest): Rarity
-    {
-        $distance = (float) ($detail->distance ?? 0);
-        $negativeSplit = ($summary['negative_split'] ?? false) === true;
-        $hasZoneData = is_array($summary['time_in_zone_pct'] ?? null);
-
-        // Tuned toward a pyramid: most runs land Common, each tier above needs a
-        // genuinely rarer condition so Legendaris/Luar Biasa stay special. Uncommon
-        // requires a quality signal (a negative split) or a long run — a plodding
-        // mid-distance easy run stays Biasa.
-        return match (true) {
-            $isLongest && $distance >= 21_097.5 => Rarity::Legendary,
-            $prSet && $distance >= 10_000 => Rarity::Epic,
-            $prSet || ($negativeSplit && $distance >= 8_000) => Rarity::Rare,
-            $distance >= 12_000 || ($hasZoneData && $negativeSplit) => Rarity::Uncommon,
-            default => Rarity::Common,
-        };
-    }
-
-    /**
+     * Compute all badges for a run. Split into original + expanded badge groups
+     * to keep cognitive complexity manageable.
+     *
      * @param  array<string, mixed>  $summary
      * @return list<string>
      */
-    private function badges(ActivityDetail $detail, array $summary): array
+    private function badges(Activity $activity, ActivityDetail $detail, array $summary): array
+    {
+        $badges = $this->originalBadges($detail, $summary);
+        $streak = $this->consecutiveDaysBefore($activity);
+
+        return array_merge($badges, $this->expandedBadges($activity, $detail, $summary, $streak));
+    }
+
+    /**
+     * Original 6 badges: weather, time-of-day, distance, split, discipline.
+     *
+     * @param  array<string, mixed>  $summary
+     * @return list<string>
+     */
+    private function originalBadges(ActivityDetail $detail, array $summary): array
     {
         $badges = [];
 
         if (($detail->weather_temp_c ?? 0) >= 31) {
-            $badges[] = RunCard::BADGE_HARI_PANAS;
+            $badges[] = Badge::HariPanas->value;
         }
         if ($detail->weather_rain_detected === true) {
-            $badges[] = RunCard::BADGE_PEJUANG_HUJAN;
+            $badges[] = Badge::PejuangHujan->value;
         }
         if ($detail->start_date_local !== null && (int) $detail->start_date_local->format('H') < 6) {
-            $badges[] = RunCard::BADGE_ANAK_PAGI;
+            $badges[] = Badge::AnakPagi->value;
         }
         if ($this->isLongSlowDistance($detail, $summary)) {
-            $badges[] = RunCard::BADGE_LONG_SLOW_DISTANCE;
+            $badges[] = Badge::LongSlowDistance->value;
         }
         if (($summary['negative_split'] ?? false) === true) {
-            $badges[] = RunCard::BADGE_NEGATIVE_SPLIT;
+            $badges[] = Badge::NegativeSplit->value;
         }
         if ($this->isAerobicDiscipline($detail, $summary)) {
-            $badges[] = RunCard::BADGE_TAHAN_DIRI;
+            $badges[] = Badge::TahanDiri->value;
         }
 
         return $badges;
+    }
+
+    /**
+     * 12 expanded badges: night, elevation, first-run, streaks, pace,
+     * distance, zones, effort, holiday.
+     *
+     * @param  array<string, mixed>  $summary
+     * @return list<string>
+     */
+    private function expandedBadges(Activity $activity, ActivityDetail $detail, array $summary, int $streak): array
+    {
+        $badges = [];
+        $distance = (float) ($detail->distance ?? 0);
+        $hour = $this->startHour($detail);
+
+        if ($hour !== null && ($hour < 5 || $hour >= 21)) {
+            $badges[] = Badge::AnakMalam->value;
+        }
+        if (($detail->total_elevation_gain ?? 0) >= self::ELEVATION_GAIN_M) {
+            $badges[] = Badge::Pendaki->value;
+        }
+        if ($this->isFirstRunEver($activity)) {
+            $badges[] = Badge::PertamaKali->value;
+        }
+        if ($streak + 1 >= self::CONSECUTIVE_DAYS_RAJIN) {
+            $badges[] = Badge::Rajin->value;
+        }
+
+        $paceSec = $detail->paceSecPerKm();
+        if ($paceSec !== null && $paceSec < self::PACE_KILAT_SEC_PER_KM) {
+            $badges[] = Badge::Kilat->value;
+        }
+        if ($distance >= 21_097.5) {
+            $badges[] = Badge::Jauh->value;
+        }
+
+        $badges = array_merge($badges, $this->zoneAndEffortBadges($detail, $summary, $hour));
+
+        if ($streak + 1 >= self::CONSECUTIVE_DAYS_BERTURUT) {
+            $badges[] = Badge::Berturut->value;
+        }
+        if ($this->isIndonesianHoliday($detail)) {
+            $badges[] = Badge::HariSpesial->value;
+        }
+
+        return $badges;
+    }
+
+    /**
+     * Zone-based and effort-based badges: Z2 Master, Anak Dingin, Keras, Santai.
+     *
+     * @param  array<string, mixed>  $summary
+     * @return list<string>
+     */
+    private function zoneAndEffortBadges(ActivityDetail $detail, array $summary, ?int $hour): array
+    {
+        $badges = [];
+
+        $zonePct = StreamSummary::zonePct($summary);
+        if (($zonePct['Z2'] ?? 0) > 80.0) {
+            $badges[] = Badge::Z2Master->value;
+        }
+        if ($hour !== null && $hour < 6) {
+            $badges[] = Badge::AnakDingin->value;
+        }
+        if ($this->isHardEffort($detail)) {
+            $badges[] = Badge::Keras->value;
+        }
+        if ($this->isEasyEffort($detail)) {
+            $badges[] = Badge::Santai->value;
+        }
+
+        return $badges;
+    }
+
+    /**
+     * Extract the start-hour (0-23) from the detail's start_date_local, or null.
+     */
+    private function startHour(ActivityDetail $detail): ?int
+    {
+        return $detail->start_date_local !== null
+            ? (int) $detail->start_date_local->format('H')
+            : null;
+    }
+
+    /**
+     * Whether this is the user's very first activity.
+     */
+    private function isFirstRunEver(Activity $activity): bool
+    {
+        return Activity::query()
+            ->where('user_id', $activity->user_id)
+            ->where('id', '!=', $activity->id)
+            ->doesntExist();
+    }
+
+    /**
+     * Count consecutive running days ending the day before this activity.
+     * Returns the streak length (0 = no run yesterday).
+     */
+    private function consecutiveDaysBefore(Activity $activity): int
+    {
+        $startDate = $activity->detail?->start_date_local;
+
+        if ($startDate === null) {
+            return 0;
+        }
+
+        // Fetch the last 30 distinct run dates in one query, then count
+        // consecutive days in PHP. Much cheaper than N queries for long streaks.
+        $dates = ActivityDetail::query()
+            ->join('activities', 'activities.id', '=', 'activity_details.activity_id')
+            ->where('activities.user_id', $activity->user_id)
+            ->whereDate('start_date_local', '<', $startDate->toDateString())
+            ->selectRaw('DISTINCT DATE(start_date_local) as run_date')
+            ->orderByDesc('run_date')
+            ->limit(30)
+            ->pluck('run_date')
+            ->map(fn (string $d): string => Carbon::parse($d)->toDateString())
+            ->flip();
+
+        $streak = 0;
+        $checkDate = $startDate->copy()->subDay();
+
+        while (isset($dates[$checkDate->toDateString()])) {
+            $streak++;
+            $checkDate->subDay();
+        }
+
+        return $streak;
+    }
+
+    /**
+     * Whether the run's start_date_local falls on an Indonesian national holiday.
+     */
+    private function isIndonesianHoliday(ActivityDetail $detail): bool
+    {
+        $startDate = $detail->start_date_local;
+
+        if ($startDate === null) {
+            return false;
+        }
+
+        $md = $startDate->format('m-d');
+
+        return in_array($md, self::INDONESIAN_HOLIDAYS_MD, strict: true);
+    }
+
+    /**
+     * Hard effort: average HR > 85% of max HR.
+     */
+    private function isHardEffort(ActivityDetail $detail): bool
+    {
+        $ratio = $this->hrRatio($detail);
+
+        return $ratio !== null && $ratio > 0.85;
+    }
+
+    /**
+     * Easy effort: average HR < 70% of max HR.
+     */
+    private function isEasyEffort(ActivityDetail $detail): bool
+    {
+        $ratio = $this->hrRatio($detail);
+
+        return $ratio !== null && $ratio < 0.70;
+    }
+
+    /**
+     * Average HR as a fraction of max HR. Null when data is missing.
+     */
+    private function hrRatio(ActivityDetail $detail): ?float
+    {
+        $avg = $detail->average_heartrate;
+        $max = $detail->max_heartrate;
+
+        if ($avg === null || $max === null || $max <= 0) {
+            return null;
+        }
+
+        return $avg / $max;
     }
 
     /**
@@ -177,19 +502,19 @@ class RunCardFactory
             ->exists();
     }
 
-    private function isAllTimeLongest(Activity $activity, ActivityDetail $detail): bool
+    /**
+     * Find the highest distance bracket reached by a run distance.
+     * Returns null when the distance doesn't reach any bracket.
+     */
+    private function highestReachedBracket(float $distance): ?float
     {
-        $distance = $detail->distance ?? 0;
-        if ($distance <= 0) {
-            return false;
+        $reached = null;
+        foreach (self::DISTANCE_BRACKETS as $bracket) {
+            if ($distance >= $bracket) {
+                $reached = $bracket;
+            }
         }
 
-        $existingMax = ActivityDetail::query()
-            ->join('activities', 'activities.id', '=', 'activity_details.activity_id')
-            ->where('activities.user_id', $activity->user_id)
-            ->where('activities.id', '!=', $activity->id)
-            ->max('activity_details.distance');
-
-        return $existingMax === null || $distance > (float) $existingMax;
+        return $reached;
     }
 }

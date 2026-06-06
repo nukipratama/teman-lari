@@ -32,29 +32,6 @@
                 </div>
             </div>
 
-            <div>
-                <div class="text-[10px] uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-1">API Rate Limits</div>
-                <div class="space-y-2">
-                    @foreach ($rateLimits as $label => $bucket)
-                        @php($pct = $bucket['max'] > 0 ? (int) round($bucket['remaining'] / $bucket['max'] * 100) : 0)
-                        <div>
-                            <div class="flex justify-between text-xs text-gray-700 dark:text-gray-300">
-                                <span>{{ $label }}</span>
-                                <span class="tabular-nums">{{ number_format($bucket['remaining']) }} / {{ number_format($bucket['max']) }}</span>
-                            </div>
-                            <div class="mt-1 h-1.5 rounded-full bg-gray-200 dark:bg-gray-800 overflow-hidden">
-                                <div @class([
-                                    'h-full rounded-full',
-                                    'bg-rose-500' => $pct <= 15,
-                                    'bg-amber-500' => $pct > 15 && $pct <= 40,
-                                    'bg-emerald-500' => $pct > 40,
-                                ]) style="width: {{ $pct }}%"></div>
-                            </div>
-                        </div>
-                    @endforeach
-                </div>
-            </div>
-
             <div class="grid grid-cols-4 gap-2 text-center">
                 <div>
                     <div class="text-lg font-bold tabular-nums text-gray-900 dark:text-gray-100">{{ number_format($stranded) }}</div>
@@ -73,6 +50,39 @@
                     <div class="text-[10px] uppercase tracking-wide text-gray-500 dark:text-gray-400">revoked</div>
                 </div>
             </div>
+
+            @if ($perUser !== [])
+                <div>
+                    <div class="text-[10px] uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-1">Per-User Sync Status</div>
+                    <div class="space-y-1">
+                        @foreach ($perUser as $row)
+                            <div @class([
+                                'flex items-center justify-between text-xs px-2 py-1 rounded',
+                                'bg-rose-500/5 ring-1 ring-rose-500/30' => $row['is_failed'],
+                                'ring-1 ring-gray-900/5 dark:ring-gray-100/10' => ! $row['is_failed'],
+                            ])>
+                                <div class="flex items-center gap-2 min-w-0">
+                                    <span @class([
+                                        'inline-block h-1.5 w-1.5 rounded-full shrink-0',
+                                        'bg-rose-500' => $row['is_failed'],
+                                        'bg-emerald-500' => ! $row['is_failed'],
+                                    ])></span>
+                                    <span class="truncate text-gray-900 dark:text-gray-100">{{ $row['user_name'] }}</span>
+                                </div>
+                                <div class="flex items-center gap-3 shrink-0 tabular-nums text-gray-500 dark:text-gray-400">
+                                    <span title="15 min remaining">{{ $row['15min_remaining'] }}/200</span>
+                                    <span title="Daily remaining">{{ $row['daily_remaining'] }}/2k</span>
+                                    @if ($row['last_sync'])
+                                        <span>{{ \Illuminate\Support\Carbon::parse($row['last_sync'])->diffForHumans(short: true) }}</span>
+                                    @else
+                                        <span class="text-gray-400">never</span>
+                                    @endif
+                                </div>
+                            </div>
+                        @endforeach
+                    </div>
+                </div>
+            @endif
 
             <div class="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
                 @if ($webhookStatus['configured'])

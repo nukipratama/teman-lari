@@ -70,38 +70,44 @@ afterEach(() => {
 });
 
 describe("CardReveal", () => {
-  it("renders the first frame eyebrow + title on mount", () => {
+  it("renders the sealed eyebrow + title on mount", () => {
     render(<CardReveal pending={epicReveal} />);
     expect(screen.getByText("Sync masuk")).toBeInTheDocument();
     expect(screen.getByText(/Aku lagi baca lari kamu/)).toBeInTheDocument();
   });
 
-  it("uses a 3-frame theatrical flow for epic+", () => {
+  it("mounts the card wrapped in foil for theatrical (epic+) reveals", () => {
     render(<CardReveal pending={epicReveal} />);
-    expect(screen.getByText(/Frame 1 \/ 3/)).toBeInTheDocument();
-  });
-
-  it("uses a 2-frame intimate flow for common rarity", () => {
-    render(<CardReveal pending={commonReveal} />);
-    expect(screen.getByText(/Frame 1 \/ 2/)).toBeInTheDocument();
-  });
-
-  it("advances from the sync frame straight to the wrapped reveal", async () => {
-    const u = userEvent.setup();
-    render(<CardReveal pending={epicReveal} />);
-    expect(screen.getByText(/Frame 1 \/ 3/)).toBeInTheDocument();
-    await u.click(screen.getByText("Lanjut"));
-    // Frame 2 is the reveal — the card arrives wrapped (counter hidden).
+    // No reveal happens until the pack is torn.
     expect(screen.getByTestId("pack-wrapper")).toBeInTheDocument();
+    expect(screen.getByText("Sync masuk")).toBeInTheDocument();
+    expect(screen.queryByTestId("card-ignite")).toBeNull();
   });
 
-  it('on the final frame, "Lihat koleksi" marks seen and navigates to /kartu', async () => {
+  it("mounts the card wrapped in foil for common reveals too", () => {
+    render(<CardReveal pending={commonReveal} />);
+    expect(screen.getByTestId("pack-wrapper")).toBeInTheDocument();
+    expect(screen.getByText("Sync masuk")).toBeInTheDocument();
+  });
+
+  it("tearing the pack swaps the sealed eyebrow for the rarity label", async () => {
+    const u = userEvent.setup();
+    render(<CardReveal pending={epicReveal} />);
+    expect(screen.getByText("Sync masuk")).toBeInTheDocument();
+    // Tap to tear the foil open — the card behind it is revealed.
+    await u.click(screen.getByTestId("pack-wrapper"));
+    expect(screen.getByText(/★ Luar Biasa/)).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "Pembalik Keadaan" }),
+    ).toBeInTheDocument();
+  });
+
+  it('"Lihat koleksi" marks seen and navigates to /kartu after the reveal', async () => {
     const u = userEvent.setup();
     render(<CardReveal pending={commonReveal} />);
-    await u.click(screen.getByText("Lanjut"));
-    // Last frame for common (frame 2 / 2) — tear the pack open first.
+    // Tear the pack, then wait for the staggered action buttons to appear.
     await u.click(screen.getByTestId("pack-wrapper"));
-    await u.click(screen.getByText("Lihat koleksi"));
+    await u.click(await screen.findByText("Lihat koleksi"));
 
     expect(fetchMock).toHaveBeenCalledWith(
       "/api/kartu/7/seen",
@@ -110,10 +116,11 @@ describe("CardReveal", () => {
     expect(visit).toHaveBeenCalledWith("/kartu", expect.anything());
   });
 
-  it("Skip on any non-final frame marks seen and reloads the pendingReveal prop", async () => {
+  it('"Tutup" marks seen and reloads the pendingReveal prop', async () => {
     const u = userEvent.setup();
     render(<CardReveal pending={epicReveal} />);
-    await u.click(screen.getByText("Lewati"));
+    // "Tutup" is available even while the pack is still sealed.
+    await u.click(screen.getByText("Tutup"));
 
     expect(fetchMock).toHaveBeenCalledWith(
       "/api/kartu/42/seen",
@@ -155,46 +162,41 @@ describe("CardReveal", () => {
     );
   });
 
-  it("Space advances from the sync frame to the wrapped card", async () => {
+  it("does not unwrap the card via keyboard (touch-first tear)", async () => {
     const u = userEvent.setup();
     render(<CardReveal pending={epicReveal} />);
-    expect(screen.getByText(/Frame 1 \/ 3/)).toBeInTheDocument();
-    await u.keyboard(" "); // → frame 2, the wrapped card (counter hidden)
     expect(screen.getByTestId("pack-wrapper")).toBeInTheDocument();
-  });
-
-  it("does not advance past the wrapped card frame via keyboard (touch-first tear)", async () => {
-    const u = userEvent.setup();
-    render(<CardReveal pending={epicReveal} />);
-    await u.keyboard(" "); // → frame 2 (wrapped card)
+    // No keyboard gesture tears the foil — it stays sealed.
+    await u.keyboard(" ");
+    await u.keyboard("{Enter}");
+    await u.keyboard("{ArrowRight}");
     expect(screen.getByTestId("pack-wrapper")).toBeInTheDocument();
-    await u.keyboard("{ArrowRight}"); // blocked while wrapped
-    expect(screen.getByTestId("pack-wrapper")).toBeInTheDocument();
-    expect(screen.queryByText("Disimpan")).toBeNull(); // never reached the proud frame
+    // The sealed eyebrow only flips to the rarity label once torn.
+    expect(screen.getByText("Sync masuk")).toBeInTheDocument();
+    expect(screen.queryByText(/★ Luar Biasa/)).toBeNull();
   });
 
   it("ignites the card with a rarity ring when the pack is torn", async () => {
     const u = userEvent.setup();
     render(<CardReveal pending={epicReveal} />);
-    await u.click(screen.getByText("Lanjut")); // → wrapped reveal frame
     expect(screen.queryByTestId("card-ignite")).toBeNull();
     await u.click(screen.getByTestId("pack-wrapper")); // tear it open
     expect(screen.getByTestId("card-ignite")).toBeInTheDocument();
   });
 
-  it("only POSTs /seen once even if the user double-clicks Skip", async () => {
+  it("only POSTs /seen once even if the user double-clicks Tutup", async () => {
     const u = userEvent.setup();
     render(<CardReveal pending={epicReveal} />);
-    const skip = screen.getByText("Lewati");
-    await u.click(skip);
-    await u.click(skip);
+    const tutup = screen.getByText("Tutup");
+    await u.click(tutup);
+    await u.click(tutup);
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
-  it("renders the card with real km/duration/trimp values on the last frame", async () => {
+  it("renders the card with real km/duration/trimp values once revealed", async () => {
     const u = userEvent.setup();
     render(<CardReveal pending={commonReveal} />);
-    await u.click(screen.getByText("Lanjut")); // jump to last frame
+    await u.click(screen.getByTestId("pack-wrapper")); // tear the pack open
     // 5000m → 5.00 km, 1800s → 30 menit, trimp 42 shown as the TRIMP badge number
     expect(screen.getByText("5.00")).toBeInTheDocument();
     expect(screen.getByText("30 menit")).toBeInTheDocument();
@@ -204,38 +206,35 @@ describe("CardReveal", () => {
   it("shows Bagikan button after the card is revealed and opens the share modal", async () => {
     const u = userEvent.setup();
     render(<CardReveal pending={epicReveal} />);
-    // Epic = 3 frames: reading → holding (wrapped card) → proud.
-    await u.click(screen.getByText("Lanjut"));
-    // Frame 2 (holding): card is wrapped — tear it, then advance to the last frame.
+    // Tear the pack open; the action buttons stagger in afterwards.
     await u.click(screen.getByTestId("pack-wrapper"));
-    await u.click(screen.getByText("Lanjut"));
-    // Last frame: "Bagikan" button appears
-    expect(screen.getByRole("button", { name: /Bagikan/ })).toBeInTheDocument();
-    await u.click(screen.getByRole("button", { name: /Bagikan/ }));
+    const bagikan = await screen.findByRole("button", { name: /Bagikan/ });
+    expect(bagikan).toBeInTheDocument();
+    await u.click(bagikan);
     // Share modal opens
     expect(screen.getByText(/Bagikan kartu/)).toBeInTheDocument();
     // Close the modal (covers () => setShareOpen(false))
     await u.click(screen.getByLabelText("Tutup"));
   });
 
-  it("keeps the card wrapped until torn, then reveals it on tap", async () => {
+  it("keeps the card wrapped until torn, then reveals the actions on tap", async () => {
     const u = userEvent.setup();
     render(<CardReveal pending={commonReveal} />);
-    await u.click(screen.getByText("Lanjut")); // → last frame, card wrapped
     expect(screen.getByTestId("pack-wrapper")).toBeInTheDocument();
+    // Lihat koleksi only exists once the card is revealed.
     expect(screen.queryByText("Lihat koleksi")).toBeNull();
     await u.click(screen.getByTestId("pack-wrapper"));
-    // Tearing reveals the card actions; the wrapper then animates away
-    // (its unmount is an exit transition, so we assert the synchronous outcome).
-    expect(screen.getByText("Lihat koleksi")).toBeInTheDocument();
+    expect(await screen.findByText("Lihat koleksi")).toBeInTheDocument();
   });
 
   it("skips the wrapper entirely under prefers-reduced-motion", async () => {
     vi.stubGlobal("matchMedia", () => ({ matches: true }));
-    const u = userEvent.setup();
     render(<CardReveal pending={commonReveal} />);
-    await u.click(screen.getByText("Lanjut")); // → last frame
+    // The card is already revealed — no foil to tear.
     expect(screen.queryByTestId("pack-wrapper")).toBeNull();
-    expect(screen.getByText("Lihat koleksi")).toBeInTheDocument();
+    // The reveal content (rarity eyebrow) is shown immediately.
+    expect(screen.getByText(/★ Biasa/)).toBeInTheDocument();
+    // The collection action is reachable without tearing.
+    expect(await screen.findByText("Lihat koleksi")).toBeInTheDocument();
   });
 });

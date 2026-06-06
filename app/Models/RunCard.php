@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Enums\Badge;
 use App\Enums\Rarity;
 use Database\Factories\RunCardFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -33,26 +34,34 @@ class RunCard extends Model
     /** @use HasFactory<RunCardFactory> */
     use HasFactory;
 
-    public const string BADGE_HARI_PANAS = 'hari_panas';
+    /**
+     * Count how many of this user's cards carry each tracked badge.
+     * Single query, counts in PHP to avoid N per-badge round-trips.
+     *
+     * @return array<string, int>
+     */
+    public static function badgeCountsForUser(int $userId): array
+    {
+        $tracked = Badge::tracked();
+        $counts = array_fill_keys(
+            array_map(fn (Badge $b): string => $b->value, $tracked),
+            0,
+        );
 
-    public const string BADGE_PEJUANG_HUJAN = 'pejuang_hujan';
+        $allBadges = self::query()
+            ->whereHas('activity', fn ($q) => $q->where('user_id', $userId))
+            ->pluck('badges');
 
-    public const string BADGE_ANAK_PAGI = 'anak_pagi';
+        foreach ($allBadges as $cardBadges) {
+            foreach ($cardBadges ?? [] as $badge) {
+                if (isset($counts[$badge])) {
+                    $counts[$badge]++;
+                }
+            }
+        }
 
-    public const string BADGE_LONG_SLOW_DISTANCE = 'long_slow_distance';
-
-    public const string BADGE_NEGATIVE_SPLIT = 'negative_split';
-
-    public const string BADGE_TAHAN_DIRI = 'tahan_diri';
-
-    public const array BADGE_LABELS = [
-        self::BADGE_HARI_PANAS => '🔥 Tahan Gerah',
-        self::BADGE_PEJUANG_HUJAN => '🌧️ Pejuang Hujan',
-        self::BADGE_ANAK_PAGI => '🌅 Anak Pagi',
-        self::BADGE_LONG_SLOW_DISTANCE => '🐢 Long Slow Distance',
-        self::BADGE_NEGATIVE_SPLIT => '👻 Negative Split',
-        self::BADGE_TAHAN_DIRI => '🧘 Anti Kalap',
-    ];
+        return $counts;
+    }
 
     /**
      * @return BelongsTo<Activity, $this>

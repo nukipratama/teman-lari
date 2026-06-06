@@ -7,6 +7,7 @@ namespace App\Http\Controllers\Strava;
 use App\Http\Controllers\Controller;
 use App\Jobs\Strava\SyncActivitiesJob;
 use App\Models\Activity;
+use App\Models\Analytics\StravaSyncLog;
 use App\Models\StravaConnection;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -104,6 +105,12 @@ class StravaWebhookController extends Controller
 
     private function handleAthleteEvent(Request $request, StravaConnection $connection, string $aspectType): void
     {
+        if ($aspectType === 'delete') {
+            $this->revokeAndLog($connection, 'webhook_athlete_delete');
+
+            return;
+        }
+
         if ($aspectType !== 'update') {
             return;
         }
@@ -111,11 +118,26 @@ class StravaWebhookController extends Controller
         // Deauthorization arrives as updates.authorized = "false" (a string).
         $authorized = $request->input('updates.authorized');
         if ($authorized === 'false' || $authorized === false) {
-            $connection->markRevoked();
-            Pulse::record('strava_revoked', 'webhook_deauth')->count();
-            Log::info('strava.webhook deauthorized — connection revoked', [
-                'strava_athlete_id' => $connection->strava_athlete_id,
-            ]);
+            $this->revokeAndLog($connection, 'webhook_deauth');
+        }
+    }
+
+    private function revokeAndLog(StravaConnection $connection, string $source): void
+    {
+        $wasAlreadyRevoked = $connection->isRevoked();
+        $connection->markRevoked();
+
+        Pulse::record('strava_revoked', $source)->count();
+        Log::info("strava.webhook {$source} — connection revoked", [
+            'strava_athlete_id' => $connection->strava_athlete_id,
+        ]);
+
+        if (! $wasAlreadyRevoked) {
+            StravaSyncLog::log(
+                $connection->user_id,
+                'revoked',
+                error: "Connection revoked via {$source}",
+            );
         }
     }
 

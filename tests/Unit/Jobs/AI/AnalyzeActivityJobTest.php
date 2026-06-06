@@ -12,7 +12,6 @@ use App\Services\AI\AnalysisService;
 use App\Services\AI\AnalysisStatus;
 use App\Services\AI\AnalysisType;
 use App\Services\AI\Narrators\PostRunSpeechNarrator;
-use App\Services\AI\Narrators\RunInsightNarrator;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
 
@@ -44,14 +43,6 @@ it('writes speech + 3 insight rows Done from one job run', function (): void {
     $speechMock->shouldReceive('generate')->andReturn('nice run');
     app()->instance(PostRunSpeechNarrator::class, $speechMock);
 
-    $insightMock = Mockery::mock(RunInsightNarrator::class);
-    $insightMock->shouldReceive('generate')->andReturn([
-        'technical' => 'T-narrative',
-        'splits' => 'S-narrative',
-        'zones' => 'Z-narrative',
-    ]);
-    app()->instance(RunInsightNarrator::class, $insightMock);
-
     (new AnalyzeActivityJob($activity->id))->handle(app(AnalysisService::class));
 
     $rows = Analysis::query()
@@ -61,10 +52,13 @@ it('writes speech + 3 insight rows Done from one job run', function (): void {
         ->keyBy(fn (Analysis $r): string => $r->analysis_type->value);
 
     expect($rows)->toHaveCount(4)
-        ->and($rows[AnalysisType::PostRunSpeech->value]->content)->toBe('nice run')
-        ->and($rows[AnalysisType::RunInsightTechnical->value]->content)->toBe('T-narrative')
-        ->and($rows[AnalysisType::RunInsightSplits->value]->content)->toBe('S-narrative')
-        ->and($rows[AnalysisType::RunInsightZones->value]->content)->toBe('Z-narrative');
+        ->and($rows[AnalysisType::PostRunSpeech->value]->content)->toBe('nice run');
+
+    // Rule-based insight types: content is deterministic from activity data.
+    foreach ([AnalysisType::RunInsightTechnical, AnalysisType::RunInsightSplits, AnalysisType::RunInsightZones] as $type) {
+        expect($rows[$type->value]->content)->not->toBeEmpty()
+            ->and($rows[$type->value]->status)->toBe(AnalysisStatus::Done);
+    }
 
     foreach ($rows as $row) {
         expect($row->status)->toBe(AnalysisStatus::Done);

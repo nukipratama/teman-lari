@@ -164,3 +164,200 @@ describe('shareCardBlob', () => {
         ).rejects.toThrow('toBlob failed');
     });
 });
+
+describe('drawShareCard — edge / branch cases', () => {
+    it('shrinks an over-wide stat value to fit its column', async () => {
+        // measureText returns a width far larger than any column, so
+        // drawHeroStatGrid's value-shrink loop runs until vSize bottoms out.
+        const ctx = makeCtx();
+        ctx.measureText = vi.fn(() => ({ width: 9999 })) as unknown as typeof ctx.measureText;
+        const canvas = { width: 0, height: 0, getContext: () => ctx } as unknown as HTMLCanvasElement;
+        await drawShareCard(canvas, {
+            kartu: { ...kartu, durasi: '39 menit 10 detik panjang sekali' },
+            layout: 'kartu',
+            format: 'story',
+        });
+        expect(ctx.fillText).toHaveBeenCalled();
+    });
+
+    it('skips the zone bar entirely when every zone is zero', async () => {
+        const ctx = makeCtx();
+        const canvas = { width: 0, height: 0, getContext: () => ctx } as unknown as HTMLCanvasElement;
+        await drawShareCard(canvas, {
+            kartu: { ...kartu, zonePct: { Z1: 0, Z2: 0, Z3: 0, Z4: 0, Z5: 0 } },
+            layout: 'kartu',
+            format: 'story',
+        });
+        // Still renders the rest of the hero; the bar just contributes no segments.
+        expect(ctx.fillText).toHaveBeenCalled();
+    });
+
+    it('skips individual empty zone segments while drawing the bar', async () => {
+        const ctx = makeCtx();
+        const canvas = { width: 0, height: 0, getContext: () => ctx } as unknown as HTMLCanvasElement;
+        await drawShareCard(canvas, {
+            // Z2 and Z4 are zero — those segments are skipped, the rest drawn.
+            kartu: { ...kartu, zonePct: { Z1: 30, Z2: 0, Z3: 40, Z4: 0, Z5: 30 } },
+            layout: 'kartu',
+            format: 'story',
+        });
+        expect(ctx.fillRect).toHaveBeenCalled();
+    });
+
+    it('renders the hero with a subtitle and without a quote', async () => {
+        const ctx = makeCtx();
+        const canvas = { width: 0, height: 0, getContext: () => ctx } as unknown as HTMLCanvasElement;
+        await drawShareCard(canvas, {
+            kartu: { ...kartu, subtitle: 'Long run minggu ini', quote: null },
+            layout: 'kartu',
+            format: 'story',
+        });
+        expect(ctx.fillText).toHaveBeenCalled();
+    });
+
+    it('renders a sparse hero with no zone bar, no badges, and no quote', async () => {
+        const ctx = makeCtx();
+        const canvas = { width: 0, height: 0, getContext: () => ctx } as unknown as HTMLCanvasElement;
+        await drawShareCard(canvas, {
+            kartu: { ...kartu, zonePct: null, tags: [], tagEmojis: [], quote: null },
+            layout: 'kartu',
+            format: 'feed',
+        });
+        expect(ctx.fillText).toHaveBeenCalled();
+    });
+
+    it('renders a hero with no stat cells (all stats absent)', async () => {
+        const ctx = makeCtx();
+        const canvas = { width: 0, height: 0, getContext: () => ctx } as unknown as HTMLCanvasElement;
+        await drawShareCard(canvas, {
+            kartu: {
+                ...kartu,
+                pace: null,
+                hr: null,
+                cadence: null,
+                durasi: '—',
+                fastestKm: null,
+            },
+            layout: 'kartu',
+            format: 'feed',
+        });
+        expect(ctx.fillText).toHaveBeenCalled();
+    });
+
+    it('renders the rute layout without an edition, date, or quote', async () => {
+        const ctx = makeCtx();
+        const canvas = { width: 0, height: 0, getContext: () => ctx } as unknown as HTMLCanvasElement;
+        await drawShareCard(canvas, {
+            kartu: { ...kartu, edition: null, date: null, quote: null },
+            layout: 'rute',
+            format: 'story',
+        });
+        expect(ctx.fillText).toHaveBeenCalled();
+    });
+
+    it('renders the rute feed layout (trimmed stat cells, no story quote)', async () => {
+        const ctx = makeCtx();
+        const canvas = { width: 0, height: 0, getContext: () => ctx } as unknown as HTMLCanvasElement;
+        await drawShareCard(canvas, { kartu, layout: 'rute', format: 'feed' });
+        expect(ctx.fillText).toHaveBeenCalled();
+    });
+
+    it('falls back to the line colour for an unknown rarity', async () => {
+        const ctx = makeCtx();
+        const canvas = { width: 0, height: 0, getContext: () => ctx } as unknown as HTMLCanvasElement;
+        await drawShareCard(canvas, {
+            kartu: { ...kartu, rarity: 'mythic' as unknown as ShareKartuData['rarity'] },
+            layout: 'rute',
+            format: 'story',
+        });
+        expect(ctx.fillText).toHaveBeenCalled();
+    });
+
+    it.each(['kartu', 'rute'] as Layout[])(
+        'draws the %s layout without a mascot/bunny when SVG glyph decode fails',
+        async (layout) => {
+            // Image that always errors -> loadBunny resolves null -> the hero
+            // (kartu) skips its mascot and the rute brand lockup omits the bunny.
+            class FailingImage {
+                onload: (() => void) | null = null;
+                onerror: (() => void) | null = null;
+                set src(_v: string) {
+                    queueMicrotask(() => this.onerror?.());
+                }
+            }
+            (globalThis as unknown as { Image: unknown }).Image = FailingImage;
+            const ctx = makeCtx();
+            const canvas = { width: 0, height: 0, getContext: () => ctx } as unknown as HTMLCanvasElement;
+            await drawShareCard(canvas, { kartu: { ...kartu, polyline: null }, layout, format: 'story' });
+            expect(ctx.fillText).toHaveBeenCalled();
+        },
+    );
+
+    it('prefers an explicit temariImg over the fallback bunny', async () => {
+        const ctx = makeCtx();
+        const canvas = { width: 0, height: 0, getContext: () => ctx } as unknown as HTMLCanvasElement;
+        const temariImg = { naturalWidth: 120, naturalHeight: 200, width: 120, height: 200 } as HTMLImageElement;
+        await drawShareCard(canvas, { kartu, layout: 'kartu', format: 'story', temariImg });
+        expect(ctx.drawImage).toHaveBeenCalled();
+    });
+
+    it('renders the kartu hero with no edition (no floating edition pill)', async () => {
+        const ctx = makeCtx();
+        const canvas = { width: 0, height: 0, getContext: () => ctx } as unknown as HTMLCanvasElement;
+        await drawShareCard(canvas, { kartu: { ...kartu, edition: null }, layout: 'kartu', format: 'story' });
+        expect(ctx.fillText).toHaveBeenCalled();
+    });
+
+    it('renders the feed kartu hero with a subtitle (feed sizing branch)', async () => {
+        const ctx = makeCtx();
+        const canvas = { width: 0, height: 0, getContext: () => ctx } as unknown as HTMLCanvasElement;
+        await drawShareCard(canvas, {
+            kartu: { ...kartu, subtitle: 'Tempo Selasa' },
+            layout: 'kartu',
+            format: 'feed',
+        });
+        expect(ctx.fillText).toHaveBeenCalled();
+    });
+
+    it('renders the rute layout with no stat cells', async () => {
+        const ctx = makeCtx();
+        const canvas = { width: 0, height: 0, getContext: () => ctx } as unknown as HTMLCanvasElement;
+        await drawShareCard(canvas, {
+            kartu: { ...kartu, pace: null, hr: null, cadence: null, durasi: '—', fastestKm: null },
+            layout: 'rute',
+            format: 'story',
+        });
+        expect(ctx.fillText).toHaveBeenCalled();
+    });
+
+    it('handles a sparse zonePct missing some zone keys (treated as zero)', async () => {
+        const ctx = makeCtx();
+        const canvas = { width: 0, height: 0, getContext: () => ctx } as unknown as HTMLCanvasElement;
+        await drawShareCard(canvas, {
+            // Only Z2/Z3 present; the missing keys exercise the `?? 0` fallbacks.
+            kartu: { ...kartu, zonePct: { Z2: 60, Z3: 40 } as ShareKartuData['zonePct'] },
+            layout: 'kartu',
+            format: 'story',
+        });
+        expect(ctx.fillRect).toHaveBeenCalled();
+    });
+
+    it('falls back to the ✦ emblem when a tag has no parallel emoji', async () => {
+        const ctx = makeCtx();
+        const canvas = { width: 0, height: 0, getContext: () => ctx } as unknown as HTMLCanvasElement;
+        await drawShareCard(canvas, {
+            // Two tags but only one emoji -> second pip uses the ✦ fallback.
+            kartu: { ...kartu, tags: ['Anak Pagi', 'Kilat'], tagEmojis: ['🌅'] },
+            layout: 'kartu',
+            format: 'story',
+        });
+        expect(ctx.fillText).toHaveBeenCalled();
+    });
+
+    it('wraps an empty name without emitting a stray line', async () => {
+        const ctx = makeCtx();
+        const canvas = { width: 0, height: 0, getContext: () => ctx } as unknown as HTMLCanvasElement;
+        await drawShareCard(canvas, { kartu: { ...kartu, name: '' }, layout: 'kartu', format: 'story' });
+        expect(ctx.fillText).toHaveBeenCalled();
+    });
+});

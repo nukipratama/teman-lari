@@ -52,11 +52,16 @@ export interface StravaSync {
 }
 
 /** Resolved server-side from the user's equipped UserUnlock rows. */
+export type EquippedSlot = 'medal' | 'ikat_kepala' | 'pita' | 'kaus' | 'celana' | 'sepatu' | 'aura';
+
 export interface EquippedAccessories {
-    headband: 'ember' | 'epik' | 'legendaris' | null;
-    medal: 'pertama' | 'emas' | null;
-    pita: boolean;
-    aura: boolean;
+    medal: string | null;
+    ikat_kepala: string | null;
+    pita: string | null;
+    kaus: string | null;
+    celana: string | null;
+    sepatu: string | null;
+    aura: string | null;
 }
 
 export interface SharedProps {
@@ -66,7 +71,22 @@ export interface SharedProps {
     pendingReveal?: PendingReveal | null;
     equippedAccessories?: EquippedAccessories | null;
     stravaSync?: StravaSync | null;
+    goalsSummary?: GoalsSummary | null;
     [key: string]: unknown;
+}
+
+export interface GoalsSummaryItem {
+    id: string;
+    title: string;
+    current: number;
+    target: number;
+    unit: string;
+}
+
+export interface GoalsSummary {
+    total: number;
+    completed: number;
+    closest: GoalsSummaryItem[];
 }
 
 export interface AnalysisPayload {

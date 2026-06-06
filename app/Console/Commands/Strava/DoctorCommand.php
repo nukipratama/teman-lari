@@ -61,6 +61,8 @@ class DoctorCommand extends Command
         $passes = 0;
         $failures = 0;
 
+        $sampleUserId = $this->resolveUsers()->first()?->id;
+
         $checks = [
             'OAuth credentials' => function (): bool {
                 $clientId = config('services.strava.client_id');
@@ -77,8 +79,12 @@ class DoctorCommand extends Command
 
                 return $verifyToken !== '' && app(StravaWebhookProbe::class)->probe($callbackUrl, $verifyToken)['passed'];
             },
-            'Rate limit headroom (15 min)' => fn (): bool => RateLimiter::remaining('strava-api:15min', 200) > 0,
-            'Rate limit headroom (daily)' => fn (): bool => RateLimiter::remaining('strava-api:daily', 2000) > 0,
+            'Rate limit headroom (15 min)' => function () use ($sampleUserId): bool {
+                return $sampleUserId !== null && RateLimiter::remaining("strava-api:{$sampleUserId}:15min", 200) > 0;
+            },
+            'Rate limit headroom (daily)' => function () use ($sampleUserId): bool {
+                return $sampleUserId !== null && RateLimiter::remaining("strava-api:{$sampleUserId}:daily", 2000) > 0;
+            },
             'No stranded activities' => fn (): bool => Activity::query()
                 ->whereHas('user.stravaConnection', fn (Builder $q): Builder => $q->whereNull('revoked_at'))
                 ->whereNull('analyzed_at')

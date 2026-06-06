@@ -1,5 +1,5 @@
-import { render, screen } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { render, screen, fireEvent } from '@testing-library/react';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import Kartu from './Kartu';
 import type { Rarity } from '@/types/inertia';
 
@@ -171,5 +171,79 @@ describe('Kartu', () => {
             />,
         );
         expect(screen.getByText('👻')).toBeInTheDocument();
+    });
+
+    it('renders the subtitle when provided', () => {
+        render(<Kartu name="x" km="1" durasi="1:00" trimp={1} subtitle="Pagi negatif-split" />);
+        expect(screen.getByText('Pagi negatif-split')).toBeInTheDocument();
+    });
+
+    it('falls back to the slug name as the pip title when a badge has no ability', () => {
+        // An unknown slug is in neither BADGE_ABILITY nor BADGE_LABELS, so the
+        // title is just the prettified name (no " · ability" suffix).
+        render(
+            <Kartu name="x" km="1" durasi="1:00" trimp={1} badges={['mystery_move']} size="lg" />,
+        );
+        const pip = screen.getByText('Mystery Move').closest('span[title]');
+        expect(pip).toHaveAttribute('title', 'Mystery Move');
+    });
+
+    it('omits the full-tier stat grid when no stat values are present', () => {
+        // With no stats and a blank duration, every grid cell is filtered out so
+        // StatGrid renders nothing (returns null).
+        render(<Kartu name="x" km="1" durasi="" trimp={1} size="lg" />);
+        expect(screen.queryByText('Pace')).toBeNull();
+        expect(screen.queryByText('Durasi')).toBeNull();
+    });
+
+    describe('hover tilt handlers', () => {
+        const originalMatchMedia = globalThis.matchMedia;
+
+        afterEach(() => {
+            globalThis.matchMedia = originalMatchMedia;
+        });
+
+        function mockMatchMedia(reduced: boolean) {
+            globalThis.matchMedia = vi.fn().mockReturnValue({
+                matches: reduced,
+                media: '',
+                addEventListener: vi.fn(),
+                removeEventListener: vi.fn(),
+            }) as unknown as typeof globalThis.matchMedia;
+        }
+
+        it('sets tilt CSS vars on mouse move and clears them on mouse leave', () => {
+            mockMatchMedia(false);
+            render(<Kartu name="x" km="1" durasi="1:00" trimp={1} />);
+            const card = screen.getByRole('img', { name: 'x' });
+            // jsdom gives a zero-size rect; the math still runs and writes vars.
+            vi.spyOn(card, 'getBoundingClientRect').mockReturnValue({
+                left: 0,
+                top: 0,
+                width: 200,
+                height: 280,
+                right: 200,
+                bottom: 280,
+                x: 0,
+                y: 0,
+                toJSON: () => ({}),
+            } as DOMRect);
+
+            fireEvent.mouseMove(card, { clientX: 150, clientY: 70 });
+            expect(card.style.getPropertyValue('--tilt-x')).not.toBe('');
+            expect(card.style.getPropertyValue('--tilt-y')).not.toBe('');
+
+            fireEvent.mouseLeave(card);
+            expect(card.style.getPropertyValue('--tilt-x')).toBe('');
+            expect(card.style.getPropertyValue('--tilt-y')).toBe('');
+        });
+
+        it('skips the tilt when the user prefers reduced motion', () => {
+            mockMatchMedia(true);
+            render(<Kartu name="x" km="1" durasi="1:00" trimp={1} />);
+            const card = screen.getByRole('img', { name: 'x' });
+            fireEvent.mouseMove(card, { clientX: 10, clientY: 10 });
+            expect(card.style.getPropertyValue('--tilt-x')).toBe('');
+        });
     });
 });

@@ -4,10 +4,13 @@ declare(strict_types=1);
 
 namespace App\Services\Run\Ingest;
 
+use Throwable;
 use App\Jobs\Strava\IngestActivityJob;
 use App\Models\Activity;
+use App\Models\Analytics\StravaSyncLog;
 use App\Models\User;
 use App\Services\Strava\ActivityFetcher;
+use App\Services\Strava\StravaClient;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -18,8 +21,10 @@ class SyncOrchestrator
 {
     private const int LOCK_TTL_SECONDS = 300;
 
-    public function __construct(private readonly ActivityFetcher $fetcher)
-    {
+    public function __construct(
+        private readonly ActivityFetcher $fetcher,
+        private readonly StravaClient $client,
+    ) {
     }
 
     public function syncUser(User $user, ?CarbonImmutable $since = null): int
@@ -39,6 +44,8 @@ class SyncOrchestrator
         try {
             $newIds = $this->fetcher->fetchNewExternalIds($connection, $since);
             if ($newIds === []) {
+                $this->logSync($user->id, 'success', 0);
+
                 return 0;
             }
 
@@ -58,10 +65,15 @@ class SyncOrchestrator
                 'inserted' => $inserted,
             ]);
 
-            // Sync-run outcome for the /pulse Strava-health card trend.
             Pulse::record('strava_sync', 'inserted', $inserted)->sum()->count();
 
+            $this->logSync($user->id, 'success', $inserted);
+
             return $inserted;
+        } catch (Throwable $e) {
+            $this->logSync($user->id, 'error', 0, $e->getMessage());
+
+            throw $e;
         } finally {
             $lock->release();
         }
@@ -79,25 +91,43 @@ class SyncOrchestrator
             return false;
         }
 
-        $this->insertActivityRows($user->id, [$externalId]);
+        try {
+            $this->insertActivityRows($user->id, [$externalId]);
 
-        $activity = Activity::query()
-            ->where('user_id', $user->id)
-            ->where('strava_external_id', $externalId)
-            ->first();
+            $activity = Activity::query()
+                ->where('user_id', $user->id)
+                ->where('strava_external_id', $externalId)
+                ->first();
 
-        if ($activity === null) {
-            return false;
+            if ($activity === null) {
+                $this->logSync($user->id, 'success', 0);
+
+                return false;
+            }
+
+            IngestActivityJob::dispatch($activity->id);
+
+            Log::info('strava-sync queued single activity from webhook', [
+                'user_id' => $user->id,
+                'strava_external_id' => $externalId,
+            ]);
+
+            $this->logSync($user->id, 'success', 1);
+
+            return true;
+        } catch (Throwable $e) {
+            $this->logSync($user->id, 'error', 0, $e->getMessage());
+
+            throw $e;
         }
+    }
 
-        IngestActivityJob::dispatch($activity->id);
+    private function logSync(int $userId, string $status, int $activitiesSynced, ?string $error = null): void
+    {
+        // Rate-limit headroom is only meaningful after a successful API call.
+        $remaining = $error === null ? $this->client->rateLimitRemaining($userId) : null;
 
-        Log::info('strava-sync queued single activity from webhook', [
-            'user_id' => $user->id,
-            'strava_external_id' => $externalId,
-        ]);
-
-        return true;
+        StravaSyncLog::log($userId, $status, $activitiesSynced, 0, $error, $remaining);
     }
 
     /**

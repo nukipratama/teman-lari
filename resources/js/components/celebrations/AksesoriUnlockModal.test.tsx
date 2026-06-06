@@ -3,8 +3,8 @@ import { describe, expect, it, vi } from 'vitest';
 import AksesoriUnlockModal from './AksesoriUnlockModal';
 
 const epikUnlock = {
-    unlock_key: 'accessory.headband_epik',
-    name: 'Headband Epik',
+    unlock_key: 'accessory.ikat_kepala_epik',
+    name: 'Ikat Kepala Luar Biasa',
     icon: 'mdi:star',
     is_major: true,
 };
@@ -29,12 +29,7 @@ describe('AksesoriUnlockModal', () => {
 
     it('renders the unlock name for a major unlock', () => {
         render(<AksesoriUnlockModal unlock={epikUnlock} onClose={vi.fn()} />);
-        expect(screen.getByText(/Headband Epik/)).toBeInTheDocument();
-    });
-
-    it('renders the criteria label for known keys', () => {
-        render(<AksesoriUnlockModal unlock={epikUnlock} onClose={vi.fn()} />);
-        expect(screen.getByText(/3 kartu Luar Biasa/)).toBeInTheDocument();
+        expect(screen.getByText(/Ikat Kepala Luar Biasa/)).toBeInTheDocument();
     });
 
     it('calls onClose when "Nanti aja" is clicked', () => {

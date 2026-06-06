@@ -13,6 +13,7 @@ use App\Http\Controllers\CalendarController;
 use App\Http\Controllers\CardController;
 use App\Http\Controllers\ClientErrorController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\GoalController;
 use App\Http\Controllers\MilestoneController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\RekorController;
@@ -57,6 +58,7 @@ Route::middleware('auth')->group(function (): void {
 
     Route::get('/rekor', RekorController::class)->name('rekor');
 
+    Route::get('/target', [GoalController::class, 'index'])->name('target');
     Route::get('/aksesori', [AksesoriController::class, 'index'])->name('aksesori');
     Route::post('/api/aksesori/equip', [AksesoriController::class, 'equip'])
         ->name('api.aksesori.equip');

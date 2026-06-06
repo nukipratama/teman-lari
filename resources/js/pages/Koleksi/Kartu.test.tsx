@@ -40,13 +40,13 @@ describe('Koleksi/Kartu', () => {
 
     it('renders the LegendaryTease when legendary count is 0', () => {
         render(<KoleksiKartu cards={emptyCards()} selectedRarity={null} featuredCard={null} rarityCounts={rarityCounts} />);
-        expect(screen.getByText(/Ada kartu Legendaris nungguin/)).toBeInTheDocument();
+        expect(screen.getByText(/Legendaris · belum kebuka/)).toBeInTheDocument();
     });
 
     it('omits the LegendaryTease when at least one legendary card exists', () => {
         const counts = { ...rarityCounts, legendary: 1 };
         render(<KoleksiKartu cards={emptyCards()} selectedRarity={null} featuredCard={null} rarityCounts={counts} />);
-        expect(screen.queryByText(/Ada kartu Legendaris nungguin/)).not.toBeInTheDocument();
+        expect(screen.queryByText(/Legendaris · belum kebuka/)).not.toBeInTheDocument();
     });
 
     it('renders the rarity filter pills (counts per rarity)', () => {

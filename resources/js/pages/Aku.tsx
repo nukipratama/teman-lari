@@ -9,7 +9,6 @@ import PersonaBar, { type PersonaSlice } from '@/components/PersonaBar';
 import PrCard from '@/components/card/PrCard';
 import SectionLabel from '@/components/ui/SectionLabel';
 import Temari from '@/components/temari/Temari';
-import VoiceCard from '@/components/temari/VoiceCard';
 import AnalysisStatus from '@/components/temari/AnalysisStatus';
 import { cn } from '@/lib/cn';
 import PageContainer from '@/components/ui/PageContainer';
@@ -61,6 +60,7 @@ interface AkuProps {
     unlockCatalog?: Record<string, UnlockCatalogEntry>;
     personaMix?: PersonaSlice[];
     personaSummary?: AnalysisPayload;
+    profileVoice?: AnalysisPayload;
 }
 
 export default function Aku({
@@ -71,6 +71,7 @@ export default function Aku({
     unlockCatalog = {},
     personaMix = [],
     personaSummary,
+    profileVoice,
 }: Readonly<AkuProps>) {
     const sharedUser = usePage<SharedProps>().props.auth.user;
     const firstName = sharedUser?.first_name ?? identity.name.split(' ')[0] ?? '';
@@ -105,9 +106,19 @@ export default function Aku({
                             <div className="mb-3 font-mono text-[11px] font-bold uppercase tracking-[0.2em] text-horizon">
                                 ★ Kata Temari tentang kamu
                             </div>
-                            <VoiceCard onSky attribution="Temari" pose="proud">
-                                Halo lagi 👋 Aku catat semua perjalanan kamu di sini: kartu, rekor, aksesori, ceritanya.
-                            </VoiceCard>
+                            {profileVoice && (
+                                <AnalysisStatus
+                                    analysis={profileVoice}
+                                    inertiaReloadProps={['profileVoice']}
+                                    showTimestamp={false}
+                                    onSky
+                                    renderContent={(text) => (
+                                        <p className="font-display text-base italic leading-relaxed text-cream">
+                                            &ldquo;{renderBold(text)}&rdquo;
+                                        </p>
+                                    )}
+                                />
+                            )}
                             <div className="mt-5 flex flex-wrap gap-2">
                                 <Chip tone="onSky">
                                     {identity.strava_connected ? 'Strava aktif' : 'Strava off'}

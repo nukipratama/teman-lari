@@ -5,15 +5,19 @@ declare(strict_types=1);
 use App\Http\Controllers\Api\CardReplayController;
 use App\Http\Controllers\Api\CardSeenController;
 use App\Http\Controllers\Auth\LoginController;
+use App\Http\Controllers\GoalController;
 use App\Http\Controllers\Auth\StravaAuthController;
 use App\Http\Controllers\MilestoneController;
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Models\AI\TokenUsage;
+use App\Models\Analytics\StravaSyncLog;
 use App\Services\AI\ChatCallOptions;
 use App\Services\AI\Demo\RuleBasedNarrationFiller;
+use App\Services\AI\RuleBased\RuleBasedInsightBuilder;
 use App\Services\AI\TokenUsageRecorder;
 use App\Services\Geo\ResolvedLocation;
 use App\Services\Run\Metrics\PaceFormatter;
+use App\Services\Gamification\GoalResolver;
 use App\Services\Run\Metrics\StreamSummary;
 use App\Services\Run\Story\BriefingResult;
 use App\Services\Run\Story\VerdictTimelineItem;
@@ -46,6 +50,7 @@ it('has a test class for every concrete app class', function (): void {
         LoginController::class,       // auth feature tests
         StravaAuthController::class,  // StravaAuthTest
         MilestoneController::class,   // MilestoneDismissTest
+        GoalController::class,        // goal feature tests
         HandleInertiaRequests::class, // framework wiring
         // Immutable value objects / DTOs (no behaviour to unit-test).
         ChatCallOptions::class,
@@ -57,8 +62,11 @@ it('has a test class for every concrete app class', function (): void {
         TokenUsage::class,              // StructuredChatCallerTest
         TokenUsageRecorder::class,      // StructuredChatCallerTest
         RuleBasedNarrationFiller::class, // DemoSeedCommandTest
+        RuleBasedInsightBuilder::class,  // JobsCoverageTest, AnalyzeActivityJobTest
         PaceFormatter::class,           // exercised across pace tests
         StreamSummary::class,           // StreamAnalysisTest
+        StravaSyncLog::class,           // SyncOrchestratorTest
+        GoalResolver::class,            // GoalController feature tests
     ];
 
     $testedBasenames = collect(File::allFiles(base_path('tests')))

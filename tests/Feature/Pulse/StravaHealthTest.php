@@ -15,8 +15,8 @@ it('renders connection states and rate-limit headroom without error', function (
     Livewire::test(StravaHealth::class)
         ->assertOk()
         ->assertSee('Connections')
-        ->assertSee('API Rate Limits')
-        ->assertSee('15 min');
+        ->assertSee('stranded')
+        ->assertSee('synced');
 });
 
 it('counts a revoked connection in the revoked bucket', function (): void {

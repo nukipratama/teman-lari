@@ -18,9 +18,6 @@ beforeEach(function (): void {
         'services.strava.client_id' => 'test-client-id',
         'services.strava.client_secret' => 'test-client-secret',
     ]);
-
-    RateLimiter::clear('strava-api:15min');
-    RateLimiter::clear('strava-api:daily');
 });
 
 it('returns the connection unchanged when token is comfortably valid', function (): void {
@@ -165,20 +162,20 @@ it('refreshes the token before making a GET when it is expired', function (): vo
 it('throws StravaRateLimitedException naming the exhausted bucket and retry-after seconds', function (): void {
     Http::fake();
 
-    for ($i = 0; $i < 200; $i++) {
-        RateLimiter::hit('strava-api:15min', 15 * 60);
-    }
-
     $connection = StravaConnection::factory()->create([
         'token_expires_at' => Carbon::now()->addHours(5),
     ]);
+
+    for ($i = 0; $i < 200; $i++) {
+        RateLimiter::hit("strava-api:{$connection->user_id}:15min", 15 * 60);
+    }
 
     try {
         (new StravaClient())->get($connection, 'athlete');
         $this->fail('Expected StravaRateLimitedException to be thrown.');
     } catch (StravaRateLimitedException $e) {
         expect($e->getMessage())
-            ->toMatch('/^Strava rate limit exhausted for bucket \[strava-api:15min\]; retry in \d+s\.$/');
+            ->toMatch('/^Strava rate limit exhausted for bucket \[strava-api:' . $connection->user_id . ':15min\]; retry in \d+s\.$/');
     }
 
     Http::assertNothingSent();
@@ -195,6 +192,6 @@ it('records hits against both rate limit buckets per request', function (): void
 
     (new StravaClient())->get($connection, 'athlete');
 
-    expect(RateLimiter::attempts('strava-api:15min'))->toBe(1)
-        ->and(RateLimiter::attempts('strava-api:daily'))->toBe(1);
+    expect(RateLimiter::attempts("strava-api:{$connection->user_id}:15min"))->toBe(1)
+        ->and(RateLimiter::attempts("strava-api:{$connection->user_id}:daily"))->toBe(1);
 });
