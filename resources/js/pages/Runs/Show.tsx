@@ -163,7 +163,7 @@ export default function RunsShow({
                     </div>
 
                     {/* Kartu sidebar */}
-                    <Card as="aside" padding="lg" className="flex h-fit flex-col gap-3.5">
+                    <Card as="aside" padding="lg" className="flex flex-col gap-3.5">
                         <SectionLabel>Kartu buat lari ini</SectionLabel>
                         {card ? (
                             <>
