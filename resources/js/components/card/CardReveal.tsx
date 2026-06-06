@@ -1,6 +1,6 @@
 import { router } from "@inertiajs/react";
 import { AnimatePresence, motion } from "framer-motion";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import ConfettiBurst from "@/components/ConfettiBurst";
 import HeroPanel from "@/components/ui/HeroPanel";
 import Kartu from "./Kartu";
@@ -21,87 +21,18 @@ interface CardRevealProps {
   onPrMoment?: () => void;
 }
 
-interface Frame {
-  pose: TemariPose;
-  /** When true, render the full-body running mascot instead of the bunny.
-   *  Reserved for the "Sync masuk" frame — Temari literally sprinting back
-   *  from Strava with your run. Every other frame stays on the bunny so
-   *  identity is consistent across reveal/voice/hero surfaces. */
-  runner?: boolean;
-  eyebrow: string;
-  title: string;
-  subtitle?: string;
-  showKartu?: boolean;
-  showConfetti?: boolean;
-}
-
 const THEATRICAL_RARITIES: ReadonlyArray<Rarity> = [
   "rare",
   "epic",
   "legendary",
 ];
 
-function framesFor(theatrical: boolean, rarity: Rarity, name: string): Frame[] {
-  const rarityLabel = RARITY_LABELS[rarity];
-  if (!theatrical) {
-    // Intimate flow: 2 frames for common/uncommon
-    return [
-      {
-        pose: "reading",
-        runner: true,
-        eyebrow: "Sync masuk",
-        title: "Aku lagi baca lari kamu…",
-      },
-      {
-        pose: "holding",
-        eyebrow: `Kartu baru · ${rarityLabel}`,
-        title: name,
-        subtitle: "Udah masuk koleksimu.",
-        showKartu: true,
-      },
-    ];
-  }
-
-  // Theatrical flow: 3 frames for rare+ (sync → reveal → saved). The old
-  // "Hasil" talking-head is gone; that excited beat now lives in the mascot's
-  // anticipation while the card is still wrapped.
-  return [
-    {
-      pose: "reading",
-      runner: true,
-      eyebrow: "Sync masuk",
-      title: "Aku lagi baca lari kamu…",
-    },
-    {
-      pose: "holding",
-      eyebrow: `★ ${rarityLabel}`,
-      title: name,
-      showKartu: true,
-      showConfetti: true,
-    },
-    {
-      pose: "proud",
-      eyebrow: "Disimpan",
-      title: "Udah masuk koleksimu.",
-      subtitle: "Tarik napas, lalu balik lagi ke larimu.",
-      showKartu: true,
-    },
-  ];
-}
-
-/**
- * The mascot's pose for the current beat: excited anticipation while the pack is
- * still sealed, a rarity-keyed celebration once it's torn open (full glow for
- * legendary, an energetic bounce otherwise), else the frame's scripted pose.
- */
-function revealPose(frame: Frame, wrapped: boolean, opened: boolean, rarity: Rarity): TemariPose {
-  if (wrapped) {
-    return "excited";
-  }
-  if (frame.showKartu && opened) {
-    return rarity === "legendary" ? "glow" : "pumped";
-  }
-  return frame.pose;
+/** Mascot pose based on state (not frame-based). */
+function revealPose(opened: boolean, rarity: Rarity): TemariPose {
+  if (!opened) return "excited";
+  if (rarity === "legendary") return "glow";
+  if (THEATRICAL_RARITIES.includes(rarity)) return "pumped";
+  return "proud";
 }
 
 export default function CardReveal({
@@ -110,14 +41,9 @@ export default function CardReveal({
 }: Readonly<CardRevealProps>) {
   const theatrical = THEATRICAL_RARITIES.includes(pending.rarity);
   const rarityHex = RARITY_HEX[pending.rarity];
-  const frames = useMemo(
-    () => framesFor(theatrical, pending.rarity, pending.special_move),
-    [theatrical, pending.rarity, pending.special_move],
-  );
-
-  const [step, setStep] = useState(0);
   const [confettiKey, setConfettiKey] = useState<string | null>(null);
   const [shareOpen, setShareOpen] = useState(false);
+  const [showButtons, setShowButtons] = useState(false);
   // The card starts wrapped in foil; reduced-motion users skip straight to it.
   const [opened, setOpened] = useState(
     () => globalThis.matchMedia?.("(prefers-reduced-motion: reduce)").matches === true,
@@ -163,51 +89,28 @@ export default function CardReveal({
     );
   }, [markSeen]);
 
-  const advance = useCallback(() => {
-    setStep((s) => {
-      if (s + 1 >= frames.length) {
-        return s;
-      }
-      return s + 1;
-    });
-  }, [frames.length]);
-
-  const frame = frames[step] ?? frames[frames.length - 1];
-  const isLastFrame = step === frames.length - 1;
-  // The card stays behind the foil PackWrapper until the user tears it open.
-  const wrapped = frame.showKartu === true && !opened;
-  // Temari reacts to the moment instead of holding one static pose: leaning in
-  // while the pack is sealed, then celebrating once it's torn open.
-  const effectivePose = revealPose(frame, wrapped, opened, pending.rarity);
-
   // Tearing the pack reveals the card and fires the confetti burst (theatrical
-  // reveals only — the showConfetti frame flag marks them).
+  // reveals only).
   const openPack = useCallback(() => {
     setOpened(true);
-    if (frames[step]?.showConfetti) {
-      setConfettiKey(`reveal-${pending.card_id}-${step}`);
+    if (theatrical) {
+      setConfettiKey(`reveal-${pending.card_id}`);
     }
-  }, [frames, step, pending.card_id]);
+    // Stagger button appearance after card animation settles (~600ms).
+    setTimeout(() => setShowButtons(true), 600);
+  }, [theatrical, pending.card_id]);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         e.preventDefault();
         dismiss();
-        return;
-      }
-      // No keyboard gesture unzips the pack (touch-first); block frame advance
-      // while the card is still wrapped so the reveal isn't skipped.
-      if (e.key === " " || e.key === "Enter" || e.key === "ArrowRight") {
-        e.preventDefault();
-        if (!wrapped) {
-          advance();
-        }
       }
     };
     document.addEventListener("keydown", handler);
     return () => document.removeEventListener("keydown", handler);
-  }, [advance, dismiss, wrapped]);
+  }, [dismiss]);
+
   const km = formatKm(pending.distance_m);
   const durasi =
     pending.moving_time_sec != null
@@ -218,10 +121,11 @@ export default function CardReveal({
       ? Math.round(pending.trimp_edwards).toString()
       : "—";
   const subtitle = buildSubtitle(pending);
-  const onPrimary = isLastFrame ? viewKoleksi : advance;
-  // While wrapped, a backdrop tap shouldn't skip the reveal.
-  const advanceOrDismiss = isLastFrame ? dismiss : advance;
-  const onBackdrop = wrapped ? () => {} : advanceOrDismiss;
+
+  const effectivePose = revealPose(opened, pending.rarity);
+  const eyebrow = opened ? `★ ${RARITY_LABELS[pending.rarity]}` : "Sync masuk";
+  const title = opened ? pending.special_move : "Aku lagi baca lari kamu…";
+  const subtitleText = opened ? "Udah masuk koleksimu." : undefined;
 
   const sharePaceSec = paceSecPerKm(pending.moving_time_sec, pending.distance_m);
   const shareBadges = (pending.badges ?? []).slice(0, 2);
@@ -275,11 +179,10 @@ export default function CardReveal({
         aria-modal="true"
         aria-label="Kartu baru"
         className="fixed inset-0 z-50 flex items-center justify-center bg-sky-deep/80 px-4 backdrop-blur-md"
-        onClick={onBackdrop}
+        onClick={() => { if (opened) dismiss(); }}
       >
         <ConfettiBurst burstKey={confettiKey} />
         <motion.div
-          key={step}
           initial={{ opacity: 0, scale: 0.96, y: 12 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
@@ -288,8 +191,9 @@ export default function CardReveal({
         >
           <HeroPanel className="px-8 py-10 sm:px-12 sm:py-12">
             <div className="grid items-center gap-9 lg:grid-cols-[200px_1fr]">
+              {/* Mascot */}
               <div className="flex justify-center">
-                {frame.runner ? (
+                {!opened ? (
                   <TemariMascot
                     mood="nyala"
                     sizeClass="h-[200px] w-[200px]"
@@ -306,98 +210,127 @@ export default function CardReveal({
                   </motion.div>
                 )}
               </div>
+
+              {/* Content */}
               <div>
                 <div className="mb-3 font-mono text-[11px] font-bold uppercase tracking-[0.18em] text-horizon">
-                  {frame.eyebrow}
+                  {eyebrow}
                 </div>
                 <h2 className="font-display text-display-sm text-cream">
-                  <em className="italic text-horizon">{frame.title}</em>
+                  <em className="italic text-horizon">{title}</em>
                 </h2>
-                {frame.subtitle && (
+                {subtitleText && (
                   <p className="mt-4 font-display text-base italic leading-relaxed text-cream/80 sm:text-lg">
-                    {frame.subtitle}
+                    {subtitleText}
                   </p>
                 )}
-                {frame.showKartu && (
-                  <motion.div
-                    initial={{ opacity: 0, rotate: -6, y: 12 }}
-                    animate={{ opacity: 1, rotate: -3, y: 0 }}
-                    transition={{ duration: 0.6, delay: 0.15 }}
-                    className="relative mt-6 max-w-md"
-                  >
-                    {/* The card pops with a springy scale-overshoot the instant the
-                        foil tears, and a one-shot rarity ring ignites around it. */}
-                    <motion.div
-                      animate={{ scale: opened ? 1 : 0.95 }}
-                      transition={opened ? { type: "spring", stiffness: 300, damping: 15 } : { duration: 0 }}
-                    >
-                      <AnimatePresence>
-                        {opened && (
-                          <motion.span
-                            key="ignite"
-                            data-testid="card-ignite"
-                            aria-hidden
-                            initial={{ opacity: 0.85, scale: 0.96 }}
-                            animate={{ opacity: 0, scale: 1.18 }}
-                            transition={{ duration: 0.7, ease: "easeOut" }}
-                            className="pointer-events-none absolute inset-0 rounded-[16px]"
-                            style={{ boxShadow: `0 0 0 3px ${rarityHex}, 0 0 36px 8px ${rarityHex}` }}
-                          />
-                        )}
-                      </AnimatePresence>
-                      <Kartu
-                        name={pending.special_move}
-                        subtitle={subtitle}
-                        km={km}
-                        durasi={durasi}
-                        trimp={trimp}
-                        rarity={pending.rarity}
-                        mood={pending.mood}
-                        badges={(pending.badges ?? []).slice(0, 3)}
-                        stats={revealStats}
-                        zonePct={revealZonePct}
-                        polyline={pending.summary_polyline}
-                        paceShape={revealPaceShape}
-                        edition={pending.edition}
-                        size="lg"
+
+                {/* Card — always rendered behind foil, revealed on open */}
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.8, rotate: -4 }}
+                  animate={opened
+                    ? { opacity: 1, scale: 1, rotate: -2 }
+                    : { opacity: 1, scale: 0.95, rotate: 0 }}
+                  transition={opened
+                    ? { type: "spring", stiffness: 260, damping: 18, delay: 0.1 }
+                    : { duration: 0 }}
+                  className="relative mt-6 max-w-md"
+                >
+                  {/* Ignition ring on open */}
+                  <AnimatePresence>
+                    {opened && (
+                      <motion.span
+                        key="ignite"
+                        data-testid="card-ignite"
+                        aria-hidden
+                        initial={{ opacity: 0.85, scale: 0.96 }}
+                        animate={{ opacity: 0, scale: 1.18 }}
+                        transition={{ duration: 0.7, ease: "easeOut" }}
+                        className="pointer-events-none absolute inset-0 rounded-[16px]"
+                        style={{ boxShadow: `0 0 0 3px ${rarityHex}, 0 0 36px 8px ${rarityHex}` }}
                       />
-                    </motion.div>
-                    <AnimatePresence>
-                      {wrapped && (
-                        <PackWrapper
-                          key="pack"
-                          rarity={pending.rarity}
-                          onOpen={openPack}
-                        />
-                      )}
-                    </AnimatePresence>
-                  </motion.div>
-                )}
+                    )}
+                  </AnimatePresence>
+                  {/* Legendary light flash */}
+                  <AnimatePresence>
+                    {opened && pending.rarity === "legendary" && (
+                      <motion.div
+                        key="flash"
+                        initial={{ opacity: 0.7 }}
+                        animate={{ opacity: 0 }}
+                        transition={{ duration: 0.8 }}
+                        className="pointer-events-none absolute inset-0 rounded-[16px] bg-white/50"
+                      />
+                    )}
+                  </AnimatePresence>
+                  <Kartu
+                    name={pending.special_move}
+                    subtitle={subtitle}
+                    km={km}
+                    durasi={durasi}
+                    trimp={trimp}
+                    rarity={pending.rarity}
+                    mood={pending.mood}
+                    badges={(pending.badges ?? []).slice(0, 3)}
+                    stats={revealStats}
+                    zonePct={revealZonePct}
+                    polyline={pending.summary_polyline}
+                    paceShape={revealPaceShape}
+                    edition={pending.edition}
+                    size="lg"
+                  />
+                  {/* Foil wrapper — torn away on open */}
+                  <AnimatePresence>
+                    {!opened && (
+                      <PackWrapper
+                        key="pack"
+                        rarity={pending.rarity}
+                        onOpen={openPack}
+                      />
+                    )}
+                  </AnimatePresence>
+                </motion.div>
+
+                {/* Action buttons — stagger in after reveal */}
                 <div className="mt-7 flex flex-wrap items-center gap-2.5">
-                  {!wrapped && (
-                    <PillButton tone="horizon" onClick={onPrimary}>
-                      {isLastFrame ? "Lihat koleksi" : "Lanjut"}
-                    </PillButton>
-                  )}
-                  {isLastFrame && frame.showKartu && opened && (
-                    <PillButton
-                      tone="horizon"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setShareOpen(true);
-                      }}
-                    >
-                      Bagikan
-                    </PillButton>
+                  {showButtons && opened && (
+                    <>
+                      <motion.div
+                        initial={{ opacity: 0, y: 8 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0 }}
+                      >
+                        <PillButton tone="horizon" onClick={viewKoleksi}>
+                          Lihat koleksi
+                        </PillButton>
+                      </motion.div>
+                      <motion.div
+                        initial={{ opacity: 0, y: 8 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.1 }}
+                      >
+                        <PillButton
+                          tone="horizon"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setShareOpen(true);
+                          }}
+                        >
+                          Bagikan
+                        </PillButton>
+                      </motion.div>
+                    </>
                   )}
                   <PillButton tone="ghost" onSky size="sm" onClick={dismiss}>
-                    {isLastFrame ? "Tutup" : "Lewati"}
+                    Tutup
                   </PillButton>
                 </div>
+
+                {/* Helper text */}
                 <div className="mt-4 text-label-micro text-ink-on-sky">
-                  {wrapped
+                  {!opened
                     ? "Sobek bungkusnya buat lihat kartu"
-                    : `Frame ${step + 1} / ${frames.length} · ketuk untuk lanjut`}
+                    : "Udah masuk koleksimu · ketuk di luar untuk tutup"}
                 </div>
               </div>
             </div>
@@ -414,6 +347,8 @@ export default function CardReveal({
 
 function buildSubtitle(pending: PendingReveal): string | null {
   if (pending.detail_name === null) return null;
+  // Don't double-append pace if detail_name already contains pace-like info.
+  if (/\d+:\d+.*km/i.test(pending.detail_name)) return pending.detail_name;
   const paceSec = paceSecPerKm(pending.moving_time_sec, pending.distance_m);
   if (paceSec === null) return pending.detail_name;
   return `${pending.detail_name} · ${formatPace(paceSec)}/km`;

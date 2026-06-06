@@ -1,5 +1,6 @@
 import { Head, Link, usePage } from '@inertiajs/react';
 import { Icon } from '@iconify/react';
+import { useState } from 'react';
 import AppShell from '@/layouts/AppShell';
 import ConfettiBurst from '@/components/ConfettiBurst';
 import MilestoneBanner, { type PendingMilestone } from '@/components/MilestoneBanner';
@@ -190,13 +191,31 @@ function KataTemariCompact({ briefing, pose }: Readonly<{ briefing: BriefingResu
                     inertiaReloadProps={['briefing']}
                     size="sm"
                     renderContent={(text) => (
-                        <p className="whitespace-pre-line font-display text-base italic leading-relaxed text-ink">
-                            &ldquo;{renderBold(text)}&rdquo;
-                        </p>
+                        <ExpandableQuote text={text} />
                     )}
                 />
             </div>
         </Card>
+    );
+}
+
+function ExpandableQuote({ text }: Readonly<{ text: string }>) {
+    const [expanded, setExpanded] = useState(false);
+    return (
+        <div>
+            <p className={cn('whitespace-pre-line font-display text-base italic leading-relaxed text-ink', !expanded && 'line-clamp-3')}>
+                &ldquo;{renderBold(text)}&rdquo;
+            </p>
+            {text.length > 150 && (
+                <button
+                    type="button"
+                    onClick={() => setExpanded(!expanded)}
+                    className="mt-1 font-mono text-[11px] font-semibold text-horizon transition hover:text-horizon/80"
+                >
+                    {expanded ? 'Tutup' : 'Baca selengkapnya'}
+                </button>
+            )}
+        </div>
     );
 }
 

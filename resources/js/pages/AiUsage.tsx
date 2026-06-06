@@ -278,7 +278,7 @@ function KindRow({ row, grandTotal }: Readonly<{ row: UsageRow; grandTotal: numb
     const latencyLabel =
         row.avg_latency_ms === null
             ? '—'
-            : `${fmt(row.avg_latency_ms)} / ${fmt(row.max_latency_ms ?? row.avg_latency_ms)} ms`;
+            : `${fmt(row.avg_latency_ms)} / ${fmt(row.max_latency_ms ?? row.avg_latency_ms)} dtk`;
 
     return (
         <tr className="border-b border-line last:border-b-0">

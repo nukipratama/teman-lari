@@ -43,6 +43,18 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Admin Emails
+    |--------------------------------------------------------------------------
+    |
+    | Comma-separated list of email addresses allowed to view the Pulse
+    | dashboard. When empty, no user can access Pulse.
+    |
+    */
+
+    'admin_emails' => array_filter(array_map(trim(...), explode(',', (string) env('ADMIN_EMAILS', '')))),
+
+    /*
+    |--------------------------------------------------------------------------
     | Pulse Master Switch
     |--------------------------------------------------------------------------
     |

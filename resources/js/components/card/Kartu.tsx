@@ -202,11 +202,11 @@ export default function Kartu({
             {/* ── STAT BLOCK ── dark, high-contrast text */}
             <div className={cn('px-2 text-cream', isFull ? 'pt-2 pb-1.5' : 'pt-1.5 pb-1')}>
                 {/* Rarity ribbon */}
-                <div className="flex items-center gap-1">
-                    <span aria-hidden className={cn('text-[10px] leading-none', RARITY_TEXT[rarity])}>
+                <div className="flex min-w-0 items-center gap-1">
+                    <span aria-hidden className={cn('shrink-0 text-[10px] leading-none', RARITY_TEXT[rarity])}>
                         {RARITY_SYMBOL[rarity]}
                     </span>
-                    <span className={cn('font-mono text-[9px] font-bold uppercase tracking-[0.14em]', RARITY_TEXT[rarity])}>
+                    <span className={cn('min-w-0 shrink-0 whitespace-nowrap font-mono text-[9px] font-bold uppercase tracking-[0.14em]', RARITY_TEXT[rarity])}>
                         {RARITY_LABELS[rarity]}
                     </span>
                 </div>
