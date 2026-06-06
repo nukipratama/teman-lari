@@ -570,7 +570,7 @@ function GoalsCard() {
 
 function Stat({ l, v }: Readonly<{ l: string; v: string }>) {
     return (
-        <div>
+        <div className="text-center">
             <div className="mb-1.5 font-mono text-[11px] font-bold uppercase tracking-[0.14em] text-ink-2">{l}</div>
             <div className="font-sans text-stat font-black leading-none tabular-nums tracking-tight text-ink">{v}</div>
         </div>
