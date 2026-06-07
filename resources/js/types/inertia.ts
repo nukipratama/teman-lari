@@ -231,14 +231,6 @@ export interface PersonalRecord {
     activity?: Activity;
 }
 
-export interface FitnessChartData {
-    labels: string[];
-    ctl: (number | null)[];
-    atl: (number | null)[];
-    form: (number | null)[];
-    volume: (number | null)[];
-}
-
 export interface PaginatedResponse<T> {
     data: T[];
     current_page: number;
