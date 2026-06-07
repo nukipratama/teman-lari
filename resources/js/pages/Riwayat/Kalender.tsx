@@ -1,6 +1,6 @@
 import { Head, Link } from '@inertiajs/react';
 import { Icon } from '@iconify/react';
-import { useCallback, useMemo, useState, type ReactNode } from 'react';
+import { memo, useCallback, useMemo, useState, type ReactNode } from 'react';
 import AppShell from '@/layouts/AppShell';
 import RiwayatFilter, { type MoodOption } from '@/components/riwayat/RiwayatFilter';
 import RiwayatTabs from '@/components/riwayat/RiwayatTabs';
@@ -227,10 +227,23 @@ function WeekRowView({
         <div className="grid grid-cols-[5.5rem_repeat(7,minmax(0,1fr))] border-b border-line/50 last:border-b-0 lg:grid-cols-[6rem_repeat(7,minmax(0,1fr))]">
             <WeekSummary week={week} />
             {week.days.map((day) => (
-                <DayCellView key={day.date} cell={day} todayQuote={todayQuote} moodFilter={moodFilter} />
+                <DayCellView
+                    key={day.date}
+                    cell={day}
+                    todayQuote={todayQuote}
+                    filteredOut={isFilteredOut(day, moodFilter)}
+                />
             ))}
         </div>
     );
+}
+
+/**
+ * Precomputed in the parent so toggling the mood filter passes a stable boolean
+ * to each memoized cell, letting React skip cells whose dimmed state is unchanged.
+ */
+function isFilteredOut(cell: CalendarCell, moodFilter: ReadonlySet<Mood>): boolean {
+    return moodFilter.size > 0 && (cell.mood === null || !moodFilter.has(cell.mood));
 }
 
 function WeekSummary({ week }: Readonly<{ week: WeekRow }>) {
@@ -253,18 +266,17 @@ function WeekSummary({ week }: Readonly<{ week: WeekRow }>) {
     );
 }
 
-function DayCellView({
+const DayCellView = memo(function DayCellView({
     cell,
     todayQuote,
-    moodFilter,
-}: Readonly<{ cell: CalendarCell; todayQuote: string | null; moodFilter: ReadonlySet<Mood> }>) {
+    filteredOut,
+}: Readonly<{ cell: CalendarCell; todayQuote: string | null; filteredOut: boolean }>) {
     if (cell.is_today) {
         return <TodayCell cell={cell} quote={todayQuote} />;
     }
 
     const hasRun = cell.distance_km !== null && cell.distance_km > 0;
     const muted = !cell.is_current_month;
-    const filteredOut = moodFilter.size > 0 && (cell.mood === null || !moodFilter.has(cell.mood));
 
     const cellChrome = cn(
         'group relative flex min-h-[120px] flex-col gap-1.5 border-l border-line/50 p-2.5 transition lg:min-h-[140px] lg:p-3',
@@ -330,7 +342,7 @@ function DayCellView({
     }
 
     return <div className={cellChrome} aria-label={ariaLabel}>{inner}</div>;
-}
+});
 
 function TodayCell({ cell, quote }: Readonly<{ cell: CalendarCell; quote: string | null }>) {
     const chrome =

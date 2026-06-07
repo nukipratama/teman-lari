@@ -75,31 +75,43 @@ interface DeltaProps {
 }
 
 function Delta({ value, higherIsBetter, suffix, fmt, labelOverride }: Readonly<DeltaProps>) {
+    // Sign + label must agree with the *displayed* magnitude, not the raw value:
+    // a -0.4 pace delta that the formatter rounds to "0" should read "±0 ... sama",
+    // never "−0 ... lebih cepat".
+    const magnitude = fmt(Math.abs(value));
+    const displaysZero = Number(magnitude) === 0;
+    const effectiveValue = displaysZero ? 0 : value;
+
     let sign: string;
-    if (value > 0) {
+    if (effectiveValue > 0) {
         sign = '+';
-    } else if (value < 0) {
+    } else if (effectiveValue < 0) {
         sign = '−';
     } else {
         sign = '±';
     }
-    const good = higherIsBetter ? value > 0 : value < 0;
-    const tone = value === 0 ? 'text-ink-3' : good ? 'text-mood-enteng' : 'text-mood-lemes';
-    let label: string;
-    if (labelOverride) {
-        label = labelOverride(value);
-    } else if (value > 0) {
-        label = 'lebih banyak';
-    } else if (value < 0) {
-        label = 'lebih sedikit';
+    const good = higherIsBetter ? effectiveValue > 0 : effectiveValue < 0;
+    let tone: string;
+    if (effectiveValue === 0) {
+        tone = 'text-ink-3';
     } else {
+        tone = good ? 'text-mood-enteng' : 'text-mood-lemes';
+    }
+    let label: string;
+    if (effectiveValue === 0) {
         label = 'sama';
+    } else if (labelOverride) {
+        label = labelOverride(effectiveValue);
+    } else if (effectiveValue > 0) {
+        label = 'lebih banyak';
+    } else {
+        label = 'lebih sedikit';
     }
 
     return (
         <span className={cn('font-bold tabular-nums', tone)}>
             {sign}
-            {fmt(Math.abs(value))}
+            {magnitude}
             {suffix} {label}
         </span>
     );

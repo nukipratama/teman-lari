@@ -299,16 +299,17 @@ function DetailTiles({
     if (detail.average_cadence != null) {
         tiles.push({ label: 'CADENCE', value: `${Math.round(detail.average_cadence * 2)}`, sub: 'spm avg' });
     }
-    if (summary.ascent_m != null) {
-        tiles.push({ label: 'ASCENT', value: `${Number(summary.ascent_m)}`, sub: 'm' });
+    const ascent = Number(summary.ascent_m);
+    if (summary.ascent_m != null && Number.isFinite(ascent)) {
+        tiles.push({ label: 'ASCENT', value: `${ascent}`, sub: 'm' });
     }
-    if (summary.decoupling_pct != null) {
-        const v = Number(summary.decoupling_pct);
+    const decoupling = Number(summary.decoupling_pct);
+    if (summary.decoupling_pct != null && Number.isFinite(decoupling)) {
         tiles.push({
             label: 'DECOUPLING',
-            value: `${v >= 0 ? '+' : ''}${v.toFixed(1)}%`,
+            value: `${decoupling >= 0 ? '+' : ''}${decoupling.toFixed(1)}%`,
             sub: 'napas melar di paruh kedua',
-            warn: Math.abs(v) > 8,
+            warn: Math.abs(decoupling) > 8,
             wide: true,
         });
     }

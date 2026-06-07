@@ -80,7 +80,7 @@ export default function AppShell({ children, withNav = true }: Readonly<AppShell
             <TopNav />
             <MobileTopBar />
 
-            <main id="main-content" className="pb-24 lg:pb-0">
+            <main id="main-content" className="pb-28 lg:pb-0">
                 {children}
             </main>
 
