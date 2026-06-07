@@ -10,7 +10,7 @@ import TopNav from '@/components/TopNav';
 import MobileTopBar from '@/components/MobileTopBar';
 import MobileBottomNav from '@/components/MobileBottomNav';
 import { useDawnShift } from '@/hooks/useDawnShift';
-import type { SharedProps } from '@/types/inertia';
+import type { SharedProps, UnlockFlash } from '@/types/inertia';
 
 interface AppShellProps {
     children: ReactNode;
@@ -20,20 +20,9 @@ interface AppShellProps {
 
 type PrModalData = { activityId: number; categoryLabel: string; timeDisplay: string };
 
-interface UnlockFlash {
-    unlock_key: string;
-    name: string;
-    icon: string;
-    is_major: boolean;
-}
-
-interface AppShellPageProps extends SharedProps {
-    flash: SharedProps['flash'] & { unlock?: UnlockFlash | null };
-}
-
 export default function AppShell({ children, withNav = true }: Readonly<AppShellProps>) {
     useDawnShift();
-    const { pendingReveal, flash } = usePage<AppShellPageProps>().props;
+    const { pendingReveal, flash } = usePage<SharedProps>().props;
     const pending = pendingReveal ?? null;
     const [prModal, setPrModal] = useState<PrModalData | null>(null);
     const [majorUnlock, setMajorUnlock] = useState<UnlockFlash | null>(null);
