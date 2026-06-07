@@ -65,10 +65,8 @@ final readonly class StructuredChatCaller
 
         $response = $this->createChat($kind, $payload, $startedAt);
 
-        // One retry at a higher token cap when the model ran out of room mid-JSON.
-        // Truncated structured output is almost always unparseable; bumping the
-        // ceiling once is cheaper than dead-ending the block. Cost-bounded: a
-        // single retry, capped by self::MAX_RETRY_COMPLETION_TOKENS.
+        // Truncated structured output is unparseable, so retry once at a higher
+        // token cap, bounded by self::MAX_RETRY_COMPLETION_TOKENS.
         if (self::isTruncated($response)) {
             $retryMaxTokens = min((int) ceil($effectiveMaxTokens * 1.5), self::MAX_RETRY_COMPLETION_TOKENS);
             if ($retryMaxTokens > $effectiveMaxTokens) {

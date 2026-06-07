@@ -1,8 +1,9 @@
 import { router } from '@inertiajs/react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { useEffect, useRef } from 'react';
+import { useRef } from 'react';
 import TemariProto from '@/components/temari/TemariProto';
 import { keyToPreviewEquipped } from '@/lib/equippedAccessories';
+import { useDismissable } from '@/hooks/useDismissable';
 import { useFocusTrap } from '@/hooks/useFocusTrap';
 import type { UnlockFlash } from '@/types/inertia';
 
@@ -19,20 +20,8 @@ export default function AksesoriUnlockModal({
     const panelRef = useRef<HTMLDivElement>(null);
     const isOpen = unlock?.is_major === true;
 
+    useDismissable(isOpen, panelRef, onClose);
     useFocusTrap(isOpen, panelRef);
-
-    useEffect(() => {
-        if (!isOpen) {
-            return;
-        }
-        const onKey = (e: KeyboardEvent) => {
-            if (e.key === 'Escape') {
-                onClose();
-            }
-        };
-        document.addEventListener('keydown', onKey);
-        return () => document.removeEventListener('keydown', onKey);
-    }, [isOpen, onClose]);
 
     const handleEquip = () => {
         onClose();
@@ -51,7 +40,6 @@ export default function AksesoriUnlockModal({
                     background: 'rgba(0,0,0,0.55)',
                     backdropFilter: 'blur(4px)',
                 }}
-                onClick={onClose}
             >
                 <motion.div
                     key="aksesori-panel"
@@ -63,7 +51,6 @@ export default function AksesoriUnlockModal({
                     animate={{ opacity: 1, y: 0, scale: 1 }}
                     exit={{ opacity: 0, y: 16, scale: 0.97 }}
                     transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
-                    onClick={(e) => e.stopPropagation()}
                     className="relative w-full max-w-[390px] overflow-hidden rounded-t-3xl sm:rounded-3xl"
                     style={{
                         background:

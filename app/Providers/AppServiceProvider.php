@@ -27,12 +27,8 @@ class AppServiceProvider extends ServiceProvider
     {
         $this->app->bind(VerdictNarrator::class, VerdictTimeline::class);
 
-        // Scoped (not singleton) so `withoutDispatching()` from one caller (e.g.
-        // DemoSeedCommand) still suppresses dispatches in collaborators
-        // (RunCardFactory, PersonalRecords, ActivityPipeline) that share the same
-        // instance within a request/CLI command, while Octane flushes the instance
-        // between requests so a throwable or worker-kill mid-withoutDispatching()
-        // can never leak the suppressed flag into the next request on that worker.
+        // Scoped: one shared instance per request/command (so `withoutDispatching()`
+        // reaches collaborators), flushed by Octane between requests.
         $this->app->scoped(AnalysisService::class);
     }
 

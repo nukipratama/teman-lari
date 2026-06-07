@@ -42,7 +42,7 @@ readonly class WeeklyRecapBuilder
             thisWeekRuns: $thisWeekRuns,
             lastWeekKm: $lastWeekKm,
             deltaPct: $this->deltaPct($thisWeekKm, $lastWeek, $lastWeekKm),
-            streakWeeks: $this->consecutiveWeekStreak($user),
+            streakWeeks: WeeklySnapshot::consecutiveWeekStreak($user->id),
             bestCard: $this->bestCardOfWeek($user, $weekStart, $weekEnding),
             nearestGoal: $this->nearestGoal($user),
         );
@@ -68,43 +68,6 @@ readonly class WeeklyRecapBuilder
         }
 
         return (int) round((($thisWeekKm - $lastWeekKm) / $lastWeekKm) * 100);
-    }
-
-    /**
-     * Consecutive-week streak: weeks with runs > 0, each exactly 7 days apart,
-     * walking back from the most recent week that had runs. A gap of more than
-     * one week (or a zero-run week in between) breaks the chain.
-     */
-    private function consecutiveWeekStreak(User $user): int
-    {
-        /** @var list<Carbon> $weekEndings */
-        $weekEndings = WeeklySnapshot::query()
-            ->where('user_id', $user->id)
-            ->where('runs', '>', 0)
-            ->orderByDesc('week_ending')
-            ->pluck('week_ending')
-            ->all();
-
-        if ($weekEndings === []) {
-            return 0;
-        }
-
-        $streak = 1;
-        $previous = $weekEndings[0]->copy()->startOfDay();
-
-        foreach (\array_slice($weekEndings, 1) as $weekEnding) {
-            $current = $weekEnding->copy()->startOfDay();
-            if ($previous->copy()->subDays(7)->equalTo($current)) {
-                $streak++;
-                $previous = $current;
-
-                continue;
-            }
-
-            break;
-        }
-
-        return $streak;
     }
 
     /**

@@ -91,12 +91,10 @@ class RunController extends Controller
      */
     private function buildJourneyMatch(User $user): ?array
     {
-        // One aggregate pass gets the boundary dates + lifetime distance instead
-        // of three correlated subqueries; the boundary detail rows are then pulled
-        // in a single follow-up query keyed on those dates.
-        // MIN/MAX skip NULL start_date_local natively, so no explicit filter is
-        // needed; SUM(distance) stays unfiltered to match the lifetime total over
-        // every analyzed detail (including any with a null start_date_local).
+        // Boundary dates + lifetime distance in one aggregate pass; detail rows
+        // for those dates follow in a second query. MIN/MAX skip NULL
+        // start_date_local natively (no explicit filter); SUM(distance) stays
+        // unfiltered to cover every analyzed detail, including null-dated ones.
         $bounds = ActivityDetail::query()
             ->whereHas('activity', fn ($q) => $q->where('user_id', $user->id)->whereNotNull('analyzed_at'))
             ->selectRaw('MIN(start_date_local) as first_date, MAX(start_date_local) as latest_date, SUM(distance) as total_distance')

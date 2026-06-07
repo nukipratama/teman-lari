@@ -1,10 +1,11 @@
 import { router } from '@inertiajs/react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useRef } from 'react';
 import Temari from '@/components/temari/Temari';
 import { cn } from '@/lib/cn';
 import { aktivitasUrl } from '@/lib/routes';
 import { iconButtonVariants } from '@/lib/variants';
+import { useDismissable } from '@/hooks/useDismissable';
 import { useFocusTrap } from '@/hooks/useFocusTrap';
 import PillButton from '@/components/ui/PillButton';
 import PillLink from '@/components/ui/PillLink';
@@ -33,20 +34,8 @@ export default function PRMomentModal({ pr, onClose, onShare }: Readonly<PRMomen
         onClose();
     }, [onClose]);
 
+    useDismissable(isOpen, panelRef, handleClose);
     useFocusTrap(isOpen, panelRef);
-
-    useEffect(() => {
-        if (!isOpen) {
-            return;
-        }
-        const onKey = (e: KeyboardEvent) => {
-            if (e.key === 'Escape') {
-                handleClose();
-            }
-        };
-        document.addEventListener('keydown', onKey);
-        return () => document.removeEventListener('keydown', onKey);
-    }, [isOpen, handleClose]);
 
     return (
         <AnimatePresence>
@@ -60,7 +49,6 @@ export default function PRMomentModal({ pr, onClose, onShare }: Readonly<PRMomen
                     background: 'rgba(0,0,0,0.55)',
                     backdropFilter: 'blur(4px)',
                 }}
-                onClick={handleClose}
             >
                 <motion.div
                     key="pr-panel"
@@ -72,7 +60,6 @@ export default function PRMomentModal({ pr, onClose, onShare }: Readonly<PRMomen
                     animate={{ opacity: 1, y: 0, scale: 1 }}
                     exit={{ opacity: 0, y: 16, scale: 0.97 }}
                     transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
-                    onClick={(e) => e.stopPropagation()}
                     className="relative w-full max-w-[390px] overflow-hidden rounded-t-3xl sm:rounded-3xl"
                     style={{
                         background:
