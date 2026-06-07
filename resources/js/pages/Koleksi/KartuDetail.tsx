@@ -298,7 +298,7 @@ export default function KartuDetail({
                                 <SectionLabel className="mb-3">
                                     Kartu mirip di koleksimu
                                 </SectionLabel>
-                                <div className="grid grid-cols-3 gap-2.5">
+                                <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3">
                                     {relatedCards.map((c) => (
                                         <Link
                                             key={c.id}

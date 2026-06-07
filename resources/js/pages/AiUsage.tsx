@@ -237,7 +237,7 @@ export default function AiUsage({
                         <EmptyState />
                     ) : (
                         <div className="mt-4 overflow-x-auto rounded-2xl border border-line bg-surface-elev shadow-sm">
-                            <table className="w-full text-sm tabular-nums">
+                            <table className="w-full min-w-[680px] text-sm tabular-nums">
                                 <thead>
                                     <tr className="border-b border-line text-left text-xs text-ink-3">
                                         {COLUMNS.map((label) => (
@@ -269,7 +269,7 @@ export default function AiUsage({
                         <EmptyState />
                     ) : (
                         <div className="mt-4 overflow-x-auto rounded-2xl border border-line bg-surface-elev shadow-sm">
-                            <table className="w-full text-sm tabular-nums">
+                            <table className="w-full min-w-[520px] text-sm tabular-nums">
                                 <thead>
                                     <tr className="border-b border-line text-left text-xs text-ink-3">
                                         {USER_COLUMNS.map((label) => (

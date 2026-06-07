@@ -1,6 +1,6 @@
 import { Head, router, usePage } from '@inertiajs/react';
 import { Icon } from '@iconify/react';
-import { useCallback, useMemo, useState } from 'react';
+import { memo, useCallback, useMemo, useState } from 'react';
 import AppShell from '@/layouts/AppShell';
 import JourneyStrip, { type JourneyMatchData } from '@/components/aktivitas/JourneyStrip';
 import RingkasanCard from '@/components/aktivitas/RingkasanCard';
@@ -128,6 +128,26 @@ export default function RunsIndex({
         return ids;
     }, [runs, notes, moodFilter]);
 
+    // Stable prop objects so toggling a mood doesn't hand RiwayatFilter a fresh
+    // `range` literal (which never changes here) on every keystroke/toggle.
+    const rangeSection = useMemo(
+        () => ({
+            value: rangeFilter,
+            options: RANGE_FILTER_OPTIONS,
+            hrefFor: (r: RangeFilterValue) => `/aktivitas?range=${r}`,
+            only: RANGE_RELOAD_PROPS,
+        }),
+        [rangeFilter],
+    );
+    const moodSection = useMemo(
+        () => ({
+            selected: moodFilter,
+            options: MOOD_FILTER_OPTIONS,
+            onToggle: toggleMood,
+        }),
+        [moodFilter, toggleMood],
+    );
+
     const hasRuns = runs.length > 0;
 
     return (
@@ -144,17 +164,8 @@ export default function RunsIndex({
                     <div className="flex flex-wrap items-center justify-between gap-3">
                         <RiwayatTabs active="jejak" />
                         <RiwayatFilter
-                            range={{
-                                value: rangeFilter,
-                                options: RANGE_FILTER_OPTIONS,
-                                hrefFor: (r) => `/aktivitas?range=${r}`,
-                                only: RANGE_RELOAD_PROPS,
-                            }}
-                            mood={{
-                                selected: moodFilter,
-                                options: MOOD_FILTER_OPTIONS,
-                                onToggle: toggleMood,
-                            }}
+                            range={rangeSection}
+                            mood={moodSection}
                             onReset={resetFilters}
                         />
                     </div>
@@ -190,7 +201,7 @@ interface WeekSectionProps {
     matchedRunIds: ReadonlySet<number> | null;
 }
 
-function WeekSection({ bucket, snapshot, notes, matchedRunIds }: Readonly<WeekSectionProps>) {
+const WeekSection = memo(function WeekSection({ bucket, snapshot, notes, matchedRunIds }: Readonly<WeekSectionProps>) {
     const trimpLabel = Math.round(bucket.totalTrimp);
     const matchCount = matchedRunIds
         ? bucket.runs.filter((r) => matchedRunIds.has(r.id)).length
@@ -253,7 +264,7 @@ function WeekSection({ bucket, snapshot, notes, matchedRunIds }: Readonly<WeekSe
             </div>
         </Card>
     );
-}
+});
 
 function WeeklyStatusChips({ snapshot }: Readonly<{ snapshot: WeeklySnapshotRow }>) {
     // Monotony ≥ 1.5 and decoupling ≥ 8% are the runner-relevant alarm thresholds.

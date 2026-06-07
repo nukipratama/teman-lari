@@ -7,7 +7,7 @@ import type { MetricKey } from '@/lib/metricGlossary';
 /**
  * Canonical "label + big tabular-nums value (+ optional unit/sub)" tile.
  * Folds together the per-page private copies (HariIni VitalChip/Stat,
- * Runs/Show HeroStat, dashboard VolumeChart Stat). The card surface, value
+ * Runs/Show HeroStat, dashboard Stat). The card surface, value
  * type-scale and text-contrast tier all swap via the `tone` + `size` matrix
  * so each old call site maps to one variant pair without per-call overrides.
  */

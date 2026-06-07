@@ -67,6 +67,10 @@ describe('AppShell', () => {
         ['Hari Ini', 'Koleksi', 'Riwayat', 'Aku'].forEach((label) => {
             expect(screen.getAllByText(label).length).toBeGreaterThan(0);
         });
+        // <main> keeps bottom clearance for the fixed mobile bottom nav (cleared on lg).
+        const main = document.getElementById('main-content');
+        expect(main?.className).toContain('pb-28');
+        expect(main?.className).toContain('lg:pb-0');
     });
 
     it('omits nav chrome when withNav is false', () => {

@@ -57,4 +57,57 @@ describe('WeekVsLastWeek', () => {
         );
         expect(screen.queryByText(/detik\/km/)).not.toBeInTheDocument();
     });
+
+    it('renders a pace delta that rounds to zero as "±0 ... sama", not "−0 ... lebih cepat"', () => {
+        render(
+            <WeekVsLastWeek
+                data={{
+                    distance_delta_km: 0,
+                    runs_delta: 0,
+                    pace_delta_sec: -0.4,
+                    this_week_km: 5,
+                    this_week_runs: 1,
+                }}
+            />,
+        );
+        const span = screen.getByText(/0 detik\/km sama/);
+        expect(span.textContent).toContain('±0 detik/km sama');
+        expect(span.textContent).not.toContain('−');
+        expect(span.textContent).not.toContain('lebih cepat');
+        expect(span.className).toContain('text-ink-3');
+    });
+
+    it('keeps the cooked tone + sign when a pace delta survives rounding', () => {
+        render(
+            <WeekVsLastWeek
+                data={{
+                    distance_delta_km: 0,
+                    runs_delta: 0,
+                    pace_delta_sec: 6.2,
+                    this_week_km: 5,
+                    this_week_runs: 1,
+                }}
+            />,
+        );
+        const span = screen.getByText(/detik\/km lebih lambat/);
+        expect(span.textContent).toContain('+6 detik/km lebih lambat');
+        expect(span.className).toContain('text-mood-lemes');
+    });
+
+    it('renders a zero distance delta as "±0.0 km sama" in the neutral tone', () => {
+        render(
+            <WeekVsLastWeek
+                data={{
+                    distance_delta_km: 0,
+                    runs_delta: 0,
+                    pace_delta_sec: null,
+                    this_week_km: 0,
+                    this_week_runs: 0,
+                }}
+            />,
+        );
+        const span = screen.getByText(/km sama/);
+        expect(span.textContent).toContain('±0.0 km sama');
+        expect(span.className).toContain('text-ink-3');
+    });
 });

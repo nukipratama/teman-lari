@@ -35,7 +35,7 @@ export default function MobileBottomNav() {
   return (
     <nav
       aria-label="Primary"
-      className="fixed inset-x-0 bottom-0 z-30 flex justify-around rounded-t-[18px] bg-sky px-2 pb-7 pt-2.5 lg:hidden"
+      className="fixed inset-x-0 bottom-0 z-30 flex justify-around rounded-t-[18px] bg-sky px-2 pb-[max(1.75rem,env(safe-area-inset-bottom))] pt-2.5 lg:hidden"
     >
       {ITEMS.map((item) => {
         const isActive = active === item.id;
