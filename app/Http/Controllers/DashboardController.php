@@ -140,6 +140,11 @@ class DashboardController extends Controller
         ];
     }
 
+    /**
+     * Read-only detection of a fresh, unseen PR. The dashboard GET must not
+     * mutate the user: advancing the "seen" marker happens on an explicit
+     * POST (PrLedgerController::seen) when the celebration UI is dismissed.
+     */
     private function detectNewPr(User $user): bool
     {
         $latest = PersonalRecord::query()
@@ -157,8 +162,6 @@ class DashboardController extends Controller
         if ($seenAt !== null && $seenAt->gte($latestAt)) {
             return false;
         }
-
-        $user->forceFill(['last_seen_pr_ledger_at' => $latestAt])->save();
 
         return true;
     }
