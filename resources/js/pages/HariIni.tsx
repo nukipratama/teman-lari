@@ -26,7 +26,7 @@ import { formStatusLabel } from '@/lib/formStatus';
 import { formatGoalNumber, goalProgressRatio } from '@/lib/goalProgress';
 import { renderBold } from '@/lib/richText';
 import { aktivitasUrl, kartuUrl } from '@/lib/routes';
-import { formatKm, formatPace, formatRelativeId, paceSecPerKm } from '@/lib/pace';
+import { formatKm, formatPace, formatRelativeId, formatTimeId, formatWeekdayDateId, paceSecPerKm } from '@/lib/pace';
 import {
     MOOD_UPPER,
     VIBE_TO_POSE,
@@ -68,17 +68,6 @@ interface HariIniProps {
     pendingMilestone?: PendingMilestone | null;
 }
 
-const ID_DATE_FMT = new Intl.DateTimeFormat('id-ID', {
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long',
-});
-
-const ID_TIME_FMT = new Intl.DateTimeFormat('id-ID', {
-    hour: '2-digit',
-    minute: '2-digit',
-});
-
 export default function HariIni({
     briefing,
     load,
@@ -96,7 +85,7 @@ export default function HariIni({
     const lastRun = recentRuns[0] ?? null;
 
     const now = new Date();
-    const dateLine = `${ID_DATE_FMT.format(now)} · ${ID_TIME_FMT.format(now)} · ${briefing.vibeLabel}`;
+    const dateLine = `${formatWeekdayDateId(now)} · ${formatTimeId(now)} · ${briefing.vibeLabel}`;
     const vibeSubtitle = vibeSubtitleFor(briefing.vibeLabel);
 
     return (

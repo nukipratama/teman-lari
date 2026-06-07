@@ -16,7 +16,7 @@ import { cn } from '@/lib/cn';
 import { aktivitasUrl, kartuUrl } from '@/lib/routes';
 import PageContainer from '@/components/ui/PageContainer';
 import { moodFromActivity } from '@/lib/moodFromActivity';
-import { formatDurationHMS, formatIdDate, formatKm, formatPace, paceSecPerKm } from '@/lib/pace';
+import { formatDurationHMS, formatIdDate, formatKm, formatPace, paceSecPerKm, parsePaceSec } from '@/lib/pace';
 import { buildCardStats, paceShapeFromDetail, zonePctFromDetail } from '@/lib/runcard';
 import { emberGlowStyle } from '@/lib/styles';
 import { MOOD_TO_POSE } from '@/lib/temariPose';
@@ -459,12 +459,8 @@ function SplitsTable({ rows, className }: Readonly<{ rows: PerKmRow[]; className
 function paceSecOf(row: PerKmRow): number | null {
     if (typeof row.pace_sec === 'number') return row.pace_sec;
     if (typeof row.pace === 'string') {
-        const parts = row.pace.split(':');
-        if (parts.length === 2) {
-            const m = Number(parts[0]);
-            const s = Number(parts[1]);
-            if (Number.isFinite(m) && Number.isFinite(s)) return m * 60 + s;
-        }
+        const sec = parsePaceSec(row.pace);
+        if (Number.isFinite(sec)) return sec;
     }
     return null;
 }

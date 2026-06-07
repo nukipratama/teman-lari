@@ -4,13 +4,7 @@ import { useEffect, useRef } from 'react';
 import TemariProto from '@/components/temari/TemariProto';
 import { keyToPreviewEquipped } from '@/lib/equippedAccessories';
 import { useFocusTrap } from '@/hooks/useFocusTrap';
-
-interface UnlockFlash {
-    unlock_key: string;
-    name: string;
-    icon: string;
-    is_major: boolean;
-}
+import type { UnlockFlash } from '@/types/inertia';
 
 interface AksesoriUnlockModalProps {
     unlock: UnlockFlash | null;

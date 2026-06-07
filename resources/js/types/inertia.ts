@@ -31,7 +31,7 @@ export interface PendingReveal {
     average_heartrate?: number | null;
     stream_summary?: StreamSummary | null;
     summary_polyline?: string | null;
-    edition?: CardEdition | null;
+    edition: CardEdition;
     is_pr: boolean;
     pr_category_label: string | null;
     pr_time_display: string | null;
@@ -64,9 +64,17 @@ export interface EquippedAccessories {
     aura: string | null;
 }
 
+/** Flashed by UnlockEngine when a user earns their first new accessory in a request. */
+export interface UnlockFlash {
+    unlock_key: string;
+    name: string;
+    icon: string;
+    is_major: boolean;
+}
+
 export interface SharedProps {
     auth: { user: AuthUser | null };
-    flash: { success: string | null; error: string | null; info: string | null };
+    flash: { success: string | null; error: string | null; info: string | null; unlock?: UnlockFlash | null };
     demoLoginEnabled: boolean;
     pendingReveal?: PendingReveal | null;
     equippedAccessories?: EquippedAccessories | null;

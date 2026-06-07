@@ -1,5 +1,5 @@
 import { moodFromActivity } from '@/lib/moodFromActivity';
-import { formatDuration, formatKm, formatRelativeId } from '@/lib/pace';
+import { formatDuration, formatKm, formatRelativeId, formatShortWeekdayDateId } from '@/lib/pace';
 import { RARITY_LABELS, buildCardStats, paceShapeFromDetail, zonePctFromDetail, type CardStatStrings } from '@/lib/runcard';
 import { MOOD_TO_POSE } from '@/lib/temariPose';
 import type { TemariPose } from '@/components/temari/TemariProto';
@@ -126,9 +126,7 @@ export function formatIdDateUpper(iso: string | null): string {
     if (iso == null) return '';
     const date = new Date(iso);
     if (Number.isNaN(date.getTime())) return '';
-    return new Intl.DateTimeFormat('id-ID', { weekday: 'short', day: 'numeric', month: 'short' })
-        .format(date)
-        .toUpperCase();
+    return formatShortWeekdayDateId(date).toUpperCase();
 }
 
 export function shortenLocation(name: string | null): string | null {

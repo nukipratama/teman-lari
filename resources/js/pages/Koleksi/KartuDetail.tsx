@@ -17,7 +17,7 @@ import ShareCardModal from '@/components/card/ShareCardModal';
 import type { ShareKartuData } from '@/lib/shareCard';
 import { cn } from '@/lib/cn';
 import PageContainer from '@/components/ui/PageContainer';
-import { formatDuration, formatIdDate, formatKm, formatPace, paceSecPerKm } from '@/lib/pace';
+import { formatDuration, formatIdDate, formatKm, formatPaddedDayMonthYearId, formatPace, formatTimeId, paceSecPerKm } from '@/lib/pace';
 import { RARITY_BORDER, RARITY_LABELS, RARITY_POSE, avgCadenceFromDetail, badgeEmblem, badgeName, buildCardStats, fastestKmFromDetail, paceShapeFromDetail, zonePctFromDetail } from '@/lib/runcard';
 import { renderBold } from '@/lib/richText';
 import type { ActivityDetail, AnalysisPayload, CardEdition, Mood, Rarity } from '@/types/inertia';
@@ -110,9 +110,7 @@ export default function KartuDetail({
     const shareDate = detail?.start_date_local
         ? (() => {
               const d = new Date(detail.start_date_local);
-              const datePart = d.toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' });
-              const timePart = d.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
-              return `${datePart}\n${timePart}`;
+              return `${formatPaddedDayMonthYearId(d)}\n${formatTimeId(d)}`;
           })()
         : null;
 
