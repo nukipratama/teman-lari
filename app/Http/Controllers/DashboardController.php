@@ -18,7 +18,6 @@ use App\Services\Run\Metrics\TrainingLoad;
 use App\Services\Run\Story\BriefingComposer;
 use App\Services\Run\Story\Temari;
 use App\Services\Run\Story\Vibe;
-use App\Services\Run\WeekSummaryBuilder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Inertia\Inertia;
@@ -32,7 +31,6 @@ class DashboardController extends Controller
         Temari $temari,
         TrainingLoad $trainingLoad,
         BriefingComposer $briefingComposer,
-        WeekSummaryBuilder $weekSummaryBuilder,
         WeeklyRecapBuilder $weeklyRecapBuilder,
     ): Response {
         /** @var User $user */
@@ -75,11 +73,9 @@ class DashboardController extends Controller
             'snapshot' => $weeks->last(),
             'recentRuns' => $recentRuns,
             'lastRunNote' => $lastRunNote,
-            'chartData' => $weekSummaryBuilder->fitnessChartData($weeks),
             'trendAnalysis' => $this->resolveTrendCaption($user, $today),
             'hasNewPr' => $this->detectNewPr($user),
             'pendingMilestone' => $this->resolvePendingMilestone($user),
-            'weekVsLastWeek' => $weekSummaryBuilder->weekVsLastWeek($weeks),
             'weeklyRecap' => $weeklyRecapBuilder->forUser($user, $today),
         ]);
     }

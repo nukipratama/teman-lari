@@ -20,29 +20,42 @@ abstract class AnalyzeBaseJob implements ShouldQueue
     public array $backoff = [10, 60];
 
     /**
-     * Decide what happens after a generation failure.
-     *
-     * `UnavailableException` is terminal (bad schema / malformed JSON /
-     * permanent upstream error): swallow it so the row stays marked failed and
-     * the worker does not retry. `TransientUpstreamException` (429 / 5xx /
-     * timeout) is retryable: when Azure handed us a `Retry-After`, release the
-     * job with that delay (this still consumes a `$tries` slot, so the attempt
-     * accounting and eventual `failed()` hook are unchanged); otherwise rethrow
-     * and let the static `$backoff` drive the retry. Anything else (a genuine
-     * bug) is rethrown unchanged.
+     * Upper bound on a `Retry-After` release delay (seconds), so an oversized
+     * upstream value cannot park a row for hours.
      */
-    protected function rethrowIfUnexpected(Throwable $e): void
+    private const int MAX_RETRY_AFTER_SECONDS = 600;
+
+    /**
+     * Settle a generation failure, given callbacks that mark the affected
+     * row(s) failed or re-queued.
+     *
+     * `TransientUpstreamException` (429 / 5xx / timeout) carrying a `Retry-After`
+     * is retryable while a `$tries` slot remains: re-queue the row(s) and
+     * release the job with that (capped) delay. A re-queued row is neither
+     * re-dispatchable nor shown as "Coba lagi", so a manual retry cannot race a
+     * second LLM call during the wait.
+     *
+     * Every other outcome ends this attempt failed. `UnavailableException` is
+     * terminal (bad schema / malformed JSON / permanent upstream error) and is
+     * swallowed so the worker does not retry; anything else (transient without
+     * a delay, exhausted retries, or a genuine bug) is rethrown so the queue
+     * retries via `$backoff` or records it in `failed_jobs`.
+     */
+    protected function settleFailure(Throwable $e, callable $markFailed, callable $markRequeued): void
     {
-        if ($e instanceof UnavailableException) {
+        if ($e instanceof TransientUpstreamException
+            && $e->retryAfterSeconds !== null
+            && $this->attempts() < $this->tries) {
+            $markRequeued();
+            $this->release(min($e->retryAfterSeconds, self::MAX_RETRY_AFTER_SECONDS));
+
             return;
         }
 
-        if ($e instanceof TransientUpstreamException && $e->retryAfterSeconds !== null) {
-            $this->release($e->retryAfterSeconds);
+        $markFailed();
 
-            return;
+        if (! $e instanceof UnavailableException) {
+            throw $e;
         }
-
-        throw $e;
     }
 }

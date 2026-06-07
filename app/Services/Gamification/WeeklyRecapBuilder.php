@@ -35,6 +35,11 @@ readonly class WeeklyRecapBuilder
         $thisWeekRuns = $thisWeek === null ? 0 : (int) ($thisWeek->runs ?? 0);
         $lastWeekKm = $lastWeek === null ? 0.0 : (float) ($lastWeek->distance_km ?? 0.0);
 
+        // Built once and reused for both the streak and the nearest goal so the
+        // GamificationContext queries (including the week-streak scan) run a
+        // single time per recap rather than once here and again inside GoalResolver.
+        $ctx = GamificationContext::forUser($user);
+
         return new WeeklyRecap(
             weekStart: $weekStart->toDateString(),
             weekEnd: $weekEnding->toDateString(),
@@ -42,9 +47,9 @@ readonly class WeeklyRecapBuilder
             thisWeekRuns: $thisWeekRuns,
             lastWeekKm: $lastWeekKm,
             deltaPct: $this->deltaPct($thisWeekKm, $lastWeek, $lastWeekKm),
-            streakWeeks: WeeklySnapshot::consecutiveWeekStreak($user->id),
+            streakWeeks: $ctx->streakWeeks,
             bestCard: $this->bestCardOfWeek($user, $weekStart, $weekEnding),
-            nearestGoal: $this->nearestGoal($user),
+            nearestGoal: $this->nearestGoal($user, $ctx),
         );
     }
 
@@ -128,9 +133,9 @@ readonly class WeeklyRecapBuilder
      *
      * @return array{id: string, title: string, current: int|float, target: int|float, unit: string, ratio: float, remainder_label: string}|null
      */
-    private function nearestGoal(User $user): ?array
+    private function nearestGoal(User $user, GamificationContext $ctx): ?array
     {
-        $goals = $this->goalResolver->forUser($user);
+        $goals = $this->goalResolver->forUser($user, $ctx);
         $closest = $this->goalResolver->closestToCompletion($user, 1, $goals);
         $goal = $closest[0] ?? null;
 

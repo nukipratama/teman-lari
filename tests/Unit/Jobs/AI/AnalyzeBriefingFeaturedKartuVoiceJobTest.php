@@ -107,14 +107,17 @@ it('releases the job with the Retry-After delay instead of rethrowing when one i
     $row = featuredKartuRow($user->id);
 
     $queueJob = Mockery::mock(QueueJobContract::class);
+    $queueJob->shouldReceive('attempts')->andReturn(1);
     $queueJob->shouldReceive('release')->once()->with(23);
 
     $job = new AnalyzeBriefingFeaturedKartuVoiceJob($row->id);
     $job->setJob($queueJob);
 
     // Releasing replaces rethrow: handle() returns cleanly while the queue
-    // re-enqueues the job after the requested delay.
+    // re-enqueues the job after the requested delay. The row stays Queued (not
+    // Failed) for the wait, so it is neither re-dispatchable nor shown as a
+    // failed "Coba lagi" block that a manual retry could double-bill.
     $job->handle(app(AnalysisService::class));
 
-    expect($row->fresh()->status)->toBe(AnalysisStatus::Failed);
+    expect($row->fresh()->status)->toBe(AnalysisStatus::Queued);
 });
