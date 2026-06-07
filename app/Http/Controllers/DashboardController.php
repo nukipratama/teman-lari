@@ -13,12 +13,11 @@ use App\Models\User;
 use App\Models\WeeklySnapshot;
 use App\Services\AI\AnalysisStatus;
 use App\Services\AI\AnalysisType;
-use App\Services\Run\Metrics\PaceCalculator;
 use App\Services\Run\Metrics\TrainingLoad;
 use App\Services\Run\Story\BriefingComposer;
 use App\Services\Run\Story\Temari;
 use App\Services\Run\Story\Vibe;
-use Illuminate\Database\Eloquent\Collection;
+use App\Services\Run\WeekSummaryBuilder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Inertia\Inertia;
@@ -32,6 +31,7 @@ class DashboardController extends Controller
         Temari $temari,
         TrainingLoad $trainingLoad,
         BriefingComposer $briefingComposer,
+        WeekSummaryBuilder $weekSummaryBuilder,
     ): Response {
         /** @var User $user */
         $user = $request->user();
@@ -73,11 +73,11 @@ class DashboardController extends Controller
             'snapshot' => $weeks->last(),
             'recentRuns' => $recentRuns,
             'lastRunNote' => $lastRunNote,
-            'chartData' => $this->fitnessChartData($weeks),
+            'chartData' => $weekSummaryBuilder->fitnessChartData($weeks),
             'trendAnalysis' => $this->resolveTrendCaption($user, $today),
             'hasNewPr' => $this->detectNewPr($user),
             'pendingMilestone' => $this->resolvePendingMilestone($user),
-            'weekVsLastWeek' => $this->resolveWeekVsLastWeek($weeks),
+            'weekVsLastWeek' => $weekSummaryBuilder->weekVsLastWeek($weeks),
         ]);
     }
 
@@ -110,51 +110,6 @@ class DashboardController extends Controller
         }
 
         return ['oneline' => $speech, 'mood' => $mood];
-    }
-
-    /**
-     * @param  Collection<int, WeeklySnapshot>  $weeks  Chronological (oldest → newest).
-     * @return array{distance_delta_km: float, runs_delta: int, pace_delta_sec: float|null, this_week_km: float, this_week_runs: int}|null
-     */
-    private function resolveWeekVsLastWeek(Collection $weeks): ?array
-    {
-        if ($weeks->count() < 2) {
-            return null;
-        }
-
-        // Both are non-null because count >= 2 (guarded above).
-        /** @var WeeklySnapshot $thisWeek */
-        $thisWeek = $weeks->last();
-        /** @var WeeklySnapshot $lastWeek */
-        $lastWeek = $weeks->slice(-2, 1)->first();
-
-        $paceDelta = null;
-        $thisPace = self::weekPaceSecPerKm($thisWeek);
-        $lastPace = self::weekPaceSecPerKm($lastWeek);
-        if ($thisPace !== null && $lastPace !== null) {
-            $paceDelta = $thisPace - $lastPace;
-        }
-
-        return [
-            'distance_delta_km' => (float) (($thisWeek->distance_km ?? 0) - ($lastWeek->distance_km ?? 0)),
-            'runs_delta' => (int) (($thisWeek->runs ?? 0) - ($lastWeek->runs ?? 0)),
-            'pace_delta_sec' => $paceDelta,
-            'this_week_km' => (float) ($thisWeek->distance_km ?? 0),
-            'this_week_runs' => (int) ($thisWeek->runs ?? 0),
-        ];
-    }
-
-    private static function weekPaceSecPerKm(WeeklySnapshot $snapshot): ?float
-    {
-        // Real pace: total moving seconds over total distance for the week.
-        // moving_time_sec is null for snapshots written before it was tracked;
-        // those return null until the next aggregation backfills the column.
-        $km = $snapshot->distance_km;
-
-        return PaceCalculator::secPerKm(
-            $km === null ? null : $km * 1000,
-            $snapshot->moving_time_sec,
-        );
     }
 
     /**
@@ -240,20 +195,5 @@ class DashboardController extends Controller
             ->first();
 
         return $existing ?? $temari->dailyGreeting($user, $vibeState, $today);
-    }
-
-    /**
-     * @param  Collection<int, WeeklySnapshot>  $rows
-     * @return array{labels: array<int, string>, ctl: array<int, ?float>, atl: array<int, ?float>, form: array<int, ?float>, volume: array<int, ?float>}
-     */
-    private function fitnessChartData(Collection $rows): array
-    {
-        return [
-            'labels' => $rows->map(fn ($r): string => $r->week_ending->toDateString())->all(),
-            'ctl' => $rows->pluck('ctl_42d')->all(),
-            'atl' => $rows->pluck('atl_7d')->all(),
-            'form' => $rows->pluck('form')->all(),
-            'volume' => $rows->pluck('distance_km')->all(),
-        ];
     }
 }
