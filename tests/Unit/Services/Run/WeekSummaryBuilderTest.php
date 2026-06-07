@@ -5,7 +5,13 @@ declare(strict_types=1);
 use App\Models\WeeklySnapshot;
 use App\Services\Run\WeekSummaryBuilder;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
+
+// WeeklySnapshot's factory has a `user_id => User::factory()` belongsTo, so even
+// `->make()` persists a User to resolve the FK. Without RefreshDatabase those
+// users commit and leak into later tests (e.g. StravaAuthTest's User::count).
+uses(RefreshDatabase::class);
 
 beforeEach(function (): void {
     $this->builder = new WeekSummaryBuilder();
