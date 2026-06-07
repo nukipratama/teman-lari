@@ -13,6 +13,29 @@
 
 > **Design tokens (Daybreak palette), voice & tone, typography, the AI narrator pipeline, the 1:1 test convention, and the Sail toolchain all live in the `teman-lari` skill** (`.claude/skills/teman-lari/`). Activate it for any UI, AI-narration, or test work. Source-of-truth docs: [docs/design-tokens.md](docs/design-tokens.md), [docs/voice-and-tone.md](docs/voice-and-tone.md).
 
+## Common commands
+
+Everything runs in Docker via **Sail** (no host PHP/Node). Stop at the first failure on the fast-feedback ladder; the full skill toolchain has the rest.
+
+```bash
+./vendor/bin/sail up -d                      # start the stack
+
+./vendor/bin/sail pest --group=structure     # fast 1:1 + aggregate structural gate (run first)
+
+./vendor/bin/sail bin pest --filter=Name     # a single test / file while iterating
+
+./vendor/bin/sail bin pest --parallel        # full PHP suite
+
+./vendor/bin/sail npm run test               # frontend (Vitest); `test:coverage` for the 95% gate
+
+./vendor/bin/sail npm run build              # build assets (`npm run dev` for HMR)
+
+./vendor/bin/sail bin pint                    # format PHP (pre-commit also runs phpstan + rector)
+
+./vendor/bin/sail composer check             # full gate: pint + phpstan + rector + pest + tsc + vitest (pre-push)
+
+```
+
 ## LLM Integration
 
 Briefing and analysis narration is LLM-backed via Azure OpenAI through openai-php/laravel ([AzureOpenAIClient](app/Services/AI/AzureOpenAIClient.php), [StructuredChatCaller](app/Services/AI/StructuredChatCaller.php), narrators under [app/Services/AI/Narrators/](app/Services/AI/Narrators/)). All narrator output flows through the [Analysis](app/Models/AI/Analysis.php) row model (status: pending / queued / processing / done / failed).
