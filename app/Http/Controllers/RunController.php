@@ -91,17 +91,31 @@ class RunController extends Controller
      */
     private function buildJourneyMatch(User $user): ?array
     {
-        $first = ActivityDetail::query()
+        // One aggregate pass gets the boundary dates + lifetime distance instead
+        // of three correlated subqueries; the boundary detail rows are then pulled
+        // in a single follow-up query keyed on those dates.
+        // MIN/MAX skip NULL start_date_local natively, so no explicit filter is
+        // needed; SUM(distance) stays unfiltered to match the lifetime total over
+        // every analyzed detail (including any with a null start_date_local).
+        $bounds = ActivityDetail::query()
             ->whereHas('activity', fn ($q) => $q->where('user_id', $user->id)->whereNotNull('analyzed_at'))
-            ->whereNotNull('start_date_local')
-            ->orderBy('start_date_local')
+            ->selectRaw('MIN(start_date_local) as first_date, MAX(start_date_local) as latest_date, SUM(distance) as total_distance')
             ->first();
 
-        $current = ActivityDetail::query()
+        $firstDate = $bounds?->getAttribute('first_date');
+        $latestDate = $bounds?->getAttribute('latest_date');
+        if ($firstDate === null || $latestDate === null || $firstDate === $latestDate) {
+            return null;
+        }
+
+        $boundaryDetails = ActivityDetail::query()
             ->whereHas('activity', fn ($q) => $q->where('user_id', $user->id)->whereNotNull('analyzed_at'))
-            ->whereNotNull('start_date_local')
-            ->orderByDesc('start_date_local')
-            ->first();
+            ->whereIn('start_date_local', [$firstDate, $latestDate])
+            ->orderBy('start_date_local')
+            ->get();
+
+        $first = $boundaryDetails->first();
+        $current = $boundaryDetails->last();
 
         if ($first === null || $current === null || $first->id === $current->id) {
             return null;
@@ -119,16 +133,12 @@ class RunController extends Controller
             ? $firstHr - $currentHr
             : null;
 
-        $totalKm = (float) ActivityDetail::query()
-            ->whereHas('activity', fn ($q) => $q->where('user_id', $user->id)->whereNotNull('analyzed_at'))
-            ->sum('distance');
-
         return [
             'first' => self::summariseDetail($first, $firstPace),
             'current' => self::summariseDetail($current, $currentPace),
             'pace_improvement_sec' => $paceImprovement,
             'hr_improvement_bpm' => $hrImprovement,
-            'total_km' => round($totalKm / 1000, 1),
+            'total_km' => round((float) ($bounds->getAttribute('total_distance') ?? 0) / 1000, 1),
         ];
     }
 
