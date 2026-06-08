@@ -23,10 +23,11 @@ uses(RefreshDatabase::class);
 beforeEach(fn () => Carbon::setTestNow('2026-05-12 12:00:00'));
 afterEach(fn () => Carbon::setTestNow());
 
-it('seeds a complete, login-ready demo dataset from a single run', function (): void {
-    // The seed is heavy (~126 runs) and deterministic (frozen clock), so ONE seed
-    // feeds every completeness assertion below rather than re-seeding per concern.
-    // (Keeps this file off the suite's slowest path — it used to re-seed 3x.)
+it('seeds a complete, login-ready demo dataset and stays idempotent across re-runs', function (): void {
+    // The seed is heavy (~126 runs) and deterministic (frozen clock). It is the
+    // suite's single slowest unit of work, so this file runs it as few times as
+    // possible: ONE seed feeds every completeness assertion below, then a SECOND
+    // --fresh seed proves idempotency — two seeds total, not the original five.
     $exitCode = $this->artisan('demo:seed', ['--fresh' => true])->run();
     expect($exitCode)->toBe(0);
 
@@ -85,16 +86,11 @@ it('seeds a complete, login-ready demo dataset from a single run', function (): 
     $queued = RunCard::query()->findOrFail($user->pending_reveal_card_id);
     $maxRank = (clone $cardQuery)->get()->max(fn (RunCard $card): int => $card->rarity->rank());
     expect($queued->rarity->rank())->toBe($maxRank);
-});
 
-it('is idempotent — re-running with --fresh produces a consistent row count', function (): void {
+    // Idempotency: a second --fresh seed wipes + rebuilds to the same row count
+    // (deterministic blueprint + frozen clock). Reusing the first seed above as
+    // the baseline keeps this file at two seeds total instead of the original five.
     $this->artisan('demo:seed', ['--fresh' => true])->assertSuccessful();
-    $firstUser = User::query()->where('email', DemoRunSeeder::DEMO_USER_EMAIL)->firstOrFail();
-    $first = Activity::query()->where('user_id', $firstUser->id)->count();
-
-    $this->artisan('demo:seed', ['--fresh' => true])->assertSuccessful();
-    $secondUser = User::query()->where('email', DemoRunSeeder::DEMO_USER_EMAIL)->firstOrFail();
-    $second = Activity::query()->where('user_id', $secondUser->id)->count();
-
-    expect($second)->toBe($first);
+    $reseededUser = User::query()->where('email', DemoRunSeeder::DEMO_USER_EMAIL)->firstOrFail();
+    expect(Activity::query()->where('user_id', $reseededUser->id)->count())->toBe($activityCount);
 });
