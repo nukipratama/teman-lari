@@ -11,7 +11,40 @@ env:
   PHP_VERSION: '8.4'
 
 jobs:
+  changes:
+    runs-on: [self-hosted, homelab]
+    outputs:
+      backend: ${{ steps.filter.outputs.backend }}
+      frontend: ${{ steps.filter.outputs.frontend }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      # Classify the push so each suite skips when its files weren't touched.
+      # Shared-infra paths (ci.yml, Dockerfile, compose, .env.example) match
+      # both, so an infra change runs the full pipeline. Diff is against the
+      # merge-base with main; on main pushes both jobs run anyway (see the `if`).
+      - name: Detect changed areas
+        id: filter
+        run: |
+          git fetch --no-tags --quiet origin main
+          changed=$(git diff --name-only "$(git merge-base origin/main HEAD)" HEAD)
+          printf 'Changed files:\n%s\n' "$changed"
+          backend=false; frontend=false
+          if printf '%s\n' "$changed" | grep -qE '^(app|bootstrap|config|database|routes|tests)/|^composer\.(json|lock)$|^phpunit\.xml$|^artisan$|^\.github/workflows/ci\.yml$|^Dockerfile$|^compose[^/]*\.yaml$|^\.env\.example$'; then
+            backend=true
+          fi
+          if printf '%s\n' "$changed" | grep -qE '^resources/(js|css|views)/|^package(-lock)?\.json$|^vite\.config\.ts$|^vitest\.config\.ts$|^tsconfig\.json$|^eslint\.config\.|^\.github/workflows/ci\.yml$|^Dockerfile$|^compose[^/]*\.yaml$|^\.env\.example$'; then
+            frontend=true
+          fi
+          echo "backend=$backend" >> "$GITHUB_OUTPUT"
+          echo "frontend=$frontend" >> "$GITHUB_OUTPUT"
+          echo "Result: backend=$backend frontend=$frontend"
+
   backend-tests:
+    needs: changes
+    if: ${{ needs.changes.outputs.backend == 'true' || github.ref == 'refs/heads/main' }}
     runs-on: [self-hosted, homelab]
     services:
       mysql:
@@ -88,8 +121,28 @@ jobs:
       # the artisan wrapper silently drops --coverage in parallel mode.
       # env is set at step level because job.services.*.ports is only
       # available there, not at job-level env.
+      - name: Tests (fast, no coverage)
+        if: github.ref != 'refs/heads/main'
+        env:
+          APP_ENV: testing
+          DB_CONNECTION: mysql
+          DB_HOST: 127.0.0.1
+          DB_PORT: ${{ job.services.mysql.ports['3306'] }}
+          DB_DATABASE: teman_lari_testing
+          DB_USERNAME: root
+          DB_PASSWORD: password
+          REDIS_HOST: 127.0.0.1
+          REDIS_PORT: ${{ job.services.redis.ports['6379'] }}
+        run: |
+          ./vendor/bin/pest --parallel --processes=4 \
+            --fail-on-warning --fail-on-notice \
+            --fail-on-deprecation --fail-on-risky \
+            --fail-on-phpunit-warning --fail-on-phpunit-notice \
+            --fail-on-phpunit-deprecation 2>&1 | tee /tmp/pest-output.txt
+          exit ${PIPESTATUS[0]}
+
       - name: Tests + 95% coverage
-        id: pest
+        if: github.ref == 'refs/heads/main'
         env:
           APP_ENV: testing
           DB_CONNECTION: mysql
@@ -128,6 +181,8 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
   frontend-tests:
+    needs: changes
+    if: ${{ needs.changes.outputs.frontend == 'true' || github.ref == 'refs/heads/main' }}
     runs-on: [self-hosted, homelab]
     steps:
       - uses: actions/checkout@v6
@@ -162,7 +217,12 @@ jobs:
       - name: Component/test 1:1 structure check
         run: npx vitest run resources/js/test/structure.test.ts
 
+      - name: Vitest (fast, no coverage)
+        if: github.ref != 'refs/heads/main'
+        run: npm run test
+
       - name: Vitest + 95% coverage
+        if: github.ref == 'refs/heads/main'
         run: npm run test:coverage
 
       - name: Vitest summary
