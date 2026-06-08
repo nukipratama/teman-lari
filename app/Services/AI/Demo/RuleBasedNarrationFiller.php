@@ -15,42 +15,54 @@ use App\Services\AI\AnalysisType;
  * - DemoSeedCommand to backfill Analysis rows without spending LLM tokens
  * - BriefingComposer when Azure OpenAI is unconfigured (empty env)
  *
- * Output is deterministic and intentionally flat. It is not Temari's natural
- * voice. Users with a configured Azure can re-trigger via "Baca ulang" to get
+ * Output is deterministic (seeded selection) and Temari-voiced. Each method
+ * offers multiple variants so demo users see personality, not repetition.
+ * Users with a configured Azure can re-trigger via "Baca ulang" to get
  * real LLM output.
  */
 final class RuleBasedNarrationFiller
 {
     public function fillFor(Analysis $row): string
     {
+        $seed = $row->subject_id;
+
         return match ($row->analysis_type) {
-            AnalysisType::BriefingHeadline => $this->briefingHeadline(),
-            AnalysisType::BriefingSuggestion => $this->briefingSuggestion(),
-            AnalysisType::BriefingMascotVoice => $this->briefingMascotVoice($row->subject_id),
-            AnalysisType::BriefingFeaturedKartuVoice => $this->briefingFeaturedKartuVoice($row->subject_id),
-            AnalysisType::PostRunSpeech => $this->postRunSpeech($row->subject_id),
-            AnalysisType::DailyGreeting => $this->dailyGreeting(),
-            AnalysisType::RunInsightTechnical => $this->runInsightTechnical($row->subject_id),
-            AnalysisType::RunInsightSplits => $this->runInsightSplits(),
-            AnalysisType::RunInsightZones => $this->runInsightZones(),
-            AnalysisType::WeeklyRecap => $this->weeklyRecap(),
-            AnalysisType::PrContext => $this->prContext(),
-            AnalysisType::TrendCaption => $this->trendCaption(),
-            AnalysisType::CardFlavor => $this->cardFlavor($row->subject_id),
-            AnalysisType::PersonaSummary => $this->personaSummary(),
-            AnalysisType::AkuProfileVoice => $this->akuProfileVoice(),
-            AnalysisType::MonthlyRecap => $this->monthlyRecap(),
+            AnalysisType::BriefingHeadline => $this->briefingHeadline($seed),
+            AnalysisType::BriefingSuggestion => $this->briefingSuggestion($seed),
+            AnalysisType::BriefingMascotVoice => $this->briefingMascotVoice($seed),
+            AnalysisType::BriefingFeaturedKartuVoice => $this->briefingFeaturedKartuVoice($seed),
+            AnalysisType::PostRunSpeech => $this->postRunSpeech($seed),
+            AnalysisType::DailyGreeting => $this->dailyGreeting($seed),
+            AnalysisType::RunInsightTechnical => $this->runInsightTechnical($seed),
+            AnalysisType::RunInsightSplits => $this->runInsightSplits($seed),
+            AnalysisType::RunInsightZones => $this->runInsightZones($seed),
+            AnalysisType::WeeklyRecap => $this->weeklyRecap($seed),
+            AnalysisType::PrContext => $this->prContext($seed),
+            AnalysisType::TrendCaption => $this->trendCaption($seed),
+            AnalysisType::CardFlavor => $this->cardFlavor($seed),
+            AnalysisType::PersonaSummary => $this->personaSummary($seed),
+            AnalysisType::AkuProfileVoice => $this->akuProfileVoice($seed),
+            AnalysisType::MonthlyRecap => $this->monthlyRecap($seed),
         };
     }
 
-    private function briefingHeadline(): string
+    private function briefingHeadline(int $seed): string
     {
-        return 'Kondisi kamu hari ini **stabil**, kapasitas cukup buat sesi ringan sampai sedang.';
+        return $this->select([
+            'Kondisi kamu hari ini **stabil**, kapasitas cukup buat sesi ringan sampai sedang.',
+            'Form lagi oke, recovery cukup. Bisa lari tapi gak usah ngoyo.',
+            'Kesiapan positif, badan udah recharge. Kalau mau lari, ada tenaga.',
+            'Bebas aja hari ini, kapasitas masih aman buat apa pun yang kamu mau.',
+        ], $seed);
     }
 
-    private function briefingSuggestion(): string
+    private function briefingSuggestion(int $seed): string
     {
-        return "Tempo ringan, 35-45 menit.\n\nWarmup 10 menit santai, tempo 15-20 menit di zona 3 atas, terus cooldown. Jaga cadence di 175+, napas terengah-engah tapi masih bisa potong kalimat.\n\nYang perlu diperhatikan: kalau HR cepat naik padahal pelan, mundur ke run-walk 15-25 menit atau berhenti di cooldown. Cuaca terasa panas atau badan masih lemes, rest juga tidak rugi.";
+        return $this->select([
+            "Tempo ringan, 35-45 menit.\n\nWarmup 10 menit santai, tempo 15-20 menit di zona 3 atas, terus cooldown. Jaga cadence di 175+, napas terengah-engah tapi masih bisa potong kalimat.\n\nYang perlu diperhatikan: kalau HR cepat naik padahal pelan, mundur ke run-walk 15-25 menit atau berhenti di cooldown. Cuaca terasa panas atau badan masih lemes, rest juga tidak rugi.",
+            "Easy run, 30-40 menit.\n\nJaga pace di zona nyaman, napas masih bisa ngobrol. Cadence di 170+ biar langkah ringan, gak usah buru-buru.\n\nYang perlu diperhatikan: kalau kaki berat atau HR naik aneh di awal, mungkin recovery belum cukup. Mundur ke jalan cepat 20 menit gak apa-apa.",
+            "Long run santai, 8-12 km.\n\nPace conversational, jangan tergoda ngejar waktu. Bawa air kalau cuaca panas, istirahat sebentar di pertengahan gak masalah.\n\nYang perlu diperhatikan: jarak panjang butuh pace stabil. Kalau km 5 udah merasa dipaksa, potong jadi 6-8 km. Lebih baik pendek tapi rapi daripada panjang tapi berantakan.",
+        ], $seed);
     }
 
     private function briefingMascotVoice(int $seed): string
@@ -86,9 +98,15 @@ final class RuleBasedNarrationFiller
         ], $activityId);
     }
 
-    private function dailyGreeting(): string
+    private function dailyGreeting(int $seed): string
     {
-        return 'Halo. Semoga harimu tenang, kapanpun kamu siap lari aku nunggu.';
+        return $this->select([
+            'Halo. Semoga harimu tenang, kapanpun kamu siap lari aku nunggu.',
+            'Halo! Aku udah siap kalau kamu mau lari hari ini. Tapi gak buru-buru juga gak apa-apa.',
+            'Pagi. Udara masih seger, tapi kalau belum mood, aku tetap di sini.',
+            'Halo. Hari baru, peluang baru buat lari. Atau istirahat, kamu yang tentuin.',
+            'Pagi. Aku cek data kamu, mungkin ada yang menarik hari ini. Yuk liat.',
+        ], $seed);
     }
 
     private function runInsightTechnical(int $activityId): string
@@ -100,40 +118,77 @@ final class RuleBasedNarrationFiller
         $cadence = $detail->average_cadence !== null ? (int) round($detail->average_cadence * 2) : null;
         $hr = $detail->average_heartrate !== null ? (int) round($detail->average_heartrate) : null;
 
+        if ($cadence === null && $hr === null) {
+            return 'Sesi ini metrik-nya konsisten.';
+        }
+
         $parts = [];
         if ($cadence !== null) {
-            $parts[] = "cadence rata-rata {$cadence}";
+            $parts[] = match (true) {
+                $cadence < 165 => "cadence rata-rata {$cadence}, masih di bawah ideal. Coba langkah lebih pendek tapi lebih sering",
+                $cadence < 175 => "cadence rata-rata {$cadence}, udah di zona oke",
+                default => "cadence rata-rata {$cadence}, langkah ringan dan efisien",
+            };
         }
         if ($hr !== null) {
-            $parts[] = "HR rata-rata {$hr}";
+            $parts[] = match (true) {
+                $hr < 140 => "HR rata-rata {$hr}, sesi ini beneran easy",
+                $hr < 160 => "HR rata-rata {$hr}, zona moderat",
+                default => "HR rata-rata {$hr}, cukup intens untuk sesi ini",
+            };
         }
 
-        return $parts === [] ? 'Sesi ini metrik-nya konsisten.' : 'Sesi ini ' . implode(', ', $parts) . '.';
+        return 'Sesi ini ' . implode('. ', $parts) . '.';
     }
 
-    private function runInsightSplits(): string
+    private function runInsightSplits(int $seed): string
     {
-        return 'Pacing kamu cenderung stabil dari awal sampai akhir. Negative split kecil di bagian akhir lebih baik daripada positive split besar.';
+        return $this->select([
+            'Pacing kamu cenderung stabil dari awal sampai akhir. Negative split kecil di bagian akhir lebih baik daripada positive split besar.',
+            'Splits kamu rapi, gak ada km yang melar jauh. Konsistensi kayak gini yang bikin progres.',
+            'Paruh pertama dan kedua hampir mirip, pacing dijaga stabil. Ini tanda control yang bagus.',
+            'Ada sedikit variasi di tengah tapi overall pace-nya terkontrol. Solid buat sesi ini.',
+        ], $seed);
     }
 
-    private function runInsightZones(): string
+    private function runInsightZones(int $seed): string
     {
-        return 'Distribusi zone-nya didominasi easy/zone 2. Cocok buat base building, gak overstrain.';
+        return $this->select([
+            'Distribusi zone-nya didominasi easy/zone 2. Cocok buat base building, gak overstrain.',
+            'Mayoritas waktu di zona rendah, aerobic base lagi diperkuat. Strategi yang sabar.',
+            'Zone 2 jadi tulang punggung sesi ini. Base aerobik yang solid dapet dari konsistensi kayak gini.',
+            'HR dijaga di zona nyaman sebagian besar waktu. Gak ada spike berarti, rapi.',
+        ], $seed);
     }
 
-    private function weeklyRecap(): string
+    private function weeklyRecap(int $seed): string
     {
-        return 'Minggu ini ritme kamu cukup teratur. Volume lari masuk akal, recovery juga keurus.';
+        return $this->select([
+            'Minggu ini ritme kamu cukup teratur. Volume lari masuk akal, recovery juga keurus.',
+            'Volume minggu ini oke, gak kebanyakan tapi gak juga kosong. Balance yang sehat.',
+            'Satu minggu lagi kelar. Jarak dan frekuensi lari kamu masuk akal, terus pelan-pelan aja.',
+            'Minggu yang konsisten tanpa drama. Kadang kayak gini yang dibutuhin, stabil naik.',
+        ], $seed);
     }
 
-    private function prContext(): string
+    private function prContext(int $seed): string
     {
-        return 'PR-nya hasil dari konsistensi minggu-minggu sebelumnya, bukan kebetulan.';
+        return $this->select([
+            'PR-nya hasil dari konsistensi minggu-minggu sebelumnya, bukan kebetulan.',
+            'Ini bukan keberuntungan, ini hasil kerja keras yang kekumpul pelan-pelan.',
+            'PR baru! Setiap detik yang dipotong itu bukti latihan yang gak putus.',
+            'Rekor baru kebuka. Kamu udah bayar mahal pelan-pelan, ini hasilnya.',
+        ], $seed);
     }
 
-    private function trendCaption(): string
+    private function trendCaption(int $seed): string
     {
-        return 'Tren beberapa minggu terakhir relatif rata. Solid base.';
+        return $this->select([
+            'Tren beberapa minggu terakhir relatif rata. Solid base.',
+            'Garis volume relatif stabil, gak naik drastis tapi gak turun juga. Fondasi yang aman.',
+            'Belum ada pergerakan besar di tren, tapi stabil bukan berarti diam. Base lagi dibangun.',
+            'Volume konsisten beberapa minggu terakhir. Makin lama makin solid.',
+        ], $seed);
     }
 
     /**
@@ -252,18 +307,33 @@ final class RuleBasedNarrationFiller
         return $pool[abs($seed) % count($pool)];
     }
 
-    private function akuProfileVoice(): string
+    private function akuProfileVoice(int $seed): string
     {
-        return 'Aku catat semua perjalanan kamu di sini: **kartu**, **rekor**, **aksesori**, ceritanya. Ayo terus jalan.';
+        return $this->select([
+            'Aku catat semua perjalanan kamu di sini: **kartu**, **rekor**, **aksesori**, ceritanya. Ayo terus jalan.',
+            'Seluruh cerita lari kamu ada di sini. Dari kartu pertama sampai rekor terbaru, aku simpan semua.',
+            'Ini ruang kamu. **Kartu**, **rekor**, **aksesori** yang udah kamu kumpulin, aku jaga baik-baik.',
+            'Semua yang kamu dapetin dari lari ada di sini. Aku terus catat, kamu terus jalan.',
+        ], $seed);
     }
 
-    private function personaSummary(): string
+    private function personaSummary(int $seed): string
     {
-        return 'Pola lari kamu cenderung easy-dominan, sesekali quality. Tipe runner yang ngebangun pelan-pelan.';
+        return $this->select([
+            'Pola lari kamu cenderung easy-dominan, sesekali quality. Tipe runner yang ngebangun pelan-pelan.',
+            'Lari kamu lebih sering santai daripada push. Sabar ngebangun base, gak buru-buru. Respek.',
+            'Gaya lari kamu steady, gak banyak drama. Consistency over intensity, dan itu strategi yang bagus.',
+            'Kamu tipe yang sabar ngebangun fondasi. Easy dominan, sesekali quality. Pelan tapi pasti.',
+        ], $seed);
     }
 
-    private function monthlyRecap(): string
+    private function monthlyRecap(int $seed): string
     {
-        return 'Bulan ini ritme kamu jalan terus. Gak ngotot, gak juga ngilang. Konsisten yang aku suka.';
+        return $this->select([
+            'Bulan ini ritme kamu jalan terus. Gak ngotot, gak juga ngilang. Konsisten yang aku suka.',
+            'Sebulan penuh lari yang teratur. Volume masuk akal, effort juga dijaga. Bulan yang solid.',
+            'Bulan yang tanpa skip berarti. Kamu datang, lari, pulang. Pola yang sehat.',
+            'Bulan ini kamu pilih konsistensi daripada intensitas. Dan itu pilihan yang bagus.',
+        ], $seed);
     }
 }

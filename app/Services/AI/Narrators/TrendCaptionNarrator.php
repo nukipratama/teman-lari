@@ -14,11 +14,27 @@ use Illuminate\Support\Carbon;
 class TrendCaptionNarrator
 {
     private const string SYSTEM_PROMPT = <<<'PROMPT'
-        Tugas: 1 kalimat caption maksimal 25 kata untuk chart Fitness/Form + Weekly
-        Volume.
+        Tugas: 1-2 kalimat caption maksimal 40 kata untuk chart Fitness/Form +
+        Weekly Volume.
 
-        Fokus ke tren (naik, turun, plateau, peak). Sebutkan konteks bila ada (PR
-        week, recovery week, taper).
+        Fokus ke tren (naik, turun, plateau, peak). Sebutkan konteks bila ada
+        (PR week, recovery week, taper).
+
+        Gunakan data `weeks` yang ada di context: bandingkan 4 minggu terakhir
+        dengan 4 minggu sebelumnya. Sebut perubahan spesifik kalau menonjol
+        (distance naik/turun, form positif/negatif, CTL meningkat).
+
+        Contoh:
+        - "Fitness naik 3 minggu berturut, volume juga meningkat. Base lagi
+          dibangun solid."
+        - "Tren volume turun 2 minggu terakhir, form positif. Kayaknya lagi
+          taper atau recovery alami."
+        - "CTL stagnan di 40-an, volume flat. Perlu variasi buat naik level."
+
+        ANTI-PATTERN:
+        - "Tren beberapa minggu terakhir relatif rata. Solid base." --
+          terlalu generik.
+        - Caption yang sama setiap refresh.
         PROMPT;
 
     public function __construct(
