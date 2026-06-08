@@ -9,7 +9,6 @@ concurrency:
 
 env:
   PHP_VERSION: '8.4'
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
 
 jobs:
   changes:
@@ -19,39 +18,29 @@ jobs:
       frontend: ${{ steps.filter.outputs.frontend }}
     steps:
       - uses: actions/checkout@v6
-      - uses: dorny/paths-filter@d1c1ffe0248fe513906c8e24db8ea791d46f8590 # v3.0.3
-        id: filter
         with:
-          filters: |
-            backend:
-              - 'app/**'
-              - 'bootstrap/**'
-              - 'config/**'
-              - 'database/**'
-              - 'routes/**'
-              - 'tests/**'
-              - 'composer.json'
-              - 'composer.lock'
-              - 'phpunit.xml'
-              - 'artisan'
-              - '.github/workflows/ci.yml'
-              - 'Dockerfile'
-              - 'compose*.yaml'
-              - '.env.example'
-            frontend:
-              - 'resources/js/**'
-              - 'resources/css/**'
-              - 'resources/views/**'
-              - 'package.json'
-              - 'package-lock.json'
-              - 'vite.config.ts'
-              - 'vitest.config.ts'
-              - 'tsconfig.json'
-              - 'eslint.config.*'
-              - '.github/workflows/ci.yml'
-              - 'Dockerfile'
-              - 'compose*.yaml'
-              - '.env.example'
+          fetch-depth: 0
+
+      # Classify the push so each suite skips when its files weren't touched.
+      # Shared-infra paths (ci.yml, Dockerfile, compose, .env.example) match
+      # both, so an infra change runs the full pipeline. Diff is against the
+      # merge-base with main; on main pushes both jobs run anyway (see the `if`).
+      - name: Detect changed areas
+        id: filter
+        run: |
+          git fetch --no-tags --quiet origin main
+          changed=$(git diff --name-only "$(git merge-base origin/main HEAD)" HEAD)
+          printf 'Changed files:\n%s\n' "$changed"
+          backend=false; frontend=false
+          if printf '%s\n' "$changed" | grep -qE '^(app|bootstrap|config|database|routes|tests)/|^composer\.(json|lock)$|^phpunit\.xml$|^artisan$|^\.github/workflows/ci\.yml$|^Dockerfile$|^compose[^/]*\.yaml$|^\.env\.example$'; then
+            backend=true
+          fi
+          if printf '%s\n' "$changed" | grep -qE '^resources/(js|css|views)/|^package(-lock)?\.json$|^vite\.config\.ts$|^vitest\.config\.ts$|^tsconfig\.json$|^eslint\.config\.|^\.github/workflows/ci\.yml$|^Dockerfile$|^compose[^/]*\.yaml$|^\.env\.example$'; then
+            frontend=true
+          fi
+          echo "backend=$backend" >> "$GITHUB_OUTPUT"
+          echo "frontend=$frontend" >> "$GITHUB_OUTPUT"
+          echo "Result: backend=$backend frontend=$frontend"
 
   backend-tests:
     needs: changes
