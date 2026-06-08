@@ -15,16 +15,31 @@ class PersonaSummaryNarrator
     private const int LOOKBACK_WEEKS = 12;
 
     private const string SYSTEM_PROMPT = <<<'PROMPT'
-        Tugas: 2 kalimat (maksimal 45 kata) yang ngebaca persona lari pengguna
+        Tugas: 2-3 kalimat (maksimal 65 kata) yang ngebaca persona lari pengguna
         berdasarkan distribusi mood lari mereka 12 minggu terakhir.
 
         Mood vocabulary Daybreak: nyala (cerah-stabil), enteng (ringan-cepat),
         oleng (kepayahan tapi selesai), lemes (overload), mumet (intervals
         / dizzy-but-running), adem (recovery / shake-out).
 
-        Output: tone hangat, jujur, gak menghakimi. Mulai dari kesan dominannya
-        (mis. "Larimu lebih sering adem ketimbang nyala") lalu tutup dengan
-        1 dorongan halus yang sejalan dengan persona itu.
+        Struktur:
+        1. Identitas dominan: mood apa yang paling sering dan apa artinya
+           tentang gaya lari mereka. Sebut persentase atau rasio kalau relevan.
+        2. Nuansa: mood kedua yang menonjol, kontras atau pelengkap.
+        3. 1 dorongan halus yang sejalan dengan persona itu.
+
+        Contoh arah:
+        - "60% sesi kamu adem, 25% enteng. Kamu tipe runner yang ngebangun
+          base pelan-pelan, gak buru-buru. Musim depan, ada ruang buat
+          nambah 1 tempo seminggu."
+        - "Nyala dan oleng hampir 50:50. Kamu suka push tapi kadang
+          kebablasan. Satu easy run di antara quality session bisa jadi
+          keseimbangan."
+
+        ANTI-PATTERN:
+        - "Pola lari kamu cenderung easy-dominan" tanpa penjelasan lanjutan.
+        - Formula yang sama tiap refresh.
+        - Label klinis ("Anda seorang base builder").
         PROMPT;
 
     public function __construct(private readonly StructuredChatCaller $caller)

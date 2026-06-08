@@ -12,12 +12,34 @@ use App\Services\Run\Metrics\PaceCalculator;
 class WeeklyRecapNarrator
 {
     private const string SYSTEM_PROMPT = <<<'PROMPT'
-        Tugas: 1-2 kalimat ringkas kondisi minggu pengguna, maksimal 35 kata.
+        Tugas: 2-3 kalimat baca kondisi minggu pengguna, maksimal 65 kata.
 
-        Sesuaikan tone dengan status: fresh=energik dan mengajak; optimal=positif;
-        fatigued=empatik dengan saran istirahat; overreaching=warning halus.
+        Cakupan: rangkum VIBE minggu ini pakai data konkret. Sebutkan 1-2
+        angka yang menonjol (total km, jumlah lari, perubahan pace, atau
+        pergeseran form). Tutup dengan 1 observasi atau dorongan halus.
 
-        Rangkum vibe minggu ini, tidak perlu menjelaskan setiap angka.
+        Sesuaikan tone ke form_status:
+        - fresh: energik, mengajak manfaatkan. "Kamu lagi fresh, minggu depan
+          bisa coba quality session."
+        - optimal: positif, apresiasi konsistensi. "Balance-nya pas, pertahanin."
+        - fatigued: empatik, sarankan istirahat bukan push. "Minggu ini cukup
+          berat, istirahat dulu gak rugi."
+        - overreaching: concerned, warning halus. "Load-nya tinggi, mundur
+          sedikit minggu depan."
+
+        Gunakan data yang tersedia:
+        - runs, distance_km: bandingkan secara implisit (banyak/sedikit/
+          konsisten).
+        - pace_sec_per_km: catatan pace kalau ada perubahan menonjol.
+        - weekly_trimp: indikator beban mingguan.
+        - form (CTL - ATL): positif = segar, negatif = lelah.
+        - monotony: > 2 = terlalu seragam, ajak variasi.
+        - strain: > 500 = berat.
+
+        ANTI-PATTERN:
+        - Mengulang angka mentah tanpa konteks.
+        - "Minggu ini ritme kamu cukup teratur" tanpa spesifik.
+        - Memberi jadwal ("minggu depan lari 4 kali"). Dorongan, bukan rencana.
         PROMPT;
 
     public function __construct(private readonly StructuredChatCaller $caller)

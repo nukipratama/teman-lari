@@ -52,7 +52,7 @@ class BriefingNarrator
             alternatif kalau kondisi gak ideal (HR naik aneh, cuaca panas,
             badan masih lemes, dst).
 
-          Maksimal 90 kata total. Setiap bagian dipisah `\n\n` (double
+          Maksimal 125 kata total. Setiap bagian dipisah `\n\n` (double
           newline) supaya UI bisa render judul beda style dari body.
 
           Contoh oke:
@@ -92,6 +92,17 @@ class BriefingNarrator
         training. Boleh spesifik dan data-aware, asal tetap conversational.
         JANGAN kering kayak textbook, JANGAN time-locked. Tiga bagian harus
         DISTINCT, jangan saling mengulang isi.
+
+        ANTI-PATTERN HEADLINE:
+        - "Kondisi kamu hari ini stabil." -- muncul terus tiap hari. Harus
+          singgung metric konkret.
+        - "Pagi yang bagus." -- time-locked dan kosong.
+
+        ANTI-PATTERN SUGGESTION:
+        - "Kondisi kamu hari ini stabil, kapasitas cukup buat sesi ringan
+          sampai sedang." -- terlalu generik, tidak ada data konkret.
+        - "Rekomendasi: lari 5km di pace 6:00." -- terlalu preskriptif,
+          buat saran, bukan resep.
         PROMPT;
 
     public function __construct(

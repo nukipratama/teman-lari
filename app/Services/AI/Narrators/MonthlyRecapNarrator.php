@@ -14,15 +14,29 @@ use Illuminate\Support\Carbon;
 class MonthlyRecapNarrator
 {
     private const string SYSTEM_PROMPT = <<<'PROMPT'
-        Tugas: 2-3 kalimat (maksimal 55 kata) baca bulan lari pengguna.
+        Tugas: 3-4 kalimat baca bulan lari pengguna, maksimal 85 kata.
 
-        Cakupan: total km + jumlah lari + lari terjauh + dominasi mood
+        Cakupan: total km + jumlah lari + lari terjauh + distribusi mood
         (nyala/enteng/oleng/lemes/mumet/adem) untuk bulan itu.
 
-        Output: tone hangat, jujur, tidak menggurui. Sebut yang menonjol
-        (mis. "Bulan ini lebih banyak adem daripada nyala, tubuhmu lagi
-        atur ulang"), lalu tutup dengan refleksi atau 1 saran untuk
-        bulan depan.
+        Struktur yang diharapkan:
+        1. Buka dengan angka konkret (total km, jumlah lari).
+        2. Narasi mood: mood mana yang dominan dan apa artinya. Gunakan data
+           mood_mix -- sebut persentase kalau menonjol (mis. "60% sesi kamu
+           adem, cuma 2 kali nyala").
+        3. Highlight: lari terjauh, PR, atau pergeseran tren.
+        4. Tutup: 1 refleksi singkat atau dorongan untuk bulan depan.
+
+        Sesuaikan tone:
+        - Mayoritas nyala/enteng: rayakan konsistensi.
+        - Mayoritas lemes/mumet: empatik, akui effort, sarankan recovery.
+        - Mayoritas adem: apresiasi base building sabar.
+        - Campur adil: observasi bahwa variasinya sehat.
+
+        ANTI-PATTERN:
+        - "Bulan ini ritme kamu jalan terus" tanpa spesifik.
+        - Mengulang formula yang sama tiap bulan.
+        - Menggurui atau buat jadwal.
         PROMPT;
 
     public function __construct(private readonly StructuredChatCaller $caller)

@@ -12,13 +12,25 @@ use App\Services\Run\Metrics\PaceCalculator;
 class CardFlavorNarrator
 {
     private const string SYSTEM_PROMPT = <<<'PROMPT'
-        Tugas: berikan 1 kalimat flavor maksimal 22 kata untuk kartu aktivitas.
+        Tugas: berikan 1 kalimat flavor maksimal 30 kata untuk kartu aktivitas.
         Setiap kartu punya rarity (common, uncommon, rare, epic, legendary) +
         special move + badges. Saat menyebut rarity dalam kalimat, gunakan
         label Bahasa Indonesia: Biasa / Berkesan / Langka / Luar Biasa / Legendaris.
 
         Rajut kombinasi badge, pacing, dan cuaca jadi 1 kalimat yang
-        nunjukin kenapa kartu ini spesial.
+        nunjukin kenapa kartu ini spesial. Sebut special_move kalau namanya
+        unik, sebut badge spesifik kalau ada, sebut cuaca kalau ekstrem
+        ("cuaca 33 derajat" atau "hujan").
+
+        ANTI-PATTERN:
+        - Kalimat generik yang bisa berlaku untuk kartu mana pun.
+        - Mengulang formula yang sama untuk rarity yang sama.
+
+        Contoh oke:
+        - "'Langkah Sunyi' dikasih label Langka karena negative split di
+          paruh kedua, pace-nya malah naik pas hujan deras."
+        - "Kartu Biasa, tapi special move-nya 'Pagi Baru' dan cuaca 8 derajat
+          bikin sesi ini pantas dicatat."
         PROMPT;
 
     public function __construct(private readonly StructuredChatCaller $caller)

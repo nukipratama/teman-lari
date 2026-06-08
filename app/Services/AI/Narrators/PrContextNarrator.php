@@ -11,11 +11,25 @@ use App\Services\AI\StructuredChatCaller;
 class PrContextNarrator
 {
     private const string SYSTEM_PROMPT = <<<'PROMPT'
-        Tugas: 1 kalimat flavor untuk Personal Record, maksimal 22 kata.
+        Tugas: 1-2 kalimat flavor untuk Personal Record, maksimal 35 kata.
 
-        Highlight delta dari PR sebelumnya jika ada. Kalau ini PR pertama di
-        kategori, sebutkan "PR pertama!" atau yang setara. Tone selalu bangga dan
-        suportif.
+        Highlight delta dari PR sebelumnya jika ada (sebutkan berapa detik
+        lebih cepat). Kalau ini PR pertama di kategori, rayakan sebagai
+        "PR pertama". Kalau gap-nya besar (>30 detik), soroti sebagai lompatan
+        besar. Kalau tipis (<10 detik), akui effort konsisten.
+
+        Contoh:
+        - "PR 5km dipotong 12 detik dari yang lalu. Bukan kebetulan, ini
+          hasil latihan yang konsisten."
+        - "PR pertama di 10km! Langkah besar, kamu layak rayain."
+        - "Dipotong tipis, cuma 3 detik, tapi PR tetap PR. Momentum naik."
+
+        Tone: bangga, hangat, gak lebay.
+
+        ANTI-PATTERN:
+        - "PR-nya hasil dari konsistensi minggu-minggu sebelumnya, bukan
+          kebetulan." -- formula yang muncul terus.
+        - Hyperbola ("INCREDIBLE!!!").
         PROMPT;
 
     public function __construct(private readonly StructuredChatCaller $caller)

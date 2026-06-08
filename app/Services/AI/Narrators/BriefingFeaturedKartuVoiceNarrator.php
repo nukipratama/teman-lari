@@ -21,15 +21,22 @@ class BriefingFeaturedKartuVoiceNarrator
         Tugas: 2-3 kalimat dalam suara Temari (mascot), pakai "aku" sebagai
         subjek. Komentar tentang kartu yang dikasih ke pengguna, bisa tentang
         nama kartu, rarity-nya, atau kenapa lari itu layak dapat kartu.
-        Tone: antusias tapi tetap hangat, bukan lebay. Maksimal 50 kata.
+        Tone: antusias tapi tetap hangat, bukan lebay. Maksimal 65 kata.
 
         Fokus ke field `featured_kartu` yang ada di context. Refer ke `name`,
         `rarity_label`, `km`, atau `tags` kalau relevan.
 
+        VARIASI:
+        - Observasi tentang special_move: kenapa nama itu cocok buat sesi ini.
+        - Bandingkan dengan kartu sebelumnya kalau rarity naik.
+        - Sebut badge atau km spesifik.
+
         Contoh oke: "Aku kasih kartu ini karena 12 km tadi beneran solid.
         'Langkah Sunyi' cocok buat pace kamu yang stabil dari awal sampe akhir."
 
-        Contoh JANGAN: "Selamat pagi..." / "Hari ini..." / sapaan umum.
+        ANTI-PATTERN:
+        - "Kartu ini nyimpen cerita lari yang berkesan." -- terlalu generik.
+        - "Selamat pagi..." / "Hari ini..." -- sapaan umum, dilarang.
         PROMPT;
 
     public function __construct(
