@@ -1,5 +1,11 @@
 # syntax=docker/dockerfile:1.7
 
+# Single pinned Node toolchain reused by the dev stage (copied in) and the
+# assets build, so dev/CI/prod all run the same Node. node:24.16.0-alpine
+# (Krypton LTS). Refresh after a version bump with:
+#   docker buildx imagetools inspect node:<ver>-alpine --format '{{.Manifest.Digest}}'
+FROM node@sha256:2bdb65ed1dab192432bc31c95f94155ca5ad7fc1392fb7eb7526ab682fa5bf14 AS node-src
+
 # ─── Stage: dev ─────────────────────────────────────────────────────────────
 # Local dev target — FrankenPHP traditional mode (no Octane worker).
 # Source code is volume-mounted at runtime; this stage only bakes in PHP
@@ -17,8 +23,15 @@ RUN install-php-extensions \
 
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
-# Node + npm for `npm run dev` inside the container (composer dev script).
-RUN apk add --no-cache nodejs npm
+# Node + npm for `npm run dev` inside the container (composer dev script),
+# copied from the pinned node-src stage so dev matches CI + the assets build
+# exactly. libstdc++ is the one runtime lib the Node binary links against under
+# musl (apk would otherwise pull it in transitively).
+RUN apk add --no-cache libstdc++
+COPY --from=node-src /usr/local/bin/node /usr/local/bin/node
+COPY --from=node-src /usr/local/lib/node_modules /usr/local/lib/node_modules
+RUN ln -sf /usr/local/lib/node_modules/npm/bin/npm-cli.js /usr/local/bin/npm \
+    && ln -sf /usr/local/lib/node_modules/npm/bin/npx-cli.js /usr/local/bin/npx
 
 # Caddy needs writable dirs for its PKI module even when auto_https is off.
 RUN mkdir -p /data/caddy /config/caddy /config/psysh \
@@ -57,7 +70,7 @@ RUN composer dump-autoload --optimize --classmap-authoritative --no-scripts
 # ─── Stage 2: assets ────────────────────────────────────────────────────────
 # Build Vite bundle (tailwind via @tailwindcss/vite). Vendor dir is needed
 # because some Laravel packages publish CSS/JS that Vite picks up.
-FROM node:22-alpine AS assets
+FROM node-src AS assets
 WORKDIR /var/www/html
 
 COPY package.json package-lock.json vite.config.ts tsconfig.json ./
