@@ -86,6 +86,7 @@ class SyncOrchestrator
             $this->insertActivityRows($user->id, [$externalId]);
 
             $activity = Activity::query()
+                ->withStubs()
                 ->where('user_id', $user->id)
                 ->where('strava_external_id', $externalId)
                 ->first();

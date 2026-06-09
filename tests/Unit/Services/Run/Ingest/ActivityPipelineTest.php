@@ -26,7 +26,9 @@ beforeEach(function (): void {
 
 function makeActivityWithConnection(): Activity
 {
-    $activity = Activity::factory()->create(['strava_external_id' => 999]);
+    // A freshly-synced stub is what the pipeline ingests; it stamps analyzed_at
+    // on success and leaves it null on failure.
+    $activity = Activity::factory()->stub()->create(['strava_external_id' => 999]);
     StravaConnection::factory()->for($activity->user)->create([
         'access_token' => 'tok',
         'token_expires_at' => Carbon::now()->addHours(2),

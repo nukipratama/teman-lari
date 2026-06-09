@@ -175,18 +175,20 @@ class HandleInertiaRequests extends Middleware
             return ['state' => 'revoked', 'last_synced_at' => null];
         }
 
-        // Use the most-recent activity ingest timestamp as the human-facing
-        // "last synced" marker. Strava connection itself doesn't store a
-        // sync timestamp; we tag every activity via fetched_at.
+        // "Last synced" reflects the most recent Strava pull, so it counts
+        // stubs too (a just-synced run that has not been ingested yet still
+        // means we synced). withStubs() opts out of the analyzed-only scope.
         $latest = Activity::query()
+            ->withStubs()
             ->where('user_id', $user->id)
             ->whereNotNull('fetched_at')
             ->orderByDesc('fetched_at')
             ->value('fetched_at');
 
+        // "ready" once at least one run is fully ingested; the scope already
+        // restricts to analyzed rows, so exists() answers that directly.
         $hasAnalyzed = Activity::query()
             ->where('user_id', $user->id)
-            ->whereNotNull('analyzed_at')
             ->exists();
 
         return [

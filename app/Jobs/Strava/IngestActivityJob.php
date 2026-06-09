@@ -75,6 +75,7 @@ class IngestActivityJob implements ShouldQueue
     public function handle(ActivityPipeline $pipeline): void
     {
         $activity = Activity::query()
+            ->withStubs()
             ->with('user.stravaConnection')
             ->find($this->activityId);
         if ($activity === null) {

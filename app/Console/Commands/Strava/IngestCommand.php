@@ -21,6 +21,7 @@ class IngestCommand extends Command
         $batch = max(1, (int) $this->option('batch'));
 
         $activities = Activity::query()
+            ->withStubs()
             ->whereNull('analyzed_at')
             ->where('detail_fail_count', '<', self::DETAIL_FETCH_MAX_ATTEMPTS)
             ->whereHas('user.stravaConnection', fn ($query) => $query->whereNull('revoked_at'))

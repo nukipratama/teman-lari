@@ -91,8 +91,18 @@ class ActivityPipeline
             $this->storeStreams($activity, $streams);
         }
 
-        $this->computeAndStoreSummary($detailModel, $streams);
+        $this->computeAndStoreSummary($activity, $detailModel, $streams);
         $this->lookupWeather($detailModel, $streams);
+
+        // The run's data is now stored, so mark it ingested before the derivation
+        // and narration layers below. Those re-load the activity via relations
+        // (e.g. $card->activity) that pass through the AnalyzedScope, so the row
+        // must already be visible rather than a stub.
+        $activity->update([
+            'analyzed_at' => now(),
+            'detail_fail_count' => 0,
+        ]);
+
         $newPrCategories = $this->personalRecords->detectAndStore($activity, $detailModel);
 
         // Story layer must run after PR detection — Temari mood reads PR rows.
@@ -100,11 +110,6 @@ class ActivityPipeline
         $this->temari->postRunLine($activity, $detailModel);
         $this->milestoneDetector->detect($activity, $detailModel, $newPrCategories);
         $this->cascadeAfterIngest($activity, $detailModel);
-
-        $activity->update([
-            'analyzed_at' => now(),
-            'detail_fail_count' => 0,
-        ]);
     }
 
     private function cascadeAfterIngest(Activity $activity, ActivityDetail $detail): void
@@ -299,13 +304,16 @@ class ActivityPipeline
     /**
      * @param  array<string, mixed>|null  $streams
      */
-    private function computeAndStoreSummary(ActivityDetail $detail, ?array $streams): void
+    private function computeAndStoreSummary(Activity $activity, ActivityDetail $detail, ?array $streams): void
     {
         if ($streams === null) {
             return;
         }
 
-        $profile = $detail->activity->user->hrProfile();
+        // Take the activity explicitly rather than via $detail->activity: during
+        // ingest the row is still a stub, and the AnalyzedScope would resolve the
+        // belongsTo back to null.
+        $profile = $activity->user->hrProfile();
         $hrZones = $profile['hr_zones'];
         $optimalCadence = $profile['optimal_cadence_spm'];
 
@@ -341,7 +349,7 @@ class ActivityPipeline
             return;
         }
 
-        $this->computeAndStoreSummary($detail, $stream->data);
+        $this->computeAndStoreSummary($activity, $detail, $stream->data);
 
         if ($detail->start_date_local !== null) {
             $this->weeklyAggregator->rebuildForwardFrom($activity->user, $detail->start_date_local);

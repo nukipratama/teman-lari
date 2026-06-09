@@ -18,7 +18,7 @@ beforeEach(function (): void {
 it('dispatches an IngestActivityJob for each pending stub', function (): void {
     $user = User::factory()->create();
     StravaConnection::factory()->for($user)->create();
-    Activity::factory()->for($user)->count(3)->create();
+    Activity::factory()->for($user)->stub()->count(3)->create();
 
     $this->artisan('strava:ingest')->assertSuccessful();
 
@@ -28,7 +28,7 @@ it('dispatches an IngestActivityJob for each pending stub', function (): void {
 it('drains at most --batch activities per run', function (): void {
     $user = User::factory()->create();
     StravaConnection::factory()->for($user)->create();
-    Activity::factory()->for($user)->count(8)->create();
+    Activity::factory()->for($user)->stub()->count(8)->create();
 
     $this->artisan('strava:ingest', ['--batch' => 5])->assertSuccessful();
 
@@ -38,9 +38,9 @@ it('drains at most --batch activities per run', function (): void {
 it('dispatches oldest-first by activity id', function (): void {
     $user = User::factory()->create();
     StravaConnection::factory()->for($user)->create();
-    $oldest = Activity::factory()->for($user)->create();
-    $middle = Activity::factory()->for($user)->create();
-    Activity::factory()->for($user)->create();
+    $oldest = Activity::factory()->for($user)->stub()->create();
+    $middle = Activity::factory()->for($user)->stub()->create();
+    Activity::factory()->for($user)->stub()->create();
 
     $this->artisan('strava:ingest', ['--batch' => 2])->assertSuccessful();
 
@@ -59,7 +59,7 @@ it('skips activities that are already analyzed', function (): void {
     $user = User::factory()->create();
     StravaConnection::factory()->for($user)->create();
     Activity::factory()->for($user)->analyzed()->create();
-    $pending = Activity::factory()->for($user)->create();
+    $pending = Activity::factory()->for($user)->stub()->create();
 
     $this->artisan('strava:ingest')->assertSuccessful();
 
@@ -73,8 +73,8 @@ it('skips activities that are already analyzed', function (): void {
 it('skips activities whose detail_fail_count has reached the cap', function (): void {
     $user = User::factory()->create();
     StravaConnection::factory()->for($user)->create();
-    Activity::factory()->for($user)->create(['detail_fail_count' => 5]);
-    $pending = Activity::factory()->for($user)->create(['detail_fail_count' => 4]);
+    Activity::factory()->for($user)->stub()->create(['detail_fail_count' => 5]);
+    $pending = Activity::factory()->for($user)->stub()->create(['detail_fail_count' => 4]);
 
     $this->artisan('strava:ingest')->assertSuccessful();
 
@@ -88,7 +88,7 @@ it('skips activities whose detail_fail_count has reached the cap', function (): 
 it('skips activities of users whose Strava connection is revoked', function (): void {
     $revokedUser = User::factory()->create();
     StravaConnection::factory()->for($revokedUser)->revoked()->create();
-    Activity::factory()->for($revokedUser)->create();
+    Activity::factory()->for($revokedUser)->stub()->create();
 
     $this->artisan('strava:ingest')->assertSuccessful();
 
@@ -97,7 +97,7 @@ it('skips activities of users whose Strava connection is revoked', function (): 
 
 it('skips activities of users who have no Strava connection', function (): void {
     $user = User::factory()->create();
-    Activity::factory()->for($user)->create();
+    Activity::factory()->for($user)->stub()->create();
 
     $this->artisan('strava:ingest')->assertSuccessful();
 
