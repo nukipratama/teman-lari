@@ -73,6 +73,22 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
+      - name: Show runner resources
+        # Surfaces what this runner actually offers — paratest/vitest scale to
+        # $(nproc), so this is the worker count too. Private-repo ubuntu-latest
+        # is 2-vCPU; bump to a larger runner here if the test phase needs it.
+        run: |
+          {
+            echo "### Runner: $(nproc) vCPU ($(uname -m))"
+            echo ""
+            echo "| | |"
+            echo "| --- | --- |"
+            echo "| nproc (= test workers) | $(nproc) |"
+            echo "| Model | $(lscpu | sed -n 's/^Model name:[[:space:]]*//p') |"
+            echo "| Memory | $(free -h | awk '/^Mem:/{print $2}') |"
+            echo ""
+          } >> "$GITHUB_STEP_SUMMARY"
+
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
@@ -188,6 +204,19 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
+
+      - name: Show runner resources
+        run: |
+          {
+            echo "### Runner: $(nproc) vCPU ($(uname -m))"
+            echo ""
+            echo "| | |"
+            echo "| --- | --- |"
+            echo "| nproc (= vitest workers) | $(nproc) |"
+            echo "| Model | $(lscpu | sed -n 's/^Model name:[[:space:]]*//p') |"
+            echo "| Memory | $(free -h | awk '/^Mem:/{print $2}') |"
+            echo ""
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Setup Node
         id: setup-node
