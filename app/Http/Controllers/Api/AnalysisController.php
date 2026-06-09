@@ -32,7 +32,8 @@ class AnalysisController extends Controller
         // Validation in TriggerAnalysisRequest guarantees a known type.
         $analysisType = AnalysisType::from($type);
 
-        $this->authorizeSubject($this->user($request), $analysisType, $subjectId);
+        $user = $this->user($request);
+        $this->authorizeSubject($user, $analysisType, $subjectId);
         $discriminator = $request->discriminator();
 
         $existing = Analysis::query()
@@ -43,10 +44,15 @@ class AnalysisController extends Controller
             return $this->payload($existing, $analysisType, $subjectId, $discriminator);
         }
 
-        // A manual "Baca ulang" on a run subject recomputes its stream summary
-        // from the already-stored streams against the user's current HR zones
-        // (no Strava calls) so the regenerated narration reflects them.
-        if ($analysisType->subjectType() === Activity::class) {
+        // A manual "Baca ulang" on a zone-dependent run block recomputes its
+        // stream summary from the already-stored streams (no Strava calls) so
+        // the regenerated narration reflects the user's current zones. Skipped
+        // unless the user has a custom profile, since without one the stored
+        // summary already used the config defaults that hrProfile() returns.
+        if ($analysisType->isZoneDependent()
+            && $analysisType->subjectType() === Activity::class
+            && $user->runnerProfile !== null
+        ) {
             $activity = Activity::find($subjectId);
             if ($activity !== null) {
                 $pipeline->recomputeSummary($activity);

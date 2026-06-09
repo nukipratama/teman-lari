@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Cache;
 use Override;
 
 /**
@@ -42,6 +43,12 @@ class RunnerProfile extends Model
             if ($profile->isDirty(['max_hr', 'resting_hr', 'hr_zones'])) {
                 $profile->hr_zones_changed_at = Carbon::now();
             }
+        });
+
+        // Keep the shared `hrZonesChangedAt` Inertia prop (cached in
+        // HandleInertiaRequests) in step with the stored marker.
+        static::saved(function (RunnerProfile $profile): void {
+            Cache::forget("hr-zones-changed-at:{$profile->user_id}");
         });
     }
 

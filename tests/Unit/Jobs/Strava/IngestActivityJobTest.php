@@ -8,6 +8,7 @@ use App\Services\Run\Ingest\ActivityPipeline;
 use App\Services\Strava\Exceptions\StravaRateLimitedException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Queue\Middleware\ThrottlesExceptions;
+use Illuminate\Support\Facades\Log;
 
 uses(RefreshDatabase::class);
 
@@ -110,4 +111,16 @@ it('lets the throttle middleware re-raise a genuine non rate-limit failure', fun
         ->toThrow(RuntimeException::class, 'genuine failure');
 
     expect($job->maxExceptions)->toBe(3);
+});
+
+it('logs the stuck activity when the job is finally marked failed', function (): void {
+    Log::spy();
+
+    (new IngestActivityJob(123))->failed(new RuntimeException('boom'));
+
+    Log::shouldHaveReceived('warning')->once()->withArgs(
+        fn (string $message, array $context): bool => $message === 'strava.ingest.failed'
+            && $context['activity_id'] === 123
+            && $context['reason'] === 'boom',
+    );
 });

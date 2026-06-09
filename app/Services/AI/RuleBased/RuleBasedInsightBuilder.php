@@ -512,7 +512,6 @@ final class RuleBasedInsightBuilder
      */
     private function userAveragePace(int $userId): ?float
     {
-        /** @var list<float> $paces */
         $paces = ActivityDetail::query()
             ->join('activities', 'activities.id', '=', 'activity_details.activity_id')
             ->where('activities.user_id', $userId)
@@ -522,16 +521,16 @@ final class RuleBasedInsightBuilder
             ->where('activity_details.moving_time', '>', 0)
             ->orderByDesc('activity_details.start_date_local')
             ->limit(self::ROLLING_PACE_WINDOW)
-            ->selectRaw('activity_details.moving_time / (activity_details.distance / 1000) as pace')
-            ->pluck('pace')
-            ->map(fn (mixed $pace): float => (float) $pace)
-            ->all();
+            ->select('activity_details.distance', 'activity_details.moving_time')
+            ->get()
+            ->map(fn (ActivityDetail $detail): ?float => $detail->paceSecPerKm())
+            ->filter(fn (?float $pace): bool => $pace !== null);
 
-        if ($paces === []) {
+        if ($paces->isEmpty()) {
             return null;
         }
 
-        return array_sum($paces) / count($paces);
+        return $paces->sum() / $paces->count();
     }
 
     /**

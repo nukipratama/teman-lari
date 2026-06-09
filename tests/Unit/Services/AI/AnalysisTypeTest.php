@@ -20,8 +20,8 @@ it('flags exactly the heart-rate-zone-derived types as zone-dependent', function
     expect($type->isZoneDependent())->toBe($expected);
 })->with([
     'zones' => [AnalysisType::RunInsightZones, true],
-    'technical' => [AnalysisType::RunInsightTechnical, true],
     'weekly recap' => [AnalysisType::WeeklyRecap, true],
+    'technical (uses run-peak HR, not zones)' => [AnalysisType::RunInsightTechnical, false],
     'splits' => [AnalysisType::RunInsightSplits, false],
     'post-run speech' => [AnalysisType::PostRunSpeech, false],
     'pr context' => [AnalysisType::PrContext, false],

@@ -18,6 +18,14 @@ class TrainingLoad
     private const int CTL_TAU = 42;
 
     /**
+     * Lower bound (days) on how far back the EWMA loads TRIMP. At 365 days a
+     * 42-day-tau CTL has converged to within ~0.02% of its steady state, so the
+     * cap is indistinguishable from full history yet keeps the query (and the
+     * roll loop) bounded instead of scanning a multi-year history every call.
+     */
+    public const int CONVERGED_LOOKBACK_DAYS = 365;
+
+    /**
      * @param  array<string, float|int>  $timeInZoneMin  zone name → minutes
      */
     public function edwardsTrimp(array $timeInZoneMin): float
@@ -46,19 +54,25 @@ class TrainingLoad
     }
 
     /**
+     * $asOf anchors the week window (weekly_trimp / monotony / strain). $loadAsOf
+     * anchors the ATL/CTL roll and defaults to $asOf; callers pass an earlier
+     * date to measure fitness as-of a day that is not the week's end (e.g. the
+     * in-progress week, capped at today, so future days are not zero-filled).
+     *
      * @param  array<string, float>  $dailyTrimp
      * @return array<string, mixed>|null
      */
-    public function summaryFromDailyMap(array $dailyTrimp, Carbon $asOf): ?array
+    public function summaryFromDailyMap(array $dailyTrimp, Carbon $asOf, ?Carbon $loadAsOf = null): ?array
     {
         if ($dailyTrimp === []) {
             return null;
         }
 
-        $today = $asOf->copy()->startOfDay();
-        [$atl, $ctl] = $this->rollLoads($dailyTrimp, $today);
+        $weekAnchor = $asOf->copy()->startOfDay();
+        $loadDate = ($loadAsOf ?? $asOf)->copy()->startOfDay();
+        [$atl, $ctl] = $this->rollLoads($dailyTrimp, $loadDate);
         $form = round($ctl - $atl, 1);
-        [$weeklyTrimp, $monotony, $strain] = $this->weekStats($dailyTrimp, $today);
+        [$weeklyTrimp, $monotony, $strain] = $this->weekStats($dailyTrimp, $weekAnchor);
 
         return [
             'weekly_trimp' => round($weeklyTrimp, 1),
@@ -85,6 +99,7 @@ class TrainingLoad
             ->where('activities.user_id', $user->id)
             ->whereNotNull('activity_details.trimp_edwards')
             ->whereNotNull('activity_details.start_date_local')
+            ->where('activity_details.start_date_local', '>=', $asOf->copy()->subDays(self::CONVERGED_LOOKBACK_DAYS)->startOfDay())
             ->where('activity_details.start_date_local', '<=', $asOf->copy()->endOfDay())
             ->groupBy(DB::raw('DATE(activity_details.start_date_local)'))
             ->orderBy('dt')

@@ -36,6 +36,14 @@ class HandleInertiaRequests extends Middleware
     private const int GOALS_SUMMARY_CACHE_SECONDS = 120;
 
     /**
+     * TTL for the HR-zones-changed marker. It only moves when the user saves
+     * their zones (which busts the cache via {@see RunnerProfile}), so the TTL
+     * is just a safety net; the win is skipping a runnerProfile lookup on every
+     * page load for the common case of no custom profile.
+     */
+    private const int HR_ZONES_CHANGED_CACHE_SECONDS = 300;
+
+    /**
      * @return array<string, mixed>
      */
     #[Override]
@@ -77,7 +85,18 @@ class HandleInertiaRequests extends Middleware
      */
     private function hrZonesChangedAtFor(?User $user): ?string
     {
-        return $user?->runnerProfile?->hr_zones_changed_at?->toIso8601String();
+        if ($user === null) {
+            return null;
+        }
+
+        // Wrap in an array so a null marker (the common no-custom-profile case)
+        // is still cached; Cache::remember treats a bare null as a miss and
+        // would re-query every request.
+        return Cache::remember(
+            "hr-zones-changed-at:{$user->id}",
+            self::HR_ZONES_CHANGED_CACHE_SECONDS,
+            fn (): array => ['at' => $user->runnerProfile?->hr_zones_changed_at?->toIso8601String()],
+        )['at'];
     }
 
     /**

@@ -12,6 +12,7 @@ use DateTimeInterface;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Queue\Middleware\ThrottlesExceptions;
+use Illuminate\Support\Facades\Log;
 
 class IngestActivityJob implements ShouldQueue
 {
@@ -81,5 +82,19 @@ class IngestActivityJob implements ShouldQueue
         }
 
         $pipeline->ingest($activity);
+    }
+
+    /**
+     * Once the retry budget / window is exhausted the job lands in failed_jobs.
+     * Log which activity got stuck and why, so a stalled ingest is traceable
+     * without digging through the queue payload.
+     */
+    public function failed(Throwable $exception): void
+    {
+        Log::warning('strava.ingest.failed', [
+            'activity_id' => $this->activityId,
+            'exception' => $exception::class,
+            'reason' => $exception->getMessage(),
+        ]);
     }
 }

@@ -145,11 +145,7 @@ class ActivityPipeline
         if ($detail->start_date_local === null) {
             return;
         }
-        $this->weeklyAggregator->rebuildForwardFrom($user, $detail->start_date_local);
-        $snapshot = WeeklySnapshot::query()
-            ->where('user_id', $user->id)
-            ->where('week_ending', $detail->start_date_local->copy()->endOfWeek(Carbon::SUNDAY)->startOfDay()->toDateString())
-            ->first();
+        $snapshot = $this->weeklyAggregator->rebuildForwardFrom($user, $detail->start_date_local);
         if ($snapshot !== null) {
             $this->analysisService->request(
                 subjectOrType: WeeklySnapshot::class,
