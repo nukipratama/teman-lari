@@ -44,11 +44,12 @@ jobs:
           echo "frontend=$frontend" >> "$GITHUB_OUTPUT"
           echo "Result: backend=$backend frontend=$frontend"
 
-  # Always runs (a leaked secret can hide in any file), in parallel with `changes` —
-  # it doesn't read the path-filter outputs, so there's no dependency between them.
-  # A red secret-scan fails ci-gate without skipping the test jobs (it's their sibling).
+  # Runs on every event, independent of the path filter.
   secret-scan:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
     steps:
       - uses: actions/checkout@v6
         with:
@@ -285,10 +286,7 @@ jobs:
             } >> "$GITHUB_STEP_SUMMARY"
           fi
 
-  # Single fan-in gate. Branch protection requires this one check instead of the test
-  # jobs directly, because a path-skipped required check would wedge the PR. `if: always()`
-  # so it still evaluates when a test job skips; passes only if each test job is success
-  # or cleanly skipped, and secret-scan is success.
+  # Single required check for branch protection.
   ci-gate:
     needs: [backend-tests, frontend-tests, secret-scan]
     if: always()
