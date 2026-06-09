@@ -1,7 +1,9 @@
 name: CI
 
 on:
+  pull_request:
   push:
+    branches: [main]
 
 concurrency:
   group: ci-${{ github.ref }}
@@ -41,6 +43,19 @@ jobs:
           echo "backend=$backend" >> "$GITHUB_OUTPUT"
           echo "frontend=$frontend" >> "$GITHUB_OUTPUT"
           echo "Result: backend=$backend frontend=$frontend"
+
+  # Always runs (a leaked secret can hide in any file), in parallel with `changes` —
+  # it doesn't read the path-filter outputs, so there's no dependency between them.
+  # A red secret-scan fails ci-gate without skipping the test jobs (it's their sibling).
+  secret-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   backend-tests:
     needs: changes
@@ -270,9 +285,26 @@ jobs:
             } >> "$GITHUB_STEP_SUMMARY"
           fi
 
+  # Single fan-in gate. Branch protection requires this one check instead of the test
+  # jobs directly, because a path-skipped required check would wedge the PR. `if: always()`
+  # so it still evaluates when a test job skips; passes only if each test job is success
+  # or cleanly skipped, and secret-scan is success.
+  ci-gate:
+    needs: [backend-tests, frontend-tests, secret-scan]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require upstream jobs to have succeeded (or cleanly skipped)
+        run: |
+          for r in "${{ needs.backend-tests.result }}" "${{ needs.frontend-tests.result }}"; do
+            [ "$r" = "success" ] || [ "$r" = "skipped" ] || { echo "::error::a test job did not pass ($r)"; exit 1; }
+          done
+          [ "${{ needs.secret-scan.result }}" = "success" ] \
+            || { echo "::error::secret-scan did not pass (${{ needs.secret-scan.result }})"; exit 1; }
+
   deploy:
     name: Deploy
-    needs: [backend-tests, frontend-tests]
+    needs: [ci-gate]
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     runs-on: [self-hosted, homelab]
     concurrency:
@@ -281,7 +313,7 @@ jobs:
     timeout-minutes: 15
     env:
       # All app secrets + per-host config live in /opt/teman-lari/.env on the
-      # homelab runner, loaded by compose via `env_file:`. The workflow no
+      # self-hosted runner, loaded by compose via `env_file:`. The workflow no
       # longer needs GitHub Secrets for these — see compose.prod.yaml.
       COMPOSE: docker compose -f compose.prod.yaml
       BACKUP_DIR: /var/lib/teman-lari-backups
