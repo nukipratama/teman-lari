@@ -109,6 +109,20 @@ describe('Riwayat/Jejak', () => {
         expect(screen.getByText(/Rentang diperlebar otomatis/i)).toBeInTheDocument();
     });
 
+    it('shows the truncation note when runs are capped', () => {
+        render(
+            <RunsIndex
+                runs={[run(101, 'Pagi', '2026-05-19T06:00:00')]}
+                rangeFilter="all"
+                rangeStart={null}
+                runsTruncated
+                maxRuns={365}
+                weeklySnapshots={[]}
+            />,
+        );
+        expect(screen.getByText(/Menampilkan 365 lari terbaru/i)).toBeInTheDocument();
+    });
+
     it('shows the "semua lari" note when widened all the way', () => {
         render(
             <RunsIndex

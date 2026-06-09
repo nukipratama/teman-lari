@@ -43,6 +43,14 @@ class RunController extends Controller
     /** Unbounded range: no lower bound, every analyzed run regardless of age. */
     private const string RANGE_ALL = 'all';
 
+    /**
+     * Hard cap on runs returned to the page so a wide/"all" range never ships an
+     * unbounded payload. The newest runs are kept (ordered by id desc), so the
+     * auto-widen guarantee of surfacing the latest run still holds; older runs
+     * beyond the cap are flagged via `runsTruncated`.
+     */
+    private const int MAX_RUNS = 365;
+
     public function index(Request $request): Response
     {
         /** @var User $user */
@@ -63,11 +71,15 @@ class RunController extends Controller
 
         $runs = Activity::query()
             ->where('user_id', $user->id)
-            ->whereNotNull('analyzed_at')
             ->whereHas('detail', fn ($q) => $rangeStart === null ? $q : $q->where('start_date_local', '>=', $rangeStart))
             ->with(['detail' => fn ($q) => $q->select(['id', 'activity_id', 'name', 'start_date_local', 'distance', 'moving_time', 'average_heartrate', 'trimp_edwards'])])
             ->orderByDesc('id')
+            ->limit(self::MAX_RUNS + 1)
             ->get();
+
+        // Fetch one past the cap to detect truncation, then trim to the cap.
+        $runsTruncated = $runs->count() > self::MAX_RUNS;
+        $runs = $runs->take(self::MAX_RUNS)->values();
 
         $weeklySnapshots = WeeklySnapshot::query()
             ->where('user_id', $user->id)
@@ -83,6 +95,8 @@ class RunController extends Controller
             'rangeFilter' => $effectiveRange,
             'rangeStart' => $rangeStart?->toDateString(),
             'rangeAutoWidened' => $rangeAutoWidened,
+            'runsTruncated' => $runsTruncated,
+            'maxRuns' => self::MAX_RUNS,
             'weeklySnapshots' => $weeklySnapshots->map(fn (WeeklySnapshot $row): array => [
                 ...$row->toArray(),
                 'recap_analysis' => $recapAnalyses[$row->id] ?? Analysis::toPayload(null, AnalysisType::WeeklyRecap, WeeklySnapshot::class, $row->id),
@@ -98,7 +112,7 @@ class RunController extends Controller
     private function latestRunDaysAgo(User $user): ?int
     {
         $latestDate = ActivityDetail::query()
-            ->whereHas('activity', fn ($q) => $q->where('user_id', $user->id)->whereNotNull('analyzed_at'))
+            ->whereHas('activity', fn ($q) => $q->where('user_id', $user->id))
             ->whereNotNull('start_date_local')
             ->max('start_date_local');
 
@@ -165,7 +179,7 @@ class RunController extends Controller
         // start_date_local natively (no explicit filter); SUM(distance) stays
         // unfiltered to cover every analyzed detail, including null-dated ones.
         $bounds = ActivityDetail::query()
-            ->whereHas('activity', fn ($q) => $q->where('user_id', $user->id)->whereNotNull('analyzed_at'))
+            ->whereHas('activity', fn ($q) => $q->where('user_id', $user->id))
             ->selectRaw('MIN(start_date_local) as first_date, MAX(start_date_local) as latest_date, SUM(distance) as total_distance')
             ->first();
 
@@ -176,7 +190,7 @@ class RunController extends Controller
         }
 
         $boundaryDetails = ActivityDetail::query()
-            ->whereHas('activity', fn ($q) => $q->where('user_id', $user->id)->whereNotNull('analyzed_at'))
+            ->whereHas('activity', fn ($q) => $q->where('user_id', $user->id))
             ->whereIn('start_date_local', [$firstDate, $latestDate])
             ->orderBy('start_date_local')
             ->get();

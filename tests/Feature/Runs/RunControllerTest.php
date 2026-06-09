@@ -90,8 +90,22 @@ it('escalates to the all range so a run older than every preset still shows', fu
             ->where('rangeFilter', 'all')
             ->where('rangeAutoWidened', true)
             ->where('rangeStart', null)
+            ->where('runsTruncated', false)
             ->has('runs', 1)
             ->where('runs.0.detail.name', 'Ancient'));
+});
+
+it('caps the runs list and flags truncation when a range holds more than the cap', function (): void {
+    $user = User::factory()->create();
+    // One past the 365 cap so truncation triggers; range=all has no lower bound.
+    Activity::factory()->for($user)->analyzed()->has(ActivityDetail::factory(), 'detail')->count(366)->create();
+
+    $this->actingAs($user)->get('/aktivitas?range=all')
+        ->assertSuccessful()
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('runsTruncated', true)
+            ->where('maxRuns', 365)
+            ->has('runs', 365));
 });
 
 it('accepts an explicit all range with no lower bound', function (): void {

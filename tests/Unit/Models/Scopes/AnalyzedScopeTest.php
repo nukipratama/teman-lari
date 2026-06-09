@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Models\Activity;
+use App\Models\ActivityDetail;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
@@ -39,4 +40,20 @@ it('excludes stubs from a user activities relationship', function (): void {
     Activity::factory()->for($user)->stub()->create();
 
     expect($user->activities()->count())->toBe(2);
+});
+
+it('excludes stubs inside a whereHas(activity) subquery', function (): void {
+    // The scope must apply inside relationship subqueries too, so callers that
+    // whereHas('activity', ...) can drop the explicit analyzed_at filter.
+    $user = User::factory()->create();
+    $analyzed = Activity::factory()->for($user)->analyzed()->create();
+    ActivityDetail::factory()->for($analyzed)->create();
+    $stub = Activity::factory()->for($user)->stub()->create();
+    ActivityDetail::factory()->for($stub)->create();
+
+    $matched = ActivityDetail::query()
+        ->whereHas('activity', fn ($q) => $q->where('user_id', $user->id))
+        ->count();
+
+    expect($matched)->toBe(1);
 });

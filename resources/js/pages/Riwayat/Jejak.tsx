@@ -44,6 +44,10 @@ interface RunsIndexProps {
     rangeStart: string | null;
     /** Server widened the requested range to reach an older run. */
     rangeAutoWidened?: boolean;
+    /** Older runs beyond the per-page cap were dropped from this list. */
+    runsTruncated?: boolean;
+    /** The per-page cap, shown in the truncation note. */
+    maxRuns?: number;
     weeklySnapshots: ReadonlyArray<WeeklySnapshotRow>;
     journeyMatch?: JourneyMatchData | null;
 }
@@ -63,7 +67,7 @@ interface WeekBucket {
 export type RangeFilterValue = '8w' | '12w' | '6m' | '1y' | 'all';
 
 const DEFAULT_RANGE: RangeFilterValue = '12w';
-const RANGE_RELOAD_PROPS = ['runs', 'rangeFilter', 'rangeStart', 'rangeAutoWidened', 'weeklySnapshots', 'notes'];
+const RANGE_RELOAD_PROPS = ['runs', 'rangeFilter', 'rangeStart', 'rangeAutoWidened', 'runsTruncated', 'maxRuns', 'weeklySnapshots', 'notes'];
 
 const RANGE_FILTER_OPTIONS: ReadonlyArray<RangeOption<RangeFilterValue>> = [
     { value: '8w', label: '2 bulan terakhir', hint: '8w' },
@@ -92,6 +96,8 @@ export default function RunsIndex({
     notes = {},
     rangeFilter,
     rangeAutoWidened = false,
+    runsTruncated = false,
+    maxRuns = 0,
     weeklySnapshots,
     journeyMatch = null,
 }: Readonly<RunsIndexProps>) {
@@ -180,6 +186,7 @@ export default function RunsIndex({
                 {hasRuns ? (
                     <div className="space-y-8">
                         {rangeAutoWidened && <RangeWidenedNote rangeFilter={rangeFilter} />}
+                        {runsTruncated && <RunsTruncatedNote maxRuns={maxRuns} />}
                         {buckets.map((bucket) => (
                             <WeekSection
                                 key={bucket.weekStart}
@@ -373,6 +380,17 @@ const EMPTY_COPY: Record<StravaSyncState, { line: string; sub: string }> = {
  * Banner shown above the run list when the server widened the requested window
  * so an older run could surface. Keeps the active range chip honest.
  */
+function RunsTruncatedNote({ maxRuns }: Readonly<{ maxRuns: number }>) {
+    return (
+        <Card tone="cream-deep" padding="sm" className="flex items-center gap-2.5">
+            <Icon icon="mdi:history" width={16} height={16} className="shrink-0 text-ink-3" aria-hidden />
+            <p className="font-sans text-sm text-ink-2">
+                Menampilkan {maxRuns} lari terbaru. Lari yang lebih lama belum dimuat.
+            </p>
+        </Card>
+    );
+}
+
 function RangeWidenedNote({ rangeFilter }: Readonly<{ rangeFilter: RangeFilterValue }>) {
     const label = RANGE_FILTER_OPTIONS.find((o) => o.value === rangeFilter)?.label ?? rangeFilter;
     const message =
