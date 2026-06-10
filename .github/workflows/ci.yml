@@ -382,6 +382,15 @@ jobs:
             echo "Analytics schema not present yet — skipping (first deploy)."
           fi
 
+      - name: Quiesce scheduler + horizon before the roll
+        # Stop the scheduler + horizon BEFORE migrate/roll: recreating a container
+        # while one of its scheduled commands / jobs is mid-run is what stranded
+        # the strava:ingest overlap mutex and froze ingest. `stop` sends SIGTERM so
+        # Horizon drains its in-flight jobs gracefully, and (unlike horizon:terminate)
+        # keeps them down so the restart policy can't resurrect them on the old image
+        # during migrate. The scheduler is resumed only once the deploy is green.
+        run: $COMPOSE stop scheduler horizon || true
+
       - name: Migrate (one-shot, on the new image)
         run: $COMPOSE run --rm app php artisan migrate --force
 
@@ -394,17 +403,17 @@ jobs:
       - name: Roll app, workers + Pulse daemons onto the new image
         # pulse-check (Servers recorder), pulse-work (drains the ingest stream)
         # and pulse-redis (dedicated ingest buffer) must come up too — the app
-        # now ingests Pulse via redis, so pulse-redis has to be running.
-        run: $COMPOSE up -d --no-deps app horizon scheduler pulse-check pulse-work pulse-redis
+        # now ingests Pulse via redis, so pulse-redis has to be running. The
+        # recreate gives Horizon fresh workers on the new code, so no separate
+        # horizon:terminate recycle is needed. The scheduler is deliberately left
+        # stopped here and only resumed once the deploy is green (below).
+        run: $COMPOSE up -d --no-deps app horizon pulse-check pulse-work pulse-redis
 
       - name: Optimize caches
         # Runs inside the running container where compose.prod.yaml's env
         # is loaded — caching at build time would freeze .env-less defaults
         # (e.g. DB_CONNECTION → sqlite) into the cached config.
         run: $COMPOSE exec -T app php artisan optimize
-
-      - name: Recycle Horizon workers onto new code
-        run: $COMPOSE exec -T app php artisan horizon:terminate
 
       - name: Healthcheck
         run: |
@@ -422,6 +431,12 @@ jobs:
         run: |
           curl -fsS -o /dev/null -w "HTTP %{http_code} in %{time_total}s\n" \
             http://127.0.0.1:7001/login
+
+      - name: Resume scheduler (deploy green)
+        # The scheduler was held stopped through migrate + the roll so no command
+        # could be mid-run during a container restart. The deploy is healthy now,
+        # so bring it back up on the new image.
+        run: $COMPOSE up -d --no-deps scheduler
 
       - name: Prune old teman-lari images
         if: always()
