@@ -6,6 +6,7 @@ use App\Models\AI\Analysis;
 use App\Models\User;
 use App\Models\WeeklySnapshot;
 use App\Services\AI\AnalysisService;
+use App\Services\AI\AnalysisStatus;
 use App\Services\AI\AnalysisType;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
@@ -43,7 +44,7 @@ it('dispatches the weekly recap once per last-completed-week snapshot with runs'
     $this->app->instance(AnalysisService::class, $service);
 
     $this->artisan('ai:weekly-recap')
-        ->expectsOutputToContain('Dispatched weekly recap for 1 snapshots (week ending 2026-05-17).')
+        ->expectsOutputToContain('Dispatched weekly recap for 1 snapshots (week ending 2026-05-17)')
         ->assertSuccessful();
 
     expect($captured)->toHaveCount(1)
@@ -51,6 +52,63 @@ it('dispatches the weekly recap once per last-completed-week snapshot with runs'
         ->and($captured[0]['subjectId'])->toBe($ranLastWeek->id)
         ->and($captured[0]['type'])->toBe(AnalysisType::WeeklyRecap)
         ->and($captured[0]['invalidate'])->toBeTrue();
+
+    Carbon::setTestNow();
+});
+
+it('self-heals a stalled prior-week recap (Pending) without touching Done ones', function (): void {
+    // Monday 2026-05-18; last completed week 2026-05-17; sweep covers ~3 weeks back.
+    Carbon::setTestNow('2026-05-18 05:30:00');
+    $user = User::factory()->create();
+
+    // Just-closed week → primary pass (invalidate:true).
+    $thisWeek = WeeklySnapshot::factory()->for($user)->create(['week_ending' => '2026-05-17', 'runs' => 3]);
+    // Prior week whose recap STALLED (Pending) → should self-heal (invalidate:false).
+    $stalled = WeeklySnapshot::factory()->for($user)->create(['week_ending' => '2026-05-10', 'runs' => 2]);
+    Analysis::factory()->create([
+        'subject_type' => WeeklySnapshot::class, 'subject_id' => $stalled->id,
+        'analysis_type' => AnalysisType::WeeklyRecap, 'status' => AnalysisStatus::Pending,
+    ]);
+    // Prior week already Done → must NOT be re-dispatched (no re-bill).
+    $done = WeeklySnapshot::factory()->for($user)->create(['week_ending' => '2026-05-03', 'runs' => 4]);
+    Analysis::factory()->create([
+        'subject_type' => WeeklySnapshot::class, 'subject_id' => $done->id,
+        'analysis_type' => AnalysisType::WeeklyRecap, 'status' => AnalysisStatus::Done,
+    ]);
+    // Oldest week the 3-week window still covers (week_ending = 2026-05-17 - 3w).
+    $oldestIncluded = WeeklySnapshot::factory()->for($user)->create(['week_ending' => '2026-04-26', 'runs' => 2]);
+    Analysis::factory()->create([
+        'subject_type' => WeeklySnapshot::class, 'subject_id' => $oldestIncluded->id,
+        'analysis_type' => AnalysisType::WeeklyRecap, 'status' => AnalysisStatus::Failed,
+    ]);
+    // One week older → outside the window, must be left stranded by the sweep.
+    $tooOld = WeeklySnapshot::factory()->for($user)->create(['week_ending' => '2026-04-19', 'runs' => 2]);
+    Analysis::factory()->create([
+        'subject_type' => WeeklySnapshot::class, 'subject_id' => $tooOld->id,
+        'analysis_type' => AnalysisType::WeeklyRecap, 'status' => AnalysisStatus::Pending,
+    ]);
+
+    $captured = [];
+    $service = Mockery::mock(AnalysisService::class);
+    $service->shouldReceive('request')
+        ->andReturnUsing(function (string $subjectOrType, int $subjectId, AnalysisType $type, ?string $discriminator = null, ?int $delaySeconds = null, bool $invalidate = false) use (&$captured): Analysis {
+            $captured[] = compact('subjectId', 'invalidate');
+
+            return new Analysis();
+        });
+    $this->app->instance(AnalysisService::class, $service);
+
+    $this->artisan('ai:weekly-recap')
+        ->expectsOutputToContain('re-dispatched 2 stalled')
+        ->assertSuccessful();
+
+    $byId = collect($captured)->keyBy('subjectId');
+    expect($byId)->toHaveCount(3)
+        ->and($byId[$thisWeek->id]['invalidate'])->toBeTrue()        // primary, final data
+        ->and($byId[$stalled->id]['invalidate'])->toBeFalse()        // self-heal, no re-bill
+        ->and($byId[$oldestIncluded->id]['invalidate'])->toBeFalse() // window lower bound
+        ->and($byId->has($done->id))->toBeFalse()                    // Done left alone
+        ->and($byId->has($tooOld->id))->toBeFalse();                 // outside the window
 
     Carbon::setTestNow();
 });
