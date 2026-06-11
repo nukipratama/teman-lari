@@ -21,17 +21,17 @@
                                     'bg-emerald-500' => $task['status'] === 'ok',
                                 ])></span>
                                 <div class="min-w-0">
-                                <div class="truncate text-sm font-bold text-gray-900 dark:text-gray-100">{{ $task['command'] }}</div>
-                                <div class="text-[10px] uppercase tracking-wide text-gray-500 dark:text-gray-400">
-                                    @if ($task['lastRunAt'])
-                                        ran {{ $task['lastRunAt']->diffForHumans() }}
-                                    @else
-                                        never run
-                                    @endif
-                                    @if ($task['runtimeMs'] !== null)
-                                        · {{ $task['runtimeMs'] >= 1000 ? round($task['runtimeMs'] / 1000, 1).'s' : $task['runtimeMs'].'ms' }}
-                                    @endif
-                                </div>
+                                    <div class="truncate text-sm font-bold text-gray-900 dark:text-gray-100">{{ $task['command'] }}</div>
+                                    <div class="text-[10px] uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                                        @if ($task['lastRunAt'])
+                                            ran {{ $task['lastRunAt']->diffForHumans() }}
+                                        @else
+                                            never run
+                                        @endif
+                                        @if ($task['runtimeMs'] !== null)
+                                            · {{ $task['runtimeMs'] >= 1000 ? round($task['runtimeMs'] / 1000, 1).'s' : $task['runtimeMs'].'ms' }}
+                                        @endif
+                                    </div>
                                 </div>
                             </div>
                             <div @class([

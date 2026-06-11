@@ -133,10 +133,25 @@ services:
 
   # Combined Pulse daemon: pulse:check (Servers recorder) + pulse:work (ingest drain).
   # Bind-mounts host root read-only so the disk metric reflects the real host disk.
-  # pulse:check runs in the background; pulse:work is PID 1 and receives SIGTERM.
+  # pulse:work is PID 1 (exec'd) and receives SIGTERM for graceful drain on stop.
+  # pulse:check is monitored: if it exits, the wrapper exits too so Docker restarts
+  # the whole container (same restart: unless-stopped that protected the old separate
+  # pulse-check container).
   pulse:
     <<: *app-base
-    command: ["/bin/sh", "-c", "php artisan pulse:check & exec php artisan pulse:work"]
+    command:
+      - "/bin/sh"
+      - "-c"
+      - |
+        php artisan pulse:check &
+        PULSE_CHECK_PID=$!
+        php artisan pulse:work &
+        PULSE_WORK_PID=$!
+        # Exit (triggering Docker restart) if either child dies.
+        wait -n
+        kill $PULSE_CHECK_PID $PULSE_WORK_PID 2>/dev/null
+        wait
+    stop_grace_period: 30s
     volumes:
       - app_logs:/var/www/html/storage/logs
       - /:/host:ro
