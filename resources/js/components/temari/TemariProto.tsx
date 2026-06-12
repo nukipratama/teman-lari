@@ -40,6 +40,7 @@ const INNER_EAR = '#E8A076';
 const EYE = '#1A1812';
 const CHEEK = '#E89B8E';
 const OUTLINE = '#3b2f1f';
+const DEFAULT_SHIRT = '#0e7a4c';
 
 // ── Headband palette ────────────────────────────────────────────────
 
@@ -165,13 +166,6 @@ const ARM_ROTATION: Record<TemariPose, [number, number]> = {
 
 // ── Helpers ─────────────────────────────────────────────────────────
 
-function resolveMedalKey(
-    equipped: TemariEquipped | null,
-): string | null {
-    if (!equipped?.medal || equipped.medal === 'none') return null;
-    return equipped.medal;
-}
-
 function resolveAuraKey(equipped: TemariEquipped | null): string | null {
     if (!equipped?.aura) return null;
     if (typeof equipped.aura === 'string') return equipped.aura;
@@ -196,9 +190,9 @@ export default function TemariProto({
     const aspectHeight = (size * viewH) / viewW;
 
     const headbandKey = equipped?.headband ?? null;
-    const hb = headbandKey ? (HEADBAND_PALETTE[headbandKey] ?? HEADBAND_PALETTE.ember) : HEADBAND_PALETTE.ember;
+    const hb = HEADBAND_PALETTE[headbandKey ?? 'ember'] ?? HEADBAND_PALETTE.ember;
 
-    const medalKey = resolveMedalKey(equipped);
+    const medalKey = (!equipped?.medal || equipped.medal === 'none') ? null : equipped.medal;
     const medal = medalKey ? (MEDAL_PALETTE[medalKey] ?? MEDAL_PALETTE.pertama) : null;
 
     const auraKey = resolveAuraKey(equipped);
@@ -291,7 +285,7 @@ export default function TemariProto({
                     <Body
                         kausColors={kausColors}
                         celanaColors={celanaColors}
-                        hb={hb}
+                        emblemColor={headbandKey ? hb.band : FUR_SHADE}
                     />
 
                     {/* Arms */}
@@ -347,7 +341,7 @@ function Head({
 }: Readonly<{
     earTilt: [number, number];
     hb: HeadbandPalette;
-    headbandKey: string;
+    headbandKey: string | null;
     eyeShape: EyeShape;
     mouthShape: MouthShape;
 }>) {
@@ -378,11 +372,11 @@ function Head({
 function Body({
     kausColors,
     celanaColors,
-    hb,
+    emblemColor,
 }: Readonly<{
     kausColors: { fill: string; trim: string; emblem: string } | null;
     celanaColors: { fill: string; stripe: string } | null;
-    hb: HeadbandPalette;
+    emblemColor: string;
 }>) {
     return (
         <g>
@@ -438,7 +432,7 @@ function Body({
                         strokeLinecap="round"
                     />
                     {/* Chest emblem — small "T" */}
-                    <circle cx="60" cy="66" r="3.2" fill={hb.band} stroke={OUTLINE} strokeWidth="0.6" />
+                    <circle cx="60" cy="66" r="3.2" fill={emblemColor} stroke={OUTLINE} strokeWidth="0.6" />
                     <text
                         x="60"
                         y="67.5"
@@ -455,7 +449,7 @@ function Body({
                 <g>
                     <path
                         d="M 36 55 Q 35 64 34 78 L 86 78 Q 85 64 84 55 Q 76 58 60 58 Q 44 58 36 55 Z"
-                        fill="#0e7a4c"
+                        fill={DEFAULT_SHIRT}
                         stroke={OUTLINE}
                         strokeWidth={0.8}
                         strokeLinejoin="round"
@@ -469,7 +463,7 @@ function Body({
                         strokeLinecap="round"
                     />
                     {/* Default chest emblem */}
-                    <circle cx="60" cy="66" r="3.2" fill={hb.band} stroke={OUTLINE} strokeWidth="0.6" />
+                    <circle cx="60" cy="66" r="3.2" fill={emblemColor} stroke={OUTLINE} strokeWidth="0.6" />
                     <text
                         x="60"
                         y="67.5"
@@ -498,7 +492,7 @@ function Arms({
     kausColors: { fill: string; trim: string; emblem: string } | null;
     wristColor: string;
 }>) {
-    const sleeveColor = kausColors ? kausColors.fill : '#0e7a4c';
+    const sleeveColor = kausColors ? kausColors.fill : DEFAULT_SHIRT;
     return (
         <>
             {/* Left arm — tapered from shoulder to paw */}
