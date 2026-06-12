@@ -15,7 +15,6 @@ export type TemariPose =
 export interface TemariEquipped {
     headband?: 'ember' | 'epik' | 'legendaris' | null;
     medal?: 'pertama' | 'emas' | 'perak' | 'platina' | 'none';
-    pita?: 'konsisten' | 'jarak' | 'malam' | 'maraton' | boolean | null;
     kaus?: 'pemula' | 'pagi' | 'hujan' | 'legendaris' | null;
     celana?: 'ringan' | 'jarak' | 'split' | 'maraton' | null;
     sepatu?: 'basic' | 'cepat' | 'tahan' | 'legendaris' | null;
@@ -100,15 +99,6 @@ const AURA_PALETTE: Record<string, { inner: string; mid: string; outer: string }
     jagoan: { inner: '#D8F0FF', mid: '#D9B23A', outer: '#B8941E' },
 };
 
-// ── Pita (ribbon) palette ───────────────────────────────────────────
-
-const PITA_PALETTE: Record<string, { fill: string; stroke: string; knot: string }> = {
-    konsisten: { fill: '#6B8E6F', stroke: '#5C7C60', knot: '#5C7C60' },
-    jarak: { fill: '#D9764A', stroke: '#B75F37', knot: '#B75F37' },
-    malam: { fill: '#5E89B5', stroke: '#4A6F94', knot: '#4A6F94' },
-    maraton: { fill: '#D9B23A', stroke: '#B8941E', knot: '#B8941E' },
-};
-
 // ── Pose configs ────────────────────────────────────────────────────
 
 const EAR_TILT: Record<TemariPose, [number, number]> = {
@@ -188,12 +178,6 @@ function resolveAuraKey(equipped: TemariEquipped | null): string | null {
     return 'pemanasan';
 }
 
-function resolvePitaKey(equipped: TemariEquipped | null): string | null {
-    if (!equipped?.pita) return null;
-    if (typeof equipped.pita === 'string') return equipped.pita;
-    return 'konsisten';
-}
-
 // ── Main component ──────────────────────────────────────────────────
 
 export default function TemariProto({
@@ -204,12 +188,11 @@ export default function TemariProto({
     animate = false,
     className,
 }: Readonly<TemariProtoProps>) {
-    // Full-body viewBox: head at y~0..56, body at y~56..96, legs at y~96..130,
-    // with padding for ears/sparkles/aura. ViewBox: x[0..120], y[-12..134] = 146 tall.
-    // Tight fit — ground shadow bottom is at y≈133.5; overflow:visible handles
-    // decorative elements (ears, sparkles, aura) that extend beyond the box.
+    // Full-body viewBox: head at y~0..56, body at y~56..96, legs at y~96..130.
+    // y starts at -24 so ears (tip y≈-20 on excited pose) are never clipped when
+    // the SVG is rasterized to canvas for the share card. ViewBox: x[0..120], y[-24..134] = 158 tall.
     const viewW = 120;
-    const viewH = 146;
+    const viewH = 158;
     const aspectHeight = (size * viewH) / viewW;
 
     const headbandKey = equipped?.headband ?? null;
@@ -223,9 +206,6 @@ export default function TemariProto({
     const auraColors = auraKey ? (AURA_PALETTE[auraKey] ?? AURA_PALETTE.pemanasan) : null;
 
     const showSparkle = SPARKLE_POSES.has(pose) || showAura;
-    const pitaKey = resolvePitaKey(equipped);
-    const pitaColors = pitaKey ? (PITA_PALETTE[pitaKey] ?? PITA_PALETTE.konsisten) : null;
-
     const kausKey = equipped?.kaus ?? null;
     const kausColors = kausKey ? (KAUS_PALETTE[kausKey] ?? KAUS_PALETTE.pemula) : null;
 
@@ -253,7 +233,7 @@ export default function TemariProto({
             data-tone={tone}
         >
             <svg
-                viewBox={`0 -12 ${viewW} ${viewH}`}
+                viewBox={`0 -24 ${viewW} ${viewH}`}
                 width={size}
                 height={aspectHeight}
                 style={{ display: 'block', overflow: 'visible' }}
@@ -326,10 +306,7 @@ export default function TemariProto({
                         mouthShape={mouthShape}
                     />
 
-                    {/* Pita (sash across body — behind medal) */}
-                    {pitaColors && <PitaLayer colors={pitaColors} />}
-
-                    {/* Medal (on chest — on top of sash) */}
+                    {/* Medal (on chest) */}
                     {medal && <MedalLayer medal={medal} />}
                 </g>
 
@@ -621,22 +598,6 @@ function MedalLayer({
             {medal.ring && (
                 <circle cx="0" cy="8" r="13" fill="none" stroke={medal.glow} strokeWidth="1.5" opacity="0.6" />
             )}
-        </g>
-    );
-}
-
-// ── Pita (ribbon sash) ────────────────────────────────────────────────
-
-function PitaLayer({ colors }: Readonly<{ colors: { fill: string; stroke: string; knot: string } }>) {
-    return (
-        <g>
-            {/* Sash body — wider, slight curve for drape feel */}
-            <path d="M 30 60 Q 58 66 88 76 L 88 86 Q 58 76 30 70 Z" fill={colors.fill} />
-            <path d="M 30 60 Q 58 66 88 76" stroke={colors.stroke} strokeWidth="0.8" fill="none" />
-            {/* Bow at right anchor — two triangular flaps + knot circle */}
-            <path d="M 88 79 L 94 74 L 93 80 Z" fill={colors.knot} opacity="0.9" />
-            <path d="M 88 83 L 95 86 L 92 81 Z" fill={colors.knot} opacity="0.8" />
-            <circle cx="90" cy="81" r="2.5" fill={colors.knot} />
         </g>
     );
 }
