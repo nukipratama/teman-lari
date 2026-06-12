@@ -151,7 +151,7 @@ class StravaClient
         $connection->update([
             'access_token' => $response->json('access_token'),
             'refresh_token' => $response->json('refresh_token'),
-            'token_expires_at' => Carbon::createFromTimestamp($response->json('expires_at')),
+            'token_expires_at' => (new Carbon('@' . $response->json('expires_at')))->setTimezone(config('app.timezone')),
         ]);
 
         return $connection;
