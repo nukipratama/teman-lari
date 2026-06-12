@@ -1,6 +1,5 @@
 import { render, screen } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
-import { router } from '@inertiajs/react';
+import { describe, expect, it } from 'vitest';
 import TopNav from './TopNav';
 import { makeUser, setMockPage } from '@/test/setup';
 
@@ -11,7 +10,6 @@ const user = (overrides: Record<string, unknown> = {}) => ({
 });
 
 beforeEach(() => {
-    vi.mocked(router.post).mockReset();
     setMockPage({ ...user(), stravaSync: { state: 'disconnected', last_synced_at: null } });
 });
 
