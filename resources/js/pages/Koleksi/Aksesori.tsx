@@ -104,9 +104,14 @@ export default function KoleksiAksesori({ items, equipped }: Readonly<AksesoriPr
                 />
 
                 <HeroPanel className="mt-8 lg:px-14 lg:py-12">
-                    <div className="grid items-center gap-10 lg:grid-cols-[260px_1fr]">
+                    <div className="grid items-center gap-8 lg:gap-10 lg:grid-cols-[220px_1fr]">
                         <div className="flex justify-center">
-                            <TemariProto pose="proud" size={260} equipped={previewEquipped} />
+                            <div className="hidden lg:block">
+                                <TemariProto pose="proud" size={220} equipped={previewEquipped} animate />
+                            </div>
+                            <div className="lg:hidden">
+                                <TemariProto pose="proud" size={160} equipped={previewEquipped} animate />
+                            </div>
                         </div>
                         <div>
                             <div className="mb-3 font-mono text-[11px] font-bold uppercase tracking-[0.18em] text-horizon">

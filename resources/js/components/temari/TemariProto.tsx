@@ -158,7 +158,6 @@ const POSE_ANIM: Record<TemariPose, string> = {
     glow: 'temari-bob 3.2s ease-in-out infinite, temari-breathe 3.2s ease-in-out infinite',
 };
 
-const DEFAULT_MEDAL_POSES = new Set<TemariPose>(['proud', 'pumped', 'holding', 'observational', 'glow']);
 const SPARKLE_POSES = new Set<TemariPose>(['pumped', 'excited', 'glow']);
 
 // ── Arm swing per pose ──────────────────────────────────────────────
@@ -177,14 +176,10 @@ const ARM_ROTATION: Record<TemariPose, [number, number]> = {
 // ── Helpers ─────────────────────────────────────────────────────────
 
 function resolveMedalKey(
-    pose: TemariPose,
     equipped: TemariEquipped | null,
 ): string | null {
-    if (equipped?.medal) {
-        if (equipped.medal === 'none') return null;
-        return equipped.medal;
-    }
-    return DEFAULT_MEDAL_POSES.has(pose) ? 'pertama' : null;
+    if (!equipped?.medal || equipped.medal === 'none') return null;
+    return equipped.medal;
 }
 
 function resolveAuraKey(equipped: TemariEquipped | null): string | null {
@@ -220,7 +215,7 @@ export default function TemariProto({
     const headbandKey = equipped?.headband ?? null;
     const hb = headbandKey ? (HEADBAND_PALETTE[headbandKey] ?? HEADBAND_PALETTE.ember) : HEADBAND_PALETTE.ember;
 
-    const medalKey = resolveMedalKey(pose, equipped);
+    const medalKey = resolveMedalKey(equipped);
     const medal = medalKey ? (MEDAL_PALETTE[medalKey] ?? MEDAL_PALETTE.pertama) : null;
 
     const auraKey = resolveAuraKey(equipped);
