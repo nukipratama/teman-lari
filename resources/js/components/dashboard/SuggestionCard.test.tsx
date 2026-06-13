@@ -62,4 +62,12 @@ describe('SuggestionCard', () => {
         fireEvent.click(screen.getByRole('button', { name: 'Saran lain' }));
         expect(screen.getByRole('button', { name: 'Lagi mikir…' })).toBeInTheDocument();
     });
+
+    it('toggles a long body with "Baca selengkapnya"', () => {
+        const longBody = 'Jaga pace di zona 2 selama empat puluh menit penuh, '.repeat(4);
+        render(<SuggestionCard suggestion={suggestion(`Tempo ringan hari ini.\n\n${longBody}`)} lastRun={null} />);
+        const toggle = screen.getByRole('button', { name: 'Baca selengkapnya' });
+        fireEvent.click(toggle);
+        expect(screen.getByRole('button', { name: 'Tutup' })).toBeInTheDocument();
+    });
 });

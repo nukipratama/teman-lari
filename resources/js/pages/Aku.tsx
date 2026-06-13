@@ -1,4 +1,4 @@
-import { Head, Link, router, usePage } from '@inertiajs/react';
+import { Head, Link, usePage } from '@inertiajs/react';
 import { Icon } from '@iconify/react';
 import { useMemo } from 'react';
 import AppShell from '@/layouts/AppShell';
@@ -6,7 +6,6 @@ import Card from '@/components/ui/Card';
 import Chip from '@/components/ui/Chip';
 import HeroPanel from '@/components/ui/HeroPanel';
 import PersonaBar, { type PersonaSlice } from '@/components/PersonaBar';
-import PillButton from '@/components/ui/PillButton';
 import PrCard from '@/components/card/PrCard';
 import SectionLabel from '@/components/ui/SectionLabel';
 import Temari from '@/components/temari/Temari';
@@ -198,34 +197,6 @@ export default function Aku({
                         catalog={unlockCatalog}
                     />
                 </section>
-
-                <Card as="section" className="mt-10 flex items-start gap-3.5">
-                    <Temari pose="observational" size={48} />
-                    <div className="flex-1">
-                        <p className="font-display text-base italic leading-relaxed text-ink-2">
-                            “Strava {identity.strava_connected ? 'tersambung' : 'belum nyambung'}. {identity.strava_connected ? 'Lari baru otomatis kepoin.' : 'Sambungin biar lari baru kebaca.'}”
-                        </p>
-                    </div>
-                    {identity.strava_connected ? (
-                        <PillButton
-                            tone="outline"
-                            size="sm"
-                            onClick={() => router.post('/strava/sync', {}, { preserveScroll: true })}
-                            className="flex-none px-4 py-2 text-xs font-semibold"
-                        >
-                            <Icon icon="mdi:sync" width={14} height={14} aria-hidden className="text-ink-3" />
-                            Sync sekarang
-                        </PillButton>
-                    ) : (
-                        <a
-                            href="/auth/strava/redirect"
-                            className="inline-flex flex-none items-center gap-2 rounded-full bg-strava-orange px-4 py-2 text-xs font-semibold text-white hover:bg-strava-orange-hover"
-                        >
-                            <Icon icon="mdi:strava" width={14} height={14} aria-hidden />
-                            Sambungkan
-                        </a>
-                    )}
-                </Card>
             </PageContainer>
         </AppShell>
     );

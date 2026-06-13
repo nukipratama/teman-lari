@@ -7,13 +7,13 @@ import Card from '@/components/ui/Card';
 import CollectionHeader from '@/components/koleksi/CollectionHeader';
 import Kartu from '@/components/card/Kartu';
 import FeaturedCardHero from '@/components/card/FeaturedCardHero';
+import ExpandableQuote from '@/components/dashboard/ExpandableQuote';
 import { cn } from '@/lib/cn';
 import { pressShrink } from '@/lib/motion';
 import { kartuUrl } from '@/lib/routes';
 import PageContainer from '@/components/ui/PageContainer';
 import { formatDuration, formatNaiveIdDate, formatKm } from '@/lib/pace';
 import { RARITY_LABELS, RARITY_ORDER, buildCardStats, paceShapeFromDetail, zonePctFromDetail } from '@/lib/runcard';
-import { renderBold } from '@/lib/richText';
 import { memo, useCallback, useDeferredValue, useMemo, useState, type ReactNode } from 'react';
 import AnalysisStatus from '@/components/temari/AnalysisStatus';
 import type {
@@ -196,11 +196,7 @@ function SlimBanner({ featured }: Readonly<{ featured: FeaturedCardPayload }>) {
                         allowReanalyze={false}
                         showTimestamp={false}
                         onSky
-                        renderContent={(text) => (
-                            <p className="font-display italic text-cream/85">
-                                &ldquo;{renderBold(text)}&rdquo;
-                            </p>
-                        )}
+                        renderContent={(text) => <ExpandableQuote text={text} onSky />}
                     />
                 )
             }

@@ -1,9 +1,12 @@
+import { useState } from 'react';
+import { Icon } from '@iconify/react';
 import Card from '@/components/ui/Card';
 import Chip from '@/components/ui/Chip';
-import PillButton from '@/components/ui/PillButton';
+import ReadMoreToggle from '@/components/ui/ReadMoreToggle';
 import SectionLabel from '@/components/ui/SectionLabel';
 import AnalysisStatus from '@/components/temari/AnalysisStatus';
 import { useAnalysisTrigger } from '@/hooks/useAnalysisTrigger';
+import { cn } from '@/lib/cn';
 import { renderBold } from '@/lib/richText';
 import { formatWeather } from '@/pages/HariIni/helpers';
 import type { ActivityDetail, AnalysisPayload } from '@/types/inertia';
@@ -16,6 +19,7 @@ import type { ActivityDetail, AnalysisPayload } from '@/types/inertia';
  * Falls back to a single paragraph if the LLM didn't follow the format.
  */
 function SuggestionContent({ text }: Readonly<{ text: string }>) {
+    const [expanded, setExpanded] = useState(false);
     const parts = text.split(/\n\n+/).map((s) => s.trim()).filter(Boolean);
     if (parts.length === 0) {
         return null;
@@ -30,9 +34,12 @@ function SuggestionContent({ text }: Readonly<{ text: string }>) {
                 {renderBold(title)}
             </h3>
             {body !== '' && (
-                <p className="whitespace-pre-line font-sans text-sm leading-relaxed text-ink-2">
-                    {renderBold(body)}
-                </p>
+                <div>
+                    <p className={cn('whitespace-pre-line font-sans text-sm leading-relaxed text-ink-2', !expanded && 'line-clamp-3')}>
+                        {renderBold(body)}
+                    </p>
+                    {body.length > 150 && <ReadMoreToggle expanded={expanded} onToggle={() => setExpanded(!expanded)} />}
+                </div>
             )}
         </div>
     );
@@ -63,9 +70,15 @@ export default function SuggestionCard({ suggestion, lastRun }: Readonly<{ sugge
                 </div>
             )}
             <div className="mt-auto pt-2">
-                <PillButton tone="ghost" size="sm" onClick={trigger} disabled={pending}>
-                    {pending ? 'Lagi mikir…' : 'Saran lain'}
-                </PillButton>
+                <button
+                    type="button"
+                    onClick={trigger}
+                    disabled={pending}
+                    className="focus-ring rounded inline-flex items-center self-start gap-1 text-xs text-ink-3 hover:text-leaf-deep transition-colors disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:text-ink-3"
+                >
+                    <Icon icon="mdi:refresh" aria-hidden />
+                    <span>{pending ? 'Lagi mikir…' : 'Saran lain'}</span>
+                </button>
             </div>
         </Card>
     );

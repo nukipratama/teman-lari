@@ -1,7 +1,7 @@
 import Kartu from '@/components/card/Kartu';
 import FeaturedCardHero from '@/components/card/FeaturedCardHero';
 import AnalysisStatus from '@/components/temari/AnalysisStatus';
-import { renderBold } from '@/lib/richText';
+import ExpandableQuote from '@/components/dashboard/ExpandableQuote';
 import { kartuUrl } from '@/lib/routes';
 import type { FeaturedCard } from '@/pages/HariIni/helpers';
 import type { AnalysisPayload } from '@/types/inertia';
@@ -27,11 +27,7 @@ export default function FeaturedKartuPanel({
                     showTimestamp={false}
                     allowReanalyze={false}
                     onSky
-                    renderContent={(text) => (
-                        <p className="font-display text-base italic leading-relaxed text-cream">
-                            &ldquo;{renderBold(text)}&rdquo;
-                        </p>
-                    )}
+                    renderContent={(text) => <ExpandableQuote text={text} onSky />}
                 />
             }
             card={
