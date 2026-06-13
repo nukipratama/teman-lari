@@ -27,4 +27,11 @@ describe('ExpandableQuote', () => {
         const paragraph = screen.getByText(new RegExp('a'.repeat(20)));
         expect(paragraph.className).toContain('line-clamp-3');
     });
+
+    it('uses cream text on the sky panel', () => {
+        render(<ExpandableQuote text="Lari santai aja." onSky />);
+        const paragraph = screen.getByText(/Lari santai aja\./);
+        expect(paragraph.className).toContain('text-cream');
+        expect(paragraph.className).not.toContain('text-ink');
+    });
 });

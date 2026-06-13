@@ -101,7 +101,7 @@ export default function FeaturedCardHero({
                     )}
 
                     {voice && (
-                        <div className="mt-4 max-w-md text-sm [&_p]:line-clamp-2">{voice}</div>
+                        <div className="mt-4 max-w-md text-sm">{voice}</div>
                     )}
                     <PillLink href={ctaHref} onSky className="mt-6">
                         {ctaLabel}

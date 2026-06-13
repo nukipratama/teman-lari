@@ -61,7 +61,7 @@ export default function LastLariCard({ run, pose, note }: Readonly<{ run: Activi
                 <StatTile tone="plain" size="lg" align="center" label="TRIMP" value={trimp != null ? String(trimp) : '—'} valueClassName="font-black tracking-tight text-ink" />
             </div>
             {note && (
-                <div className="flex flex-1 items-center gap-2 px-3 text-sm leading-relaxed text-ink-2">
+                <div className="flex items-start gap-2 px-3 text-sm leading-relaxed text-ink-2">
                     <Icon
                         icon="mdi:comment-quote-outline"
                         width={14}

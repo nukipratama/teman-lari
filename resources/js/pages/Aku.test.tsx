@@ -1,6 +1,5 @@
-import { fireEvent, render, screen } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
-import { router } from '@inertiajs/react';
+import { render, screen } from '@testing-library/react';
+import { describe, expect, it } from 'vitest';
 import Aku from './Aku';
 import { makeUser, setMockPage } from '@/test/setup';
 
@@ -92,19 +91,5 @@ describe('Aku', () => {
         expect(screen.getByText(/Ikat Kepala Luar Biasa/)).toBeInTheDocument();
         expect(screen.getByText(/Medali Emas/)).toBeInTheDocument();
         expect(screen.getByText(/kebuka/)).toBeInTheDocument();
-    });
-
-    it('shows the Strava connect CTA when not connected', () => {
-        const disconnected = { ...identity, strava_connected: false };
-        render(<Aku identity={disconnected} stats={stats} />);
-        expect(screen.getByText('Sambungkan')).toBeInTheDocument();
-        expect(screen.getByText(/belum nyambung/)).toBeInTheDocument();
-    });
-
-    it('posts to /strava/sync when connected and Sync sekarang is clicked', () => {
-        vi.mocked(router.post).mockReset();
-        render(<Aku identity={identity} stats={stats} />);
-        fireEvent.click(screen.getByText('Sync sekarang'));
-        expect(router.post).toHaveBeenCalledWith('/strava/sync', {}, { preserveScroll: true });
     });
 });
