@@ -191,7 +191,7 @@ export default function CardReveal({
           className="my-auto w-full max-w-3xl"
         >
           <HeroPanel className="px-8 py-10 sm:px-12 sm:py-12">
-            <div className="grid items-center gap-9 lg:grid-cols-[200px_1fr]">
+            <div className="grid grid-cols-1 items-center gap-9 lg:grid-cols-[200px_1fr]">
               {/* Mascot */}
               <div className="flex justify-center">
                 {!opened ? (
