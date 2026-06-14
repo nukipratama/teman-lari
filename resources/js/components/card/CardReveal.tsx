@@ -235,7 +235,7 @@ export default function CardReveal({
                   transition={opened
                     ? { type: "spring", stiffness: 260, damping: 18, delay: 0.1 }
                     : { duration: 0 }}
-                  className="relative mt-6 max-w-md"
+                  className="relative mt-6 max-w-md mx-auto lg:mx-0"
                 >
                   {/* Ignition ring on open */}
                   <AnimatePresence>
