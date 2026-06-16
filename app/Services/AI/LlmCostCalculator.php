@@ -26,6 +26,14 @@ class LlmCostCalculator
     private array $warnedDeployments = [];
 
     /**
+     * Refreshed retail-price map, fetched from the cache once per instance so a
+     * per-row costing loop (report build) hits the cache store a single time.
+     *
+     * @var array<string, array{input_per_1m: float, output_per_1m: float, currency: string}>|null
+     */
+    private ?array $refreshedPrices = null;
+
+    /**
      * Cost in USD for a single call's token split against the deployment's rate.
      */
     public function costFor(string $deployment, int $promptTokens, int $completionTokens): float
@@ -82,10 +90,13 @@ class LlmCostCalculator
      */
     private function rateFor(string $deployment): ?array
     {
-        /** @var array<string, array{input_per_1m: float, output_per_1m: float, currency: string}> $refreshed */
-        $refreshed = Cache::get((string) config('azure_openai.price_cache_key'), []);
+        if ($this->refreshedPrices === null) {
+            /** @var array<string, array{input_per_1m: float, output_per_1m: float, currency: string}> $refreshed */
+            $refreshed = Cache::get((string) config('azure_openai.price_cache_key'), []);
+            $this->refreshedPrices = $refreshed;
+        }
 
-        $rate = $refreshed[$deployment] ?? config("azure_openai.prices.{$deployment}");
+        $rate = $this->refreshedPrices[$deployment] ?? config("azure_openai.prices.{$deployment}");
 
         if (! is_array($rate) || ! isset($rate['input_per_1m'], $rate['output_per_1m'])) {
             return null;

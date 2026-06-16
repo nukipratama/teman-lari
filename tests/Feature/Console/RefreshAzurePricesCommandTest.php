@@ -44,6 +44,24 @@ it('refreshes prices from the retail API into the cache (per-1K scaled to per-1M
         ->and($cached['gpt-4o-mini'])->toMatchArray(['input_per_1m' => 0.15, 'output_per_1m' => 0.60]);
 });
 
+it('does not match a gpt-4o-mini meter when pricing the gpt-4o deployment', function (): void {
+    Http::fake([
+        // The mini meter is listed FIRST, so a naive substring match would
+        // mis-bill gpt-4o at the mini rate. Whole-token matching must skip it.
+        'prices.azure.com/*' => Http::response(fakeRetailResponse([
+            ['meterName' => 'gpt-4o-mini Input Tokens', 'unitPrice' => 0.00015],
+            ['meterName' => 'gpt-4o-mini Output Tokens', 'unitPrice' => 0.00060],
+            ['meterName' => 'gpt-4o Input Tokens', 'unitPrice' => 0.0025],
+            ['meterName' => 'gpt-4o Output Tokens', 'unitPrice' => 0.0100],
+        ])),
+    ]);
+
+    $this->artisan('ai:refresh-azure-prices')->assertSuccessful();
+
+    $cached = Cache::get('azure_openai.prices.refreshed');
+    expect($cached['gpt-4o'])->toMatchArray(['input_per_1m' => 2.50, 'output_per_1m' => 10.00]);
+});
+
 it('keeps the config seed rate for a deployment with no matching retail meter', function (): void {
     Http::fake([
         'prices.azure.com/*' => Http::response(fakeRetailResponse([

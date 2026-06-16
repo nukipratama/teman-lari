@@ -105,14 +105,19 @@ class RefreshAzurePricesCommand extends Command
      */
     private function findRate(array $items, string $deployment, bool $isOutput): ?float
     {
-        $needle = strtolower(str_replace('-', ' ', $deployment));
+        // Whole-token match so the `gpt-4o` slug does not also match a
+        // `gpt-4o-mini` meter (and bill the larger model at the mini rate).
+        // Hyphens are normalised to spaces on both sides; the lookbehind/ahead
+        // plus the explicit `mini` exclusion reject `gpt 4o mini ...` while still
+        // matching versioned base meters like `gpt 4o 0806 ...`.
+        $needle = '/(?<![a-z0-9])'.preg_quote(strtolower(str_replace('-', ' ', $deployment)), '/').'(?![a-z0-9])(?! mini)/';
         $direction = $isOutput ? 'output' : 'input';
 
         foreach ($items as $item) {
             $meterName = strtolower((string) ($item['meterName'] ?? ''));
             $haystack = strtolower(str_replace('-', ' ', $meterName));
 
-            if (! str_contains($haystack, $needle)) {
+            if (preg_match($needle, $haystack) !== 1) {
                 continue;
             }
             if (! str_contains($haystack, $direction)) {
