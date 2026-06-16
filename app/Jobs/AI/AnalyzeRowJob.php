@@ -45,7 +45,9 @@ abstract class AnalyzeRowJob extends AnalyzeBaseJob
     public function failed(Throwable $e): void
     {
         $row = Analysis::query()->find($this->analysisId);
-        if ($row === null || $row->status === AnalysisStatus::Done) {
+        if ($row === null
+            || $row->status === AnalysisStatus::Done
+            || $row->status === AnalysisStatus::Failed) {
             return;
         }
 
