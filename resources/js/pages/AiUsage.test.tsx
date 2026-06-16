@@ -55,8 +55,10 @@ describe('AiUsage page', () => {
         // Date range badge
         expect(screen.getByText('2026-05-01')).toBeInTheDocument();
         expect(screen.getByText('2026-05-19')).toBeInTheDocument();
-        // Total tokens KPI
-        expect(screen.getByText('880')).toBeInTheDocument();
+        // Total tokens (880) appears in the KPI tile and the by-deployment row.
+        expect(screen.getAllByText('880').length).toBeGreaterThan(0);
+        // Per-deployment row
+        expect(screen.getByText('gpt-4o-mini')).toBeInTheDocument();
         // Per-kind rows
         expect(screen.getByText('run-insight')).toBeInTheDocument();
         expect(screen.getByText('briefing')).toBeInTheDocument();
