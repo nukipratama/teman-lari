@@ -112,7 +112,7 @@ class StravaClient
     {
         $retryAfter = $response->header('Retry-After');
 
-        if ($retryAfter === '' || ! ctype_digit($retryAfter)) {
+        if (! ctype_digit($retryAfter)) {
             return null;
         }
 

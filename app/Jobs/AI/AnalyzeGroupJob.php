@@ -72,7 +72,8 @@ abstract class AnalyzeGroupJob extends AnalyzeBaseJob
             $this->subjectId,
             $this->discriminator,
             static::groupedTypes(),
-        )->filter(fn (Analysis $row): bool => $row->status !== AnalysisStatus::Done);
+        )->filter(fn (Analysis $row): bool => $row->status !== AnalysisStatus::Done
+            && $row->status !== AnalysisStatus::Failed);
 
         $this->failPending($pending, $service, $e->getMessage());
     }
