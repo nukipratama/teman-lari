@@ -9,6 +9,7 @@ use App\Services\Strava\Exceptions\StravaCircuitOpenException;
 use App\Services\Strava\Exceptions\StravaConnectionRevokedException;
 use App\Services\Strava\Exceptions\StravaRateLimitedException;
 use App\Services\Strava\Exceptions\StravaTokenRefreshFailedException;
+use App\Services\Strava\Exceptions\StravaTokenRefreshTransientException;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\Response;
 use Illuminate\Support\Carbon;
@@ -74,6 +75,17 @@ class StravaClient
             );
         }
 
+        if ($response->status() === 429) {
+            // A real Strava 429 (server-side bucket exhausted, distinct from our
+            // local guardRateLimit): surface it as a rate-limit so the caller's
+            // ThrottlesExceptions middleware absorbs it as a backoff rather than a
+            // generic failure. Don't move the breaker — Strava is up, just busy.
+            throw new StravaRateLimitedException(
+                "Strava returned 429 for [{$path}]; backing off.",
+                $this->retryAfterSeconds($response),
+            );
+        }
+
         if ($response->serverError()) {
             // 5xx: Strava itself is failing — count toward the breaker.
             $breaker->recordFailure();
@@ -90,6 +102,21 @@ class StravaClient
     private function breaker(): StravaCircuitBreaker
     {
         return $this->breaker ?? app(StravaCircuitBreaker::class);
+    }
+
+    /**
+     * Seconds to wait per Strava's Retry-After header on a 429, or null when the
+     * header is absent or non-numeric so the caller falls back to its default.
+     */
+    private function retryAfterSeconds(Response $response): ?int
+    {
+        $retryAfter = $response->header('Retry-After');
+
+        if ($retryAfter === '' || ! ctype_digit($retryAfter)) {
+            return null;
+        }
+
+        return (int) $retryAfter;
     }
 
     /**
@@ -135,16 +162,36 @@ class StravaClient
 
     private function performRefresh(StravaConnection $connection): StravaConnection
     {
-        $response = Http::asForm()->post(self::TOKEN_URL, [
-            'client_id' => config('services.strava.client_id'),
-            'client_secret' => config('services.strava.client_secret'),
-            'grant_type' => 'refresh_token',
-            'refresh_token' => $connection->refresh_token,
-        ]);
+        try {
+            $response = Http::asForm()->post(self::TOKEN_URL, [
+                'client_id' => config('services.strava.client_id'),
+                'client_secret' => config('services.strava.client_secret'),
+                'grant_type' => 'refresh_token',
+                'refresh_token' => $connection->refresh_token,
+            ]);
+        } catch (ConnectionException $e) {
+            // Transport failure / timeout reaching the token endpoint: Strava is
+            // unreachable, not deauthorizing us. Treat it as transient so the
+            // caller backs off instead of revoking a healthy connection.
+            throw new StravaTokenRefreshTransientException(
+                "Strava token refresh could not reach the endpoint: {$e->getMessage()}",
+                previous: $e,
+            );
+        }
 
         if ($response->failed()) {
-            throw new StravaTokenRefreshFailedException(
-                "Strava token refresh failed with status {$response->status()}: {$response->body()}",
+            if ($response->status() === 400) {
+                // Only a 400 invalid_grant is a permanent deauthorization: the
+                // refresh token will never succeed, so the caller revokes.
+                throw new StravaTokenRefreshFailedException(
+                    "Strava token refresh failed with status 400: {$response->body()}",
+                );
+            }
+
+            // 401 / 429 / 5xx are transient: the refresh may succeed on retry, so
+            // the caller releases the job and backs off instead of revoking.
+            throw new StravaTokenRefreshTransientException(
+                "Strava token refresh failed transiently with status {$response->status()}: {$response->body()}",
             );
         }
 
