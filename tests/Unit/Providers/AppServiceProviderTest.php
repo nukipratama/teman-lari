@@ -58,16 +58,21 @@ it('isOpsUser allows any user in the local environment', function (): void {
         ->and(AppServiceProvider::isOpsUser(User::factory()->make()))->toBeTrue();
 });
 
-it('isOpsUser denies guests outside local', function (): void {
+it('isOpsUser leaves the gate open when no ops allow-list is configured', function (): void {
     app()->detectEnvironment(fn (): string => 'production');
+    config()->set('app.ops_emails', []);
 
-    expect(AppServiceProvider::isOpsUser(null))->toBeFalse();
+    expect(AppServiceProvider::isOpsUser(null))->toBeTrue()
+        ->and(AppServiceProvider::isOpsUser(User::factory()->make()))->toBeTrue()
+        ->and(AppServiceProvider::isOpsUser(User::factory()->demo()->make()))->toBeTrue();
 });
 
-it('isOpsUser allows the seeded demo user outside local', function (): void {
+it('isOpsUser excludes guests and demo once an ops allow-list is configured', function (): void {
     app()->detectEnvironment(fn (): string => 'production');
+    config()->set('app.ops_emails', ['ops@teman-lari.local']);
 
-    expect(AppServiceProvider::isOpsUser(User::factory()->demo()->make()))->toBeTrue();
+    expect(AppServiceProvider::isOpsUser(null))->toBeFalse()
+        ->and(AppServiceProvider::isOpsUser(User::factory()->demo()->make(['email' => 'ops@teman-lari.local'])))->toBeFalse();
 });
 
 it('isOpsUser allows a configured ops email and denies others outside local', function (): void {

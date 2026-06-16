@@ -98,9 +98,12 @@ class AppServiceProvider extends ServiceProvider
     }
 
     /**
-     * Allow-list predicate shared by the Pulse / ai-usage gates. Local dev always
-     * passes; otherwise the user must be authenticated and either be the seeded
-     * demo account or carry an email listed in `app.ops_emails` (env-driven).
+     * Allow-list predicate shared by the Horizon / Pulse / ai-usage gates. Local
+     * dev always passes. In other environments the app-layer gate only engages
+     * once `app.ops_emails` (env-driven) is configured: until then it stays open
+     * so a deploy can never lock the owner out, leaving the edge basicauth as the
+     * gate. Once configured, only those emails pass, and demo accounts are
+     * excluded because demo login is public in production.
      */
     public static function isOpsUser(?Authenticatable $user): bool
     {
@@ -108,17 +111,15 @@ class AppServiceProvider extends ServiceProvider
             return true;
         }
 
-        if (! $user instanceof User) {
-            return false;
-        }
-
-        if ($user->is_demo) {
-            return true;
-        }
-
         /** @var list<string> $opsEmails */
         $opsEmails = (array) config('app.ops_emails', []);
 
-        return in_array($user->email, $opsEmails, true);
+        if ($opsEmails === []) {
+            return true;
+        }
+
+        return $user instanceof User
+            && ! $user->is_demo
+            && in_array($user->email, $opsEmails, true);
     }
 }
