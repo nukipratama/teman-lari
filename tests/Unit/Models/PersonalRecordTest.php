@@ -30,6 +30,14 @@ it('casts value_sec to float and set_at to Carbon', function (): void {
         ->and($pr->set_at)->toBeInstanceOf(Carbon::class);
 });
 
+it('serializes set_at as the verbatim wall-clock, not a UTC-shifted instant', function (): void {
+    // set_at is copied from the run's start_date_local (a location wall-clock) and
+    // rendered through the frontend's naive parsers, so it must serialize unshifted.
+    $pr = new PersonalRecord(['set_at' => '2026-01-01 06:20:30']);
+
+    expect($pr->toArray()['set_at'])->toBe('2026-01-01T06:20:30');
+});
+
 it('belongs to a user and optionally to an activity', function (): void {
     $user = User::factory()->create();
     $activity = Activity::factory()->for($user)->create();
