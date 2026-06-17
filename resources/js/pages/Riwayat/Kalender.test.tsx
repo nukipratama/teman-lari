@@ -1,7 +1,21 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
-import Kalender, { type CalendarCell } from './Kalender';
+import Kalender, { type CalendarCell, type MonthlyRecap } from './Kalender';
 import { makeUser, setMockPage } from '@/test/setup';
+
+function makeRecap(overrides: Partial<MonthlyRecap> = {}): MonthlyRecap {
+    return {
+        id: 1,
+        status: 'done',
+        content: 'Mei kamu padat, ritmenya kejaga.',
+        type: 'monthly_recap',
+        subject_type: 'monthly_recap_user_month',
+        subject_id: 1,
+        discriminator: '2026-05',
+        is_chain_head: true,
+        ...overrides,
+    };
+}
 
 beforeEach(() => {
     setMockPage({
@@ -207,5 +221,51 @@ describe('Kalender', () => {
         // No grid rows since groupByWeek returns []. Chrome (month label + legend) still shows.
         expect(screen.getByRole('heading', { name: 'Mei 2026' })).toBeInTheDocument();
         expect(screen.getByText('Mood')).toBeInTheDocument();
+    });
+
+    describe('monthly recap card', () => {
+        it('renders Temari\'s narrative when the recap is done', () => {
+            render(<Kalender {...BASE_PROPS} cells={TWO_WEEK_CELLS} monthlyRecap={makeRecap()} />);
+            expect(screen.getByText(/Mei kamu padat, ritmenya kejaga\./)).toBeInTheDocument();
+            expect(screen.getByText(/Catatan Temari · Mei 2026/)).toBeInTheDocument();
+        });
+
+        it('is omitted entirely when no recap prop is passed', () => {
+            render(<Kalender {...BASE_PROPS} cells={TWO_WEEK_CELLS} />);
+            expect(screen.queryByText(/Catatan Temari/)).not.toBeInTheDocument();
+        });
+
+        it('shows the empty / resume state when the month is not yet narrated', () => {
+            render(
+                <Kalender
+                    {...BASE_PROPS}
+                    cells={TWO_WEEK_CELLS}
+                    monthlyRecap={makeRecap({ status: 'pending', content: null, id: null })}
+                />,
+            );
+            expect(screen.getByText('Belum dibaca Temari.')).toBeInTheDocument();
+            expect(screen.getByRole('button', { name: /Minta Temari bacain/ })).toBeInTheDocument();
+        });
+
+        it('shows a "Coba lagi" resume action when the recap failed', () => {
+            render(
+                <Kalender
+                    {...BASE_PROPS}
+                    cells={TWO_WEEK_CELLS}
+                    monthlyRecap={makeRecap({ status: 'failed', content: null })}
+                />,
+            );
+            expect(screen.getByRole('button', { name: /Coba lagi/ })).toBeInTheDocument();
+        });
+
+        it('shows the "Baca ulang" regenerate action only on the chain-head month', () => {
+            render(<Kalender {...BASE_PROPS} cells={TWO_WEEK_CELLS} monthlyRecap={makeRecap({ is_chain_head: true })} />);
+            expect(screen.getByRole('button', { name: /Baca ulang/ })).toBeInTheDocument();
+        });
+
+        it('hides the regenerate action on a historical (non-head) month', () => {
+            render(<Kalender {...BASE_PROPS} cells={TWO_WEEK_CELLS} monthlyRecap={makeRecap({ is_chain_head: false })} />);
+            expect(screen.queryByRole('button', { name: /Baca ulang/ })).not.toBeInTheDocument();
+        });
     });
 });

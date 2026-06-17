@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 use App\Models\Activity;
 use App\Models\ActivityDetail;
+use App\Models\AI\Analysis;
 use App\Models\User;
+use App\Services\AI\AnalysisType;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
 use Inertia\Testing\AssertableInertia as Assert;
@@ -96,4 +98,64 @@ it('exposes a lifetime stats payload', function (): void {
             ->has('lifetime.total_runs')
             ->has('lifetime.total_km')
             ->has('lifetime.first_run_at'));
+});
+
+it('passes the MonthlyRecap analysis for the viewed month as the monthlyRecap prop', function (): void {
+    $user = User::factory()->create();
+    Analysis::factory()->done('Bulan Mei kamu padat, ritmenya kejaga.')->create([
+        'subject_type' => AnalysisType::MONTHLY_RECAP_SUBJECT_TYPE,
+        'subject_id' => $user->id,
+        'analysis_type' => AnalysisType::MonthlyRecap,
+        'discriminator' => '2026-05',
+    ]);
+
+    $this->actingAs($user)->get('/kalender?month=2026-05')
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('monthlyRecap.status', 'done')
+            ->where('monthlyRecap.content', 'Bulan Mei kamu padat, ritmenya kejaga.')
+            ->where('monthlyRecap.type', AnalysisType::MonthlyRecap->value)
+            ->where('monthlyRecap.discriminator', '2026-05'));
+});
+
+it('only matches the recap row for the viewed month, not another month', function (): void {
+    $user = User::factory()->create();
+    Analysis::factory()->done('Cerita bulan April.')->create([
+        'subject_type' => AnalysisType::MONTHLY_RECAP_SUBJECT_TYPE,
+        'subject_id' => $user->id,
+        'analysis_type' => AnalysisType::MonthlyRecap,
+        'discriminator' => '2026-04',
+    ]);
+
+    $this->actingAs($user)->get('/kalender?month=2026-05')
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('monthlyRecap.status', 'pending')
+            ->where('monthlyRecap.content', null)
+            ->where('monthlyRecap.discriminator', '2026-05'));
+});
+
+it('flags the latest completed month with a run as the chain head', function (): void {
+    Carbon::setTestNow('2026-06-17');
+    $user = User::factory()->create();
+    $activity = Activity::factory()->for($user)->analyzed()->create();
+    ActivityDetail::factory()->for($activity)->create([
+        'start_date_local' => Carbon::create(2026, 5, 20),
+    ]);
+
+    $this->actingAs($user)->get('/kalender?month=2026-05')
+        ->assertInertia(fn (Assert $page) => $page->where('monthlyRecap.is_chain_head', true));
+
+    $this->actingAs($user)->get('/kalender?month=2026-04')
+        ->assertInertia(fn (Assert $page) => $page->where('monthlyRecap.is_chain_head', false));
+});
+
+it('never flags the current (in-progress) month as the chain head', function (): void {
+    Carbon::setTestNow('2026-06-17');
+    $user = User::factory()->create();
+    $activity = Activity::factory()->for($user)->analyzed()->create();
+    ActivityDetail::factory()->for($activity)->create([
+        'start_date_local' => Carbon::create(2026, 6, 5),
+    ]);
+
+    $this->actingAs($user)->get('/kalender?month=2026-06')
+        ->assertInertia(fn (Assert $page) => $page->where('monthlyRecap.is_chain_head', false));
 });

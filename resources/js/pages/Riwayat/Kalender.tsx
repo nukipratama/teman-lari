@@ -2,14 +2,19 @@ import { Head, Link } from '@inertiajs/react';
 import { Icon } from '@iconify/react';
 import { memo, useCallback, useMemo, useState, type ReactNode } from 'react';
 import AppShell from '@/layouts/AppShell';
+import AnalysisStatus from '@/components/temari/AnalysisStatus';
 import RiwayatFilter, { type MoodOption } from '@/components/riwayat/RiwayatFilter';
 import RiwayatTabs from '@/components/riwayat/RiwayatTabs';
 import { cn } from '@/lib/cn';
 import PageContainer from '@/components/ui/PageContainer';
 import { MOOD_FILL, MOOD_HINT, MOOD_LABEL, MOOD_ORDER, MOOD_SOFT_FILL, moodSigilColor } from '@/lib/mood';
 import { formatPace, formatShortDateId } from '@/lib/pace';
+import { renderBold } from '@/lib/richText';
 import { aktivitasUrl } from '@/lib/routes';
-import type { Mood } from '@/types/inertia';
+import type { AnalysisPayload, Mood } from '@/types/inertia';
+
+/** The monthly recap payload plus the chain-head flag the controller adds. */
+export type MonthlyRecap = AnalysisPayload & { is_chain_head: boolean };
 
 export interface CalendarCell {
     date: string;
@@ -39,6 +44,7 @@ interface KalenderProps {
     todayMonth: string;
     lifetime?: LifetimeStats;
     todayQuote?: string | null;
+    monthlyRecap?: MonthlyRecap;
 }
 
 interface WeekRow {
@@ -76,6 +82,7 @@ export default function Kalender({
     todayMonth,
     lifetime,
     todayQuote = null,
+    monthlyRecap,
 }: Readonly<KalenderProps>) {
     const weeks = useMemo<WeekRow[]>(() => groupByWeek(cells), [cells]);
     const isCurrentMonth = month === todayMonth;
@@ -122,6 +129,8 @@ export default function Kalender({
                     </div>
                 </div>
 
+                {monthlyRecap && <MonthlyRecapCard recap={monthlyRecap} monthLabel={monthLabel} />}
+
                 <Legend className="mb-4" />
 
                 <div className="relative">
@@ -166,6 +175,39 @@ function LifetimeEyebrow({ lifetime }: Readonly<{ lifetime?: LifetimeStats }>) {
         <div className="mb-3.5 font-mono font-bold text-[11px] uppercase tracking-[0.18em] text-ink-2 lg:text-xs">
             {['Riwayat', ...stats].join(' · ')}
         </div>
+    );
+}
+
+/**
+ * Temari's narrative recap for the viewed month, keyed to that month's
+ * MonthlyRecap analysis. MonthlyRecap is a connected + chained kind: the
+ * "Coba lagi" / "Minta Temari bacain" actions resume the chain from the
+ * earliest unfilled month, and "Baca ulang" (regenerate) shows only on the
+ * latest narrated month (`is_chain_head`). No rule-based fallback exists for
+ * monthly, so unfilled months simply show the empty / resume state.
+ */
+function MonthlyRecapCard({ recap, monthLabel }: Readonly<{ recap: MonthlyRecap; monthLabel: string }>) {
+    return (
+        <section
+            className="mb-4 rounded-2xl border border-line bg-surface-warm p-4 shadow-sm sm:p-5"
+            aria-label={`Catatan Temari bulan ${monthLabel}`}
+        >
+            <div className="font-mono text-xs font-bold uppercase tracking-wider text-ink-2">
+                Catatan Temari · {monthLabel}
+            </div>
+            <div className="mt-2">
+                <AnalysisStatus
+                    analysis={recap}
+                    inertiaReloadProps={['monthlyRecap']}
+                    chained
+                    isChainHead={recap.is_chain_head}
+                    size="md"
+                    renderContent={(content) => (
+                        <p className="text-sm leading-relaxed text-ink">{renderBold(content)}</p>
+                    )}
+                />
+            </div>
+        </section>
     );
 }
 
