@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Models\AI\TokenUsage;
 use App\Models\User;
+use App\Services\AI\AzureRetailPrices;
 use App\Services\AI\LlmCostCalculator;
 use App\Services\AI\TokenUsageReport;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -13,7 +14,10 @@ use Illuminate\Support\Facades\Cache;
 uses(RefreshDatabase::class);
 
 beforeEach(function (): void {
-    $this->report = new TokenUsageReport(new LlmCostCalculator());
+    // Retail unavailable in tests => cost math uses the config seed below.
+    $retail = Mockery::mock(AzureRetailPrices::class);
+    $retail->shouldReceive('fetch')->andReturn([]);
+    $this->report = new TokenUsageReport(new LlmCostCalculator($retail));
 
     // Deterministic price seed for cost math: gpt-4o = 2.50 in / 10.00 out per 1M.
     config()->set('azure_openai.prices', [

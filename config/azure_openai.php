@@ -36,9 +36,18 @@ return [
         'card_flavor' => (string) env('AZURE_OPENAI_CARD_FLAVOR_DEPLOYMENT', env('AZURE_OPENAI_DEPLOYMENT')),
     ],
 
-    // USD list prices per 1M tokens, keyed by deployment slug. Seeded with Azure
-    // retail list prices; ai:refresh-azure-prices refreshes these weekly into the
-    // cache under price_cache_key (this map is the fallback when the cache is cold).
+    // Map your (arbitrary) Azure deployment names to their underlying model, so
+    // pricing can look up the right rate. A deployment not listed here is assumed
+    // to already be a model name. Recorded usage keys on the deployment name.
+    'deployments' => [
+        // 'nuki-5.2' => 'gpt-4o',
+        // 'nuki-mini' => 'gpt-4o-mini',
+    ],
+
+    // USD list prices per 1M tokens, keyed by MODEL. Seeded with Azure retail
+    // list prices and used when the live retail map is unavailable. LlmCostCalculator
+    // lazily refreshes the retail map into the cache (price_cache_key) with a TTL,
+    // so an /ai-usage view after the TTL lapses fetches fresh prices.
     'prices' => [
         'gpt-4o' => ['input_per_1m' => 2.50, 'output_per_1m' => 10.00, 'currency' => 'USD'],
         'gpt-4o-mini' => ['input_per_1m' => 0.15, 'output_per_1m' => 0.60, 'currency' => 'USD'],

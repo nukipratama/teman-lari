@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Models\AI\TokenUsage;
+use App\Services\AI\AzureRetailPrices;
 use App\Services\AI\LlmCostCalculator;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
@@ -16,20 +17,35 @@ beforeEach(function (): void {
         'gpt-4o' => ['input_per_1m' => 2.50, 'output_per_1m' => 10.00, 'currency' => 'USD'],
         'gpt-4o-mini' => ['input_per_1m' => 0.15, 'output_per_1m' => 0.60, 'currency' => 'USD'],
     ]);
+    config()->set('azure_openai.deployments', []);
     config()->set('azure_openai.price_cache_key', 'azure_openai.prices.refreshed');
     Cache::forget('azure_openai.prices.refreshed');
-
-    $this->calculator = new LlmCostCalculator();
 });
 
-it('costs a call from the config price seed', function (): void {
+/** A calculator whose retail fetch returns $map (or throws when $map is a Throwable). */
+function calculatorWithRetail(array|Throwable $map = []): LlmCostCalculator
+{
+    $retail = Mockery::mock(AzureRetailPrices::class);
+    $expectation = $retail->shouldReceive('fetch');
+    $map instanceof Throwable ? $expectation->andThrow($map) : $expectation->andReturn($map);
+
+    return new LlmCostCalculator($retail);
+}
+
+it('costs a call from the config price seed when no retail map is available', function (): void {
     // 1M input @ 2.50 + 1M output @ 10.00 = 12.50
-    expect($this->calculator->costFor('gpt-4o', 1_000_000, 1_000_000))->toBe(12.50);
+    expect(calculatorWithRetail()->costFor('gpt-4o', 1_000_000, 1_000_000))->toBe(12.50);
 });
 
 it('scales cost proportionally for sub-million token counts', function (): void {
-    // 500 in @ 2.50/1M + 200 out @ 10.00/1M = 0.00125 + 0.002 = 0.00325
-    expect($this->calculator->costFor('gpt-4o', 500, 200))->toEqualWithDelta(0.00325, 1e-9);
+    expect(calculatorWithRetail()->costFor('gpt-4o', 500, 200))->toEqualWithDelta(0.00325, 1e-9);
+});
+
+it('maps an arbitrary deployment name to its model for pricing', function (): void {
+    config()->set('azure_openai.deployments', ['nuki-5.2' => 'gpt-4o']);
+
+    // nuki-5.2 is priced as gpt-4o.
+    expect(calculatorWithRetail()->costFor('nuki-5.2', 1_000_000, 1_000_000))->toBe(12.50);
 });
 
 it('prefers the refreshed cache price map over the config seed', function (): void {
@@ -37,17 +53,36 @@ it('prefers the refreshed cache price map over the config seed', function (): vo
         'gpt-4o' => ['input_per_1m' => 5.00, 'output_per_1m' => 20.00, 'currency' => 'USD'],
     ]);
 
-    // 1M in @ 5.00 + 1M out @ 20.00 = 25.00 (cache wins over the 12.50 seed).
-    expect($this->calculator->costFor('gpt-4o', 1_000_000, 1_000_000))->toBe(25.00);
+    // Cache wins over the 12.50 seed; retail is never fetched on a cache hit.
+    $retail = Mockery::mock(AzureRetailPrices::class);
+    $retail->shouldNotReceive('fetch');
+
+    expect((new LlmCostCalculator($retail))->costFor('gpt-4o', 1_000_000, 1_000_000))->toBe(25.00);
+});
+
+it('fetches the retail map on a cold cache and caches it', function (): void {
+    $calculator = calculatorWithRetail([
+        'gpt-4o' => ['input_per_1m' => 5.00, 'output_per_1m' => 20.00, 'currency' => 'USD'],
+    ]);
+
+    expect($calculator->costFor('gpt-4o', 1_000_000, 1_000_000))->toBe(25.00)
+        ->and(Cache::has('azure_openai.prices.refreshed'))->toBeTrue();
+});
+
+it('falls back to the seed and does not cache when the retail fetch fails', function (): void {
+    $calculator = calculatorWithRetail(new RuntimeException('retail down'));
+
+    expect($calculator->costFor('gpt-4o', 1_000_000, 1_000_000))->toBe(12.50)
+        ->and(Cache::has('azure_openai.prices.refreshed'))->toBeFalse();
 });
 
 it('returns 0.0 and warns once for an unknown deployment', function (): void {
     Log::spy();
+    $calculator = calculatorWithRetail();
 
-    expect($this->calculator->costFor('mystery-model', 1_000_000, 1_000_000))->toBe(0.0)
-        ->and($this->calculator->costFor('mystery-model', 1, 1))->toBe(0.0);
+    expect($calculator->costFor('mystery-model', 1_000_000, 1_000_000))->toBe(0.0)
+        ->and($calculator->costFor('mystery-model', 1, 1))->toBe(0.0);
 
-    // Warned once for the deployment despite two calls.
     Log::shouldHaveReceived('warning')
         ->once()
         ->with('llm_cost.unknown_deployment', ['deployment' => 'mystery-model']);
@@ -68,17 +103,17 @@ it('sums today\'s cost per deployment across the analytics table', function (): 
         'total_tokens' => 1_000_000, 'model' => 'gpt-4o', 'created_at' => Carbon::yesterday()->setTime(10, 0),
     ]); // excluded: yesterday
 
-    expect($this->calculator->dailyCost())->toBe(2.65);
+    expect(calculatorWithRetail()->dailyCost())->toBe(2.65);
 });
 
 it('returns zero daily cost when there is no usage today', function (): void {
-    expect($this->calculator->dailyCost())->toBe(0.0);
+    expect(calculatorWithRetail()->dailyCost())->toBe(0.0);
 });
 
-it('reports whether the refreshed price cache is populated', function (): void {
-    expect($this->calculator->isUsingRefreshedPrices())->toBeFalse();
+it('reports refreshed prices once the cache is populated, seed otherwise', function (): void {
+    expect(calculatorWithRetail()->isUsingRefreshedPrices())->toBeFalse();
 
     Cache::forever('azure_openai.prices.refreshed', ['gpt-4o' => ['input_per_1m' => 1.0, 'output_per_1m' => 1.0, 'currency' => 'USD']]);
 
-    expect($this->calculator->isUsingRefreshedPrices())->toBeTrue();
+    expect(calculatorWithRetail()->isUsingRefreshedPrices())->toBeTrue();
 });
