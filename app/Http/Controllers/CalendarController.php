@@ -5,7 +5,10 @@ declare(strict_types=1);
 namespace App\Http\Controllers;
 
 use Throwable;
+use App\Models\ActivityDetail;
+use App\Models\AI\Analysis;
 use App\Models\User;
+use App\Services\AI\AnalysisType;
 use App\Services\Run\CalendarBuilder;
 use App\Services\Run\LifetimeStats;
 use App\Services\Run\PostRunNoteReader;
@@ -43,8 +46,18 @@ class CalendarController extends Controller
         $gridStart = $monthStart->copy()->startOfWeek(Carbon::MONDAY);
         $gridEnd = $monthEnd->copy()->endOfWeek(Carbon::SUNDAY);
 
+        $discriminator = $monthStart->format('Y-m');
+        $recapRow = Analysis::query()
+            ->forSubject(
+                AnalysisType::MONTHLY_RECAP_SUBJECT_TYPE,
+                $user->id,
+                AnalysisType::MonthlyRecap,
+                $discriminator,
+            )
+            ->first();
+
         return Inertia::render('Riwayat/Kalender', [
-            'month' => $monthStart->format('Y-m'),
+            'month' => $discriminator,
             'monthLabel' => $this->formatMonthLabel($monthStart),
             'prevMonth' => $monthStart->copy()->subMonthNoOverflow()->format('Y-m'),
             'nextMonth' => $monthStart->copy()->addMonthNoOverflow()->format('Y-m'),
@@ -52,7 +65,36 @@ class CalendarController extends Controller
             'cells' => $this->calendarBuilder->buildCells($user, $gridStart, $gridEnd, $monthStart, $monthEnd),
             'lifetime' => $this->lifetimeStats->forUser($user),
             'todayQuote' => $this->noteReader->speechForToday($user->id),
+            'monthlyRecap' => [
+                ...Analysis::toPayload(
+                    $recapRow,
+                    AnalysisType::MonthlyRecap,
+                    AnalysisType::MONTHLY_RECAP_SUBJECT_TYPE,
+                    $user->id,
+                    $discriminator,
+                ),
+                'is_chain_head' => $discriminator === $this->latestNarratedMonthFor($user),
+            ],
         ]);
+    }
+
+    /**
+     * The latest completed month (Y-m, strictly before the current month) the
+     * user has a run in, mirroring RunController's weekly chain-head flag: only
+     * the latest narrated month may regenerate, so re-narrating mid-history
+     * can't desync later links. Null when the user has no closed-month runs.
+     */
+    private function latestNarratedMonthFor(User $user): ?string
+    {
+        $currentMonthStart = Carbon::today()->startOfMonth();
+
+        $latestDate = ActivityDetail::query()
+            ->forUser($user->id)
+            ->whereNotNull('start_date_local')
+            ->where('start_date_local', '<', $currentMonthStart)
+            ->max('start_date_local');
+
+        return $latestDate === null ? null : Carbon::parse($latestDate)->format('Y-m');
     }
 
     private function resolveMonth(mixed $raw): Carbon
