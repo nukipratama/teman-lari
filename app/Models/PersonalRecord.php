@@ -73,7 +73,7 @@ class PersonalRecord extends Model
     {
         return [
             'value_sec' => 'float',
-            'set_at' => 'datetime',
+            'set_at' => 'datetime:Y-m-d\TH:i:s',
             'category' => PrCategory::class,
         ];
     }

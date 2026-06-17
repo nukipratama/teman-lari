@@ -122,7 +122,7 @@ class ProfileController extends Controller
                 'id' => $pr->id,
                 'category' => $pr->category->value,
                 'value_sec' => (int) $pr->value_sec,
-                'set_at' => $pr->set_at->toIso8601String(),
+                'set_at' => $pr->set_at->format('Y-m-d\TH:i:s'),
                 'activity_id' => $pr->activity_id,
                 'activity_name' => $pr->activity?->detail?->name,
             ];

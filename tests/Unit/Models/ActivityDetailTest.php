@@ -42,6 +42,15 @@ it('casts numeric, boolean, datetime, and json columns', function (): void {
         ->and($detail->stream_summary)->toBe(['avg_pace' => '6:00']);
 });
 
+it('serializes start_date_local as the verbatim wall-clock, not a UTC-shifted instant', function (): void {
+    // start_date_local is Strava's location wall-clock; the frontend's naive
+    // parsers expect it back unshifted. The default datetime cast would convert
+    // the app-tz (Asia/Jakarta) value to its UTC instant (06:20 -> 23:20 prev day).
+    $detail = new ActivityDetail(['start_date_local' => '2026-01-01 06:20:30']);
+
+    expect($detail->toArray()['start_date_local'])->toBe('2026-01-01T06:20:30');
+});
+
 it('belongs to one activity', function (): void {
     $activity = Activity::factory()->create();
     $detail = ActivityDetail::factory()->for($activity)->create();
