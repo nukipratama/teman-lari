@@ -11,6 +11,7 @@ use App\Models\WeeklySnapshot;
 use App\Services\AI\AnalysisService;
 use App\Services\AI\AnalysisStatus;
 use App\Services\AI\AnalysisType;
+use App\Services\AI\RecapPeriod;
 use Illuminate\Console\Attributes\Description;
 use Illuminate\Console\Attributes\Signature;
 use Illuminate\Console\Command;
@@ -70,16 +71,24 @@ class ResumeChainsCommand extends Command
     }
 
     /**
-     * Weekly chains: the earliest Pending WeeklyRecap per user (runs > 0).
+     * Weekly chains: the earliest stalled WeeklyRecap per user (runs > 0) among
+     * the fully-closed weeks. "Stalled" = Pending or Failed, so this recovers a
+     * link a transient failure or cost-ceiling pause left behind, not only ones
+     * never dispatched. Capped at the latest closed week so the daily sweep never
+     * narrates the still-running current week on incomplete data (the weekly
+     * kickoff command owns first-narration of newly-closed/never-staged weeks).
      * Includes demo (weekly is demo-inclusive).
      */
     private function resumeWeekly(AnalysisService $service): int
     {
+        $lastWeekEnding = RecapPeriod::lastClosedWeekEnding();
+
         $earliestPerUser = WeeklySnapshot::query()
             ->where('runs', '>', 0)
+            ->where('week_ending', '<=', $lastWeekEnding)
             ->whereHas('analyses', fn ($query) => $query
                 ->where('analysis_type', AnalysisType::WeeklyRecap)
-                ->where('status', AnalysisStatus::Pending))
+                ->whereIn('status', [AnalysisStatus::Pending, AnalysisStatus::Failed]))
             ->orderBy('week_ending')
             ->get(['id', 'user_id'])
             ->unique('user_id');
@@ -97,16 +106,23 @@ class ResumeChainsCommand extends Command
     }
 
     /**
-     * Monthly chains: the earliest Pending MonthlyRecap month per user. Demo
-     * stays weekly-only, so it never stages a monthly row and is naturally
-     * absent here.
+     * Monthly chains: the earliest stalled MonthlyRecap month per user among the
+     * fully-closed months. "Stalled" = Pending or Failed (recovers a link a
+     * transient failure or cost-ceiling pause left behind). Capped at the latest
+     * closed month so the daily sweep never narrates the still-running current
+     * month on incomplete data (the monthly kickoff command owns first-narration
+     * of newly-closed months). Demo stays weekly-only, so it never stages a
+     * monthly row and is naturally absent here.
      */
     private function resumeMonthly(AnalysisService $service): int
     {
+        $lastClosedMonth = RecapPeriod::lastClosedMonth();
+
         $earliestPerUser = Analysis::query()
             ->where('subject_type', AnalysisType::MONTHLY_RECAP_SUBJECT_TYPE)
             ->where('analysis_type', AnalysisType::MonthlyRecap)
-            ->where('status', AnalysisStatus::Pending)
+            ->whereIn('status', [AnalysisStatus::Pending, AnalysisStatus::Failed])
+            ->where('discriminator', '<=', $lastClosedMonth)
             ->orderBy('discriminator')
             ->get(['subject_id', 'discriminator'])
             ->unique('subject_id');

@@ -15,12 +15,12 @@ use App\Models\WeeklySnapshot;
 use App\Services\AI\AnalysisService;
 use App\Services\AI\AnalysisStatus;
 use App\Services\AI\AnalysisType;
+use App\Services\AI\RecapPeriod;
 use App\Services\Run\Ingest\ActivityPipeline;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Carbon;
 
 class AnalysisController extends Controller
 {
@@ -147,7 +147,7 @@ class AnalysisController extends Controller
     /** @return array{0: int, 1: string|null, 2: \App\Models\AI\Analysis|null}|null */
     private function earliestUnfilledWeeklyLink(User $user): ?array
     {
-        $lastWeekEnding = Carbon::today()->subWeek()->endOfWeek(Carbon::SUNDAY)->startOfDay()->toDateString();
+        $lastWeekEnding = RecapPeriod::lastClosedWeekEnding();
 
         $earliest = WeeklySnapshot::query()
             ->where('user_id', $user->id)
@@ -233,7 +233,7 @@ class AnalysisController extends Controller
     /** The WeeklySnapshot id of the user's latest completed running week, or null. */
     private function weeklyChainHeadId(User $user): ?int
     {
-        $lastWeekEnding = Carbon::today()->subWeek()->endOfWeek(Carbon::SUNDAY)->startOfDay()->toDateString();
+        $lastWeekEnding = RecapPeriod::lastClosedWeekEnding();
 
         $headId = WeeklySnapshot::query()
             ->where('user_id', $user->id)

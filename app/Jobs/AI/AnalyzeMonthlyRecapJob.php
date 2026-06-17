@@ -11,6 +11,7 @@ use App\Services\AI\AnalysisService;
 use App\Services\AI\AnalysisStatus;
 use App\Services\AI\AnalysisType;
 use App\Services\AI\Narrators\MonthlyRecapNarrator;
+use App\Services\AI\RecapPeriod;
 use Illuminate\Support\Facades\Log;
 use Override;
 use Throwable;
@@ -81,16 +82,21 @@ class AnalyzeMonthlyRecapJob extends AnalyzeRowJob
     /**
      * The user's earliest month after $month (Y-m) whose MonthlyRecap row is
      * Pending. Failed/Done links are skipped: Failed waits for a manual retry or
-     * the daily resume sweep, Done is already part of the story.
+     * the daily resume sweep, Done is already part of the story. Capped at the
+     * latest fully-closed month so the chain never walks into the still-running
+     * current month and narrates it on incomplete data.
      */
     private function nextPendingMonth(int $userId, string $month): ?string
     {
+        $lastClosedMonth = RecapPeriod::lastClosedMonth();
+
         return Analysis::query()
             ->where('subject_type', AnalysisType::MONTHLY_RECAP_SUBJECT_TYPE)
             ->where('subject_id', $userId)
             ->where('analysis_type', AnalysisType::MonthlyRecap)
             ->where('status', AnalysisStatus::Pending)
             ->where('discriminator', '>', $month)
+            ->where('discriminator', '<=', $lastClosedMonth)
             ->orderBy('discriminator')
             ->value('discriminator');
     }

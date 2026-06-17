@@ -10,10 +10,10 @@ use App\Models\User;
 use App\Services\AI\AnalysisService;
 use App\Services\AI\AnalysisStatus;
 use App\Services\AI\AnalysisType;
+use App\Services\AI\RecapPeriod;
 use Illuminate\Console\Attributes\Description;
 use Illuminate\Console\Attributes\Signature;
 use Illuminate\Console\Command;
-use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 
 #[Signature('ai:monthly-recap')]
@@ -24,7 +24,7 @@ class MonthlyRecapCommand extends Command
     {
         // The latest fully-closed month (last month). The current, still-running
         // month is excluded so a recap never narrates an incomplete month.
-        $lastClosedMonth = Carbon::today()->subMonthNoOverflow()->format('Y-m');
+        $lastClosedMonth = RecapPeriod::lastClosedMonth();
 
         $stagger = (int) config('ai.backfill_stagger_seconds', 360);
 

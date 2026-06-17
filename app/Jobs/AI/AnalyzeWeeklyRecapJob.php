@@ -11,6 +11,7 @@ use App\Services\AI\AnalysisService;
 use App\Services\AI\AnalysisStatus;
 use App\Services\AI\AnalysisType;
 use App\Services\AI\Narrators\WeeklyRecapNarrator;
+use App\Services\AI\RecapPeriod;
 use Illuminate\Support\Facades\Log;
 use Override;
 use Throwable;
@@ -73,13 +74,18 @@ class AnalyzeWeeklyRecapJob extends AnalyzeRowJob
     /**
      * The user's earliest week after $current whose WeeklyRecap row is Pending
      * (runs > 0). Failed/Done links are skipped: Failed waits for a manual retry
-     * or the daily resume sweep, Done is already part of the story.
+     * or the daily resume sweep, Done is already part of the story. Capped at the
+     * latest fully-closed week so the chain never walks into the still-running
+     * current week and narrates it on incomplete data.
      */
     private function nextPendingSnapshot(WeeklySnapshot $current): ?WeeklySnapshot
     {
+        $lastWeekEnding = RecapPeriod::lastClosedWeekEnding();
+
         return WeeklySnapshot::query()
             ->where('user_id', $current->user_id)
             ->where('week_ending', '>', $current->week_ending)
+            ->where('week_ending', '<=', $lastWeekEnding)
             ->where('runs', '>', 0)
             ->whereHas('analyses', fn ($query) => $query
                 ->where('analysis_type', AnalysisType::WeeklyRecap)
