@@ -15,6 +15,18 @@ use Illuminate\Support\Carbon;
 
 uses(RefreshDatabase::class);
 
+// The resume sweep caps every chain at the latest fully-closed period
+// (week_ending <= last-closed Sunday / discriminator <= last-closed month), so
+// these tests are wall-clock dependent. Pin "now" to a fixed Wednesday whose
+// last-closed week is 2026-06-14 and last-closed month is 2026-05.
+beforeEach(function (): void {
+    Carbon::setTestNow('2026-06-17');
+});
+
+afterEach(function (): void {
+    Carbon::setTestNow();
+});
+
 /**
  * @param  array<int, array<string, mixed>>  $captured
  */
@@ -167,7 +179,7 @@ it('re-kicks the earliest Pending per-activity group per user', function (): voi
         ->and($captured[0]['invalidate'])->toBeFalse();
 });
 
-it('skips chains with no Pending links (Done/Failed are left alone)', function (): void {
+it('leaves Done links alone (nothing stalled to resume)', function (): void {
     $user = User::factory()->create();
     $snap = WeeklySnapshot::factory()->for($user)->create(['week_ending' => '2026-05-03', 'runs' => 3]);
     Analysis::factory()->done('already narrated')->create([
@@ -176,11 +188,96 @@ it('skips chains with no Pending links (Done/Failed are left alone)', function (
         'analysis_type' => AnalysisType::WeeklyRecap,
         'discriminator' => null,
     ]);
-    Analysis::factory()->failed()->create([
+    Analysis::factory()->done('month narrated')->create([
         'subject_type' => AnalysisType::MONTHLY_RECAP_SUBJECT_TYPE,
         'subject_id' => $user->id,
         'analysis_type' => AnalysisType::MonthlyRecap,
         'discriminator' => '2026-04',
+    ]);
+
+    $service = Mockery::mock(AnalysisService::class);
+    $service->shouldNotReceive('request');
+    $this->app->instance(AnalysisService::class, $service);
+
+    $this->artisan('ai:resume-chains')
+        ->expectsOutputToContain('Resumed 0 chains.')
+        ->assertSuccessful();
+});
+
+it('recovers a Failed weekly link (not only Pending)', function (): void {
+    $user = User::factory()->create();
+    $snap = WeeklySnapshot::factory()->for($user)->create(['week_ending' => '2026-05-31', 'runs' => 3]);
+    Analysis::factory()->failed()->create([
+        'subject_type' => WeeklySnapshot::class,
+        'subject_id' => $snap->id,
+        'analysis_type' => AnalysisType::WeeklyRecap,
+        'discriminator' => null,
+    ]);
+
+    $captured = [];
+    $this->app->instance(AnalysisService::class, captureResumeRequests($captured));
+
+    $this->artisan('ai:resume-chains')
+        ->expectsOutputToContain('Resumed 1 chains.')
+        ->assertSuccessful();
+
+    expect($captured)->toHaveCount(1)
+        ->and($captured[0]['subjectId'])->toBe($snap->id)
+        ->and($captured[0]['type'])->toBe(AnalysisType::WeeklyRecap)
+        ->and($captured[0]['invalidate'])->toBeFalse();
+});
+
+it('recovers a Failed monthly link', function (): void {
+    $user = User::factory()->create();
+    Analysis::factory()->failed()->create([
+        'subject_type' => AnalysisType::MONTHLY_RECAP_SUBJECT_TYPE,
+        'subject_id' => $user->id,
+        'analysis_type' => AnalysisType::MonthlyRecap,
+        'discriminator' => '2026-05',
+    ]);
+
+    $captured = [];
+    $this->app->instance(AnalysisService::class, captureResumeRequests($captured));
+
+    $this->artisan('ai:resume-chains')
+        ->expectsOutputToContain('Resumed 1 chains.')
+        ->assertSuccessful();
+
+    expect($captured)->toHaveCount(1)
+        ->and($captured[0]['type'])->toBe(AnalysisType::MonthlyRecap)
+        ->and($captured[0]['discriminator'])->toBe('2026-05');
+});
+
+it('skips the still-open current week (never narrates it early)', function (): void {
+    // now = 2026-06-17: current week ends 2026-06-21 (> last closed 2026-06-14).
+    $user = User::factory()->create();
+    $open = WeeklySnapshot::factory()->for($user)->create(['week_ending' => '2026-06-21', 'runs' => 2]);
+    Analysis::factory()->create([
+        'subject_type' => WeeklySnapshot::class,
+        'subject_id' => $open->id,
+        'analysis_type' => AnalysisType::WeeklyRecap,
+        'discriminator' => null,
+        'status' => AnalysisStatus::Pending,
+    ]);
+
+    $service = Mockery::mock(AnalysisService::class);
+    $service->shouldNotReceive('request');
+    $this->app->instance(AnalysisService::class, $service);
+
+    $this->artisan('ai:resume-chains')
+        ->expectsOutputToContain('Resumed 0 chains.')
+        ->assertSuccessful();
+});
+
+it('skips the still-open current month', function (): void {
+    // now = 2026-06-17: current month 2026-06 (> last closed 2026-05).
+    $user = User::factory()->create();
+    Analysis::factory()->create([
+        'subject_type' => AnalysisType::MONTHLY_RECAP_SUBJECT_TYPE,
+        'subject_id' => $user->id,
+        'analysis_type' => AnalysisType::MonthlyRecap,
+        'discriminator' => '2026-06',
+        'status' => AnalysisStatus::Pending,
     ]);
 
     $service = Mockery::mock(AnalysisService::class);

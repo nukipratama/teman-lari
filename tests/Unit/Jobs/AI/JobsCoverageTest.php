@@ -296,6 +296,56 @@ it('AnalyzeWeeklyRecapJob does not advance when no later Pending week exists', f
     Illuminate\Support\Facades\Bus::assertNotDispatched(AnalyzeWeeklyRecapJob::class);
 });
 
+it('AnalyzeWeeklyRecapJob does not advance into the still-open current week', function (): void {
+    Carbon::setTestNow('2026-05-18'); // latest fully-closed week ends 2026-05-17
+    config()->set('azure_openai.uri', 'https://x.openai.azure.com/x');
+    config()->set('azure_openai.api_key', 'fake-key');
+    Illuminate\Support\Facades\Bus::fake();
+
+    $user = User::factory()->create();
+    $lastClosed = WeeklySnapshot::factory()->for($user)->create(['week_ending' => '2026-05-17', 'runs' => 3]);
+    $openWeek = WeeklySnapshot::factory()->for($user)->create(['week_ending' => '2026-05-24', 'runs' => 2]);
+    $openRow = Analysis::factory()->create([
+        'subject_type' => WeeklySnapshot::class,
+        'subject_id' => $openWeek->id,
+        'analysis_type' => AnalysisType::WeeklyRecap,
+        'discriminator' => null,
+        'status' => AnalysisStatus::Pending,
+    ]);
+
+    mockNarrator(WeeklyRecapNarrator::class, 'closed week narrative');
+    $thisRow = rowOf(WeeklySnapshot::class, $lastClosed->id, AnalysisType::WeeklyRecap);
+    (new AnalyzeWeeklyRecapJob($thisRow->id))->handle(app(AnalysisService::class));
+
+    // The open week stays Pending: the chain must not narrate an incomplete week.
+    expect($openRow->fresh()->status)->toBe(AnalysisStatus::Pending);
+    Illuminate\Support\Facades\Bus::assertNotDispatched(AnalyzeWeeklyRecapJob::class);
+    Carbon::setTestNow();
+});
+
+it('AnalyzeMonthlyRecapJob does not advance into the still-open current month', function (): void {
+    Carbon::setTestNow('2026-05-18'); // latest fully-closed month is 2026-04
+    config()->set('azure_openai.uri', 'https://x.openai.azure.com/x');
+    config()->set('azure_openai.api_key', 'fake-key');
+    Illuminate\Support\Facades\Bus::fake();
+
+    $user = User::factory()->create();
+    $openRow = Analysis::factory()->create([
+        'subject_type' => AnalysisType::MONTHLY_RECAP_SUBJECT_TYPE,
+        'subject_id' => $user->id,
+        'analysis_type' => AnalysisType::MonthlyRecap,
+        'discriminator' => '2026-05',
+        'status' => AnalysisStatus::Pending,
+    ]);
+
+    mockNarrator(MonthlyRecapNarrator::class, 'closed month narrative');
+    $thisRow = rowOf(AnalysisType::MONTHLY_RECAP_SUBJECT_TYPE, $user->id, AnalysisType::MonthlyRecap, '2026-04');
+    (new AnalyzeMonthlyRecapJob($thisRow->id))->handle(app(AnalysisService::class));
+
+    expect($openRow->fresh()->status)->toBe(AnalysisStatus::Pending);
+    Carbon::setTestNow();
+});
+
 // ── AnalyzeTrendCaptionJob (row) ─────────────────────────────────────
 
 it('AnalyzeTrendCaptionJob returns caption with discriminator', function (): void {

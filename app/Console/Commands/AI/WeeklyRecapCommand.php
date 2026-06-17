@@ -8,10 +8,10 @@ use App\Models\WeeklySnapshot;
 use App\Services\AI\AnalysisService;
 use App\Services\AI\AnalysisStatus;
 use App\Services\AI\AnalysisType;
+use App\Services\AI\RecapPeriod;
 use Illuminate\Console\Attributes\Description;
 use Illuminate\Console\Attributes\Signature;
 use Illuminate\Console\Command;
-use Illuminate\Support\Carbon;
 
 #[Signature('ai:weekly-recap')]
 #[Description('Kick off the connected weekly-recap chain: narrate every completed week whose recap is not Done, oldest first')]
@@ -19,7 +19,7 @@ class WeeklyRecapCommand extends Command
 {
     public function handle(AnalysisService $service): int
     {
-        $lastWeekEnding = Carbon::today()->subWeek()->endOfWeek(Carbon::SUNDAY)->startOfDay()->toDateString();
+        $lastWeekEnding = RecapPeriod::lastClosedWeekEnding();
 
         // Every completed week (week_ending <= the latest fully-closed week,
         // runs > 0) whose WeeklyRecap is not yet Done — Pending, Failed, or
