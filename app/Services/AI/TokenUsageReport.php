@@ -30,12 +30,11 @@ class TokenUsageReport
      * @return array{
      *     totals: array{prompt:int, completion:int, total:int, calls:int, truncated_calls:int, cost:float},
      *     byKind: list<array{kind:string, prompt:int, completion:int, total:int, calls:int, truncated_calls:int, avg_latency_ms:int|null, max_latency_ms:int|null, cost:float}>,
-     *     byDeployment: list<array{deployment:string, prompt:int, completion:int, total:int, calls:int, cost:float}>,
+     *     byDeployment: list<array{deployment:string, prompt:int, completion:int, total:int, calls:int, cost:float, inputPer1m:float|null, outputPer1m:float|null}>,
      *     byUser: list<array{user_id:int, user_name:string|null, prompt:int, completion:int, total:int, calls:int}>,
      *     daily: list<array{day:string, prompt:int, completion:int, total:int, calls:int, cost:float}>,
      *     availableKinds: list<array{value:string, label:string}>,
      *     budget: array{todayCost:float, dailyCeiling:float|null, currency:string},
-     *     priceSource: string,
      * }
      */
     public function build(Carbon $from, Carbon $to, ?string $kind): array
@@ -60,9 +59,8 @@ class TokenUsageReport
             'budget' => [
                 'todayCost' => $this->costCalculator->dailyCost(),
                 'dailyCeiling' => $ceiling === null ? null : (float) $ceiling,
-                'currency' => 'USD', // Azure retail prices are quoted in USD.
+                'currency' => 'USD', // Prices are quoted in USD.
             ],
-            'priceSource' => $this->costCalculator->isUsingRefreshedPrices() ? 'azure-retail' : 'unavailable',
         ];
     }
 
@@ -153,7 +151,7 @@ class TokenUsageReport
      * Per-deployment (model) breakdown with $ cost, ordered by total tokens.
      *
      * @param  Builder  $baseQuery
-     * @return list<array{deployment:string, prompt:int, completion:int, total:int, calls:int, cost:float}>
+     * @return list<array{deployment:string, prompt:int, completion:int, total:int, calls:int, cost:float, inputPer1m:float|null, outputPer1m:float|null}>
      */
     private function byDeployment(Builder $baseQuery): array
     {
@@ -171,6 +169,7 @@ class TokenUsageReport
             $deployment = (string) $row->model;
             $prompt = (int) $row->prompt;
             $completion = (int) $row->completion;
+            $rate = $this->costCalculator->priceFor($deployment);
             $byDeployment[] = [
                 'deployment' => $deployment,
                 'prompt' => $prompt,
@@ -178,6 +177,8 @@ class TokenUsageReport
                 'total' => (int) $row->total,
                 'calls' => (int) $row->calls,
                 'cost' => $this->costCalculator->costFor($deployment, $prompt, $completion),
+                'inputPer1m' => $rate['input_per_1m'] ?? null,
+                'outputPer1m' => $rate['output_per_1m'] ?? null,
             ];
         }
 

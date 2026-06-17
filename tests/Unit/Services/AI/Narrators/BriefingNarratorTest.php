@@ -15,7 +15,6 @@ use App\Services\AI\Narrators\BriefingNarrator;
 use App\Services\Run\Story\Vibe;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
-use OpenAI\Responses\Chat\CreateResponse;
 use OpenAI\Testing\ClientFake;
 
 uses(RefreshDatabase::class);
@@ -38,13 +37,7 @@ function bootNarrator(string $jsonContent): array
         'trimp_edwards' => 60.0,
     ]);
 
-    $client = new ClientFake([
-        CreateResponse::fake([
-            'choices' => [
-                ['message' => ['role' => 'assistant', 'content' => $jsonContent]],
-            ],
-        ]),
-    ]);
+    $client = new ClientFake([fakeAzureResponse($jsonContent)]);
     $azure = Mockery::mock(AzureOpenAIClient::class);
     $azure->shouldReceive('client')->andReturn($client);
     $azure->shouldReceive('deploymentFor')->andReturn('gpt-test');

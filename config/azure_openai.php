@@ -37,13 +37,15 @@ return [
         'card_flavor' => (string) env('AZURE_OPENAI_CARD_FLAVOR_DEPLOYMENT', env('AZURE_OPENAI_DEPLOYMENT')),
     ],
 
-    // Map each Azure deployment name to its underlying model. Pricing resolves
-    // deployment -> model, and the set of models here is what gets priced from
-    // the Azure Retail Prices API. A deployment not listed is assumed to already
-    // be a model name. Recorded usage keys on the deployment name.
-    'deployments' => [
-        'nuki-5.2' => 'gpt-5.2',
-        'nuki-5.1-codex-mini' => 'gpt-5.1-codex-mini',
+    // Manual per-1M-token USD rates keyed by DEPLOYMENT name (the value recorded
+    // in ai_token_usages.model), for the /ai-usage cost estimate. Azure's retail
+    // price catalog (Foundry Models) uses cryptic, region/tier-specific meter
+    // names that can't be matched reliably, so these are maintained by hand from
+    // https://azure.microsoft.com/pricing/details/cognitive-services/openai-service/.
+    // Values are Global Standard; map the deployment to its model's published rate.
+    'prices' => [
+        'nuki-5.2' => ['input_per_1m' => 1.75, 'output_per_1m' => 14.00],       // gpt-5.2
+        'nuki-5.4-mini' => ['input_per_1m' => 0.75, 'output_per_1m' => 4.50],   // gpt-5.4-mini
     ],
 
     // Nullable USD/day spend ceiling. null = no ceiling (auto-dispatch never
@@ -52,7 +54,4 @@ return [
     'daily_cost_ceiling' => env('AZURE_OPENAI_DAILY_COST_CEILING') !== null
         ? (float) env('AZURE_OPENAI_DAILY_COST_CEILING')
         : null,
-
-    // Cache key holding the refreshed retail price map.
-    'price_cache_key' => 'azure_openai.prices.refreshed',
 ];
