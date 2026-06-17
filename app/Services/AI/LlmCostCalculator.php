@@ -66,7 +66,7 @@ class LlmCostCalculator
     /**
      * The per-1M rate for a deployment, or null when it has no configured rate.
      *
-     * @return array{input_per_1m: float, output_per_1m: float, currency: string}|null
+     * @return array{input_per_1m: float, output_per_1m: float}|null
      */
     public function priceFor(string $deployment): ?array
     {
@@ -82,7 +82,6 @@ class LlmCostCalculator
         return [
             'input_per_1m' => (float) $rate['input_per_1m'],
             'output_per_1m' => (float) $rate['output_per_1m'],
-            'currency' => 'USD',
         ];
     }
 }

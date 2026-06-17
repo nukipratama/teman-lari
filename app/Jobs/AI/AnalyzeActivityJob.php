@@ -7,6 +7,7 @@ namespace App\Jobs\AI;
 use App\Exceptions\AI\TransientUpstreamException;
 use App\Exceptions\AI\UnavailableException;
 use App\Models\Activity;
+use App\Models\ActivityDetail;
 use App\Models\StoryLine;
 use App\Services\AI\AnalysisType;
 use App\Services\AI\Narrators\PostRunSpeechNarrator;
@@ -57,7 +58,7 @@ class AnalyzeActivityJob extends AnalyzeGroupJob
         $speech = app(PostRunSpeechNarrator::class)
             ->generate($subject, $detail, $storyLine->mood);
 
-        $insights = $this->runInsights($subject);
+        $insights = $this->runInsights($subject, $detail);
 
         return [
             AnalysisType::PostRunSpeech->value => $speech,
@@ -74,11 +75,8 @@ class AnalyzeActivityJob extends AnalyzeGroupJob
      *
      * @return array{technical: string, splits: string, zones: string}
      */
-    private function runInsights(Activity $activity): array
+    private function runInsights(Activity $activity, ActivityDetail $detail): array
     {
-        $detail = $activity->detail;
-        assert($detail !== null);
-
         try {
             return app(RunInsightNarrator::class)->generate($activity, $detail);
         } catch (UnavailableException|TransientUpstreamException) {
