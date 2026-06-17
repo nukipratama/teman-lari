@@ -14,7 +14,7 @@ beforeEach(function (): void {
 
 // ── client() ─────────────────────────────────────────────────────────────
 
-it('builds an openai client from the endpoint + deployment', function (): void {
+it('builds an openai client for the v1 endpoint', function (): void {
     expect((new AzureOpenAIClient())->client())->toBeInstanceOf(ClientContract::class);
 });
 
@@ -27,7 +27,7 @@ it('builds an openai client when the endpoint is empty (no baseUri)', function (
 it('builds an openai client with no custom http client when timeout is 0', function (): void {
     config()->set('azure_openai.timeout', 0);
 
-    expect((new AzureOpenAIClient())->client('briefing'))->toBeInstanceOf(ClientContract::class);
+    expect((new AzureOpenAIClient())->client())->toBeInstanceOf(ClientContract::class);
 });
 
 // ── deploymentFor(): per-narrator override vs general fallback ────────────

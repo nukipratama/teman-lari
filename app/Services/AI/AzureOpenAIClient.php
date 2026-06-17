@@ -10,21 +10,21 @@ use OpenAI\Contracts\ClientContract;
 
 class AzureOpenAIClient
 {
-    private const string API_VERSION = '2024-10-21';
-
-    public function client(?string $kind = null): ClientContract
+    public function client(): ClientContract
     {
         $endpoint = rtrim((string) config('azure_openai.uri'), '/');
-        $deployment = $this->deploymentFor($kind);
         $timeout = (int) config('azure_openai.timeout');
 
         $factory = OpenAI::factory()
             ->withHttpHeader('api-key', (string) config('azure_openai.api_key'))
             ->withHttpHeader('User-Agent', 'TemanLari-Temari/1.0')
-            ->withQueryParam('api-version', self::API_VERSION);
+            // Azure's OpenAI-compatible v1 surface: an evergreen api-version (no
+            // dated value to maintain); the deployment is selected by the request
+            // body's `model` field, not the URL path.
+            ->withQueryParam('api-version', 'preview');
 
-        if ($endpoint !== '' && $deployment !== '') {
-            $factory = $factory->withBaseUri("{$endpoint}/openai/deployments/{$deployment}");
+        if ($endpoint !== '') {
+            $factory = $factory->withBaseUri("{$endpoint}/openai/v1");
         }
         if ($timeout > 0) {
             $factory = $factory->withHttpClient(new Client(['timeout' => $timeout]));
@@ -34,9 +34,9 @@ class AzureOpenAIClient
     }
 
     /**
-     * The Azure deployment (model) name for $kind: the per-narrator override,
-     * which already falls back to the general AZURE_OPENAI_DEPLOYMENT in config.
-     * A null/unmapped kind uses the general deployment directly.
+     * The Azure deployment (model) name for $kind, used as the request body's
+     * `model`. The per-narrator override already falls back to the general
+     * AZURE_OPENAI_DEPLOYMENT in config; a null/unmapped kind uses it directly.
      */
     public function deploymentFor(?string $kind): string
     {
