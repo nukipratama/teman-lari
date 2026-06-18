@@ -24,6 +24,7 @@ use App\Services\Run\Ingest\StreamAnalysis;
 use App\Services\Run\Metrics\PersonalRecords;
 use App\Services\Run\Metrics\TrainingLoad;
 use App\Services\Run\Metrics\WeeklyAggregator;
+use App\Services\Run\Story\FeaturedKartuResolver;
 use App\Services\Run\Story\RunCardFactory;
 use App\Services\Gamification\UnlockEngine;
 use App\Services\Run\Story\Temari;
@@ -54,6 +55,7 @@ class DemoRunSeeder
         private readonly AnalysisService $analysisService,
         private readonly RuleBasedNarrationFiller $filler,
         private readonly UnlockEngine $unlockEngine,
+        private readonly FeaturedKartuResolver $featuredKartu,
         private readonly PolylineEncoder $polylineEncoder = new PolylineEncoder(),
     ) {
     }
@@ -236,12 +238,17 @@ class DemoRunSeeder
         // The weekly-featured-card voice ("Kartu dari Temari minggu ini" on the
         // dashboard hero) has its own job and is never auto-requested by ingest,
         // so the demo must stage it here or the hero falls back to "Belum dibaca".
-        $this->analysisService->request(
-            subjectOrType: AnalysisType::BRIEFING_SUBJECT_TYPE,
-            subjectId: $user->id,
-            type: AnalysisType::BriefingFeaturedKartuVoice,
-            discriminator: $today,
-        );
+        // Keyed by the featured card id (matching BriefingComposer) so the staged
+        // quote lines up with the card the hero actually shows.
+        $featuredCard = $this->featuredKartu->resolve($user);
+        if ($featuredCard !== null) {
+            $this->analysisService->request(
+                subjectOrType: AnalysisType::BRIEFING_SUBJECT_TYPE,
+                subjectId: $user->id,
+                type: AnalysisType::BriefingFeaturedKartuVoice,
+                discriminator: (string) $featuredCard->id,
+            );
+        }
         $this->analysisService->request(
             subjectOrType: AnalysisType::DAILY_GREETING_SUBJECT_TYPE,
             subjectId: $user->id,

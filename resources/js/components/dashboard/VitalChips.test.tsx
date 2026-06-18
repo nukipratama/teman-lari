@@ -23,6 +23,7 @@ const briefing: BriefingResult = {
     suggestion: payload(),
     mascotVoice: payload(),
     featuredKartuVoice: payload(),
+    featuredCardId: null,
     recoveryLabel: 'Pemulihan: 41j',
     recoveryTone: 'positive',
     recoveryHoursLabel: '41j',

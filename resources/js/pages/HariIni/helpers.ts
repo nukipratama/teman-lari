@@ -29,14 +29,6 @@ export interface StripItem {
     polyline: string | null;
 }
 
-const RARITY_RANK: Record<Rarity, number> = {
-    common: 0,
-    uncommon: 1,
-    rare: 2,
-    epic: 3,
-    legendary: 4,
-};
-
 function toFeaturedCard(r: ActivityDetail, card: RunCard): FeaturedCard {
     return {
         cardId: card.id,
@@ -56,22 +48,19 @@ function toFeaturedCard(r: ActivityDetail, card: RunCard): FeaturedCard {
     };
 }
 
-export function pickFeaturedKartu(runs: ReadonlyArray<ActivityDetail>): FeaturedCard | null {
-    let best: FeaturedCard | null = null;
-    let bestRank = -1;
-    let bestDate = '';
+// The featured card is chosen server-side (FeaturedKartuResolver) and its id is
+// passed down, so the hero and its Temari quote can never describe different
+// cards. We only build the display model for that one run here.
+export function featuredCardFor(
+    runs: ReadonlyArray<ActivityDetail>,
+    cardId: number | null,
+): FeaturedCard | null {
+    if (cardId == null) return null;
     for (const r of runs) {
         const card = r.activity?.run_card;
-        if (!card) continue;
-        const rank = RARITY_RANK[card.rarity];
-        const date = r.start_date_local ?? '';
-        if (rank > bestRank || (rank === bestRank && date > bestDate)) {
-            best = toFeaturedCard(r, card);
-            bestRank = rank;
-            bestDate = date;
-        }
+        if (card?.id === cardId) return toFeaturedCard(r, card);
     }
-    return best;
+    return null;
 }
 
 export function kartuStripItem(run: ActivityDetail): StripItem | null {

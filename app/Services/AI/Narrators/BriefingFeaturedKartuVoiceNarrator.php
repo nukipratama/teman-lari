@@ -4,11 +4,10 @@ declare(strict_types=1);
 
 namespace App\Services\AI\Narrators;
 
-use App\Models\ActivityDetail;
+use App\Models\RunCard;
 use App\Models\User;
 use App\Services\AI\ChatCallOptions;
 use App\Services\AI\StructuredChatCaller;
-use Illuminate\Support\Carbon;
 
 /**
  * Generates the mascot voice for the Featured Kartu hero panel on HariIni.
@@ -44,14 +43,24 @@ class BriefingFeaturedKartuVoiceNarrator
     ) {
     }
 
-    public function generate(User $user, ?Carbon $asOf = null): string
+    /**
+     * @param  RunCard|null  $card  The featured card resolved by
+     *                              {@see \App\Services\Run\Story\FeaturedKartuResolver},
+     *                              with its `activity.detail` loaded for the km.
+     */
+    public function generate(User $user, ?RunCard $card): string
     {
-        $asOf ??= Carbon::today();
-        $featured = $this->pickFeaturedKartu($user);
-
-        if ($featured === null) {
+        if ($card === null) {
             return 'Belum ada kartu khusus buat kamu minggu ini. Terus lari, aku pantau!';
         }
+
+        $distance = $card->activity->detail?->distance;
+        $featured = [
+            'name' => $card->special_move,
+            'rarity_label' => $card->rarity->label(),
+            'km' => $distance !== null ? round($distance / 1000, 1).'km' : '-',
+            'tags' => \array_slice((array) ($card->badges ?? []), 0, 3),
+        ];
 
         $decoded = $this->caller->call(
             kind: 'briefing_featured_kartu_voice',
@@ -59,7 +68,6 @@ class BriefingFeaturedKartuVoiceNarrator
             context: [
                 'name' => $user->firstName(),
                 'featured_kartu' => $featured,
-                'date' => $asOf->toDateString(),
             ],
             schemaName: 'TemariKartuVoice',
             requiredKeys: ['kartu_voice'],
@@ -67,44 +75,5 @@ class BriefingFeaturedKartuVoiceNarrator
         );
 
         return (string) $decoded['kartu_voice'];
-    }
-
-    /**
-     * Mirrors the JS `pickFeaturedKartu` logic: highest-rarity card from the
-     * last 8 analyzed runs.
-     *
-     * @return array{name: string, rarity_label: string, km: string, tags: list<string>}|null
-     */
-    private function pickFeaturedKartu(User $user): ?array
-    {
-        $runs = ActivityDetail::query()
-            ->select(['id', 'activity_id', 'distance'])
-            ->whereHas('activity', fn ($q) => $q->where('user_id', $user->id))
-            ->with(['activity.runCard:id,activity_id,rarity,special_move,badges'])
-            ->orderByDesc('start_date_local')
-            ->limit(8)
-            ->get();
-
-        $best = null;
-        $bestRank = -1;
-
-        foreach ($runs as $run) {
-            $card = $run->activity->runCard;
-            if ($card === null) {
-                continue;
-            }
-            $rank = $card->rarity->rank();
-            if ($rank > $bestRank) {
-                $bestRank = $rank;
-                $best = [
-                    'name' => $card->special_move,
-                    'rarity_label' => $card->rarity->label(),
-                    'km' => $run->distance !== null ? round($run->distance / 1000, 1).'km' : '-',
-                    'tags' => array_slice((array) ($card->badges ?? []), 0, 3),
-                ];
-            }
-        }
-
-        return $best;
     }
 }

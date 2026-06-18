@@ -24,6 +24,7 @@ function makeBriefing(overrides: Partial<BriefingResult> = {}): BriefingResult {
         suggestion: analysisPayload('Easy run aja dulu', 'done', 'briefing_suggestion'),
         mascotVoice: analysisPayload(null, 'pending', 'briefing_mascot_voice'),
         featuredKartuVoice: analysisPayload(null, 'pending', 'briefing_featured_kartu_voice'),
+        featuredCardId: null,
         recoveryLabel: 'Pemulihan: cukup',
         recoveryTone: 'positive',
         recoveryHoursLabel: '12j',
