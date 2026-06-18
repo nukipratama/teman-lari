@@ -98,12 +98,7 @@ export default function FourLensGrid({
     // it stays disabled until the longest-cooling lens unlocks. Lenses finish
     // within seconds of each other, so the max is a faithful shared countdown.
     const cooldownRemaining = useCooldownCountdown(
-        Math.max(
-            cerita.retry_after_seconds ?? 0,
-            terjemahan.retry_after_seconds ?? 0,
-            split.retry_after_seconds ?? 0,
-            hr.retry_after_seconds ?? 0,
-        ) || null,
+        Math.max(...lenses.map((l) => l.analysis.retry_after_seconds ?? 0)) || null,
     );
     const cooling = cooldownRemaining > 0;
     const bulkLabel = bulkButtonLabel(bulkPending, cooldownRemaining);
