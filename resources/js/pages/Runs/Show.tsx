@@ -103,7 +103,7 @@ export default function RunsShow({
     const hr = detail.average_heartrate != null ? Math.round(detail.average_heartrate) : null;
     const trimp = detail.trimp_edwards != null ? Math.round(detail.trimp_edwards) : null;
 
-    const kartuProps = useMemo(() => kartuPropsFromDetail(detail, { durationFormat: 'hms' }), [detail]);
+    const kartuProps = useMemo(() => kartuPropsFromDetail(detail), [detail]);
 
     return (
         <AppShell>
@@ -136,8 +136,9 @@ export default function RunsShow({
                                     </h1>
                                 </div>
                             </div>
-                            <div className="grid grid-cols-2 gap-5 sm:grid-cols-4">
+                            <div className="grid grid-cols-2 gap-5 sm:grid-cols-5">
                                 <StatTile tone="plainSky" size="md" label="JARAK" value={km} unit="km" />
+                                <StatTile tone="plainSky" size="md" label="DURASI" value={kartuProps.durasi} />
                                 <StatTile tone="plainSky" size="md" label="PACE" value={pace} unit="/km" />
                                 <StatTile tone="plainSky" size="md" label="HR" value={hr != null ? `${hr}` : '—'} unit="bpm" />
                                 <StatTile tone="plainSky" size="md" label="TRIMP" value={trimp != null ? `${trimp}` : '—'} unit="Edwards" />
