@@ -868,3 +868,40 @@ it('BriefingMascotVoiceNarrator leaves prev_narrative null on the first day', fu
 
     expect($context['prev_narrative'])->toBeNull();
 });
+
+// ── Prompt wording guards (slice 8 polish) ────────────────────────────
+
+/** Read a narrator's private SYSTEM_PROMPT constant for wording assertions. */
+function narratorPrompt(string $class): string
+{
+    return (string) (new ReflectionClass($class))->getConstant('SYSTEM_PROMPT');
+}
+
+it('MonthlyRecapNarrator prompt makes the mood step conditional on mood_mix', function (): void {
+    $prompt = narratorPrompt(MonthlyRecapNarrator::class);
+
+    expect($prompt)
+        ->toContain('HANYA kalau mood_mix terisi')
+        ->toContain('LEWATI langkah ini diam-diam')
+        ->not->toContain('—');
+});
+
+it('TrendCaptionNarrator prompt demands one coherent reading with a concrete number', function (): void {
+    $prompt = narratorPrompt(TrendCaptionNarrator::class);
+
+    expect($prompt)
+        ->toContain('SATU PEMBACAAN SAJA')
+        ->toContain('jangan')
+        ->toContain('minimal 1 angka konkret')
+        ->not->toContain('—');
+});
+
+it('RunInsightNarrator prompt steers general words to Indonesian while keeping run terms English', function (): void {
+    $prompt = narratorPrompt(RunInsightNarrator::class);
+
+    expect($prompt)
+        ->toContain('BAHASA:')
+        ->toContain('stabil/rata bukan "steady"')
+        ->toContain('negative split')
+        ->not->toContain('—');
+});

@@ -6,6 +6,8 @@ use App\Models\Activity;
 use App\Models\ActivityDetail;
 use App\Models\PersonalRecord;
 use App\Models\User;
+use App\Services\AI\AnalysisService;
+use App\Services\AI\AnalysisType;
 use App\Services\Run\Metrics\PersonalRecords;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Bus;
@@ -176,4 +178,36 @@ it('respects per-user scoping (PR break for user A does not affect user B)', fun
     expect($broken)->toContain('5km')
         ->and(PersonalRecord::query()->where('user_id', $userB->id)->where('category', '5km')->value('value_sec'))
         ->toBe(1500.0);
+});
+
+it('requests pr_context with invalidate:false so a backfill does not re-bill each beat', function (): void {
+    // invalidate:false lets the AnalysisService idempotency guard skip a Done
+    // row, so a chronological backfill (many beats of the same category) narrates
+    // pr_context once instead of re-billing on every faster split.
+    $mock = $this->mock(AnalysisService::class);
+    $mock->shouldReceive('request')
+        ->atLeast()->once()
+        ->with(
+            subjectOrType: PersonalRecord::class,
+            subjectId: Mockery::type('int'),
+            type: AnalysisType::PrContext,
+            invalidate: false,
+        );
+
+    $records = app(PersonalRecords::class);
+
+    $user = User::factory()->create();
+    // A single 5km record so exactly one category beats and pr_context is requested.
+    PersonalRecord::factory()->for($user)->create([
+        'category' => '5km',
+        'value_sec' => 1500.0,
+    ]);
+    $activity = Activity::factory()->for($user)->create();
+    $detail = ActivityDetail::factory()->for($activity)->create([
+        'distance' => 5000,
+        'splits_metric' => evenSplits(5, 280),
+        'stream_summary' => null,
+    ]);
+
+    expect($records->detectAndStore($activity, $detail))->toContain('5km');
 });
