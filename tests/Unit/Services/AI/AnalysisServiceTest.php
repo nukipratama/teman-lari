@@ -20,7 +20,6 @@ use App\Support\Config\AppConfigKey;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Bus;
-use Illuminate\Support\Facades\Cache;
 
 uses(RefreshDatabase::class);
 
