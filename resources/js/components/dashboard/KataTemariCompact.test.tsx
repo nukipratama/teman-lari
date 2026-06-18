@@ -24,6 +24,7 @@ function briefingWith(content: string): BriefingResult {
         suggestion: payload('Tempo ringan.'),
         mascotVoice: payload(content),
         featuredKartuVoice: payload('Kartu keren.'),
+        featuredCardId: null,
         recoveryLabel: 'Pemulihan: 41j',
         recoveryTone: 'positive',
         recoveryHoursLabel: '41j',

@@ -2,11 +2,14 @@
 
 declare(strict_types=1);
 
+use App\Enums\Rarity;
 use App\Jobs\AI\AnalyzeBriefingFeaturedKartuVoiceJob;
 use App\Jobs\AI\AnalyzeBriefingMascotVoiceJob;
 use App\Jobs\AI\AnalyzeDailyGreetingJob;
 use App\Models\Activity;
+use App\Models\ActivityDetail;
 use App\Models\AI\Analysis;
+use App\Models\RunCard;
 use App\Models\User;
 use App\Services\AI\AnalysisService;
 use App\Services\AI\AnalysisStatus;
@@ -22,7 +25,9 @@ it('dispatches briefing group and daily row types for each active user', functio
     $today = Carbon::today()->toDateString();
 
     $user = User::factory()->create();
-    Activity::factory()->for($user)->create(['analyzed_at' => Carbon::today()->subDays(2)]);
+    $activity = Activity::factory()->for($user)->analyzed()->create();
+    ActivityDetail::factory()->for($activity)->create(['start_date_local' => Carbon::today()]);
+    $card = RunCard::factory()->for($activity)->create(['rarity' => Rarity::Epic]);
 
     $briefingGroupCalls = [];
     $requestCalls = [];
@@ -34,7 +39,7 @@ it('dispatches briefing group and daily row types for each active user', functio
             $briefingGroupCalls[] = ['user_id' => $u->id, 'discriminator' => $discriminator];
         });
     $service->shouldReceive('request')
-        ->times(3) // MascotVoice, FeaturedKartuVoice, DailyGreeting
+        ->times(3) // MascotVoice, DailyGreeting, FeaturedKartuVoice
         ->andReturnUsing(function (string $subjectOrType, int $subjectId, AnalysisType $type, ?string $discriminator = null, ?int $delaySeconds = null, bool $invalidate = false) use (&$requestCalls): Analysis {
             $requestCalls[] = compact('subjectOrType', 'subjectId', 'type', 'discriminator', 'invalidate');
 
@@ -51,21 +56,26 @@ it('dispatches briefing group and daily row types for each active user', functio
     expect($briefingGroupCalls[0]['user_id'])->toBe($user->id)
         ->and($briefingGroupCalls[0]['discriminator'])->toBe($today);
 
-    // Three individual requests, all for the correct user and discriminator.
+    // The two day-keyed rows, then the featured-kartu row keyed by card id.
     $requestedTypes = collect($requestCalls)->map(fn (array $c): string => $c['type']->value)->all();
     expect($requestedTypes)->toBe([
         'briefing_mascot_voice',
-        'briefing_featured_kartu_voice',
         'daily_greeting',
+        'briefing_featured_kartu_voice',
     ]);
 
+    $byType = collect($requestCalls)->keyBy(fn (array $c): string => $c['type']->value);
     foreach ($requestCalls as $call) {
-        expect($call['subjectId'])->toBe($user->id)
-            ->and($call['discriminator'])->toBe($today);
+        expect($call['subjectId'])->toBe($user->id);
     }
+    // Day-keyed rows carry today; the featured voice keys off the card id so it
+    // regenerates only when the featured pick changes.
+    expect($byType['briefing_mascot_voice']['discriminator'])->toBe($today)
+        ->and($byType['daily_greeting']['discriminator'])->toBe($today)
+        ->and($byType['briefing_featured_kartu_voice']['discriminator'])->toBe((string) $card->id);
 
     // All three are LLM types — invalidate=false.
-    $invalidateByType = collect($requestCalls)->mapWithKeys(fn (array $c): array => [$c['type']->value => $c['invalidate']]);
+    $invalidateByType = $byType->map(fn (array $c): bool => $c['invalidate']);
     expect($invalidateByType['briefing_mascot_voice'])->toBeFalse()
         ->and($invalidateByType['briefing_featured_kartu_voice'])->toBeFalse()
         ->and($invalidateByType['daily_greeting'])->toBeFalse();
@@ -77,7 +87,9 @@ it('skips the demo user even with recent analyzed activity', function (): void {
     Carbon::setTestNow('2026-05-11 12:00:00');
 
     $real = User::factory()->create();
-    Activity::factory()->for($real)->create(['analyzed_at' => Carbon::today()->subDays(1)]);
+    $realActivity = Activity::factory()->for($real)->analyzed()->create(['analyzed_at' => Carbon::today()->subDays(1)]);
+    ActivityDetail::factory()->for($realActivity)->create(['start_date_local' => Carbon::today()->subDays(1)]);
+    RunCard::factory()->for($realActivity)->create(['rarity' => Rarity::Rare]);
     $demo = User::factory()->demo()->create();
     Activity::factory()->for($demo)->create(['analyzed_at' => Carbon::today()->subDays(1)]);
 
@@ -103,7 +115,9 @@ it('a second same-day run only fills missing types and never re-bills Done rows'
     $today = Carbon::today()->toDateString();
 
     $user = User::factory()->create();
-    Activity::factory()->for($user)->create(['analyzed_at' => Carbon::today()->subDays(2)]);
+    $activity = Activity::factory()->for($user)->analyzed()->create(['analyzed_at' => Carbon::today()->subDays(2)]);
+    ActivityDetail::factory()->for($activity)->create(['start_date_local' => Carbon::today()->subDays(2)]);
+    $card = RunCard::factory()->for($activity)->create(['rarity' => Rarity::Epic]);
 
     // Simulate the earlier (00:01) run having already completed the mascot voice
     // and daily greeting, but NOT the featured kartu voice (the row a missed tick
@@ -128,12 +142,12 @@ it('a second same-day run only fills missing types and never re-bills Done rows'
         ->expectsOutputToContain('Dispatched daily briefing analysis for 1 active users.')
         ->assertSuccessful();
 
-    // The missing type is created + dispatched once.
+    // The missing type is created + dispatched once, keyed by the featured card id.
     Bus::assertDispatched(AnalyzeBriefingFeaturedKartuVoiceJob::class, 1);
     $featured = Analysis::query()
         ->where('subject_id', $user->id)
         ->where('analysis_type', AnalysisType::BriefingFeaturedKartuVoice)
-        ->where('discriminator', $today)
+        ->where('discriminator', (string) $card->id)
         ->firstOrFail();
     expect($featured->status)->toBe(AnalysisStatus::Queued);
 

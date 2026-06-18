@@ -17,6 +17,7 @@ class BriefingComposer
         private readonly Vibe $vibe,
         private readonly TrainingLoad $trainingLoad,
         private readonly Temari $temari,
+        private readonly FeaturedKartuResolver $featuredKartu,
     ) {
     }
 
@@ -35,7 +36,15 @@ class BriefingComposer
         $headline = $this->existingRow($user, AnalysisType::BriefingHeadline, $subjectType, $discriminator);
         $suggestion = $this->existingRow($user, AnalysisType::BriefingSuggestion, $subjectType, $discriminator);
         $mascotVoice = $this->existingRow($user, AnalysisType::BriefingMascotVoice, $subjectType, $discriminator);
-        $featuredKartuVoice = $this->existingRow($user, AnalysisType::BriefingFeaturedKartuVoice, $subjectType, $discriminator);
+
+        // The featured-kartu voice keys off the card it describes (not the day),
+        // so the hero card and its quote stay in lockstep even as new runs slide
+        // the pick. No featured card -> no row, and the panel shows its empty state.
+        $featuredCard = $this->featuredKartu->resolve($user);
+        $featuredDiscriminator = $featuredCard !== null ? (string) $featuredCard->id : null;
+        $featuredKartuVoice = $featuredDiscriminator !== null
+            ? $this->existingRow($user, AnalysisType::BriefingFeaturedKartuVoice, $subjectType, $featuredDiscriminator)
+            : null;
 
         return new BriefingResult(
             vibeState: $vibeState,
@@ -44,7 +53,8 @@ class BriefingComposer
             headline: Analysis::toPayload($headline, AnalysisType::BriefingHeadline, $subjectType, $user->id, $discriminator),
             suggestion: Analysis::toPayload($suggestion, AnalysisType::BriefingSuggestion, $subjectType, $user->id, $discriminator),
             mascotVoice: Analysis::toPayload($mascotVoice, AnalysisType::BriefingMascotVoice, $subjectType, $user->id, $discriminator),
-            featuredKartuVoice: Analysis::toPayload($featuredKartuVoice, AnalysisType::BriefingFeaturedKartuVoice, $subjectType, $user->id, $discriminator),
+            featuredKartuVoice: Analysis::toPayload($featuredKartuVoice, AnalysisType::BriefingFeaturedKartuVoice, $subjectType, $user->id, $featuredDiscriminator),
+            featuredCardId: $featuredCard?->id,
             recoveryLabel: FormStatus::label($load),
             recoveryTone: FormStatus::tone($load),
             recoveryHoursLabel: $this->recoveryHoursLabel($hoursSince),

@@ -13,7 +13,6 @@ use App\Services\AI\Narrators\BriefingFeaturedKartuVoiceNarrator;
 use App\Services\AI\StructuredChatCaller;
 use App\Services\AI\TokenUsageRecorder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Carbon;
 use OpenAI\Testing\ClientFake;
 
 uses(RefreshDatabase::class);
@@ -41,104 +40,61 @@ function bootFeaturedKartuNarrator(string $jsonContent): array
     return ['narrator' => $narrator, 'client' => $client];
 }
 
-function runWithCard(User $user, Rarity $rarity, float $distance, Carbon $when): RunCard
+/** @param  list<string>  $badges */
+function featuredCard(User $user, Rarity $rarity, ?float $distance, array $badges): RunCard
 {
     $activity = Activity::factory()->for($user)->analyzed()->create();
-    ActivityDetail::factory()->for($activity)->create([
-        'start_date_local' => $when,
-        'distance' => $distance,
-    ]);
-
-    return RunCard::factory()->for($activity)->create([
+    ActivityDetail::factory()->for($activity)->create(['distance' => $distance]);
+    RunCard::factory()->for($activity)->create([
         'rarity' => $rarity,
         'special_move' => 'Langkah Sunyi',
-        'badges' => ['anak_pagi', 'negative_split', 'tahan_diri', 'hari_panas'],
+        'badges' => $badges,
     ]);
+
+    return RunCard::query()->with('activity.detail')->whereBelongsTo($activity)->firstOrFail();
 }
 
-it('returns the kartu voice from a valid LLM structured response, picking the highest rarity card', function (): void {
+it('returns the kartu voice for the resolved card from a valid LLM response', function (): void {
     $user = User::factory()->create(['name' => 'Ada Lovelace']);
-
-    // Lower rarity, more recent.
-    runWithCard($user, Rarity::Common, 5000.0, Carbon::today());
-    // Higher rarity, older — should still win on rarity rank.
-    runWithCard($user, Rarity::Legendary, 12000.0, Carbon::today()->subDay());
+    $card = featuredCard($user, Rarity::Legendary, 12000.0, ['anak_pagi', 'negative_split', 'tahan_diri', 'hari_panas']);
 
     ['narrator' => $narrator] = bootFeaturedKartuNarrator(json_encode([
         'kartu_voice' => 'Aku kasih kartu ini karena 12 km tadi solid.',
     ], JSON_THROW_ON_ERROR));
 
-    $voice = $narrator->generate($user, Carbon::today());
-
-    expect($voice)->toBe('Aku kasih kartu ini karena 12 km tadi solid.');
+    expect($narrator->generate($user, $card))->toBe('Aku kasih kartu ini karena 12 km tadi solid.');
 });
 
-it('returns a fallback line when the user has no analyzed run cards', function (): void {
+it('returns a fallback line and skips the LLM when there is no featured card', function (): void {
     $user = User::factory()->create();
 
     ['narrator' => $narrator, 'client' => $client] = bootFeaturedKartuNarrator(
         json_encode(['kartu_voice' => 'unused'], JSON_THROW_ON_ERROR),
     );
 
-    $voice = $narrator->generate($user);
-
-    expect($voice)->toBe('Belum ada kartu khusus buat kamu minggu ini. Terus lari, aku pantau!');
-    // Fallback short-circuits before any LLM call.
+    expect($narrator->generate($user, null))
+        ->toBe('Belum ada kartu khusus buat kamu minggu ini. Terus lari, aku pantau!');
     $client->assertNothingSent();
-});
-
-it('skips runs without a card and defaults asOf to today', function (): void {
-    Carbon::setTestNow('2026-05-19 09:00:00');
-    $user = User::factory()->create();
-
-    // Analyzed run with NO run card — must be skipped by the picker.
-    $activity = Activity::factory()->for($user)->analyzed()->create();
-    ActivityDetail::factory()->for($activity)->create([
-        'start_date_local' => Carbon::today(),
-        'distance' => 8000.0,
-    ]);
-    // A run with a card so a featured kartu is picked.
-    runWithCard($user, Rarity::Rare, 9000.0, Carbon::today());
-
-    ['narrator' => $narrator] = bootFeaturedKartuNarrator(json_encode([
-        'kartu_voice' => 'Kartu langka buat lari kamu.',
-    ], JSON_THROW_ON_ERROR));
-
-    $voice = $narrator->generate($user);
-
-    expect($voice)->toBe('Kartu langka buat lari kamu.');
-    Carbon::setTestNow();
 });
 
 it('handles a card whose run has a null distance (em dash km) and no badges', function (): void {
     $user = User::factory()->create();
-    $activity = Activity::factory()->for($user)->analyzed()->create();
-    ActivityDetail::factory()->for($activity)->create([
-        'start_date_local' => Carbon::today(),
-        'distance' => null,
-    ]);
-    RunCard::factory()->for($activity)->create([
-        'rarity' => Rarity::Epic,
-        'special_move' => 'Tanpa Letih',
-        'badges' => [],
-    ]);
+    $card = featuredCard($user, Rarity::Epic, null, []);
 
     ['narrator' => $narrator] = bootFeaturedKartuNarrator(json_encode([
         'kartu_voice' => 'Kartu tanpa jarak.',
     ], JSON_THROW_ON_ERROR));
 
-    $voice = $narrator->generate($user, Carbon::today());
-
-    expect($voice)->toBe('Kartu tanpa jarak.');
+    expect($narrator->generate($user, $card))->toBe('Kartu tanpa jarak.');
 });
 
 it('throws UnavailableException when required keys are missing', function (): void {
     $user = User::factory()->create();
-    runWithCard($user, Rarity::Rare, 9000.0, Carbon::today());
+    $card = featuredCard($user, Rarity::Rare, 9000.0, []);
 
     ['narrator' => $narrator] = bootFeaturedKartuNarrator(
         json_encode(['wrong_key' => 'x'], JSON_THROW_ON_ERROR),
     );
 
-    $narrator->generate($user, Carbon::today());
+    $narrator->generate($user, $card);
 })->throws(UnavailableException::class);

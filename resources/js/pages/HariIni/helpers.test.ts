@@ -5,10 +5,10 @@ import {
     ctlHint,
     formatIdDateUpper,
     formatSignedForm,
+    featuredCardFor,
     formatWeather,
     kartuStripItem,
     monotonyHint,
-    pickFeaturedKartu,
     shortenLocation,
     strainHint,
     vibeSubtitleFor,
@@ -59,26 +59,28 @@ describe('vibeSubtitleFor', () => {
     });
 });
 
-describe('pickFeaturedKartu', () => {
-    it('returns null when no run has an attached card', () => {
-        expect(pickFeaturedKartu([runWith({})])).toBeNull();
+describe('featuredCardFor', () => {
+    it('returns null when the featured card id is null', () => {
+        const run = runWith({}, { id: 7, rarity: 'epic', special_move: 'Some Move' });
+        expect(featuredCardFor([run], null)).toBeNull();
     });
 
-    it('picks the highest-rarity card; ties broken by most recent date', () => {
-        const older = runWith(
-            { id: 1, activity_id: 1, start_date_local: '2026-05-01' },
-            { id: 1, rarity: 'epic', special_move: 'Older Epic' },
-        );
-        const newer = runWith(
+    it('returns null when no run matches the featured card id', () => {
+        const run = runWith({}, { id: 7, rarity: 'epic', special_move: 'Some Move' });
+        expect(featuredCardFor([run], 999)).toBeNull();
+    });
+
+    it('builds the display model for the server-chosen card', () => {
+        const chosen = runWith(
             { id: 2, activity_id: 2, start_date_local: '2026-05-20' },
-            { id: 2, rarity: 'epic', special_move: 'Newer Epic' },
+            { id: 2, rarity: 'epic', special_move: 'Chosen One' },
         );
-        const rare = runWith(
+        const other = runWith(
             { id: 3, activity_id: 3, start_date_local: '2026-05-21' },
-            { id: 3, rarity: 'rare', special_move: 'Rare One' },
+            { id: 3, rarity: 'legendary', special_move: 'Not This' },
         );
-        const featured = pickFeaturedKartu([older, newer, rare]);
-        expect(featured?.name).toBe('Newer Epic');
+        const featured = featuredCardFor([other, chosen], 2);
+        expect(featured?.name).toBe('Chosen One');
         // The CTA links to the card detail page, so it carries the card id, not the run id.
         expect(featured?.cardId).toBe(2);
     });

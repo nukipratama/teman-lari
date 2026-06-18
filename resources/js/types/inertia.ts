@@ -148,6 +148,7 @@ export interface BriefingResult {
     suggestion: AnalysisPayload;
     mascotVoice: AnalysisPayload;
     featuredKartuVoice: AnalysisPayload;
+    featuredCardId: number | null;
     recoveryLabel: string;
     recoveryTone: RecoveryTone;
     recoveryHoursLabel: string | null;

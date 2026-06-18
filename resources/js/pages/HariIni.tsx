@@ -12,7 +12,7 @@ import KondisiCard from '@/components/dashboard/KondisiCard';
 import GoalsCard from '@/components/dashboard/GoalsCard';
 
 import { VIBE_TO_POSE, poseForRun } from '@/lib/temariPose';
-import { pickFeaturedKartu, vibeSubtitleFor } from './HariIni/helpers';
+import { featuredCardFor, vibeSubtitleFor } from './HariIni/helpers';
 import { formatTimeId, formatWeekdayDateId } from '@/lib/pace';
 import type {
     ActivityDetail,
@@ -41,7 +41,7 @@ export default function HariIni({
     const firstName = props.auth.user?.first_name ?? '';
     const pose: TemariPose = VIBE_TO_POSE[briefing.vibeState] ?? 'observational';
 
-    const featured = pickFeaturedKartu(recentRuns);
+    const featured = featuredCardFor(recentRuns, briefing.featuredCardId);
     const lastRun = recentRuns[0] ?? null;
 
     const now = new Date();
