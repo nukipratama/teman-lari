@@ -64,28 +64,79 @@ docker compose exec -u root app sh .claude/skills/browser-review/scripts/setup.s
 # 3. horizontal-overflow audit across the matrix
 ./vendor/bin/sail exec app node .claude/skills/browser-review/scripts/audit.mjs
 
-# 4. teardown (restore node_modules, remove PNGs)
+# 4. teardown (restore node_modules; screenshots are kept as history)
 ./vendor/bin/sail exec app sh .claude/skills/browser-review/scripts/teardown.sh
 ```
 
-Output lands in `storage/app/browser-review/<viewport>/NN-<page>-{viewport,full}.png` (gitignored
-`storage/`). The script also prints any console/`pageerror` per page, and the audit prints
+Each run lands in its own batch dir, keyed by date + execution time:
+`storage/app/browser-review/<YYYY-MM-DD>/<HHMMSS>/<viewport>/NN-<page>-{viewport,full}.png`. `shoot.mjs`
+clears prior batches at the start, so only the latest sweep is on disk, and prints the resolved dir as
+`BATCH_DIR=...` on its last line — **capture that and pass it to the inspect workflow.** The script also prints any console/`pageerror` per page, and the audit prints
 `HORIZ-OVERFLOW=true/false` per page per viewport (ignoring intentional `overflow-x-auto` scroll
 containers and decorative `pointer-events-none` glow blobs).
 
-## Inspect in parallel (keep the main context lean)
+> These PNGs are gitignored (`storage/app/.gitignore` ignores `*`) and your IDE may hide gitignored
+> files — they're on disk under `storage/app/browser-review/`, not in a temp dir.
 
-A sweep produces a lot of images (pages × viewports) — **don't read them all into the orchestrating
-context.** Fan out one subagent per viewport (Agent tool), each reading only its own
-`storage/app/browser-review/<viewport>/*-full.png` files and returning a compact findings list; send
-the Agent calls in one message so they run concurrently. Merge the lists, then open only the PNGs an
-agent flagged — the heavy image reads stay in the subagents.
+## Inspect in parallel (Sonnet subagents, keep the main context lean)
 
-Tell each agent its viewport's size and which nav it should see, to report only real layout bugs
-(not pages that look fine), and to ignore the fixed bottom-nav appearing mid-page (a
-`position: fixed` full-page-screenshot artifact). Judge each finding against the app's actual design
-intent before acting — e.g. content is deliberately width-capped (`PageContainer`), so "doesn't fill
-the wide screen" is usually by design, and sparse demo data can make a responsive grid look empty.
+A sweep produces a lot of images — **don't read them all into the orchestrating context.** Run the
+inspection as a `Workflow`: one Sonnet subagent per viewport (parallel), each reading only its own
+`<BATCH_DIR>/<viewport>/*-full.png` files and returning structured findings. Pass the batch dir and the
+viewports you shot as `args`, e.g. `{ "dir": "storage/app/browser-review/2026-06-19/143022", "viewports": ["mobile","wide"] }`
+(`dir` is the `BATCH_DIR=` line `shoot.mjs` printed; omit `viewports` for all four). Merge the lists,
+then open only the flagged PNGs to confirm before acting.
+
+```js
+export const meta = {
+  name: 'browser-review-inspect',
+  description: 'Read browser-review screenshots per viewport in parallel (Sonnet) and report layout bugs',
+  phases: [{ title: 'Inspect', detail: 'one Sonnet agent per viewport reads its PNGs', model: 'sonnet' }],
+}
+
+const NAV = {
+  mobile:  { size: '390x844',  nav: 'mobile nav (top bar + bottom nav)' },
+  tablet:  { size: '834x1112', nav: 'still mobile nav (834 < 1024 lg breakpoint)' },
+  desktop: { size: '1280x800', nav: 'desktop TopNav' },
+  wide:    { size: '1536x864', nav: 'desktop TopNav, widest max-w-page-2xl layout' },
+}
+const dir = args?.dir ?? 'storage/app/browser-review'
+const viewports = args?.viewports?.length ? args.viewports : Object.keys(NAV)
+
+const FINDINGS = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['viewport', 'findings'],
+  properties: {
+    viewport: { type: 'string' },
+    findings: {
+      type: 'array',
+      items: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['page', 'severity', 'issue'],
+        properties: {
+          page: { type: 'string' },
+          severity: { type: 'string', enum: ['high', 'medium', 'low'] },
+          issue: { type: 'string' },
+        },
+      },
+    },
+  },
+}
+
+phase('Inspect')
+return (await parallel(viewports.map((vp) => () =>
+  agent(
+    `Review the "${vp}" viewport (${NAV[vp]?.size}, ${NAV[vp]?.nav}) of the teman-lari app. Read every ` +
+    `*-full.png in ${dir}/${vp}/ and report ONLY real layout bugs (horizontal overflow, ` +
+    `overlapping/clipped/truncated text, wrong nav chrome for this viewport, off-screen elements). Ignore by ` +
+    `design: width-capped content (PageContainer / max-w-page-2xl), the fixed bottom-nav mid-page artifact, ` +
+    `sparse demo-data grids, and intentional overflow-x-auto. Return only flagged pages.`,
+    { label: `inspect:${vp}`, phase: 'Inspect', model: 'sonnet', effort: 'high', schema: FINDINGS }
+  )
+))).filter(Boolean)
+```
 
 ## What the scripts handle for you
 

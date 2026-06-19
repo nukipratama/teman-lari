@@ -1,11 +1,22 @@
 // End-to-end screenshot sweep across a viewport matrix. Runs inside the Sail
 // `app` container:  ./vendor/bin/sail exec app node .claude/skills/browser-review/scripts/shoot.mjs
-// Env: VIEWPORTS=mobile,tablet,desktop,wide (default all)  BASE=http://localhost  OUT=storage/app/browser-review
+// Env: VIEWPORTS=mobile,tablet,desktop,wide (default all)  BASE=http://localhost
+//      OUT=storage/app/browser-review  BATCH=<date>/<time> (override the run key)
 // Pages are discovered from `artisan route:list` (see lib.mjs) — nothing hardcoded.
+import { rmSync } from 'node:fs';
 import { chromium } from 'playwright';
 import { BASE, VIEWPORT_DEFS, parseViewports, login, dismissReveal, discoverPageRoutes } from './lib.mjs';
 
-const OUT = process.env.OUT ?? 'storage/app/browser-review';
+// Each run lands in its own dir keyed by date + execution time. Prior batches are
+// cleared first, so only the latest sweep is kept (stale screenshots aren't needed):
+// storage/app/browser-review/<YYYY-MM-DD>/<HHMMSS>/<viewport>/.
+const BASE_OUT = process.env.OUT ?? 'storage/app/browser-review';
+const now = new Date();
+const p2 = (n) => String(n).padStart(2, '0');
+const BATCH = process.env.BATCH
+  ?? `${now.getFullYear()}-${p2(now.getMonth() + 1)}-${p2(now.getDate())}/${p2(now.getHours())}${p2(now.getMinutes())}${p2(now.getSeconds())}`;
+const OUT = `${BASE_OUT}/${BATCH}`;
+rmSync(BASE_OUT, { recursive: true, force: true });
 const selected = parseViewports();
 
 const browser = await chromium.launch({
@@ -56,3 +67,4 @@ for (const vp of selected) {
 
 await browser.close();
 console.log(`\nDone. Screenshots under ${OUT}/<viewport>/ — read the PNGs to inspect.`);
+console.log(`BATCH_DIR=${OUT}`);
