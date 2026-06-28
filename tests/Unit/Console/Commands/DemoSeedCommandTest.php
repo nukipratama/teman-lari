@@ -35,10 +35,11 @@ it('seeds a complete, login-ready demo dataset and stays idempotent across re-ru
 
     $user = User::query()->where('email', DemoRunSeeder::DEMO_USER_EMAIL)->firstOrFail();
 
-    // Core row counts — 35 scripted + RNG fillers @ 65% over ~180d; exact match fails loud on drift.
+    // Core row counts — 35 scripted + RNG fillers @ 65% over ~180d + 1 D-0
+    // cold-start run; exact match fails loud on drift.
     $activityIds = Activity::query()->where('user_id', $user->id)->pluck('id');
     $activityCount = $activityIds->count();
-    expect($activityCount)->toBe(126)
+    expect($activityCount)->toBe(127)
         ->and(RunCard::query()->whereIn('activity_id', $activityIds)->count())
         ->toBe($activityCount)
         ->and(StoryLine::query()->where('user_id', $user->id)->where('kind', StoryLine::KIND_POST_RUN)->count())

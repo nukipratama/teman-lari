@@ -15,6 +15,12 @@ Artisan::command('inspire', function () {
 // Idempotent: a same-day re-run dispatches only still-missing types, never re-bills.
 Schedule::command('ai:daily-briefing')->dailyAt('00:01');
 
+// 00:05: keep the seeded demo account fresh — one modest synthetic run (~5/week)
+// plus a rule-based refresh of today's briefing/greeting/trend so the demo never
+// renders an empty "Belum dibaca" once the date rolls. Zero LLM tokens
+// (withoutDispatching + rule-based fill), so the demo-billing exclusion holds.
+Schedule::command('demo:daily-refresh')->dailyAt('00:05');
+
 // Monday 00:01: narrate last week's recap once per user, on final data. The
 // per-ingest cascade only stages the row Pending (weekly cadence) — this is
 // the single scheduled LLM call that fills it.
