@@ -17,6 +17,9 @@ use Illuminate\Support\Facades\DB;
  * notifiable analysis completes. Resolves the user, honours the demo exclusion /
  * opt-in / connection guards, and sends the narration to Telegram exactly once
  * (the telegram_deliveries unique claim makes a Horizon retry idempotent).
+ *
+ * A manual push ($force) bypasses the opt-in toggle and the once-only delivery
+ * claim, so a user can (re)send a run to Telegram on demand from its detail page.
  */
 class SendTelegramNotificationJob implements ShouldQueue
 {
@@ -29,7 +32,7 @@ class SendTelegramNotificationJob implements ShouldQueue
      */
     public array $backoff = [30, 120];
 
-    public function __construct(public readonly int $analysisId)
+    public function __construct(public readonly int $analysisId, public readonly bool $force = false)
     {
     }
 
@@ -50,27 +53,34 @@ class SendTelegramNotificationJob implements ShouldQueue
             return;
         }
 
-        if (! $registry->isOptedIn($analysis, $connection)) {
-            return;
-        }
+        // A manual push overrides the per-type opt-in toggle and the once-only
+        // delivery claim; the automatic path keeps both.
+        if (! $this->force) {
+            if (! $registry->isOptedIn($analysis, $connection)) {
+                return;
+            }
 
-        // Claim the delivery before sending. insertOrIgnore is atomic on the
-        // unique analysis_id, so a racing retry that already claimed it gets 0
-        // rows and bails before re-sending.
-        $claimed = DB::table('telegram_deliveries')->insertOrIgnore([
-            'analysis_id' => $analysis->id,
-            'created_at' => now(),
-        ]);
+            // Claim the delivery before sending. insertOrIgnore is atomic on the
+            // unique analysis_id, so a racing retry that already claimed it gets 0
+            // rows and bails before re-sending.
+            $claimed = DB::table('telegram_deliveries')->insertOrIgnore([
+                'analysis_id' => $analysis->id,
+                'created_at' => now(),
+            ]);
 
-        if ($claimed === 0) {
-            return;
+            if ($claimed === 0) {
+                return;
+            }
         }
 
         try {
             $client->sendMessage($connection->chat_id, $registry->format($analysis));
         } catch (Throwable $e) {
-            // Release the claim so the job's retry can resend.
-            DB::table('telegram_deliveries')->where('analysis_id', $analysis->id)->delete();
+            // Release the claim so the job's retry can resend (the manual path
+            // never claimed one).
+            if (! $this->force) {
+                DB::table('telegram_deliveries')->where('analysis_id', $analysis->id)->delete();
+            }
 
             throw $e;
         }
