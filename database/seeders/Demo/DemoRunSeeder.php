@@ -117,6 +117,12 @@ class DemoRunSeeder
                 }
             }
 
+            // A D-0 run so a fresh seed already looks current (newest run today)
+            // rather than the scripted library's ~10-days-stale tail. The
+            // demo:daily-refresh scheduler keeps it current from here on.
+            $this->seedOne($user, $this->modestBlueprintFor(Carbon::today()));
+            $count++;
+
             $log('Rebuilding weekly snapshots...');
             $weeks = $this->weeklyAggregator->rebuildFor($user);
             $log(sprintf('  %d weekly snapshots written', $weeks));
@@ -160,6 +166,77 @@ class DemoRunSeeder
     }
 
     /**
+     * Daily keep-alive for the demo account, run by the demo:daily-refresh
+     * scheduler. Adds one modest synthetic run for today (skipping two rest days
+     * a week so the streak looks human) and re-stages + rule-based-fills today's
+     * date-keyed narration, so the demo never goes stale or renders an empty
+     * "Belum dibaca" when the date rolls. Zero LLM tokens (runs under
+     * withoutDispatching + the filler), so the demo-billing exclusion holds.
+     *
+     * @param  Closure(string): void|null  $log  optional reporter (command::info etc.)
+     */
+    public function refreshToday(?Closure $log = null): void
+    {
+        $log ??= static fn (string $_): null => null;
+
+        $this->analysisService->withoutDispatching(function () use ($log): void {
+            $user = $this->ensureDemoUser($log);
+            $today = Carbon::today();
+
+            // ~5 runs/week: rest on Monday + Thursday so the streak / recovery
+            // widgets read like a real training week, not a bot that runs daily.
+            if (! in_array($today->dayOfWeekIso, [1, 4], true)) {
+                $this->seedOne($user, $this->modestBlueprintFor($today));
+                $log("Synthesised today's run for {$user->email}.");
+            } else {
+                $log('Rest day, refreshing narration only.');
+            }
+
+            // CTL is cumulative, so roll the new run forward into every later
+            // week's snapshot, then refresh today's greeting + briefing narration.
+            $this->weeklyAggregator->rebuildForwardFrom($user, $today);
+            $this->unlockEngine->grantEligible($user);
+            $this->temari->dailyGreeting($user, $this->vibe->current($user));
+
+            // Re-stage the date-keyed surfaces (briefing set, greeting, trend,
+            // weekly persona) against today's discriminator — the line that kills
+            // "Belum dibaca" once the calendar day moves past the seed day.
+            $this->stagePendingAnalyses($user);
+        });
+
+        $user = User::query()->where('email', self::DEMO_USER_EMAIL)->firstOrFail();
+        $filled = $this->backfillWithFiller($user);
+        $log(sprintf('  %d AI analyses refreshed with rule-based content.', $filled));
+    }
+
+    /**
+     * A believable easy run for a given day, deterministic per date (so a same-day
+     * re-run converges via updateOrCreate). Kept modest on purpose: easy Z2 pace
+     * slower than any seeded PR and short enough that RunCardFactory scores it a
+     * Common/Uncommon card, so the daily run never beats a record or inflates the
+     * curated rarity ladder.
+     */
+    private function modestBlueprintFor(Carbon $date): RunBlueprint
+    {
+        $rng = new Randomizer(new Mt19937((int) $date->format('Ymd')));
+
+        $locations = DemoLocation::library();
+        $names = ['Lari pagi', 'Easy run', 'Lari santai', 'Jogging pagi', 'Lari ringan'];
+
+        return new RunBlueprint(
+            startsAt: $date->copy()->setTime(6, $rng->getInt(0, 45)),
+            distanceM: $rng->getInt(35, 70) * 100,
+            targetPaceSecPerKm: $rng->getInt(390, 460),
+            hrProfile: $rng->getInt(0, 1) === 0 ? HrProfile::Z2Steady : HrProfile::Mixed,
+            cadenceSpm: 170,
+            elevationGainM: $rng->getInt(10, 60),
+            name: $names[$rng->getInt(0, count($names) - 1)],
+            tags: ['daily'],
+            location: $locations[$rng->getInt(0, count($locations) - 1)],
+        );
+    }
+
+    /**
      * Point the one-shot reveal modal at the demo user's rarest card instead of
      * whatever run happened to seed first. RunCardFactory::build() queues the
      * first card it creates (the oldest activity, a plain Common easy run), so
@@ -188,11 +265,10 @@ class DemoRunSeeder
         $today = Carbon::today()->toDateString();
 
         foreach ($activities as $activity) {
-            $this->analysisService->request(
-                subjectOrType: Activity::class,
-                subjectId: $activity->id,
-                type: AnalysisType::PostRunSpeech,
-            );
+            // Stage the whole per-activity group (post-run speech + the three run
+            // insights) like production's post-ingest dispatch, so a run's detail
+            // page is fully filled, not just its speech block.
+            $this->analysisService->requestActivityGroup($activity);
         }
         foreach ($cardIds as $cardId) {
             $this->analysisService->request(
@@ -223,12 +299,10 @@ class DemoRunSeeder
                 type: AnalysisType::WeeklyRecap,
             );
         }
-        $this->analysisService->request(
-            subjectOrType: AnalysisType::BRIEFING_SUBJECT_TYPE,
-            subjectId: $user->id,
-            type: AnalysisType::BriefingHeadline,
-            discriminator: $today,
-        );
+        // Headline + suggestion are one group: stage the whole group (not just the
+        // headline) so the dashboard's suggestion card is filled too and never
+        // renders "Belum dibaca". Mirrors DailyBriefingCommand.
+        $this->analysisService->requestBriefingGroup($user, $today);
         $this->analysisService->request(
             subjectOrType: AnalysisType::BRIEFING_SUBJECT_TYPE,
             subjectId: $user->id,
