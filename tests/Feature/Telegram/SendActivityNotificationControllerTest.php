@@ -12,7 +12,7 @@ use Illuminate\Support\Facades\Bus;
 
 uses(RefreshDatabase::class);
 
-function postRunSpeechFor(Activity $activity, bool $done = true): Analysis
+function doneActivitySpeechFor(Activity $activity, bool $done = true): Analysis
 {
     $factory = Analysis::factory();
     $factory = $done ? $factory->done('Mantap!') : $factory;
@@ -35,7 +35,7 @@ it('force-dispatches the push when the post-run speech is done', function (): vo
     Bus::fake();
     $user = User::factory()->create();
     $activity = Activity::factory()->for($user)->create();
-    $analysis = postRunSpeechFor($activity);
+    $analysis = doneActivitySpeechFor($activity);
 
     $this->actingAs($user)
         ->post(route('aktivitas.telegram', $activity))
@@ -52,7 +52,7 @@ it('does not dispatch and flashes info when the narration is not ready', functio
     Bus::fake();
     $user = User::factory()->create();
     $activity = Activity::factory()->for($user)->create();
-    postRunSpeechFor($activity, done: false);
+    doneActivitySpeechFor($activity, done: false);
 
     $this->actingAs($user)
         ->post(route('aktivitas.telegram', $activity))
