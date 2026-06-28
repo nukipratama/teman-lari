@@ -93,7 +93,7 @@ function HeroSide() {
                 <BrandMark tone="cream" />
             </div>
 
-            <div className="relative z-10 w-full max-w-[440px] text-center">
+            <div className="relative z-10 w-full max-w-[560px] text-center xl:max-w-[620px]">
                 <div className="relative overflow-hidden rounded-2xl shadow-[0_24px_60px_rgba(0,0,0,0.45)] ring-1 ring-cream/15">
                     <video
                         ref={videoRef}
@@ -120,8 +120,9 @@ function HeroSide() {
                         </button>
                     )}
                 </div>
-                <h1 className="mt-7 font-display italic text-display-xl text-cream">
-                    Lari Kamu,<br /><span className="text-horizon">Gak Sendirian.</span>
+                <h1 className="mt-7 font-display italic text-display-lg text-cream sm:text-display-xl">
+                    <span className="block whitespace-nowrap">Lari Kamu,</span>
+                    <span className="block whitespace-nowrap text-horizon">Gak Sendirian.</span>
                 </h1>
                 <p className="mt-4 font-sans text-base leading-relaxed text-cream sm:text-lg">
                     “Halo, aku Temari. Mulai sekarang, lari kamu aku temenin.”
