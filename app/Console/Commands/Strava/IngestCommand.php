@@ -12,7 +12,7 @@ use Illuminate\Console\Attributes\Description;
 use Illuminate\Console\Attributes\Signature;
 use Illuminate\Console\Command;
 
-#[Signature('strava:ingest {--batch=5 : Max activities to ingest per run}')]
+#[Signature('strava:ingest {--batch=20 : Max activities to ingest per run}')]
 #[Description('Drain pending activity stubs through the ingest pipeline, oldest-first, batched to respect Strava rate limits.')]
 class IngestCommand extends Command
 {

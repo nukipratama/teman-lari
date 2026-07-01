@@ -6,6 +6,7 @@ namespace App\Jobs\Telegram;
 
 use Throwable;
 use App\Models\AI\Analysis;
+use App\Models\TelegramConnection;
 use App\Services\Telegram\NotifiableAnalysis;
 use App\Services\Telegram\TelegramClient;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -40,40 +41,63 @@ class SendTelegramNotificationJob implements ShouldQueue
     public function handle(NotifiableAnalysis $registry, TelegramClient $client): void
     {
         $analysis = Analysis::query()->find($this->analysisId);
-        if ($analysis === null || ! $registry->isNotifiable($analysis)) {
+        $connection = $analysis === null ? null : $this->resolveConnection($registry, $analysis);
+
+        if ($analysis === null || $connection === null) {
             return;
+        }
+
+        // A manual push overrides the recency gate, the per-type opt-in toggle, and
+        // the once-only delivery claim; the automatic path keeps all three.
+        $blocked = ! $this->force
+            && (! $this->passesAutomaticGuards($registry, $analysis, $connection) || ! $this->claimDelivery($analysis));
+
+        if ($blocked) {
+            return;
+        }
+
+        $this->send($registry, $client, $analysis, $connection);
+    }
+
+    /** Resolves the notify target, or null when any demo/connection guard fails. */
+    private function resolveConnection(NotifiableAnalysis $registry, Analysis $analysis): ?TelegramConnection
+    {
+        if (! $registry->isNotifiable($analysis)) {
+            return null;
         }
 
         $user = $registry->resolveUser($analysis);
         if ($user === null || $user->is_demo) {
-            return;
+            return null;
         }
 
         $connection = $user->telegramConnection;
-        if ($connection === null || $connection->isRevoked()) {
-            return;
-        }
 
-        // A manual push overrides the per-type opt-in toggle and the once-only
-        // delivery claim; the automatic path keeps both.
-        if (! $this->force) {
-            if (! $registry->isOptedIn($analysis, $connection)) {
-                return;
-            }
+        return $connection === null || $connection->isRevoked() ? null : $connection;
+    }
 
-            // Claim the delivery before sending. insertOrIgnore is atomic on the
-            // unique analysis_id, so a racing retry that already claimed it gets 0
-            // rows and bails before re-sending.
-            $claimed = DB::table('telegram_deliveries')->insertOrIgnore([
-                'analysis_id' => $analysis->id,
-                'created_at' => now(),
-            ]);
+    private function passesAutomaticGuards(NotifiableAnalysis $registry, Analysis $analysis, TelegramConnection $connection): bool
+    {
+        return $registry->isRecentEnoughToAutoNotify($analysis) && $registry->isOptedIn($analysis, $connection);
+    }
 
-            if ($claimed === 0) {
-                return;
-            }
-        }
+    /**
+     * Claim the delivery before sending. insertOrIgnore is atomic on the unique
+     * analysis_id, so a racing retry that already claimed it gets 0 rows and
+     * bails before re-sending.
+     */
+    private function claimDelivery(Analysis $analysis): bool
+    {
+        $claimed = DB::table('telegram_deliveries')->insertOrIgnore([
+            'analysis_id' => $analysis->id,
+            'created_at' => now(),
+        ]);
 
+        return $claimed !== 0;
+    }
+
+    private function send(NotifiableAnalysis $registry, TelegramClient $client, Analysis $analysis, TelegramConnection $connection): void
+    {
         try {
             $client->sendMessage($connection->chat_id, $registry->format($analysis));
         } catch (Throwable $e) {

@@ -13,6 +13,7 @@ use App\Models\WeeklySnapshot;
 use App\Services\AI\AnalysisType;
 use App\Services\Run\Metrics\PaceCalculator;
 use App\Services\Run\Metrics\PaceFormatter;
+use Illuminate\Support\Carbon;
 
 /**
  * Registry of the analysis types that fan out a Telegram notification when they
@@ -37,6 +38,30 @@ class NotifiableAnalysis
     public function isNotifiable(Analysis $analysis): bool
     {
         return array_key_exists($analysis->analysis_type->value, self::TYPES);
+    }
+
+    /**
+     * Whether an automatic post-run push is still relevant to send. A big Strava
+     * backfill stages hundreds of old PostRunSpeech narrations that eventually
+     * complete via the deferred chain (see DispatchPostRunAnalysis::isBackfill);
+     * without this, each one would still push to Telegram once done. Only gates
+     * PostRunSpeech, and only the automatic path — the manual "Kirim ke Telegram"
+     * push (force) bypasses it on purpose.
+     */
+    public function isRecentEnoughToAutoNotify(Analysis $analysis): bool
+    {
+        if ($analysis->analysis_type !== AnalysisType::PostRunSpeech) {
+            return true;
+        }
+
+        $startedAt = ActivityDetail::query()->where('activity_id', $analysis->subject_id)->value('start_date_local');
+        if ($startedAt === null) {
+            return true;
+        }
+
+        $maxDays = (int) config('services.telegram.notify_max_age_days');
+
+        return Carbon::parse($startedAt)->diffInDays(Carbon::now(), absolute: true) <= $maxDays;
     }
 
     /** Whether the connection has opted in to notifications for this analysis type. */

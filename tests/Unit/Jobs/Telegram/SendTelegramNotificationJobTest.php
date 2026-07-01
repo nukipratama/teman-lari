@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Jobs\Telegram\SendTelegramNotificationJob;
 use App\Models\Activity;
+use App\Models\ActivityDetail;
 use App\Models\AI\Analysis;
 use App\Models\TelegramConnection;
 use App\Models\User;
@@ -126,6 +127,26 @@ it('releases the delivery claim when the send fails so a retry can resend', func
     $this->assertDatabaseMissing('telegram_deliveries', ['analysis_id' => $analysisId]);
 });
 
+it('skips the automatic push for a backfilled activity older than the max age', function (): void {
+    fakeTelegramOk();
+    config(['services.telegram.notify_max_age_days' => 3]);
+    $user = User::factory()->create();
+    TelegramConnection::factory()->for($user)->create(['notify_post_run' => true]);
+    $activity = Activity::factory()->for($user)->create();
+    ActivityDetail::factory()->for($activity)->create(['start_date_local' => now()->subDays(10)]);
+    $analysisId = Analysis::factory()->done('Cerita lama.')->create([
+        'analysis_type' => AnalysisType::PostRunSpeech,
+        'subject_type' => Activity::class,
+        'subject_id' => $activity->id,
+        'discriminator' => null,
+    ])->id;
+
+    runSend($analysisId);
+
+    Http::assertNothingSent();
+    $this->assertDatabaseMissing('telegram_deliveries', ['analysis_id' => $analysisId]);
+});
+
 function runForceSend(int $analysisId): void
 {
     (new SendTelegramNotificationJob($analysisId, force: true))->handle(
@@ -157,6 +178,25 @@ it('force-sends again even when the activity was already delivered', function ()
     runForceSend($analysisId);
 
     Http::assertSentCount(1);
+});
+
+it('force-send bypasses the recency gate for an old activity', function (): void {
+    fakeTelegramOk();
+    config(['services.telegram.notify_max_age_days' => 3]);
+    $user = User::factory()->create();
+    TelegramConnection::factory()->for($user)->create(['chat_id' => 4242, 'notify_post_run' => true]);
+    $activity = Activity::factory()->for($user)->create();
+    ActivityDetail::factory()->for($activity)->create(['start_date_local' => now()->subDays(10)]);
+    $analysisId = Analysis::factory()->done('Cerita lama, kirim manual.')->create([
+        'analysis_type' => AnalysisType::PostRunSpeech,
+        'subject_type' => Activity::class,
+        'subject_id' => $activity->id,
+        'discriminator' => null,
+    ])->id;
+
+    runForceSend($analysisId);
+
+    Http::assertSent(fn ($request): bool => str_contains((string) $request['text'], 'Cerita lama, kirim manual.'));
 });
 
 it('force still never sends to the demo user or a revoked connection', function (): void {
