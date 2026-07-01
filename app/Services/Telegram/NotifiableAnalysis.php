@@ -13,6 +13,7 @@ use App\Models\WeeklySnapshot;
 use App\Services\AI\AnalysisType;
 use App\Services\Run\Metrics\PaceCalculator;
 use App\Services\Run\Metrics\PaceFormatter;
+use Illuminate\Support\Carbon;
 
 /**
  * Registry of the analysis types that fan out a Telegram notification when they
@@ -34,9 +35,41 @@ class NotifiableAnalysis
         AnalysisType::WeeklyRecap->value => ['pref' => 'notify_weekly_recap', 'emoji' => '📊', 'cta' => 'Lihat riwayat'],
     ];
 
+    /**
+     * Per-instance memo of activity_id => ActivityDetail, so a single send
+     * (recency gate + metrics line both look up the same row) hits the DB once.
+     *
+     * @var array<int, ActivityDetail|null>
+     */
+    private array $detailCache = [];
+
     public function isNotifiable(Analysis $analysis): bool
     {
         return array_key_exists($analysis->analysis_type->value, self::TYPES);
+    }
+
+    /**
+     * Whether an automatic post-run push is still relevant to send. A big Strava
+     * backfill stages hundreds of old PostRunSpeech narrations that eventually
+     * complete via the deferred chain (see DispatchPostRunAnalysis::isBackfill);
+     * without this, each one would still push to Telegram once done. Only gates
+     * PostRunSpeech, and only the automatic path — the manual "Kirim ke Telegram"
+     * push (force) bypasses it on purpose.
+     */
+    public function isRecentEnoughToAutoNotify(Analysis $analysis): bool
+    {
+        if ($analysis->analysis_type !== AnalysisType::PostRunSpeech) {
+            return true;
+        }
+
+        $startedAt = $this->activityDetail($analysis->subject_id)?->start_date_local;
+        if ($startedAt === null) {
+            return true;
+        }
+
+        $maxDays = (int) config('services.telegram.notify_max_age_days');
+
+        return Carbon::parse($startedAt)->diffInDays(Carbon::now(), absolute: true) <= $maxDays;
     }
 
     /** Whether the connection has opted in to notifications for this analysis type. */
@@ -92,7 +125,7 @@ class NotifiableAnalysis
             return null;
         }
 
-        $detail = ActivityDetail::query()->where('activity_id', $analysis->subject_id)->first();
+        $detail = $this->activityDetail($analysis->subject_id);
         if ($detail === null) {
             return null;
         }
@@ -113,6 +146,15 @@ class NotifiableAnalysis
         }
 
         return $parts === [] ? null : implode(' · ', $parts);
+    }
+
+    private function activityDetail(int $activityId): ?ActivityDetail
+    {
+        if (! array_key_exists($activityId, $this->detailCache)) {
+            $this->detailCache[$activityId] = ActivityDetail::query()->where('activity_id', $activityId)->first();
+        }
+
+        return $this->detailCache[$activityId];
     }
 
     /** Seconds to mm:ss, or h:mm:ss past an hour (no backend duration formatter exists). */

@@ -121,6 +121,44 @@ it('omits HR from the metrics line on a strap-less run', function (): void {
         ->and($message)->not->toContain('bpm');
 });
 
+it('is recent enough to auto-notify when the activity started within the max age', function (): void {
+    $activity = Activity::factory()->create();
+    ActivityDetail::factory()->for($activity)->create(['start_date_local' => now()->subDays(2)]);
+    $analysis = Analysis::factory()->make([
+        'analysis_type' => AnalysisType::PostRunSpeech,
+        'subject_id' => $activity->id,
+    ]);
+
+    expect((new NotifiableAnalysis())->isRecentEnoughToAutoNotify($analysis))->toBeTrue();
+});
+
+it('is not recent enough to auto-notify when the activity is older than the max age', function (): void {
+    config(['services.telegram.notify_max_age_days' => 3]);
+    $activity = Activity::factory()->create();
+    ActivityDetail::factory()->for($activity)->create(['start_date_local' => now()->subDays(10)]);
+    $analysis = Analysis::factory()->make([
+        'analysis_type' => AnalysisType::PostRunSpeech,
+        'subject_id' => $activity->id,
+    ]);
+
+    expect((new NotifiableAnalysis())->isRecentEnoughToAutoNotify($analysis))->toBeFalse();
+});
+
+it('treats a missing activity detail as recent enough (nothing to gate on)', function (): void {
+    $analysis = Analysis::factory()->make([
+        'analysis_type' => AnalysisType::PostRunSpeech,
+        'subject_id' => 999999,
+    ]);
+
+    expect((new NotifiableAnalysis())->isRecentEnoughToAutoNotify($analysis))->toBeTrue();
+});
+
+it('never gates non-post-run types by activity age', function (): void {
+    $analysis = Analysis::factory()->make(['analysis_type' => AnalysisType::WeeklyRecap]);
+
+    expect((new NotifiableAnalysis())->isRecentEnoughToAutoNotify($analysis))->toBeTrue();
+});
+
 it('links a weekly recap to the run history page', function (): void {
     $analysis = Analysis::factory()->make([
         'analysis_type' => AnalysisType::WeeklyRecap,
