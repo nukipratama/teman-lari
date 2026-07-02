@@ -68,6 +68,7 @@ class TokenUsageController extends Controller
 
         [$from, $to] = match ($range) {
             'today' => [Carbon::today()->startOfDay(), Carbon::now()],
+            '7d' => [$sevenDaysAgo, Carbon::now()],
             '30d' => [Carbon::today()->subDays(29)->startOfDay(), Carbon::now()],
             'month' => [Carbon::now()->startOfMonth(), Carbon::now()],
             'all' => [Carbon::createFromTimestamp(0), Carbon::now()],

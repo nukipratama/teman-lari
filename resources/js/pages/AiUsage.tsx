@@ -72,13 +72,7 @@ interface Budget {
     currency: string;
 }
 
-interface PreviousTotals {
-    prompt: number;
-    completion: number;
-    total: number;
-    calls: number;
-    cost: number;
-}
+type PreviousTotals = Omit<UsageTotals, 'truncated_calls'>;
 
 /** Relative range token resolved server-side; drives preset highlighting. */
 type RangeToken = 'today' | '7d' | '30d' | 'month' | 'all' | 'custom';
