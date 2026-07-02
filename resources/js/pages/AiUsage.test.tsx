@@ -15,10 +15,18 @@ vi.mock('@inertiajs/react', () => ({
 }));
 
 const baseProps = {
+    range: 'custom' as 'today' | '7d' | '30d' | 'month' | 'all' | 'custom',
     from: '2026-05-01',
     to: '2026-05-19',
     kind: null as string | null,
     totals: { prompt: 600, completion: 280, total: 880, calls: 3, cost: 0.05, truncated_calls: 0 },
+    previousTotals: { prompt: 500, completion: 200, total: 700, calls: 2, cost: 0.04 } as {
+        prompt: number;
+        completion: number;
+        total: number;
+        calls: number;
+        cost: number;
+    } | null,
     byKind: [
         { kind: 'run-insight', prompt: 300, completion: 150, total: 450, calls: 1, cost: 0.03, truncated_calls: 0, avg_latency_ms: 800, max_latency_ms: 800 },
         { kind: 'briefing', prompt: 300, completion: 130, total: 430, calls: 2, cost: 0.02, truncated_calls: 0, avg_latency_ms: 1000, max_latency_ms: 1200 },
@@ -190,18 +198,59 @@ describe('AiUsage page', () => {
     });
 
     it.each([
-        ['hari ini', /hari ini/i],
-        ['7 hari', /7 hari/i],
-        ['30 hari', /30 hari/i],
-        ['bulan ini', /bulan ini/i],
-        ['semua', /semua/i],
-    ])('preset "%s" is a link to a from/to date pair', (_label, pattern) => {
+        ['hari ini', /hari ini/i, 'today'],
+        ['7 hari', /7 hari/i, '7d'],
+        ['30 hari', /30 hari/i, '30d'],
+        ['bulan ini', /bulan ini/i, 'month'],
+        ['semua', /semua/i, 'all'],
+    ])('preset "%s" links to a date-free range token (durable, never stale)', (_label, pattern, token) => {
         render(<AiUsage {...baseProps} />);
 
         const link = screen.getByRole('link', { name: pattern });
-        expect(link.getAttribute('href')).toMatch(
-            /^\/ai-usage\?from=\d{4}-\d{2}-\d{2}&to=\d{4}-\d{2}-\d{2}$/,
+        // Date-free: the href carries only the relative token, so it stays valid tomorrow.
+        expect(link.getAttribute('href')).toBe(`/ai-usage?range=${token}`);
+    });
+
+    it('preset links preserve the active kind filter', () => {
+        render(<AiUsage {...baseProps} kind="briefing" />);
+
+        const link = screen.getByRole('link', { name: /7 hari/i });
+        expect(link.getAttribute('href')).toBe('/ai-usage?range=7d&kind=briefing');
+    });
+
+    it('highlights the active preset', () => {
+        render(<AiUsage {...baseProps} range="7d" />);
+
+        const active = screen.getByRole('link', { name: /7 hari/i });
+        const inactive = screen.getByRole('link', { name: /30 hari/i });
+        expect(active.className).toContain('bg-sky');
+        expect(inactive.className).toContain('bg-cream-deep');
+    });
+
+    it('applies the kind filter immediately on change, preserving the range', () => {
+        render(<AiUsage {...baseProps} range="7d" />);
+
+        fireEvent.change(screen.getByLabelText(/jenis/i), { target: { value: 'briefing' } });
+
+        expect(routerGet).toHaveBeenCalledWith(
+            '/ai-usage',
+            { range: '7d', kind: 'briefing' },
+            { preserveState: true, preserveScroll: true },
         );
+    });
+
+    it('shows a vs-previous delta on the KPI tiles', () => {
+        // total 880 vs 700 => +26%.
+        render(<AiUsage {...baseProps} />);
+
+        expect(screen.getAllByText(/vs sblm/).length).toBeGreaterThan(0);
+        expect(screen.getByText(/26% vs sblm/)).toBeInTheDocument();
+    });
+
+    it('hides the delta when there is no comparable prior window', () => {
+        render(<AiUsage {...baseProps} previousTotals={null} />);
+
+        expect(screen.queryByText(/vs sblm/)).not.toBeInTheDocument();
     });
 
     it('typing into a date field updates the form value', () => {

@@ -85,18 +85,68 @@ it('renders the AiUsage page with totals + per-kind breakdown filtered by date',
         );
 });
 
-it('defaults to start of current week (Monday) when from is omitted', function (): void {
-    Carbon::setTestNow('2026-05-19 12:00:00'); // Tuesday; Monday of this week is 2026-05-18
-    seedUsage('inside', 50, 50, Carbon::parse('2026-05-18'));
-    seedUsage('outside', 50, 50, Carbon::parse('2026-05-17')); // previous week
+it('defaults to the rolling last 7 days when no range is given', function (): void {
+    Carbon::setTestNow('2026-05-19 12:00:00'); // 7d window = 2026-05-13 .. now
+    seedUsage('inside', 50, 50, Carbon::parse('2026-05-15'));
+    seedUsage('outside', 50, 50, Carbon::parse('2026-05-10')); // older than 7 days
 
     $this->get('/ai-usage')
         ->assertSuccessful()
         ->assertInertia(
             fn (AssertableInertia $page) => $page
-                ->where('from', '2026-05-18')
+                ->where('range', '7d')
+                ->where('from', '2026-05-13')
                 ->where('totals.calls', 1),
         );
+
+    Carbon::setTestNow();
+});
+
+it('resolves relative range tokens to self-correcting windows', function (string $range, string $expectedFrom): void {
+    Carbon::setTestNow('2026-05-19 12:00:00');
+
+    $this->get("/ai-usage?range={$range}")
+        ->assertSuccessful()
+        ->assertInertia(
+            fn (AssertableInertia $page) => $page
+                ->where('range', $range)
+                ->where('from', $expectedFrom),
+        );
+
+    Carbon::setTestNow();
+})->with([
+    'today' => ['today', '2026-05-19'],
+    '7d' => ['7d', '2026-05-13'],
+    '30d' => ['30d', '2026-04-20'],
+    'month' => ['month', '2026-05-01'],
+    'all' => ['all', '1970-01-01'],
+]);
+
+it('maps legacy absolute from+to links (no range) to a custom range', function (): void {
+    $this->get('/ai-usage?from=2026-05-01&to=2026-05-19')
+        ->assertSuccessful()
+        ->assertInertia(
+            fn (AssertableInertia $page) => $page
+                ->where('range', 'custom')
+                ->where('from', '2026-05-01')
+                ->where('to', '2026-05-19'),
+        );
+});
+
+it('includes previousTotals for a bounded range and null for all-time', function (): void {
+    Carbon::setTestNow('2026-05-19 12:00:00');
+    seedUsage('briefing', 100, 50, Carbon::parse('2026-05-15')); // current 7d window
+    seedUsage('briefing', 40, 20, Carbon::parse('2026-05-10')); // prior window
+
+    $this->get('/ai-usage?range=7d')
+        ->assertInertia(
+            fn (AssertableInertia $page) => $page
+                ->where('totals.total', 150)
+                ->where('previousTotals.total', 60),
+        );
+
+    $this->get('/ai-usage?range=all')
+        ->assertInertia(fn (AssertableInertia $page) => $page->where('previousTotals', null));
 
     Carbon::setTestNow();
 });

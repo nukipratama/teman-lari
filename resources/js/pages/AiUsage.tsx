@@ -1,13 +1,7 @@
 import { Head, Link, router } from '@inertiajs/react';
 import { type ReactNode, useState } from 'react';
 import { Icon } from '@iconify/react';
-import {
-    formatMonthDayId,
-    formatWeekdayDayId,
-    isoDaysAgoLocal,
-    isoStartOfMonthLocal,
-    todayLocalIso,
-} from '@/lib/pace';
+import { formatMonthDayId, formatWeekdayDayId } from '@/lib/pace';
 import SectionHeading from '@/components/SectionHeading';
 import KpiTile from '@/components/dashboard/KpiTile';
 import PageContainer from '@/components/ui/PageContainer';
@@ -78,11 +72,24 @@ interface Budget {
     currency: string;
 }
 
+interface PreviousTotals {
+    prompt: number;
+    completion: number;
+    total: number;
+    calls: number;
+    cost: number;
+}
+
+/** Relative range token resolved server-side; drives preset highlighting. */
+type RangeToken = 'today' | '7d' | '30d' | 'month' | 'all' | 'custom';
+
 interface AiUsageProps {
+    range: RangeToken;
     from: string;
     to: string;
     kind: string | null;
     totals: UsageTotals;
+    previousTotals: PreviousTotals | null;
     byKind: UsageRow[];
     byUser: UserRow[];
     byDeployment: DeploymentRow[];
@@ -108,13 +115,41 @@ function formatCost(amount: number, currency: string): string {
     }).format(amount);
 }
 
-function navigate(from: string, to: string, kind: string | null): void {
-    const params: Record<string, string> = { from, to };
+/**
+ * Navigate the report. A preset range travels as a self-correcting `range`
+ * token (resolved server-side, never stale); a custom Dari/Sampai window
+ * travels as absolute `from`/`to`.
+ */
+function navigate({ range, from, to, kind }: { range: RangeToken; from: string; to: string; kind: string | null }): void {
+    const params: Record<string, string> = {};
+    if (range === 'custom') {
+        params.from = from;
+        params.to = to;
+    } else {
+        params.range = range;
+    }
     if (kind !== null) {
         params.kind = kind;
     }
     router.get('/ai-usage', params, { preserveState: true, preserveScroll: true });
 }
+
+/** Build a durable, date-free preset href that preserves the active kind filter. */
+function presetHref(token: RangeToken, kind: string | null): string {
+    const params = new URLSearchParams({ range: token });
+    if (kind !== null) {
+        params.set('kind', kind);
+    }
+    return `/ai-usage?${params.toString()}`;
+}
+
+const PRESETS: ReadonlyArray<{ token: RangeToken; label: string }> = [
+    { token: 'today', label: 'Hari ini' },
+    { token: '7d', label: '7 hari' },
+    { token: '30d', label: '30 hari' },
+    { token: 'month', label: 'Bulan ini' },
+    { token: 'all', label: 'Semua' },
+];
 
 function formatDayLabel(day: string): string {
     return formatMonthDayId(new Date(day + 'T00:00:00'));
@@ -125,10 +160,12 @@ function formatDayLabelShort(day: string): string {
 }
 
 export default function AiUsage({
+    range,
     from,
     to,
     kind,
     totals,
+    previousTotals,
     byKind,
     byUser,
     byDeployment,
@@ -147,7 +184,14 @@ export default function AiUsage({
 
     function handleSubmit(e: React.FormEvent): void {
         e.preventDefault();
-        navigate(fromInput, toInput, kindInput || null);
+        // Editing the date fields is a custom window.
+        navigate({ range: 'custom', from: fromInput, to: toInput, kind: kindInput || null });
+    }
+
+    // Changing the kind applies immediately, keeping the current range window.
+    function handleKindChange(value: string): void {
+        setKindInput(value);
+        navigate({ range, from, to, kind: value || null });
     }
 
     return (
@@ -183,7 +227,7 @@ export default function AiUsage({
                         <DateField id="to" label="Sampai" value={toInput} onChange={setToInput} />
 
                         {availableKinds.length > 0 && (
-                            <KindFilter kinds={availableKinds} value={kindInput} onChange={setKindInput} />
+                            <KindFilter kinds={availableKinds} value={kindInput} onChange={handleKindChange} />
                         )}
 
                         <PillButton type="submit" tone="sky" size="sm">
@@ -192,11 +236,14 @@ export default function AiUsage({
                         </PillButton>
 
                         <div className="ml-auto flex flex-wrap gap-2">
-                            <PresetButton label="Hari ini" href={`/ai-usage?from=${todayLocalIso()}&to=${todayLocalIso()}`} />
-                            <PresetButton label="7 hari" href={`/ai-usage?from=${isoDaysAgoLocal(6)}&to=${todayLocalIso()}`} />
-                            <PresetButton label="30 hari" href={`/ai-usage?from=${isoDaysAgoLocal(29)}&to=${todayLocalIso()}`} />
-                            <PresetButton label="Bulan ini" href={`/ai-usage?from=${isoStartOfMonthLocal()}&to=${todayLocalIso()}`} />
-                            <PresetButton label="Semua" href={`/ai-usage?from=1970-01-01&to=${todayLocalIso()}`} />
+                            {PRESETS.map((preset) => (
+                                <PresetButton
+                                    key={preset.token}
+                                    label={preset.label}
+                                    href={presetHref(preset.token, kind)}
+                                    active={range === preset.token}
+                                />
+                            ))}
                         </div>
                     </form>
                 </Card>
@@ -214,8 +261,26 @@ export default function AiUsage({
                 </p>
 
                 <section className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
-                    <KpiTile label="Total Tokens" value={fmt(totals.total)} sub={`${totals.calls} call`} />
-                    <KpiTile label="Estimasi Biaya" value={formatCost(totals.cost, currency)} sub={`${fmt(avgPerCall)} token/call`} />
+                    <KpiTile
+                        label="Total Tokens"
+                        value={fmt(totals.total)}
+                        sub={
+                            <>
+                                {totals.calls} call
+                                <DeltaChip current={totals.total} previous={previousTotals?.total ?? null} />
+                            </>
+                        }
+                    />
+                    <KpiTile
+                        label="Estimasi Biaya"
+                        value={formatCost(totals.cost, currency)}
+                        sub={
+                            <>
+                                {`${fmt(avgPerCall)} token/call`}
+                                <DeltaChip current={totals.cost} previous={previousTotals?.cost ?? null} />
+                            </>
+                        }
+                    />
                     <KpiTile label="Prompt" value={fmt(totals.prompt)} sub={`${promptShare}% dari total`} />
                     <KpiTile
                         label="Terpotong"
@@ -578,11 +643,38 @@ function DateField({
     );
 }
 
-function PresetButton({ label, href }: Readonly<{ label: string; href: string }>) {
+function PresetButton({ label, href, active }: Readonly<{ label: string; href: string; active: boolean }>) {
     return (
-        <Link href={href} preserveScroll className={cn(toggleButtonVariants({ size: 'sm', selected: false }))}>
+        <Link href={href} preserveScroll className={cn(toggleButtonVariants({ size: 'sm', selected: active }))}>
             {label}
         </Link>
+    );
+}
+
+/**
+ * Small "vs periode sebelumnya" delta next to a KPI. Hidden when there is no
+ * comparable prior window (range=all) or the prior window had no data.
+ */
+function DeltaChip({ current, previous }: Readonly<{ current: number; previous: number | null }>) {
+    if (previous === null) {
+        return null;
+    }
+    if (previous <= 0) {
+        return current > 0 ? <span className="ml-1.5 text-ink-3">· baru</span> : null;
+    }
+
+    const pct = Math.round(((current - previous) / previous) * 100);
+    let arrow = '·';
+    if (pct > 0) {
+        arrow = '▲';
+    } else if (pct < 0) {
+        arrow = '▼';
+    }
+
+    return (
+        <span className="ml-1.5 text-ink-3">
+            {arrow} {Math.abs(pct)}% vs sblm
+        </span>
     );
 }
 

@@ -29,6 +29,7 @@ class TokenUsageReport
     /**
      * @return array{
      *     totals: array{prompt:int, completion:int, total:int, calls:int, truncated_calls:int, cost:float},
+     *     previousTotals: array{prompt:int, completion:int, total:int, calls:int, cost:float}|null,
      *     byKind: list<array{kind:string, prompt:int, completion:int, total:int, calls:int, truncated_calls:int, avg_latency_ms:int|null, max_latency_ms:int|null, cost:float}>,
      *     byDeployment: list<array{deployment:string, prompt:int, completion:int, total:int, calls:int, cost:float, inputPer1m:float|null, outputPer1m:float|null}>,
      *     byUser: list<array{user_id:int, user_name:string|null, prompt:int, completion:int, total:int, calls:int}>,
@@ -37,7 +38,7 @@ class TokenUsageReport
      *     budget: array{todayCost:float, dailyCeiling:float|null, currency:string},
      * }
      */
-    public function build(Carbon $from, Carbon $to, ?string $kind): array
+    public function build(Carbon $from, Carbon $to, ?string $kind, bool $includePrevious = true): array
     {
         $baseQuery = DB::connection('analytics')->table('ai_token_usages')
             ->whereBetween('created_at', [$from, $to]);
@@ -46,13 +47,14 @@ class TokenUsageReport
             $baseQuery->where('kind', $kind);
         }
 
-        $totalsAndByKind = $this->totalsAndByKind($baseQuery);
+        $aggregate = $this->aggregate($baseQuery);
         $ceiling = config('azure_openai.daily_cost_ceiling');
 
         return [
-            'totals' => $totalsAndByKind['totals'],
-            'byKind' => $totalsAndByKind['byKind'],
-            'byDeployment' => $this->byDeployment($baseQuery),
+            'totals' => $aggregate['totals'],
+            'previousTotals' => $includePrevious ? $this->previousTotals($from, $to, $kind) : null,
+            'byKind' => $aggregate['byKind'],
+            'byDeployment' => $aggregate['byDeployment'],
             'byUser' => $this->byUser($baseQuery),
             'daily' => $this->daily($from, $to),
             'availableKinds' => $this->availableKinds($from, $to),
@@ -65,10 +67,19 @@ class TokenUsageReport
     }
 
     /**
+     * Single (kind, model) aggregate scan that feeds totals, the per-kind
+     * breakdown, AND the per-deployment breakdown. byDeployment is rolled up
+     * from the same rows (summed across kinds per model) rather than issuing a
+     * second GROUP BY model scan over the range.
+     *
      * @param  Builder  $baseQuery
-     * @return array{totals: array{prompt:int, completion:int, total:int, calls:int, truncated_calls:int, cost:float}, byKind: list<array{kind:string, prompt:int, completion:int, total:int, calls:int, truncated_calls:int, avg_latency_ms:int|null, max_latency_ms:int|null, cost:float}>}
+     * @return array{
+     *     totals: array{prompt:int, completion:int, total:int, calls:int, truncated_calls:int, cost:float},
+     *     byKind: list<array{kind:string, prompt:int, completion:int, total:int, calls:int, truncated_calls:int, avg_latency_ms:int|null, max_latency_ms:int|null, cost:float}>,
+     *     byDeployment: list<array{deployment:string, prompt:int, completion:int, total:int, calls:int, cost:float, inputPer1m:float|null, outputPer1m:float|null}>,
+     * }
      */
-    private function totalsAndByKind(Builder $baseQuery): array
+    private function aggregate(Builder $baseQuery): array
     {
         $rows = (clone $baseQuery)
             ->selectRaw(
@@ -84,11 +95,14 @@ class TokenUsageReport
 
         /** @var array<string, array{kind:string, prompt:int, completion:int, total:int, calls:int, truncated_calls:int, avg_sum:float, latency_calls:int, max_latency_ms:int|null, cost:float}> $kinds */
         $kinds = [];
+        /** @var array<string, array{prompt:int, completion:int, total:int, calls:int}> $models */
+        $models = [];
         foreach ($rows as $row) {
             $kindKey = (string) $row->kind;
+            $modelKey = (string) $row->model;
             $prompt = (int) $row->prompt;
             $completion = (int) $row->completion;
-            $cost = $this->costCalculator->costFor((string) $row->model, $prompt, $completion);
+            $cost = $this->costCalculator->costFor($modelKey, $prompt, $completion);
 
             if (! isset($kinds[$kindKey])) {
                 $kinds[$kindKey] = [
@@ -118,6 +132,14 @@ class TokenUsageReport
                 );
             }
 
+            if (! isset($models[$modelKey])) {
+                $models[$modelKey] = ['prompt' => 0, 'completion' => 0, 'total' => 0, 'calls' => 0];
+            }
+            $models[$modelKey]['prompt'] += $prompt;
+            $models[$modelKey]['completion'] += $completion;
+            $models[$modelKey]['total'] += (int) $row->total;
+            $models[$modelKey]['calls'] += (int) $row->calls;
+
             $totals['prompt'] += $prompt;
             $totals['completion'] += $completion;
             $totals['total'] += (int) $row->total;
@@ -144,45 +166,74 @@ class TokenUsageReport
         // Preserve the original "order by total tokens descending" contract.
         usort($byKind, fn (array $a, array $b): int => $b['total'] <=> $a['total']);
 
-        return ['totals' => $totals, 'byKind' => $byKind];
+        return ['totals' => $totals, 'byKind' => $byKind, 'byDeployment' => $this->byDeployment($models)];
     }
 
     /**
-     * Per-deployment (model) breakdown with $ cost, ordered by total tokens.
+     * Per-deployment (model) breakdown with $ cost, ordered by total tokens,
+     * built from the already-scanned (kind, model) rows.
      *
-     * @param  Builder  $baseQuery
+     * @param  array<string, array{prompt:int, completion:int, total:int, calls:int}>  $models
      * @return list<array{deployment:string, prompt:int, completion:int, total:int, calls:int, cost:float, inputPer1m:float|null, outputPer1m:float|null}>
      */
-    private function byDeployment(Builder $baseQuery): array
+    private function byDeployment(array $models): array
     {
-        $rows = (clone $baseQuery)
-            ->selectRaw(
-                'model, SUM(prompt_tokens) as prompt, SUM(completion_tokens) as completion, '.
-                'SUM(total_tokens) as total, COUNT(*) as calls'
-            )
-            ->groupBy('model')
-            ->orderByDesc('total')
-            ->get();
-
         $byDeployment = [];
-        foreach ($rows as $row) {
-            $deployment = (string) $row->model;
-            $prompt = (int) $row->prompt;
-            $completion = (int) $row->completion;
+        foreach ($models as $deployment => $m) {
             $rate = $this->costCalculator->priceFor($deployment);
             $byDeployment[] = [
                 'deployment' => $deployment,
-                'prompt' => $prompt,
-                'completion' => $completion,
-                'total' => (int) $row->total,
-                'calls' => (int) $row->calls,
-                'cost' => $this->costCalculator->costFor($deployment, $prompt, $completion),
+                'prompt' => $m['prompt'],
+                'completion' => $m['completion'],
+                'total' => $m['total'],
+                'calls' => $m['calls'],
+                'cost' => $this->costCalculator->costFor($deployment, $m['prompt'], $m['completion']),
                 'inputPer1m' => $rate['input_per_1m'] ?? null,
                 'outputPer1m' => $rate['output_per_1m'] ?? null,
             ];
         }
 
+        usort($byDeployment, fn (array $a, array $b): int => $b['total'] <=> $a['total']);
+
         return $byDeployment;
+    }
+
+    /**
+     * Token/cost totals for the equal-length window immediately before $from,
+     * for the "vs periode sebelumnya" deltas. Grouped by model so each row is
+     * costed against its own deployment rate before summing.
+     *
+     * @return array{prompt:int, completion:int, total:int, calls:int, cost:float}
+     */
+    private function previousTotals(Carbon $from, Carbon $to, ?string $kind): array
+    {
+        $prevTo = $from->copy()->subSecond();
+        $prevFrom = $prevTo->copy()->subSeconds($to->getTimestamp() - $from->getTimestamp());
+
+        $query = DB::connection('analytics')->table('ai_token_usages')
+            ->whereBetween('created_at', [$prevFrom, $prevTo]);
+
+        if ($kind !== null) {
+            $query->where('kind', $kind);
+        }
+
+        $rows = $query->selectRaw(
+            'model, SUM(prompt_tokens) as prompt, SUM(completion_tokens) as completion, '.
+            'SUM(total_tokens) as total, COUNT(*) as calls'
+        )->groupBy('model')->get();
+
+        $totals = ['prompt' => 0, 'completion' => 0, 'total' => 0, 'calls' => 0, 'cost' => 0.0];
+        foreach ($rows as $row) {
+            $prompt = (int) $row->prompt;
+            $completion = (int) $row->completion;
+            $totals['prompt'] += $prompt;
+            $totals['completion'] += $completion;
+            $totals['total'] += (int) $row->total;
+            $totals['calls'] += (int) $row->calls;
+            $totals['cost'] += $this->costCalculator->costFor((string) $row->model, $prompt, $completion);
+        }
+
+        return $totals;
     }
 
     /**
