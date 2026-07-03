@@ -7,6 +7,7 @@ namespace App\Console\Commands;
 use App\Models\Activity;
 use App\Models\AI\Analysis;
 use App\Models\AI\TokenUsage;
+use App\Models\PersonalRecord;
 use App\Models\RunCard;
 use App\Models\User;
 use App\Models\WeeklySnapshot;
@@ -25,7 +26,7 @@ class UserRemoveCommand extends Command
     /**
      * ai_analyses subject_type strings keyed directly by user id (the per-user /
      * per-day / per-month narration subjects). Activity / RunCard / WeeklySnapshot
-     * subjects are matched by their own ids instead.
+     * / PersonalRecord subjects are matched by their own ids instead.
      */
     private const array USER_SUBJECT_TYPES = [
         AnalysisType::BRIEFING_SUBJECT_TYPE,
@@ -56,8 +57,9 @@ class UserRemoveCommand extends Command
         $activityIds = Activity::query()->where('user_id', $id)->pluck('id');
         $cardIds = RunCard::query()->whereIn('activity_id', $activityIds)->pluck('id');
         $snapshotIds = WeeklySnapshot::query()->where('user_id', $id)->pluck('id');
+        $personalRecordIds = PersonalRecord::query()->where('user_id', $id)->pluck('id');
 
-        $analysisCount = $this->analysisQuery($id, $activityIds, $cardIds, $snapshotIds)->count();
+        $analysisCount = $this->analysisQuery($id, $activityIds, $cardIds, $snapshotIds, $personalRecordIds)->count();
         $tokenUsageCount = TokenUsage::query()->where('user_id', $id)->count();
 
         $this->table(['What', 'Count'], [
@@ -65,6 +67,7 @@ class UserRemoveCommand extends Command
             ['Activities (+ details, streams, cards, PRs, story lines)', (string) $activityIds->count()],
             ['Run cards', (string) $cardIds->count()],
             ['Weekly snapshots', (string) $snapshotIds->count()],
+            ['Personal records', (string) $personalRecordIds->count()],
             ['AI analyses (deleted)', (string) $analysisCount],
             ['AI token-usage rows (KEPT, will orphan)', (string) $tokenUsageCount],
         ]);
@@ -76,10 +79,19 @@ class UserRemoveCommand extends Command
             return self::SUCCESS;
         }
 
-        DB::transaction(function () use ($id, $activityIds, $cardIds, $snapshotIds, $user): void {
+        DB::transaction(function () use ($id, $user): void {
+            // Re-resolve the owned ids inside the transaction rather than reusing
+            // the ones fetched for the preview table: activity/card/etc rows can
+            // be created for this user (e.g. a Strava webhook) in the window
+            // between the preview and an interactive confirmation.
+            $activityIds = Activity::query()->where('user_id', $id)->pluck('id');
+            $cardIds = RunCard::query()->whereIn('activity_id', $activityIds)->pluck('id');
+            $snapshotIds = WeeklySnapshot::query()->where('user_id', $id)->pluck('id');
+            $personalRecordIds = PersonalRecord::query()->where('user_id', $id)->pluck('id');
+
             // ai_analyses is polymorphic with no user FK, so it never cascades:
             // delete it explicitly before the user row.
-            $this->analysisQuery($id, $activityIds, $cardIds, $snapshotIds)->delete();
+            $this->analysisQuery($id, $activityIds, $cardIds, $snapshotIds, $personalRecordIds)->delete();
 
             // Everything else (activities -> details/streams/cards/PRs, story
             // lines, snapshots, unlocks, profiles, connections) cascades off the
@@ -94,20 +106,23 @@ class UserRemoveCommand extends Command
 
     /**
      * All ai_analyses rows owned by the user: their activity / card / snapshot
-     * subjects, plus the user-keyed daily/monthly/persona subjects.
+     * / personal-record subjects, plus the user-keyed daily/monthly/persona
+     * subjects.
      *
      * @param  Collection<int, int>  $activityIds
      * @param  Collection<int, int>  $cardIds
      * @param  Collection<int, int>  $snapshotIds
+     * @param  Collection<int, int>  $personalRecordIds
      * @return Builder<Analysis>
      */
-    private function analysisQuery(int $userId, Collection $activityIds, Collection $cardIds, Collection $snapshotIds): Builder
+    private function analysisQuery(int $userId, Collection $activityIds, Collection $cardIds, Collection $snapshotIds, Collection $personalRecordIds): Builder
     {
-        return Analysis::query()->where(function (Builder $query) use ($userId, $activityIds, $cardIds, $snapshotIds): void {
+        return Analysis::query()->where(function (Builder $query) use ($userId, $activityIds, $cardIds, $snapshotIds, $personalRecordIds): void {
             $query
                 ->where(fn (Builder $q) => $q->where('subject_type', Activity::class)->whereIn('subject_id', $activityIds))
                 ->orWhere(fn (Builder $q) => $q->where('subject_type', RunCard::class)->whereIn('subject_id', $cardIds))
                 ->orWhere(fn (Builder $q) => $q->where('subject_type', WeeklySnapshot::class)->whereIn('subject_id', $snapshotIds))
+                ->orWhere(fn (Builder $q) => $q->where('subject_type', PersonalRecord::class)->whereIn('subject_id', $personalRecordIds))
                 ->orWhere(fn (Builder $q) => $q->whereIn('subject_type', self::USER_SUBJECT_TYPES)->where('subject_id', $userId));
         });
     }

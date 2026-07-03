@@ -18,9 +18,10 @@ uses(RefreshDatabase::class);
 
 /**
  * Seed a user with one run (+ card, story line, PR), a weekly snapshot, an
- * activity-subject and a user-subject analysis, and two token-usage rows.
+ * activity-subject, a personal-record-subject and a user-subject analysis,
+ * and two token-usage rows.
  *
- * @return array{user: User, activity: Activity, card: RunCard, snapshot: WeeklySnapshot}
+ * @return array{user: User, activity: Activity, card: RunCard, snapshot: WeeklySnapshot, personalRecord: PersonalRecord}
  */
 function seedUserWithData(): array
 {
@@ -29,13 +30,19 @@ function seedUserWithData(): array
     ActivityDetail::factory()->for($activity)->create();
     $card = RunCard::factory()->for($activity)->create();
     StoryLine::factory()->for($user)->create(['activity_id' => $activity->id]);
-    PersonalRecord::factory()->for($user)->create(['activity_id' => $activity->id]);
+    $personalRecord = PersonalRecord::factory()->for($user)->create(['activity_id' => $activity->id]);
     $snapshot = WeeklySnapshot::factory()->for($user)->create();
 
     Analysis::factory()->create([
         'subject_type' => Activity::class,
         'subject_id' => $activity->id,
         'analysis_type' => AnalysisType::PostRunSpeech,
+        'discriminator' => null,
+    ]);
+    Analysis::factory()->create([
+        'subject_type' => PersonalRecord::class,
+        'subject_id' => $personalRecord->id,
+        'analysis_type' => AnalysisType::PrContext,
         'discriminator' => null,
     ]);
     Analysis::factory()->create([
@@ -62,11 +69,11 @@ function seedUserWithData(): array
         'created_at' => now(),
     ]);
 
-    return ['user' => $user, 'activity' => $activity, 'card' => $card, 'snapshot' => $snapshot];
+    return ['user' => $user, 'activity' => $activity, 'card' => $card, 'snapshot' => $snapshot, 'personalRecord' => $personalRecord];
 }
 
 it('removes the user and all owned data, deletes their analyses, but keeps ai_token_usages', function (): void {
-    ['user' => $user, 'activity' => $activity, 'card' => $card, 'snapshot' => $snapshot] = seedUserWithData();
+    ['user' => $user, 'activity' => $activity, 'card' => $card, 'snapshot' => $snapshot, 'personalRecord' => $personalRecord] = seedUserWithData();
     $bystander = seedUserWithData();
 
     $this->artisan('user:remove', ['id' => $user->id, '--force' => true])
@@ -80,8 +87,9 @@ it('removes the user and all owned data, deletes their analyses, but keeps ai_to
         ->and(PersonalRecord::query()->where('user_id', $user->id)->exists())->toBeFalse()
         ->and(WeeklySnapshot::query()->whereKey($snapshot->id)->exists())->toBeFalse();
 
-    // Both analyses (activity-subject + user-subject) are deleted.
+    // All analyses (activity-subject + personal-record-subject + user-subject) are deleted.
     expect(Analysis::query()->where('subject_type', Activity::class)->where('subject_id', $activity->id)->exists())->toBeFalse()
+        ->and(Analysis::query()->where('subject_type', PersonalRecord::class)->where('subject_id', $personalRecord->id)->exists())->toBeFalse()
         ->and(Analysis::query()->where('subject_type', AnalysisType::DAILY_GREETING_SUBJECT_TYPE)->where('subject_id', $user->id)->exists())->toBeFalse();
 
     // Token-usage rows are kept (now orphaned) for cost history.
