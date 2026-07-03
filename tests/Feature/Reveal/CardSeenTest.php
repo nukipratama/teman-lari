@@ -117,6 +117,7 @@ it('shares pendingReveal payload (incl. km/duration/trimp) when a card is flagge
             'time_in_zone_pct' => ['Z2' => 80, 'Z3' => 20],
             'negative_split' => true,
         ],
+        'weather_temp_c' => 25,
     ]);
     $card = RunCard::factory()->for($activity)->create([
         'rarity' => 'epic',

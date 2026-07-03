@@ -76,6 +76,7 @@ it('picks mumet mood on a hard grind (≥80% Z3+ time) without a controlled fini
     $detail = ActivityDetail::factory()->for($activity)->create([
         'distance' => 5_000,
         'stream_summary' => ['time_in_zone_pct' => ['Z2' => 20, 'Z3' => 50, 'Z4' => 30]],
+        'weather_temp_c' => 25,
     ]);
 
     expect(app(Temari::class)->postRunLine($activity, $detail)->mood)
@@ -120,6 +121,7 @@ it('picks enteng for a hard session that was controlled but not clean enough for
             'negative_split' => true,
             'decoupling_pct' => 9.0,
         ],
+        'weather_temp_c' => 25,
     ]);
 
     expect(app(Temari::class)->postRunLine($activity, $detail)->mood)
