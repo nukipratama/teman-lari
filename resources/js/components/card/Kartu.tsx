@@ -183,7 +183,7 @@ export default function Kartu({
             <div className="relative flex-1 overflow-hidden rounded-[11px]" style={artStyle}>
                 {/* Route hero */}
                 <div className="absolute inset-0">
-                    <RouteGlyph rarity={rarity} color={rarityHex} polyline={polyline} paceShape={paceShape} />
+                    <RouteGlyph rarity={rarity} color={rarityHex} polyline={polyline} paceShape={paceShape} distanceKm={Number.parseFloat(km)} />
                 </div>
 
                 {/* Bunny corner companion */}
