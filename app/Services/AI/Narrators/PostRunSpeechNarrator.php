@@ -92,8 +92,7 @@ class PostRunSpeechNarrator
             'negative_split' => $shared->negativeSplit,
             'weather_temp_c' => $shared->weatherTempC,
             'weather_rain' => $shared->weatherRain,
-            'prev_narrative' => $prevNarrative,
-            'prev_opener' => NarratorContinuity::opener($prevNarrative),
+            ...NarratorContinuity::fields($prevNarrative),
         ];
     }
 }

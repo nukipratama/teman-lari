@@ -129,8 +129,7 @@ class BriefingMascotVoiceNarrator
             'recent_runs' => $verdictSummary,
             'date' => $ctx->asOf->toDateString(),
             'context' => BriefingContext::forUser($ctx->user, $ctx->asOf)->toArray(),
-            'prev_narrative' => $prevNarrative,
-            'prev_opener' => NarratorContinuity::opener($prevNarrative),
+            ...NarratorContinuity::fields($prevNarrative),
         ];
     }
 }

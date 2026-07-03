@@ -26,3 +26,19 @@ it('does not pad a short narrative', function (): void {
     expect(NarratorContinuity::opener('Lari kemarin enteng banget.'))
         ->toBe('Lari kemarin enteng banget.');
 });
+
+it('bundles prev_narrative and prev_opener into one context slice', function (): void {
+    expect(NarratorContinuity::fields('Lari kemarin enteng banget.'))
+        ->toBe([
+            'prev_narrative' => 'Lari kemarin enteng banget.',
+            'prev_opener' => 'Lari kemarin enteng banget.',
+        ]);
+});
+
+it('bundles null fields when there is no previous narrative', function (): void {
+    expect(NarratorContinuity::fields(null))
+        ->toBe([
+            'prev_narrative' => null,
+            'prev_opener' => null,
+        ]);
+});

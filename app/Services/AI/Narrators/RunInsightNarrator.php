@@ -150,8 +150,7 @@ class RunInsightNarrator
             'weather_humidity_pct' => $detail->weather_humidity_pct,
             'training_load' => $this->trainingLoadContext($activity, $asOf),
             'recent_baseline_28d' => $this->baseline->forUserAsOf($activity->user_id, $asOf, $activity->id),
-            'prev_narrative' => $prevNarrative,
-            'prev_opener' => NarratorContinuity::opener($prevNarrative),
+            ...NarratorContinuity::fields($prevNarrative),
         ];
     }
 

@@ -38,4 +38,19 @@ final class NarratorContinuity
     {
         return $narrative === null ? null : Str::words($narrative, $words, '');
     }
+
+    /**
+     * The prev_narrative + prev_opener pair every chained narrator's context
+     * array carries. Spread into the return array so the two keys and their
+     * derivation stay defined in one place.
+     *
+     * @return array{prev_narrative: string|null, prev_opener: string|null}
+     */
+    public static function fields(?string $prevNarrative): array
+    {
+        return [
+            'prev_narrative' => $prevNarrative,
+            'prev_opener' => self::opener($prevNarrative),
+        ];
+    }
 }

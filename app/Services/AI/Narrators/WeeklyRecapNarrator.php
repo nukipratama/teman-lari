@@ -92,8 +92,7 @@ class WeeklyRecapNarrator
             'prev_runs' => $previous?->runs,
             'prev_distance_km' => $previous?->distance_km,
             'prev_pace_sec_per_km' => $previous === null ? null : $this->paceFor($previous),
-            'prev_narrative' => $prevNarrative,
-            'prev_opener' => NarratorContinuity::opener($prevNarrative),
+            ...NarratorContinuity::fields($prevNarrative),
         ];
     }
 

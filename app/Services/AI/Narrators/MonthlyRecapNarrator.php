@@ -121,8 +121,7 @@ class MonthlyRecapNarrator
             'pr_count' => $prCount,
             'weekly_distance_km' => $weeklyKm,
             'mood_mix' => $moodMix,
-            'prev_narrative' => $prevNarrative,
-            'prev_opener' => NarratorContinuity::opener($prevNarrative),
+            ...NarratorContinuity::fields($prevNarrative),
         ];
     }
 

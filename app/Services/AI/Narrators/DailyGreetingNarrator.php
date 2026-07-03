@@ -74,8 +74,7 @@ class DailyGreetingNarrator
             'name' => $user->firstName(),
             'vibe' => $vibeState,
             'vibe_label' => Vibe::label($vibeState),
-            'prev_narrative' => $prevNarrative,
-            'prev_opener' => NarratorContinuity::opener($prevNarrative),
+            ...NarratorContinuity::fields($prevNarrative),
         ];
     }
 }
