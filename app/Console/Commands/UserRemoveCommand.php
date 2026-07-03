@@ -72,11 +72,21 @@ class UserRemoveCommand extends Command
             ['AI token-usage rows (KEPT, will orphan)', (string) $tokenUsageCount],
         ]);
 
-        if (! $this->option('force')
-            && ! $this->confirm("Permanently remove user {$id} and all owned data? This cannot be undone.")) {
-            $this->info('Aborted, nothing removed.');
+        if (! $this->option('force')) {
+            // Without a TTY (e.g. `docker exec` with no -it), confirm() can't read
+            // input and silently returns its default, which reads as the command
+            // doing nothing. Fail loudly and point at the two ways forward.
+            if (! $this->input->isInteractive()) {
+                $this->error('No interactive terminal to confirm on. Re-run with a TTY (docker exec -it ...) or pass --force to skip the prompt.');
 
-            return self::SUCCESS;
+                return self::FAILURE;
+            }
+
+            if (! $this->confirm("Permanently remove user {$id} and all owned data? This cannot be undone.")) {
+                $this->info('Aborted, nothing removed.');
+
+                return self::SUCCESS;
+            }
         }
 
         DB::transaction(function () use ($id, $user): void {

@@ -127,6 +127,28 @@ it('aborts and removes nothing when the confirmation is declined', function (): 
         ->and(Activity::query()->where('user_id', $user->id)->exists())->toBeTrue();
 });
 
+it('fails loudly instead of silently aborting when run non-interactively without --force', function (): void {
+    ['user' => $user] = seedUserWithData();
+
+    // No TTY (e.g. `docker exec` without -it) means confirm() can't read input;
+    // the command must error and remove nothing rather than silently default to no.
+    $this->artisan('user:remove', ['id' => $user->id, '--no-interaction' => true])
+        ->expectsOutputToContain('No interactive terminal to confirm on.')
+        ->assertFailed();
+
+    expect(User::query()->find($user->id))->not->toBeNull()
+        ->and(Activity::query()->where('user_id', $user->id)->exists())->toBeTrue();
+});
+
+it('removes non-interactively when --force is passed', function (): void {
+    ['user' => $user] = seedUserWithData();
+
+    $this->artisan('user:remove', ['id' => $user->id, '--force' => true, '--no-interaction' => true])
+        ->assertSuccessful();
+
+    expect(User::query()->find($user->id))->toBeNull();
+});
+
 it('removes the user after an interactive confirmation', function (): void {
     ['user' => $user] = seedUserWithData();
 
