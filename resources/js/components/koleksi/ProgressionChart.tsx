@@ -22,6 +22,7 @@ import {
     LinearScale,
     PointElement,
     Tooltip,
+    type Plugin,
 } from 'chart.js';
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Filler, Tooltip, Legend);
@@ -31,15 +32,13 @@ ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Filler, 
  * value (every point would clutter a multi-week series), so the progression reads
  * without hovering for a tooltip.
  */
-const endpointLabelsPlugin = {
+const endpointLabelsPlugin: Plugin<'line'> = {
     id: 'endpointLabels',
-    afterDatasetsDraw(chart: {
-        ctx: CanvasRenderingContext2D;
-        data: { datasets: Array<{ data: Array<number | null> }> };
-        getDatasetMeta: (i: number) => { data: Array<{ x: number; y: number }> };
-    }) {
+    afterDatasetsDraw(chart) {
         const points = chart.getDatasetMeta(0).data;
-        const values = chart.data.datasets[0]?.data ?? [];
+        // Dataset 0 ("Best time") is always fed plain `number | null` values (never
+        // Chart.js's `Point` object form) — see the `data` prop below.
+        const values = (chart.data.datasets[0]?.data ?? []) as Array<number | null>;
         const drawn = new Set<number>();
         const indices = [values.findIndex((v) => v != null), lastDefinedIndex(values)];
         const ctx = chart.ctx;

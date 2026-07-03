@@ -40,7 +40,7 @@ export default function RouteGlyph({ polyline, paceShape, rarity, color, distanc
     const route = useMemo(() => projectPolyline(polyline, VB_W, VB_H, PAD, MAX_POINTS), [polyline]);
     if (route !== null) {
         const d = route.points.map((p, i) => `${i === 0 ? 'M' : 'L'}${p[0].toFixed(1)} ${p[1].toFixed(1)}`).join(' ');
-        const strokeWidth = distanceKm != null ? Math.max(2.2, 3.8 - Math.log2(Math.max(distanceKm, 1)) * 0.5) : 3.8;
+        const strokeWidth = distanceKm != null && Number.isFinite(distanceKm) ? Math.max(2.2, 3.8 - Math.log2(Math.max(distanceKm, 1)) * 0.5) : 3.8;
         const finish = route.points.at(-1) ?? route.start;
         // Only mark the finish separately on point-to-point routes; on a loop the ring
         // would sit on top of the start dot (start≈finish is itself the "loop" cue).

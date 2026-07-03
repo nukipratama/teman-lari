@@ -52,7 +52,7 @@ LLM narration renders `**…**` via [`renderBold`](../resources/js/lib/richText.
 
 Tiers escalate as **felt specialness**, in plain Indonesian (no borrowed loot-game `Epik`):
 
-`Biasa · Berkesan · Langka · Luar Biasa · Legendaris`
+`Biasa · Berkesan · Langka · Istimewa · Legendaris`
 
 Labels only — the `Rarity` enum cases (`common…legendary`) and `rarity-*` color tokens are unchanged. Source of truth: [Rarity.php](../app/Enums/Rarity.php) and [runcard.ts](../resources/js/lib/runcard.ts); keep them in sync.
 
@@ -70,7 +70,7 @@ Labels only — the `Rarity` enum cases (`common…legendary`) and `rarity-*` co
 | KPI | `Form` | `Kesiapan` |
 | Milestone | `… Quality day!` | `… Lari berkualitas!` |
 | Special move | `Mode Metronom` | `Metronom` |
-| Rarity (epic) | `Epik` | `Luar Biasa` |
+| Rarity (epic) | `Epik` | `Istimewa` |
 
 ## LLM prompts
 

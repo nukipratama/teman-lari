@@ -46,7 +46,6 @@ type DetailedActivityDetail = ActivityDetail & {
 };
 
 type DetailedActivity = Activity & {
-    strava_external_id?: string | number | null;
     analyzed_at?: string | null;
     detail: DetailedActivityDetail;
 };
