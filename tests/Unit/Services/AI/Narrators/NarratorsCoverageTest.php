@@ -46,12 +46,23 @@ beforeEach(function (): void {
 
 function fakeCaller(string $content): StructuredChatCaller
 {
+    return capturingCaller($content)[0];
+}
+
+/**
+ * Like {@see fakeCaller} but also returns the underlying ClientFake so a test can
+ * assert on the exact request payload sent to Azure.
+ *
+ * @return array{0: StructuredChatCaller, 1: ClientFake}
+ */
+function capturingCaller(string $content): array
+{
     $client = new ClientFake([fakeAzureResponse($content)]);
     $azure = Mockery::mock(AzureOpenAIClient::class);
     $azure->shouldReceive('client')->andReturn($client);
     $azure->shouldReceive('deploymentFor')->andReturn('gpt-test');
 
-    return new StructuredChatCaller($azure, app(TokenUsageRecorder::class));
+    return [new StructuredChatCaller($azure, app(TokenUsageRecorder::class)), $client];
 }
 
 // ── PostRunSpeechNarrator ─────────────────────────────────────────────
@@ -586,6 +597,24 @@ it('CardFlavorNarrator throws on non-JSON', function (): void {
     $narrator = new CardFlavorNarrator($caller);
     $narrator->generate($card);
 })->throws(UnavailableException::class, 'non-JSON');
+
+it('CardFlavorNarrator humanizes badge slugs so no raw code reaches the prompt', function (): void {
+    $card = cardFixture();
+    $card->update(['badges' => ['negative_split', 'pejuang_hujan', 'not_a_real_badge']]);
+
+    [$caller, $client] = capturingCaller(json_encode(['flavor' => 'ok'], JSON_THROW_ON_ERROR));
+    (new CardFlavorNarrator($caller))->generate($card->fresh());
+
+    $client->assertSent(OpenAI\Resources\Responses::class, function (string $method, array $params): bool {
+        $payload = json_encode($params, JSON_THROW_ON_ERROR);
+
+        return str_contains($payload, 'Negative Split')
+            && str_contains($payload, 'Pejuang Hujan')
+            && ! str_contains($payload, 'negative_split')
+            && ! str_contains($payload, 'pejuang_hujan')
+            && ! str_contains($payload, 'not_a_real_badge');
+    });
+});
 
 // ── PersonaSummaryNarrator ────────────────────────────────────────────
 

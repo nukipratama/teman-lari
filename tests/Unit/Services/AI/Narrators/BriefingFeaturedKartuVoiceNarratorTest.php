@@ -58,11 +58,21 @@ it('returns the kartu voice for the resolved card from a valid LLM response', fu
     $user = User::factory()->create(['name' => 'Ada Lovelace']);
     $card = featuredCard($user, Rarity::Legendary, 12000.0, ['anak_pagi', 'negative_split', 'tahan_diri', 'hari_panas']);
 
-    ['narrator' => $narrator] = bootFeaturedKartuNarrator(json_encode([
+    ['narrator' => $narrator, 'client' => $client] = bootFeaturedKartuNarrator(json_encode([
         'kartu_voice' => 'Aku kasih kartu ini karena 12 km tadi solid.',
     ], JSON_THROW_ON_ERROR));
 
     expect($narrator->generate($user, $card))->toBe('Aku kasih kartu ini karena 12 km tadi solid.');
+
+    // Badge slugs are humanized before the prompt, capped at 3 tags.
+    $client->assertSent(OpenAI\Resources\Responses::class, function (string $method, array $params): bool {
+        $payload = json_encode($params, JSON_THROW_ON_ERROR);
+
+        return str_contains($payload, 'Anak Pagi')
+            && ! str_contains($payload, 'anak_pagi')
+            && ! str_contains($payload, 'negative_split')
+            && ! str_contains($payload, 'tahan_diri');
+    });
 });
 
 it('returns a fallback line and skips the LLM when there is no featured card', function (): void {

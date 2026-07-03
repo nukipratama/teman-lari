@@ -79,4 +79,27 @@ enum Badge: string
             array_map(fn (self $b): string => $b->label(), self::cases()),
         );
     }
+
+    /**
+     * Emoji-free label for LLM prompt context, so the model has a human phrase to
+     * weave in instead of echoing the raw snake_case slug ("negative_split").
+     */
+    public function promptLabel(): string
+    {
+        return (string) preg_replace('/^[^\p{L}]+/u', '', $this->label());
+    }
+
+    /**
+     * Map a list of badge slugs to their prompt labels, dropping any unknown slug.
+     *
+     * @param  array<int, string>  $slugs
+     * @return array<int, string>
+     */
+    public static function promptLabelsFor(array $slugs): array
+    {
+        return array_values(array_filter(array_map(
+            fn (string $slug): ?string => self::tryFrom($slug)?->promptLabel(),
+            $slugs,
+        )));
+    }
 }
