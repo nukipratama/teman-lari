@@ -13,6 +13,8 @@ import BackLink from '@/components/ui/BackLink';
 import MoodChip from '@/components/ui/MoodChip';
 import SectionLabel from '@/components/ui/SectionLabel';
 import StatTile from '@/components/ui/StatTile';
+import MetricExplainer from '@/components/MetricExplainer';
+import type { MetricKey } from '@/lib/metricGlossary';
 import ProgressBar from '@/components/ui/ProgressBar';
 import Temari from '@/components/temari/Temari';
 import { type TemariPose } from '@/components/temari/TemariProto';
@@ -179,7 +181,7 @@ export default function RunsShow({
                                 <StatTile tone="plainSky" size="md" label="DURASI" value={kartuProps.durasi} />
                                 <StatTile tone="plainSky" size="md" label="PACE" value={pace} unit="/km" />
                                 <StatTile tone="plainSky" size="md" label="HR" value={hr != null ? `${hr}` : '—'} unit="bpm" />
-                                <StatTile tone="plainSky" size="md" label="TRIMP" value={trimp != null ? `${trimp}` : '—'} unit="Edwards" />
+                                <StatTile tone="plainSky" size="md" label="TRIMP" value={trimp != null ? `${trimp}` : '—'} unit="Edwards" explainerKey="trimp" />
                             </div>
 
                             {/* KAMU VS KAMU DULU — inline in hero */}
@@ -325,6 +327,7 @@ interface DetailTile {
     sub?: string;
     warn?: boolean;
     wide?: boolean;
+    metricKey?: MetricKey;
 }
 
 function DetailTiles({
@@ -340,11 +343,11 @@ function DetailTiles({
         tiles.push({ label: 'MAX HR', value: `${detail.max_heartrate}`, sub: 'bpm' });
     }
     if (detail.average_cadence != null) {
-        tiles.push({ label: 'CADENCE', value: `${Math.round(detail.average_cadence * 2)}`, sub: 'spm avg' });
+        tiles.push({ label: 'CADENCE', value: `${Math.round(detail.average_cadence * 2)}`, sub: 'spm avg', metricKey: 'cadence' });
     }
     const ascent = Number(summary.ascent_m);
     if (summary.ascent_m != null && Number.isFinite(ascent)) {
-        tiles.push({ label: 'ASCENT', value: `${ascent}`, sub: 'm' });
+        tiles.push({ label: 'ASCENT', value: `${ascent}`, sub: 'm', metricKey: 'ascent' });
     }
     const decoupling = Number(summary.decoupling_pct);
     if (summary.decoupling_pct != null && Number.isFinite(decoupling)) {
@@ -354,6 +357,7 @@ function DetailTiles({
             sub: 'napas melar di paruh kedua',
             warn: Math.abs(decoupling) > 8,
             wide: true,
+            metricKey: 'decoupling',
         });
     }
 
@@ -375,7 +379,10 @@ function DetailTiles({
                         t.wide && 'col-span-2',
                     )}
                 >
-                    <div className="mb-1.5 font-mono font-bold text-[11px] uppercase tracking-[0.14em] text-ink-2">{t.label}</div>
+                    <div className="mb-1.5 inline-flex items-center gap-1 font-mono font-bold text-[11px] uppercase tracking-[0.14em] text-ink-2">
+                        {t.label}
+                        {t.metricKey && <MetricExplainer metricKey={t.metricKey} size="xs" />}
+                    </div>
                     <div
                         className={cn(
                             'font-sans font-bold leading-none tabular-nums tracking-[-0.01em]',

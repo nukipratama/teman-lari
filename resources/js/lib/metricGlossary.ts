@@ -112,6 +112,10 @@ export const METRIC_GLOSSARY = {
         label: 'Vibe vs Mood',
         body: 'Vibe = kondisi kamu hari ini, dihitung dari fitness, fatigue, dan form. Mood = nuansa lari per sesi (nyala, enteng, oleng, lemes, mumet, adem). Vibe satu hari satu, mood per lari.',
     },
+    ascent: {
+        label: 'Ascent',
+        body: 'Total tanjakan yang kamu lewatin selama lari, dalam meter. Makin tinggi, makin berat usahanya walau jaraknya sama.',
+    },
 } as const satisfies Record<string, MetricGlossaryEntry>;
 
 export type MetricKey = keyof typeof METRIC_GLOSSARY;
