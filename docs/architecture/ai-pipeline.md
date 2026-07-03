@@ -73,7 +73,7 @@ Propagation is a hook fired after a row/group completes: `AnalyzeRowJob::afterDo
 - dispatch the successor with `invalidate: false`, so under a tripped cost ceiling or AI-off env the dispatch is a clean no-op and the chain **pauses** (rows stay Pending) rather than injecting filler;
 - are **best-effort** — any error is logged and swallowed so a chain-advance failure never flips an already-billed Done row back to Failed.
 
-A stalled link is re-kicked hourly by the `ai:resume-chains` command in [routes/console.php](routes/console.php), which only re-dispatches Pending/Failed links and so never re-bills.
+A stalled block is re-kicked hourly by the `ai:self-heal` command ([SelfHealCommand](app/Console/Commands/AI/SelfHealCommand.php)) in [routes/console.php](routes/console.php): it re-dispatches the earliest stalled block per user (the chains, plus the standalone card-flavor and PR-context narration) with `invalidate:false` so it never re-bills, early-exits while generation is paused, and bounds Failed retries by `Analysis::MAX_SELF_HEAL_ATTEMPTS` before dead-lettering (see below).
 
 ## Deferred recaps (windowing)
 
@@ -92,8 +92,8 @@ LLM calls go through an Azure OpenAI client configured by [config/azure_openai.p
 
 Two distinct things still produce content without the LLM:
 
-1. **Rule-based types** — `AnalysisType::isRuleBased()` (the run-insight blocks + trend caption) are deterministic. In `dispatchRow()`, when the type is rule-based or auto-dispatch is off, the row is filled inline via `ruleBasedContent()` / `RuleBasedNarrationFiller` and marked Done — no queue, no tokens.
-2. **Demo seed** — the demo seeder backfills every Analysis row through [RuleBasedNarrationFiller](app/Services/AI/RuleBased/RuleBasedNarrationFiller.php) under `AnalysisService::withoutDispatching()`, so seeding spends no tokens. The "Baca ulang" button stays live so a reviewer can trigger one real LLM call per block on demand.
+1. **Rule-based types** — `AnalysisType::isRuleBased()` (the run-insight blocks + trend caption) are deterministic. In `dispatchRow()` they are always filled inline via `ruleBasedContent()` and marked Done — no queue, no tokens. **LLM types are never templated on a real account**: when generation is paused (cost ceiling / AI off / Azure unset) a single-row LLM block stays honestly `Pending` (an existing Done keeps its real prose) and `ai:self-heal` fills it once generation resumes. A block that reaches the LLM and keeps failing is bounded by `Analysis::MAX_SELF_HEAL_ATTEMPTS`, then **dead-lettered** — surfaced per-user on `/ai-usage` ([TokenUsageController](app/Http/Controllers/TokenUsageController.php)) with a manual "Coba lagi" that re-arms the budget.
+2. **Demo seed** — the demo seeder backfills every Analysis row through [RuleBasedNarrationFiller](app/Services/AI/RuleBased/RuleBasedNarrationFiller.php) under `AnalysisService::withoutDispatching()`, so seeding spends no tokens (the filler is demo-only). The "Baca ulang" button stays live so a reviewer can trigger one real LLM call per block on demand.
 
 ## See also
 

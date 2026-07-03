@@ -2,13 +2,33 @@
 
 declare(strict_types=1);
 
+use App\Jobs\AI\AnalyzeWeeklyRecapJob;
+use App\Models\AI\Analysis;
 use App\Models\AI\TokenUsage;
+use App\Models\PersonalRecord;
 use App\Models\User;
+use App\Models\WeeklySnapshot;
+use App\Services\AI\AnalysisStatus;
+use App\Services\AI\AnalysisType;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Bus;
 use Inertia\Testing\AssertableInertia;
 
 uses(RefreshDatabase::class);
+
+/** Dead-letter a WeeklyRecap for $user (Failed, budget burned). */
+function deadLetterWeeklyRecap(User $user): Analysis
+{
+    $snap = WeeklySnapshot::factory()->for($user)->create();
+
+    return Analysis::factory()->failed()->create([
+        'subject_type' => WeeklySnapshot::class,
+        'subject_id' => $snap->id,
+        'analysis_type' => AnalysisType::WeeklyRecap,
+        'attempts' => Analysis::MAX_SELF_HEAL_ATTEMPTS,
+    ]);
+}
 
 function seedUsage(
     string $kind,
@@ -229,4 +249,66 @@ it('keeps the user_id in the breakdown after the user is deleted (no FK cascade)
                     'calls' => 2,
                 ]),
         );
+});
+
+it('surfaces dead-lettered blocks grouped per user', function (): void {
+    $alice = User::factory()->create(['name' => 'Alice']);
+    deadLetterWeeklyRecap($alice);
+    // A second dead-lettered block for the same user (PR context, subject = user).
+    $pr = PersonalRecord::factory()->for($alice)->create();
+    Analysis::factory()->failed()->create([
+        'subject_type' => PersonalRecord::class,
+        'subject_id' => $pr->id,
+        'analysis_type' => AnalysisType::PrContext,
+        'attempts' => Analysis::MAX_SELF_HEAL_ATTEMPTS,
+    ]);
+
+    $this->get('/ai-usage')
+        ->assertSuccessful()
+        ->assertInertia(
+            fn (AssertableInertia $page) => $page
+                ->has('deadLettered', 1)
+                ->where('deadLettered.0.user_id', $alice->id)
+                ->where('deadLettered.0.user_name', 'Alice')
+                ->where('deadLettered.0.count', 2)
+                ->has('deadLettered.0.blocks', 2),
+        );
+});
+
+it('excludes Done and under-budget Failed blocks from the dead-letter panel', function (): void {
+    $user = User::factory()->create();
+    // Under-budget Failed (attempts 1) -> still self-healing, not dead-lettered.
+    $snap = WeeklySnapshot::factory()->for($user)->create();
+    Analysis::factory()->failed()->create([
+        'subject_type' => WeeklySnapshot::class,
+        'subject_id' => $snap->id,
+        'analysis_type' => AnalysisType::WeeklyRecap,
+    ]);
+
+    $this->get('/ai-usage')
+        ->assertSuccessful()
+        ->assertInertia(fn (AssertableInertia $page) => $page->has('deadLettered', 0));
+});
+
+it('re-arms and re-dispatches a user\'s dead-lettered blocks on retry', function (): void {
+    Bus::fake();
+    $user = User::factory()->create();
+    $row = deadLetterWeeklyRecap($user);
+
+    $this->post("/ai-usage/users/{$user->id}/retry-failed")
+        ->assertRedirect();
+
+    $fresh = $row->fresh();
+    expect($fresh->attempts)->toBe(0)                          // budget re-armed
+        ->and($fresh->status)->toBe(AnalysisStatus::Queued);   // re-dispatched
+    Bus::assertDispatched(AnalyzeWeeklyRecapJob::class);
+});
+
+it('retry is reachable without a Laravel session (edge auth handles access in prod)', function (): void {
+    Bus::fake();
+    $user = User::factory()->create();
+
+    // No dead-lettered rows: still a clean, session-less redirect (0 retried).
+    $this->post("/ai-usage/users/{$user->id}/retry-failed")->assertRedirect();
+    Bus::assertNothingDispatched();
 });

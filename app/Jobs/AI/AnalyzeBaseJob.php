@@ -6,6 +6,9 @@ namespace App\Jobs\AI;
 
 use App\Exceptions\AI\TransientUpstreamException;
 use App\Exceptions\AI\UnavailableException;
+use App\Models\AI\Analysis;
+use App\Services\AI\AnalysisService;
+use App\Services\AI\AnalysisStatus;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Throwable;
@@ -67,5 +70,30 @@ abstract class AnalyzeBaseJob implements ShouldQueue
     private function defaultBackoffSeconds(): int
     {
         return $this->backoff[0] ?? 0;
+    }
+
+    /**
+     * Refuse to bill while generation is paused (cost ceiling / AI off / Azure
+     * unset). The cap is otherwise enforced only at dispatch time, so a job
+     * dispatched just before the ceiling tripped would still call the LLM; this
+     * closes that window. Reverts the given rows to Pending (never Failed, and
+     * before markProcessing, so no `attempts` burn) and returns true to tell
+     * handle() to stop; ai:self-heal re-dispatches once generation resumes.
+     *
+     * @param  iterable<Analysis>  $rows
+     */
+    protected function haltForPausedGeneration(AnalysisService $service, iterable $rows): bool
+    {
+        if (! $service->generationPaused()) {
+            return false;
+        }
+
+        foreach ($rows as $row) {
+            if ($row->status !== AnalysisStatus::Pending) {
+                $service->revertToPending($row);
+            }
+        }
+
+        return true;
     }
 }

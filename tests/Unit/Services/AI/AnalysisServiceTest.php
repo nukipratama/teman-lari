@@ -292,7 +292,8 @@ it('does not dispatch when ai.auto_dispatch config is false', function (): void 
         type: AnalysisType::WeeklyRecap,
     );
 
-    expect($row->status)->toBe(AnalysisStatus::Done);
+    expect($row->status)->toBe(AnalysisStatus::Pending)
+        ->and($row->content)->toBeNull();
     Bus::assertNotDispatched(AnalyzeWeeklyRecapJob::class);
 });
 
@@ -306,7 +307,8 @@ it('does not dispatch when the AI kill-switch is off', function (): void {
         type: AnalysisType::WeeklyRecap,
     );
 
-    expect($row->status)->toBe(AnalysisStatus::Done);
+    expect($row->status)->toBe(AnalysisStatus::Pending)
+        ->and($row->content)->toBeNull();
     Bus::assertNotDispatched(AnalyzeWeeklyRecapJob::class);
 });
 
@@ -320,7 +322,8 @@ it('does not dispatch when Azure config is missing', function (): void {
         type: AnalysisType::WeeklyRecap,
     );
 
-    expect($row->status)->toBe(AnalysisStatus::Done);
+    expect($row->status)->toBe(AnalysisStatus::Pending)
+        ->and($row->content)->toBeNull();
     Bus::assertNotDispatched(AnalyzeWeeklyRecapJob::class);
 });
 
@@ -341,7 +344,8 @@ it('does not dispatch when today\'s LLM cost exceeds the daily ceiling', functio
         type: AnalysisType::WeeklyRecap,
     );
 
-    expect($row->status)->toBe(AnalysisStatus::Done);
+    expect($row->status)->toBe(AnalysisStatus::Pending)
+        ->and($row->content)->toBeNull();
     Bus::assertNotDispatched(AnalyzeWeeklyRecapJob::class);
 });
 
@@ -362,6 +366,29 @@ it('still dispatches when today\'s LLM cost is under the daily ceiling', functio
     );
 
     Bus::assertDispatched(AnalyzeWeeklyRecapJob::class);
+});
+
+it('keeps existing prose when a capped "Baca ulang" regenerate is a no-op', function (): void {
+    config(['ai.auto_dispatch' => false]);
+    $snap = WeeklySnapshot::factory()->create();
+    Analysis::query()->create([
+        'subject_type' => WeeklySnapshot::class,
+        'subject_id' => $snap->id,
+        'analysis_type' => AnalysisType::WeeklyRecap,
+        'status' => AnalysisStatus::Done,
+        'content' => 'narasi LLM asli',
+    ]);
+
+    $row = $this->service->request(
+        subjectOrType: WeeklySnapshot::class,
+        subjectId: $snap->id,
+        type: AnalysisType::WeeklyRecap,
+        invalidate: true,
+    );
+
+    expect($row->status)->toBe(AnalysisStatus::Done)
+        ->and($row->content)->toBe('narasi LLM asli');
+    Bus::assertNotDispatched(AnalyzeWeeklyRecapJob::class);
 });
 
 it('applies delaySeconds when dispatching (row)', function (): void {

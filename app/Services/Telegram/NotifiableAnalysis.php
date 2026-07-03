@@ -4,12 +4,10 @@ declare(strict_types=1);
 
 namespace App\Services\Telegram;
 
-use App\Models\Activity;
 use App\Models\ActivityDetail;
 use App\Models\AI\Analysis;
 use App\Models\TelegramConnection;
 use App\Models\User;
-use App\Models\WeeklySnapshot;
 use App\Services\AI\AnalysisType;
 use App\Services\Run\Metrics\PaceCalculator;
 use App\Services\Run\Metrics\PaceFormatter;
@@ -84,13 +82,9 @@ class NotifiableAnalysis
     /** The user this analysis belongs to, or null when it can't be resolved. */
     public function resolveUser(Analysis $analysis): ?User
     {
-        return match ($analysis->analysis_type) {
-            AnalysisType::PostRunSpeech => Activity::query()->find($analysis->subject_id)?->user,
-            AnalysisType::WeeklyRecap => WeeklySnapshot::query()->find($analysis->subject_id)?->user,
-            // The monthly recap's subject_id IS the user id (no intermediate model).
-            AnalysisType::MonthlyRecap => User::query()->find($analysis->subject_id),
-            default => null,
-        };
+        $userId = $analysis->ownerId();
+
+        return $userId !== null ? User::query()->find($userId) : null;
     }
 
     /**

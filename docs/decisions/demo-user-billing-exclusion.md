@@ -8,7 +8,7 @@ code_refs:
   - app/Models/User.php
   - app/Console/Commands/AI/WeeklyRecapCommand.php
   - app/Console/Commands/AI/MonthlyRecapCommand.php
-  - app/Console/Commands/AI/ResumeChainsCommand.php
+  - app/Console/Commands/AI/SelfHealCommand.php
   - app/Console/Commands/AI/WeeklyProfileCommand.php
   - app/Console/Commands/AI/DailyBriefingCommand.php
   - app/Console/Commands/Strava/SyncCommand.php
@@ -38,7 +38,7 @@ The flag and its scope live on [User](app/Models/User.php): an `is_demo` boolean
 - `strava:sync` — [SyncCommand](app/Console/Commands/Strava/SyncCommand.php)
 - `strava:ingest` — [IngestCommand](app/Console/Commands/Strava/IngestCommand.php) (filters `is_demo = false` via a relation sub-query)
 
-The one daily sweep that does **not** filter demo is the **per-activity** branch of [ResumeChainsCommand](app/Console/Commands/AI/ResumeChainsCommand.php) (`resumePerActivity()`), and that is deliberate per its docblock: it is a safety net that only re-kicks a *Pending* PostRunSpeech group, and the demo's per-activity rows are rule-based seeded (Done), so it has nothing Pending to re-kick. The weekly and monthly sweeps of the same command do exclude demo.
+The one hourly sweep that does **not** filter demo is the **per-activity** branch of [SelfHealCommand](app/Console/Commands/AI/SelfHealCommand.php) (`resumePerActivity()`), and that is deliberate per its docblock: it is a safety net that only re-kicks a *Pending* PostRunSpeech group, and the demo's per-activity rows are rule-based seeded (Done), so it has nothing Pending to re-kick. The weekly, monthly, card-flavor, and PR-context sweeps of the same command do exclude demo.
 
 The demo's narration is otherwise backfilled deterministically with zero tokens: [DemoSeedCommand](app/Console/Commands/DemoSeedCommand.php) seeds the dataset, and [RuleBasedNarrationFiller](app/Services/AI/RuleBased/RuleBasedNarrationFiller.php) provides Temari-voiced content per AnalysisType under `AnalysisService::withoutDispatching()`. The live "Baca ulang" button still lets a reviewer trigger a real per-block LLM call on demand.
 
@@ -52,4 +52,4 @@ The demo's narration is otherwise backfilled deterministically with zero tokens:
 
 - [[ai-pipeline]] — the narrator/analysis pipeline these schedulers feed
 - [[deferred-recap-windowing]] — why the recaps are scheduled at all
-- [[chained-narration]] — the resume-chains safety net whose per-activity sweep is the one place demo isn't filtered
+- [[chained-narration]] — the self-heal safety net whose per-activity sweep is the one place demo isn't filtered

@@ -15,7 +15,8 @@ Only decisions that clear the bar live here — costly to reverse, cross-cutting
 ## Timeline
 
 _AI cost & flow_
-- [[per-block-manual-retry]] — failed AI blocks never auto-retry; retry is manual, to keep LLM cost predictable
+- [[per-block-manual-retry]] — failed AI blocks never auto-retry; retry is manual, to keep LLM cost predictable *(superseded by [[bounded-self-heal-and-dead-letter]])*
+- [[bounded-self-heal-and-dead-letter]] — paused blocks stay honestly Pending; failed blocks get a bounded auto-retry, then a per-user dead-letter
 - [[idempotent-dispatch-cost-ceiling]] — re-runnable schedulers don't re-bill; a daily USD ceiling caps spend
 - [[azure-openai-routing]] — per-narrator-kind Azure deployment selection via config/env
 - [[chained-narration]] — connected narration threads via prev_narrative + afterDone + resume sweep

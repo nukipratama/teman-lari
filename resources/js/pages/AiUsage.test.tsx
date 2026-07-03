@@ -3,6 +3,7 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import AiUsage from './AiUsage';
 
 const routerGet = vi.fn();
+const formPost = vi.fn();
 
 vi.mock('@inertiajs/react', () => ({
     Head: ({ children }: { children?: React.ReactNode }) => <>{children}</>,
@@ -12,6 +13,7 @@ vi.mock('@inertiajs/react', () => ({
     router: {
         get: (...args: unknown[]) => routerGet(...args),
     },
+    useForm: () => ({ post: (...args: unknown[]) => formPost(...args), processing: false }),
 }));
 
 const baseProps = {
@@ -47,11 +49,42 @@ const baseProps = {
         { value: 'run-insight', label: 'RunInsightTechnical' },
     ],
     budget: { todayCost: 0.02, dailyCeiling: 0.1, currency: 'USD' },
+    deadLettered: [],
+};
+
+const deadLetteredGroup = {
+    user_id: 7,
+    user_name: 'Charlie',
+    count: 2,
+    blocks: [
+        { type: 'weekly_recap', error: 'Azure down', failed_at: '2026-05-19T10:00:00+00:00' },
+        { type: 'pr_context', error: null, failed_at: '2026-05-19T09:00:00+00:00' },
+    ],
 };
 
 describe('AiUsage page', () => {
     beforeEach(() => {
         routerGet.mockClear();
+        formPost.mockClear();
+    });
+
+    it('hides the dead-letter panel when nothing is stuck', () => {
+        render(<AiUsage {...baseProps} />);
+        expect(screen.queryByText('Perlu perhatian')).not.toBeInTheDocument();
+    });
+
+    it('renders a per-user dead-letter group with its stuck-block count', () => {
+        render(<AiUsage {...baseProps} deadLettered={[deadLetteredGroup]} />);
+        expect(screen.getByText('Perlu perhatian')).toBeInTheDocument();
+        expect(screen.getByText('Charlie')).toBeInTheDocument();
+        expect(screen.getByText('2 blok berhenti dicoba otomatis')).toBeInTheDocument();
+        expect(screen.getByText('weekly_recap')).toBeInTheDocument();
+    });
+
+    it('posts to the per-user retry route on "Coba lagi semua"', () => {
+        render(<AiUsage {...baseProps} deadLettered={[deadLetteredGroup]} />);
+        fireEvent.click(screen.getByRole('button', { name: /Coba lagi semua/ }));
+        expect(formPost).toHaveBeenCalledWith('/ai-usage/users/7/retry-failed', expect.anything());
     });
 
     it('shows totals + active date range + breakdown rows', () => {

@@ -5,6 +5,8 @@ declare(strict_types=1);
 use App\Models\Activity;
 use App\Models\ActivityDetail;
 use App\Models\AI\Analysis;
+use App\Models\PersonalRecord;
+use App\Models\RunCard;
 use App\Models\User;
 use App\Models\WeeklySnapshot;
 use App\Services\AI\AnalysisService;
@@ -33,6 +35,7 @@ afterEach(function (): void {
 function captureResumeRequests(array &$captured): AnalysisService
 {
     $service = Mockery::mock(AnalysisService::class);
+    $service->shouldReceive('generationPaused')->andReturn(false);
     $service->shouldReceive('request')
         ->andReturnUsing(function (string $subjectOrType, int $subjectId, AnalysisType $type, ?string $discriminator = null, ?int $delaySeconds = null, bool $invalidate = false) use (&$captured): Analysis {
             $captured[] = compact('subjectOrType', 'subjectId', 'type', 'discriminator', 'invalidate');
@@ -41,9 +44,20 @@ function captureResumeRequests(array &$captured): AnalysisService
         });
     // Per-activity chains advance through the group helper, not request().
     $service->shouldReceive('requestActivityGroup')
-        ->andReturnUsing(function (App\Models\Activity $activity, bool $invalidate = false, ?int $delaySeconds = null) use (&$captured): void {
+        ->andReturnUsing(function (Activity $activity, bool $invalidate = false, ?int $delaySeconds = null) use (&$captured): void {
             $captured[] = ['subjectOrType' => Activity::class, 'subjectId' => $activity->id, 'type' => AnalysisType::PostRunSpeech, 'discriminator' => null, 'invalidate' => $invalidate];
         });
+
+    return $service;
+}
+
+/** A running (not paused) service mock that must never dispatch. */
+function nonDispatchingResumeService(): AnalysisService
+{
+    $service = Mockery::mock(AnalysisService::class);
+    $service->shouldReceive('generationPaused')->andReturn(false);
+    $service->shouldNotReceive('request');
+    $service->shouldNotReceive('requestActivityGroup');
 
     return $service;
 }
@@ -87,8 +101,8 @@ it('re-kicks the earliest Pending weekly link per user with invalidate:false', f
     $captured = [];
     $this->app->instance(AnalysisService::class, captureResumeRequests($captured));
 
-    $this->artisan('ai:resume-chains')
-        ->expectsOutputToContain('Resumed 1 chains.')
+    $this->artisan('ai:self-heal')
+        ->expectsOutputToContain('Resumed 1 blocks.')
         ->assertSuccessful();
 
     expect($captured)->toHaveCount(1)
@@ -109,12 +123,10 @@ it('skips a demo user so the resume net never auto-bills its weekly LLM', functi
         'status' => AnalysisStatus::Pending,
     ]);
 
-    $service = Mockery::mock(AnalysisService::class);
-    $service->shouldNotReceive('request');
-    $this->app->instance(AnalysisService::class, $service);
+    $this->app->instance(AnalysisService::class, nonDispatchingResumeService());
 
-    $this->artisan('ai:resume-chains')
-        ->expectsOutputToContain('Resumed 0 chains.')
+    $this->artisan('ai:self-heal')
+        ->expectsOutputToContain('Resumed 0 blocks.')
         ->assertSuccessful();
 });
 
@@ -138,8 +150,8 @@ it('re-kicks the earliest Pending monthly link per user with invalidate:false', 
     $captured = [];
     $this->app->instance(AnalysisService::class, captureResumeRequests($captured));
 
-    $this->artisan('ai:resume-chains')
-        ->expectsOutputToContain('Resumed 1 chains.')
+    $this->artisan('ai:self-heal')
+        ->expectsOutputToContain('Resumed 1 blocks.')
         ->assertSuccessful();
 
     expect($captured)->toHaveCount(1)
@@ -171,8 +183,8 @@ it('resumes both weekly and monthly chains in one sweep', function (): void {
     $captured = [];
     $this->app->instance(AnalysisService::class, captureResumeRequests($captured));
 
-    $this->artisan('ai:resume-chains')
-        ->expectsOutputToContain('Resumed 2 chains.')
+    $this->artisan('ai:self-heal')
+        ->expectsOutputToContain('Resumed 2 blocks.')
         ->assertSuccessful();
 
     expect(array_column($captured, 'type'))
@@ -189,13 +201,61 @@ it('re-kicks the earliest Pending per-activity group per user', function (): voi
     $captured = [];
     $this->app->instance(AnalysisService::class, captureResumeRequests($captured));
 
-    $this->artisan('ai:resume-chains')
-        ->expectsOutputToContain('Resumed 1 chains.')
+    $this->artisan('ai:self-heal')
+        ->expectsOutputToContain('Resumed 1 blocks.')
         ->assertSuccessful();
 
     expect($captured)->toHaveCount(1)
         ->and($captured[0]['subjectOrType'])->toBe(Activity::class)
         ->and($captured[0]['subjectId'])->toBe($earliest->id)
+        ->and($captured[0]['invalidate'])->toBeFalse();
+});
+
+it('re-kicks the earliest stalled CardFlavor per user with invalidate:false', function (): void {
+    $user = User::factory()->create();
+    $activity = Activity::factory()->for($user)->create();
+    $card = RunCard::factory()->for($activity)->create();
+    Analysis::factory()->create([
+        'subject_type' => RunCard::class,
+        'subject_id' => $card->id,
+        'analysis_type' => AnalysisType::CardFlavor,
+        'status' => AnalysisStatus::Pending,
+    ]);
+
+    $captured = [];
+    $this->app->instance(AnalysisService::class, captureResumeRequests($captured));
+
+    $this->artisan('ai:self-heal')
+        ->expectsOutputToContain('Resumed 1 blocks.')
+        ->assertSuccessful();
+
+    expect($captured)->toHaveCount(1)
+        ->and($captured[0]['subjectOrType'])->toBe(RunCard::class)
+        ->and($captured[0]['subjectId'])->toBe($card->id)
+        ->and($captured[0]['type'])->toBe(AnalysisType::CardFlavor)
+        ->and($captured[0]['invalidate'])->toBeFalse();
+});
+
+it('recovers a Failed PrContext under the retry budget', function (): void {
+    $user = User::factory()->create();
+    $pr = PersonalRecord::factory()->for($user)->create(['set_at' => Carbon::parse('2026-05-01')]);
+    Analysis::factory()->failed()->create([
+        'subject_type' => PersonalRecord::class,
+        'subject_id' => $pr->id,
+        'analysis_type' => AnalysisType::PrContext,
+    ]);
+
+    $captured = [];
+    $this->app->instance(AnalysisService::class, captureResumeRequests($captured));
+
+    $this->artisan('ai:self-heal')
+        ->expectsOutputToContain('Resumed 1 blocks.')
+        ->assertSuccessful();
+
+    expect($captured)->toHaveCount(1)
+        ->and($captured[0]['subjectOrType'])->toBe(PersonalRecord::class)
+        ->and($captured[0]['subjectId'])->toBe($pr->id)
+        ->and($captured[0]['type'])->toBe(AnalysisType::PrContext)
         ->and($captured[0]['invalidate'])->toBeFalse();
 });
 
@@ -215,12 +275,10 @@ it('leaves Done links alone (nothing stalled to resume)', function (): void {
         'discriminator' => '2026-04',
     ]);
 
-    $service = Mockery::mock(AnalysisService::class);
-    $service->shouldNotReceive('request');
-    $this->app->instance(AnalysisService::class, $service);
+    $this->app->instance(AnalysisService::class, nonDispatchingResumeService());
 
-    $this->artisan('ai:resume-chains')
-        ->expectsOutputToContain('Resumed 0 chains.')
+    $this->artisan('ai:self-heal')
+        ->expectsOutputToContain('Resumed 0 blocks.')
         ->assertSuccessful();
 });
 
@@ -237,14 +295,32 @@ it('recovers a Failed weekly link (not only Pending)', function (): void {
     $captured = [];
     $this->app->instance(AnalysisService::class, captureResumeRequests($captured));
 
-    $this->artisan('ai:resume-chains')
-        ->expectsOutputToContain('Resumed 1 chains.')
+    $this->artisan('ai:self-heal')
+        ->expectsOutputToContain('Resumed 1 blocks.')
         ->assertSuccessful();
 
     expect($captured)->toHaveCount(1)
         ->and($captured[0]['subjectId'])->toBe($snap->id)
         ->and($captured[0]['type'])->toBe(AnalysisType::WeeklyRecap)
         ->and($captured[0]['invalidate'])->toBeFalse();
+});
+
+it('does not resume a Failed link that has burned its retry budget (dead-lettered)', function (): void {
+    $user = User::factory()->create();
+    $snap = WeeklySnapshot::factory()->for($user)->create(['week_ending' => '2026-05-31', 'runs' => 3]);
+    Analysis::factory()->failed()->create([
+        'subject_type' => WeeklySnapshot::class,
+        'subject_id' => $snap->id,
+        'analysis_type' => AnalysisType::WeeklyRecap,
+        'discriminator' => null,
+        'attempts' => Analysis::MAX_SELF_HEAL_ATTEMPTS,
+    ]);
+
+    $this->app->instance(AnalysisService::class, nonDispatchingResumeService());
+
+    $this->artisan('ai:self-heal')
+        ->expectsOutputToContain('Resumed 0 blocks.')
+        ->assertSuccessful();
 });
 
 it('recovers a Failed monthly link', function (): void {
@@ -259,8 +335,8 @@ it('recovers a Failed monthly link', function (): void {
     $captured = [];
     $this->app->instance(AnalysisService::class, captureResumeRequests($captured));
 
-    $this->artisan('ai:resume-chains')
-        ->expectsOutputToContain('Resumed 1 chains.')
+    $this->artisan('ai:self-heal')
+        ->expectsOutputToContain('Resumed 1 blocks.')
         ->assertSuccessful();
 
     expect($captured)->toHaveCount(1)
@@ -280,12 +356,10 @@ it('skips the still-open current week (never narrates it early)', function (): v
         'status' => AnalysisStatus::Pending,
     ]);
 
-    $service = Mockery::mock(AnalysisService::class);
-    $service->shouldNotReceive('request');
-    $this->app->instance(AnalysisService::class, $service);
+    $this->app->instance(AnalysisService::class, nonDispatchingResumeService());
 
-    $this->artisan('ai:resume-chains')
-        ->expectsOutputToContain('Resumed 0 chains.')
+    $this->artisan('ai:self-heal')
+        ->expectsOutputToContain('Resumed 0 blocks.')
         ->assertSuccessful();
 });
 
@@ -300,11 +374,31 @@ it('skips the still-open current month', function (): void {
         'status' => AnalysisStatus::Pending,
     ]);
 
+    $this->app->instance(AnalysisService::class, nonDispatchingResumeService());
+
+    $this->artisan('ai:self-heal')
+        ->expectsOutputToContain('Resumed 0 blocks.')
+        ->assertSuccessful();
+});
+
+it('early-exits without sweeping when AI generation is paused', function (): void {
+    $user = User::factory()->create();
+    $snap = WeeklySnapshot::factory()->for($user)->create(['week_ending' => '2026-05-03', 'runs' => 3]);
+    Analysis::factory()->create([
+        'subject_type' => WeeklySnapshot::class,
+        'subject_id' => $snap->id,
+        'analysis_type' => AnalysisType::WeeklyRecap,
+        'discriminator' => null,
+        'status' => AnalysisStatus::Pending,
+    ]);
+
     $service = Mockery::mock(AnalysisService::class);
+    $service->shouldReceive('generationPaused')->andReturn(true);
     $service->shouldNotReceive('request');
+    $service->shouldNotReceive('requestActivityGroup');
     $this->app->instance(AnalysisService::class, $service);
 
-    $this->artisan('ai:resume-chains')
-        ->expectsOutputToContain('Resumed 0 chains.')
+    $this->artisan('ai:self-heal')
+        ->expectsOutputToContain('Skipped: AI generation is paused')
         ->assertSuccessful();
 });

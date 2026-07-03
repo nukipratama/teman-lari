@@ -4,7 +4,11 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\Models\AI\Analysis;
+use App\Models\User;
+use App\Services\AI\AnalysisService;
 use App\Services\AI\TokenUsageReport;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Inertia\Inertia;
@@ -12,8 +16,10 @@ use Inertia\Response;
 
 class TokenUsageController extends Controller
 {
-    public function __construct(private readonly TokenUsageReport $report)
-    {
+    public function __construct(
+        private readonly TokenUsageReport $report,
+        private readonly AnalysisService $analysisService,
+    ) {
     }
 
     public function show(Request $request): Response
@@ -43,7 +49,72 @@ class TokenUsageController extends Controller
             'daily' => $report['daily'],
             'availableKinds' => $report['availableKinds'],
             'budget' => $report['budget'],
+            'deadLettered' => $this->deadLetteredByUser(),
         ]);
+    }
+
+    /**
+     * Re-arm and re-dispatch every dead-lettered block for one user (the blocks
+     * ai:self-heal gave up on). Resetting attempts to 0 restores the self-heal
+     * budget, and invalidate:false re-dispatches without re-billing any Done
+     * siblings. Cost-safe even mid-cap: the job-level guard reverts to Pending.
+     */
+    public function retryFailed(User $user): RedirectResponse
+    {
+        $rows = Analysis::query()->deadLettered()->get()
+            ->filter(fn (Analysis $row): bool => $row->ownerId() === $user->id);
+
+        foreach ($rows as $row) {
+            $row->update(['attempts' => 0]);
+            $this->analysisService->request(
+                subjectOrType: $row->subject_type,
+                subjectId: $row->subject_id,
+                type: $row->analysis_type,
+                discriminator: $row->discriminator,
+                invalidate: false,
+            );
+        }
+
+        return back()->with('info', "Mencoba ulang {$rows->count()} blok untuk {$user->name}.");
+    }
+
+    /**
+     * Dead-lettered blocks grouped by their owning user, for the "Perlu
+     * perhatian" panel. The ops user retries per user, not per block.
+     *
+     * @return list<array{user_id:int, user_name:string, count:int, blocks:list<array{type:string, error:string|null, failed_at:string}>}>
+     */
+    private function deadLetteredByUser(): array
+    {
+        $rows = Analysis::query()->deadLettered()->orderByDesc('updated_at')->get();
+
+        /** @var array<int, list<Analysis>> $byUser */
+        $byUser = [];
+        foreach ($rows as $row) {
+            $userId = $row->ownerId();
+            if ($userId !== null) {
+                $byUser[$userId][] = $row;
+            }
+        }
+
+        /** @var array<int, string> $names */
+        $names = User::query()->whereIn('id', array_keys($byUser))->pluck('name', 'id')->all();
+
+        $groups = [];
+        foreach ($byUser as $userId => $userRows) {
+            $groups[] = [
+                'user_id' => $userId,
+                'user_name' => $names[$userId] ?? "User #{$userId}",
+                'count' => count($userRows),
+                'blocks' => array_map(fn (Analysis $row): array => [
+                    'type' => $row->analysis_type->value,
+                    'error' => $row->error,
+                    'failed_at' => $row->updated_at->toIso8601String(),
+                ], $userRows),
+            ];
+        }
+
+        return $groups;
     }
 
     /**

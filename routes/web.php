@@ -130,6 +130,10 @@ Route::middleware('auth')->group(function (): void {
 
 });
 
-// Edge basicauth (docker/Caddyfile) protects this in prod. No `auth` middleware
-// so ops can open it without a Strava session.
+// Edge basicauth (docker/Caddyfile) protects these in prod. No `auth` middleware
+// so ops can open them without a Strava session; the viewAiUsage gate can't apply
+// here (session-less -> a configured ops-email allow-list would deny the null
+// user), so edge basicauth is the sole gate for the mutating retry too.
 Route::get('/ai-usage', [TokenUsageController::class, 'show'])->name('ai-usage');
+Route::post('/ai-usage/users/{user}/retry-failed', [TokenUsageController::class, 'retryFailed'])
+    ->name('ai-usage.retry-failed');

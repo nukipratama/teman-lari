@@ -5,6 +5,10 @@ declare(strict_types=1);
 namespace App\Models\AI;
 
 use Illuminate\Database\Eloquent\Attributes\Scope;
+use App\Models\Activity;
+use App\Models\PersonalRecord;
+use App\Models\RunCard;
+use App\Models\WeeklySnapshot;
 use App\Services\AI\AnalysisStatus;
 use App\Services\AI\AnalysisType;
 use App\Support\Cooldown;
@@ -48,6 +52,14 @@ class Analysis extends Model
     /** @use HasFactory<AnalysisFactory> */
     use HasFactory;
 
+    /**
+     * Max real LLM executions before ai:self-heal gives up on a Failed row and
+     * dead-letters it for a manual retry. `attempts` bumps once per job run
+     * (markProcessing) and resets to 0 on invalidate, so a manual "Baca ulang"
+     * re-arms the budget; capped no-op dispatches never touch it.
+     */
+    public const int MAX_SELF_HEAL_ATTEMPTS = 3;
+
     protected $table = 'ai_analyses';
 
     /** @return array<string, string> */
@@ -79,6 +91,37 @@ class Analysis extends Model
             ->where('subject_id', $subjectId)
             ->where('analysis_type', $type)
             ->where('discriminator', $discriminator);
+    }
+
+    /**
+     * Rows ai:self-heal may re-dispatch: still Pending or Failed and under the
+     * retry budget. A Pending row is always attempts=0, so the budget only ever
+     * excludes a Failed row that has burned its retries.
+     *
+     * @param  Builder<Analysis>  $query
+     * @return Builder<Analysis>
+     */
+    #[Scope]
+    protected function stalled(Builder $query): Builder
+    {
+        return $query
+            ->whereIn($this->qualifyColumn('status'), [AnalysisStatus::Pending, AnalysisStatus::Failed])
+            ->where($this->qualifyColumn('attempts'), '<', self::MAX_SELF_HEAL_ATTEMPTS);
+    }
+
+    /**
+     * Rows ai:self-heal has given up on: Failed with the retry budget exhausted.
+     * These surface on /ai-usage for a manual per-user re-arm.
+     *
+     * @param  Builder<Analysis>  $query
+     * @return Builder<Analysis>
+     */
+    #[Scope]
+    protected function deadLettered(Builder $query): Builder
+    {
+        return $query
+            ->where($this->qualifyColumn('status'), AnalysisStatus::Failed)
+            ->where($this->qualifyColumn('attempts'), '>=', self::MAX_SELF_HEAL_ATTEMPTS);
     }
 
     /**
@@ -118,6 +161,22 @@ class Analysis extends Model
     public static function cooldownKey(AnalysisType $type, int $subjectId, ?string $discriminator): string
     {
         return "ai-cooldown:{$type->value}:{$subjectId}:".($discriminator ?? '');
+    }
+
+    /**
+     * The user id that owns this row, resolved per subject type. The `*_user_*`
+     * string subject types store the user id directly as subject_id. Single
+     * source of truth for subject to owner mapping.
+     */
+    public function ownerId(): ?int
+    {
+        return match ($this->subject_type) {
+            Activity::class => Activity::query()->find($this->subject_id)?->user_id,
+            WeeklySnapshot::class => WeeklySnapshot::query()->find($this->subject_id)?->user_id,
+            RunCard::class => RunCard::query()->find($this->subject_id)?->activity?->user_id,
+            PersonalRecord::class => PersonalRecord::query()->find($this->subject_id)?->user_id,
+            default => $this->subject_id,
+        };
     }
 
     /**
