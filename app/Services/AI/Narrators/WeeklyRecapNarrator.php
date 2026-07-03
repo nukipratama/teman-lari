@@ -27,12 +27,6 @@ class WeeklyRecapNarrator
         lari". Kalau prev_* null (minggu pertama), lewati perbandingan, jangan
         mengarang angka.
 
-        KESINAMBUNGAN: kalau prev_narrative ada (recap minggu sebelumnya),
-        lanjutkan benang ceritanya, tunjukkan progres dari sana ke minggu ini,
-        dan variasikan cara membuka. Jangan mengulang kalimat atau angka yang
-        sama persis. Kalau prev_narrative null, tulis berdiri sendiri tanpa
-        menyinggung minggu sebelumnya.
-
         Sesuaikan tone ke form_status:
         - fresh: energik, mengajak manfaatkan. "Kamu lagi fresh, minggu depan
           bisa coba quality session."
@@ -65,7 +59,7 @@ class WeeklyRecapNarrator
     {
         $decoded = $this->caller->call(
             kind: 'weekly_recap',
-            systemPrompt: self::SYSTEM_PROMPT,
+            systemPrompt: self::SYSTEM_PROMPT."\n\n".NarratorContinuity::RULE,
             context: $this->context($snapshot),
             schemaName: 'TemariWeeklyRecap',
             requiredKeys: ['narrative'],
@@ -76,11 +70,12 @@ class WeeklyRecapNarrator
     }
 
     /**
-     * @return array{week_ending: string, runs: int|null, distance_km: float|null, pace_sec_per_km: float|null, weekly_trimp: float|null, ctl_42d: float|null, atl_7d: float|null, form: float|null, form_status: string|null, monotony: float|null, strain: float|null, prev_runs: int|null, prev_distance_km: float|null, prev_pace_sec_per_km: float|null, prev_narrative: string|null}
+     * @return array{week_ending: string, runs: int|null, distance_km: float|null, pace_sec_per_km: float|null, weekly_trimp: float|null, ctl_42d: float|null, atl_7d: float|null, form: float|null, form_status: string|null, monotony: float|null, strain: float|null, prev_runs: int|null, prev_distance_km: float|null, prev_pace_sec_per_km: float|null, prev_narrative: string|null, prev_opener: string|null}
      */
     public function context(WeeklySnapshot $snapshot): array
     {
         $previous = $this->previousWeek($snapshot);
+        $prevNarrative = $this->prevNarrative($snapshot);
 
         return [
             'week_ending' => $snapshot->week_ending->toDateString(),
@@ -97,7 +92,7 @@ class WeeklyRecapNarrator
             'prev_runs' => $previous?->runs,
             'prev_distance_km' => $previous?->distance_km,
             'prev_pace_sec_per_km' => $previous === null ? null : $this->paceFor($previous),
-            'prev_narrative' => $this->prevNarrative($snapshot),
+            ...NarratorContinuity::fields($prevNarrative),
         ];
     }
 
