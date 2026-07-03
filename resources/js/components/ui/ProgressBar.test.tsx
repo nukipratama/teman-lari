@@ -37,10 +37,11 @@ describe('ProgressBar', () => {
         expect(container.querySelector(`.${expected}`)).not.toBeNull();
     });
 
-    it('uses the cream-deep md track by default and the glass sm track', () => {
+    it('uses a visible md track by default and the glass sm track', () => {
         const { container, rerender } = render(<ProgressBar value={0.5} />);
         expect(container.firstElementChild).toHaveClass('h-2');
-        expect(container.firstElementChild).toHaveClass('bg-cream-deep');
+        // A tinted (not near-invisible cream-on-cream) resting track so a 0% bar still reads as a bar.
+        expect(container.firstElementChild).toHaveClass('bg-sky/[0.1]');
         rerender(<ProgressBar value={0.5} size="sm" />);
         expect(container.firstElementChild).toHaveClass('h-1.5');
     });

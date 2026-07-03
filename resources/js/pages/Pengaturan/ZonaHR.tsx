@@ -140,10 +140,12 @@ export default function ZonaHR({ profile, hasCustomProfile }: Readonly<ZonaHRPro
                         <PillButton tone="outline" size="sm" onClick={applyDerived}>
                             Hitung otomatis dari Max & Resting
                         </PillButton>
-                        <span className="font-sans text-xs text-ink-3">
-                            Pakai rumus %HRR (Karvonen) sebagai titik awal.
-                        </span>
                     </div>
+                    <p className="mt-3 max-w-xl font-sans text-xs leading-relaxed text-ink-3">
+                        Aku pakai rumus %HRR (Karvonen) sebagai titik awal: ngitung zona dari detak
+                        jantung istirahat sama maksimalmu. Kalau kamu udah punya angka sendiri, tinggal
+                        ubah manual di bawah.
+                    </p>
                 </Card>
 
                 <section className="mt-6">

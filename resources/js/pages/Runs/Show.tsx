@@ -271,9 +271,8 @@ export default function RunsShow({
                 {/* SPLITS */}
                 {perKm.length > 0 && <SplitsTable rows={perKm} className="mt-10" />}
 
-                <footer className="mt-8 font-mono font-bold text-[11px] uppercase tracking-[0.1em] text-ink-2">
-                    Strava activity {activity.strava_external_id ?? '—'} · ingested{' '}
-                    {formatIdDate(activity.analyzed_at ?? null, 'long')}
+                <footer className="mt-8 font-mono font-bold text-[11px] uppercase tracking-[0.1em] text-ink-3">
+                    Tersambung otomatis dari Strava · {formatIdDate(activity.analyzed_at ?? null, 'long')}
                 </footer>
             </PageContainer>
         </AppShell>
