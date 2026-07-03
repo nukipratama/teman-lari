@@ -73,10 +73,15 @@ class UserRemoveCommand extends Command
         ]);
 
         if (! $this->option('force')) {
-            // Without a TTY (e.g. `docker exec` with no -it), confirm() can't read
-            // input and silently returns its default, which reads as the command
-            // doing nothing. Fail loudly and point at the two ways forward.
-            if (! $this->input->isInteractive()) {
+            // isInteractive() alone only flips false for an explicit --no-interaction
+            // flag: a bare `docker exec` (no -it) still reports interactive=true, so
+            // confirm() reads immediate EOF as its "no" default and the command exits
+            // 0 having silently done nothing. Also require a real stdin TTY (skipped
+            // under tests, whose own stdin is never a TTY either) to catch that case.
+            $hasRealTerminal = $this->laravel->runningUnitTests()
+                || (defined('STDIN') && stream_isatty(STDIN));
+
+            if (! $this->input->isInteractive() || ! $hasRealTerminal) {
                 $this->error('No interactive terminal to confirm on. Re-run with a TTY (docker exec -it ...) or pass --force to skip the prompt.');
 
                 return self::FAILURE;
