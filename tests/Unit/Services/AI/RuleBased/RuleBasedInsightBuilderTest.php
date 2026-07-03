@@ -289,7 +289,10 @@ it('combines multiple technical parts into one sentence', function (): void {
     ]);
 
     expect(builder()->runInsightTechnical($activity, $detail))
-        ->toStartWith('Sesi ini ')
+        // The opener rotates deterministically by activity id (see the
+        // "frames the technical note" test), so match any of the frames
+        // instead of hardcoding one - otherwise this flakes on activity id.
+        ->toMatch('/^(Sesi ini|Catatan teknisnya,|Dari angka-angkanya,|Baca teknisnya:) /')
         ->toContain(', ')
         ->toEndWith('.');
 });

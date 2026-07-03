@@ -39,8 +39,7 @@ class Temari
 
     public function postRunLine(Activity $activity, ActivityDetail $detail): StoryLine
     {
-        $hasPr = PersonalRecord::query()->where('activity_id', $activity->id)->exists();
-        $mood = self::moodForActivity($detail, $hasPr);
+        $mood = self::moodForActivity($detail, self::hasPr($activity));
 
         return StoryLine::query()->updateOrCreate(
             [
@@ -104,9 +103,12 @@ class Temari
             return self::MOOD_ADEM;
         }
 
-        $hasPr = PersonalRecord::query()->where('activity_id', $activity->id)->exists();
+        return self::moodForActivity($detail, self::hasPr($activity));
+    }
 
-        return self::moodForActivity($detail, $hasPr);
+    private static function hasPr(Activity $activity): bool
+    {
+        return PersonalRecord::query()->where('activity_id', $activity->id)->exists();
     }
 
     // Order matters — first matching rule wins, most-prestigious mood first.
