@@ -92,8 +92,22 @@ class Analysis extends Model
             return null;
         }
 
-        return (new Cooldown(self::cooldownKey($this->analysis_type, $this->subject_id, $this->discriminator)))
-            ->remaining();
+        return $this->cooldown()->remaining();
+    }
+
+    /**
+     * Opens this row's re-trigger cooldown window. Called from
+     * {@see AnalysisService::markDone()} so a "Baca ulang" can't re-fire the
+     * LLM for the same block until the window elapses.
+     */
+    public function startCooldown(): void
+    {
+        $this->cooldown()->start();
+    }
+
+    private function cooldown(): Cooldown
+    {
+        return new Cooldown(self::cooldownKey($this->analysis_type, $this->subject_id, $this->discriminator));
     }
 
     /**

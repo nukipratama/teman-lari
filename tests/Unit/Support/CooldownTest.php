@@ -38,3 +38,19 @@ it('clears once the window is released', function (): void {
 it('builds a per-analysis telegram key', function (): void {
     expect(Cooldown::telegramKey(42))->toBe('telegram-send:42');
 });
+
+it('attempt starts the window and returns true when not already active', function (): void {
+    $cooldown = new Cooldown('probe');
+
+    expect($cooldown->attempt())->toBeTrue();
+    expect($cooldown->isActive())->toBeTrue();
+});
+
+it('attempt returns false and leaves the window untouched when already active', function (): void {
+    $cooldown = new Cooldown('probe');
+    $cooldown->start();
+    $remainingBefore = $cooldown->remaining();
+
+    expect($cooldown->attempt())->toBeFalse();
+    expect($cooldown->remaining())->toBe($remainingBefore);
+});

@@ -25,11 +25,27 @@ final readonly class Cooldown
     }
 
     /**
-     * Seconds left in the window, or null when not cooling.
+     * Starts the window and returns true, unless it was already active (then
+     * it's left untouched and this returns false). Prefer this over a separate
+     * {@see self::isActive()} + {@see self::start()} pair, which leaves a gap
+     * for two concurrent callers to both see it inactive and both proceed.
+     */
+    public function attempt(): bool
+    {
+        return RateLimiter::attempt($this->key, 1, fn (): bool => true, self::WINDOW_SECONDS);
+    }
+
+    /**
+     * Seconds left in the window, or null when not cooling. Reads
+     * `availableIn()` directly (it's 0, not negative, once the window has
+     * elapsed or was never started) rather than checking {@see self::isActive()}
+     * first, so a single Redis round trip covers both the check and the value.
      */
     public function remaining(): ?int
     {
-        return $this->isActive() ? RateLimiter::availableIn($this->key) : null;
+        $seconds = RateLimiter::availableIn($this->key);
+
+        return $seconds > 0 ? $seconds : null;
     }
 
     public function start(): void

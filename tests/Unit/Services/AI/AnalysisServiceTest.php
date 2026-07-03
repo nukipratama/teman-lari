@@ -601,6 +601,21 @@ it('markDone does not notify under withoutDispatching (demo seed)', function ():
     Bus::assertNotDispatched(SendTelegramNotificationJob::class);
 });
 
+it('markDone does not start the re-trigger cooldown under withoutDispatching (demo seed)', function (): void {
+    $row = Analysis::factory()->queued()->create([
+        'subject_type' => AnalysisType::BRIEFING_SUBJECT_TYPE,
+        'subject_id' => 1,
+        'analysis_type' => AnalysisType::BriefingHeadline,
+        'discriminator' => '2026-05-18',
+    ]);
+
+    $this->service->withoutDispatching(function () use ($row): void {
+        $this->service->markDone($row, 'Seed content.');
+    });
+
+    expect($row->fresh()->cooldownRemaining())->toBeNull();
+});
+
 it('markDone does not notify when Telegram is unconfigured', function (): void {
     config(['services.telegram.bot_token' => null]);
     $snap = WeeklySnapshot::factory()->create();

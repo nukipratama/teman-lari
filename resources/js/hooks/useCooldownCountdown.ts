@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { formatDurationHMS } from '@/lib/pace';
 
 /**
  * Counts an initial cooldown (in seconds) down to zero, ticking once a second
@@ -24,4 +25,13 @@ export function useCooldownCountdown(initialSeconds: number | null | undefined):
     }, [ticking]);
 
     return remaining;
+}
+
+/**
+ * aria-label for a button disabled by a {@link useCooldownCountdown}, or
+ * undefined when not cooling. `action` is the Indonesian infinitive phrase for
+ * what's being waited on (e.g. "baca ulang", "kirim ke Telegram").
+ */
+export function cooldownAriaLabel(remaining: number, action: string): string | undefined {
+    return remaining > 0 ? `Tunggu ${formatDurationHMS(remaining)} sebelum ${action}` : undefined;
 }

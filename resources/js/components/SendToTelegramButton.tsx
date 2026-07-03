@@ -1,7 +1,7 @@
 import { Icon } from '@iconify/react';
 import PillButton from '@/components/ui/PillButton';
 import { usePendingPost } from '@/hooks/usePendingPost';
-import { useCooldownCountdown } from '@/hooks/useCooldownCountdown';
+import { cooldownAriaLabel, useCooldownCountdown } from '@/hooks/useCooldownCountdown';
 import { formatDurationHMS } from '@/lib/pace';
 
 /**
@@ -33,7 +33,7 @@ export default function SendToTelegramButton({
             disabled={sending || cooling}
             className="disabled:opacity-60 disabled:cursor-not-allowed"
             onClick={send}
-            aria-label={cooling ? `Tunggu ${formatDurationHMS(cooldownRemaining)} sebelum kirim ke Telegram` : undefined}
+            aria-label={cooldownAriaLabel(cooldownRemaining, 'kirim ke Telegram')}
         >
             <Icon
                 icon={sending ? 'mdi:loading' : 'mdi:send'}

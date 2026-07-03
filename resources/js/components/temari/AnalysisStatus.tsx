@@ -2,7 +2,7 @@ import { type ReactNode } from 'react';
 import { Icon } from '@iconify/react';
 import { usePage } from '@inertiajs/react';
 import { RATE_LIMITED_ERROR, useAnalysisTrigger } from '@/hooks/useAnalysisTrigger';
-import { useCooldownCountdown } from '@/hooks/useCooldownCountdown';
+import { cooldownAriaLabel, useCooldownCountdown } from '@/hooks/useCooldownCountdown';
 import { formatDurationHMS, formatRelativeId } from '@/lib/pace';
 import { renderBold } from '@/lib/richText';
 import type { AnalysisPayload, SharedProps } from '@/types/inertia';
@@ -132,7 +132,7 @@ export default function AnalysisStatus({
                         type="button"
                         onClick={trigger}
                         disabled={cooling || pending}
-                        aria-label={cooling ? `Tunggu ${formatDurationHMS(cooldownRemaining)} sebelum baca ulang` : undefined}
+                        aria-label={cooldownAriaLabel(cooldownRemaining, 'baca ulang')}
                         className="focus-ring rounded inline-flex items-center self-start gap-1 text-xs text-ink-3 hover:text-leaf-deep transition-colors disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:text-ink-3"
                     >
                         <Icon icon="mdi:auto-awesome" aria-hidden />

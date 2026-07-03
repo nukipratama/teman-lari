@@ -24,11 +24,9 @@ trait PushesAnalysisToTelegram
             return back()->with('info', $notReadyMessage);
         }
 
-        $cooldown = new Cooldown(Cooldown::telegramKey($analysis->id));
-        if ($cooldown->isActive()) {
+        if (! new Cooldown(Cooldown::telegramKey($analysis->id))->attempt()) {
             return back()->with('info', 'Baru saja dikirim ke Telegram. Tunggu sebentar sebelum kirim ulang.');
         }
-        $cooldown->start();
 
         SendTelegramNotificationJob::dispatch($analysis->id, force: true);
 

@@ -15,7 +15,6 @@ use App\Models\AI\Analysis;
 use App\Models\User;
 use App\Services\AI\RuleBased\RuleBasedInsightBuilder;
 use App\Services\AI\RuleBased\RuleBasedNarrationFiller;
-use App\Support\Cooldown;
 use App\Services\Telegram\NotifiableAnalysis;
 use App\Support\Config\AppConfig;
 use App\Support\Config\AppConfigKey;
@@ -23,6 +22,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Foundation\Bus\PendingDispatch;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Laravel\Pulse\Facades\Pulse;
 
@@ -149,7 +149,14 @@ class AnalysisService
 
         // Start the re-trigger cooldown so a "Baca ulang" can't re-fire the LLM
         // for the same block within the window (covers both auto and manual).
-        (new Cooldown(Analysis::cooldownKey($row->analysis_type, $row->subject_id, $row->discriminator)))->start();
+        // Skipped under withoutDispatching (demo seed) so a freshly seeded demo
+        // stays instantly re-narratable on demand. afterCommit: AnalyzeGroupJob
+        // wraps several markDone() calls in one DB::transaction(), and the
+        // Redis-backed cooldown isn't rolled back by a transaction abort, so
+        // starting it eagerly could cool a row whose Done status never committed.
+        if (! $this->dispatchSuppressed) {
+            DB::afterCommit(fn () => $row->startCooldown());
+        }
 
         // Fan out a Telegram push for the notifiable types. Suppressed under
         // withoutDispatching (demo seed) and a no-op when Telegram is unconfigured;
