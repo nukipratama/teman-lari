@@ -72,11 +72,26 @@ class UserRemoveCommand extends Command
             ['AI token-usage rows (KEPT, will orphan)', (string) $tokenUsageCount],
         ]);
 
-        if (! $this->option('force')
-            && ! $this->confirm("Permanently remove user {$id} and all owned data? This cannot be undone.")) {
-            $this->info('Aborted, nothing removed.');
+        if (! $this->option('force')) {
+            // isInteractive() alone only flips false for an explicit --no-interaction
+            // flag: a bare `docker exec` (no -it) still reports interactive=true, so
+            // confirm() reads immediate EOF as its "no" default and the command exits
+            // 0 having silently done nothing. Also require a real stdin TTY (skipped
+            // under tests, whose own stdin is never a TTY either) to catch that case.
+            $hasRealTerminal = $this->laravel->runningUnitTests()
+                || (defined('STDIN') && stream_isatty(STDIN));
 
-            return self::SUCCESS;
+            if (! $this->input->isInteractive() || ! $hasRealTerminal) {
+                $this->error('No interactive terminal to confirm on. Re-run with a TTY (docker exec -it ...) or pass --force to skip the prompt.');
+
+                return self::FAILURE;
+            }
+
+            if (! $this->confirm("Permanently remove user {$id} and all owned data? This cannot be undone.")) {
+                $this->info('Aborted, nothing removed.');
+
+                return self::SUCCESS;
+            }
         }
 
         DB::transaction(function () use ($id, $user): void {
