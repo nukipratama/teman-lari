@@ -53,6 +53,15 @@ final class RuleBasedInsightBuilder
     // Positive-split detection: second half slower than first by this fraction
     private const float POSITIVE_SPLIT_MARGIN = 0.015;
 
+    // Opener frames for the technical note, so identical-metric runs don't all
+    // read "Sesi ini ...". Picked deterministically by activity id (idempotent).
+    private const array TECHNICAL_FRAMES = [
+        'Sesi ini %s.',
+        'Catatan teknisnya, %s.',
+        'Dari angka-angkanya, %s.',
+        'Baca teknisnya: %s.',
+    ];
+
     /**
      * @return array{technical: string, splits: string, zones: string}
      */
@@ -84,7 +93,9 @@ final class RuleBasedInsightBuilder
             return 'Sesi ini metrik-nya konsisten, gak ada yang mencolok.';
         }
 
-        return 'Sesi ini ' . implode(', ', $parts) . '.';
+        $frame = self::TECHNICAL_FRAMES[$activity->id % count(self::TECHNICAL_FRAMES)];
+
+        return sprintf($frame, implode(', ', $parts));
     }
 
     /**

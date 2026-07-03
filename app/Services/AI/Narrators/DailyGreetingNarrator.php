@@ -32,12 +32,9 @@ class DailyGreetingNarrator
         Gunakan field `name` kalau ada untuk personalisasi ("Halo, Budi!").
         Boleh pakai 1 emoji yang cocok.
 
-        KESINAMBUNGAN: kalau prev_narrative ada (greeting hari sebelumnya),
-        lanjutkan benang sapaannya, variasikan cara membuka, dan jangan ulang
-        kalimat yang sama persis. Kalau prev_narrative null, tulis berdiri
-        sendiri tanpa menyinggung sapaan sebelumnya.
-
         ANTI-PATTERN:
+        - "Halo, [nama]! [kondisi]mu masih [x], enak banget kalau dipake lari."
+          -- pola sapa yang sama terus buat tiap hari. Ganti-ganti pembukanya.
         - "Halo. Semoga harimu tenang, kapanpun kamu siap lari aku nunggu."
           -- muncul terus untuk semua vibe.
         - Time-locked greeting ("Selamat pagi").
@@ -51,7 +48,7 @@ class DailyGreetingNarrator
     {
         $decoded = $this->caller->call(
             kind: 'daily_greeting',
-            systemPrompt: self::SYSTEM_PROMPT,
+            systemPrompt: self::SYSTEM_PROMPT."\n\n".NarratorContinuity::RULE,
             context: $this->context($user, $vibeState, $asOf ?? Carbon::today()),
             schemaName: 'TemariDailyGreeting',
             requiredKeys: ['speech'],
@@ -62,20 +59,22 @@ class DailyGreetingNarrator
     }
 
     /**
-     * @return array{name: string, vibe: string, vibe_label: string, prev_narrative: string|null}
+     * @return array{name: string, vibe: string, vibe_label: string, prev_narrative: string|null, prev_opener: string|null}
      */
     public function context(User $user, string $vibeState, Carbon $asOf): array
     {
+        $prevNarrative = $this->previousDailyNarrative(
+            AnalysisType::DAILY_GREETING_SUBJECT_TYPE,
+            $user->id,
+            AnalysisType::DailyGreeting,
+            $asOf,
+        );
+
         return [
             'name' => $user->firstName(),
             'vibe' => $vibeState,
             'vibe_label' => Vibe::label($vibeState),
-            'prev_narrative' => $this->previousDailyNarrative(
-                AnalysisType::DAILY_GREETING_SUBJECT_TYPE,
-                $user->id,
-                AnalysisType::DailyGreeting,
-                $asOf,
-            ),
+            ...NarratorContinuity::fields($prevNarrative),
         ];
     }
 }

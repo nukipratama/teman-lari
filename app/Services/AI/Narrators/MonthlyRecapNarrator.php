@@ -37,12 +37,6 @@ class MonthlyRecapNarrator
            atau "konsisten di kisaran 10 km"). Pakai 1 yang paling menonjol.
         4. Tutup: 1 refleksi singkat atau dorongan untuk bulan depan.
 
-        KESINAMBUNGAN: kalau prev_narrative ada (recap bulan sebelumnya),
-        lanjutkan benang ceritanya, tunjukkan progres dari bulan lalu ke bulan
-        ini, dan variasikan cara membuka. Jangan mengulang kalimat atau angka
-        yang sama persis. Kalau prev_narrative null (bulan pertama), tulis
-        berdiri sendiri tanpa menyinggung bulan sebelumnya.
-
         Sesuaikan tone:
         - Mayoritas nyala/enteng: rayakan konsistensi.
         - Mayoritas lemes/mumet: empatik, akui effort, sarankan recovery.
@@ -65,7 +59,7 @@ class MonthlyRecapNarrator
 
         $decoded = $this->caller->call(
             kind: 'monthly_recap',
-            systemPrompt: self::SYSTEM_PROMPT,
+            systemPrompt: self::SYSTEM_PROMPT."\n\n".NarratorContinuity::RULE,
             context: $context,
             schemaName: 'TemariMonthlyRecap',
             requiredKeys: ['narrative'],
@@ -76,11 +70,12 @@ class MonthlyRecapNarrator
     }
 
     /**
-     * @return array{month: string, total_runs: int, total_distance_km: float, longest_run_km: float, pr_count: int, weekly_distance_km: list<float>, mood_mix: list<array{mood: string, count: int, percent: float}>, prev_narrative: string|null}
+     * @return array{month: string, total_runs: int, total_distance_km: float, longest_run_km: float, pr_count: int, weekly_distance_km: list<float>, mood_mix: list<array{mood: string, count: int, percent: float}>, prev_narrative: string|null, prev_opener: string|null}
      */
     public function context(User $user, string $month): array
     {
         [$start, $end] = $this->monthBounds($month);
+        $prevNarrative = $this->prevNarrative($user, $month);
 
         $details = ActivityDetail::query()
             ->whereHas('activity', fn ($q) => $q->where('user_id', $user->id))
@@ -126,7 +121,7 @@ class MonthlyRecapNarrator
             'pr_count' => $prCount,
             'weekly_distance_km' => $weeklyKm,
             'mood_mix' => $moodMix,
-            'prev_narrative' => $this->prevNarrative($user, $month),
+            ...NarratorContinuity::fields($prevNarrative),
         ];
     }
 

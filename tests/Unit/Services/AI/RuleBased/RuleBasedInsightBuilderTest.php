@@ -47,6 +47,19 @@ it('returns the consistent fallback when no technical parts qualify', function (
         ->toBe('Sesi ini metrik-nya konsisten, gak ada yang mencolok.');
 });
 
+it('frames the technical note with one of the deterministic openers (not always "Sesi ini")', function (): void {
+    $user = User::factory()->create();
+    [$activity, $detail] = makeRun($user, ['average_cadence' => 90.0]);
+
+    $out = builder()->runInsightTechnical($activity, $detail);
+
+    expect($out)
+        ->toMatch('/^(Sesi ini|Catatan teknisnya,|Dari angka-angkanya,|Baca teknisnya:) /')
+        ->toContain('cadence 180 spm')
+        // Deterministic: the same activity yields the same frame on every call.
+        ->and(builder()->runInsightTechnical($activity, $detail))->toBe($out);
+});
+
 it('labels cadence across every threshold band', function (float $rawCadence, string $label): void {
     $user = User::factory()->create();
     [$activity, $detail] = makeRun($user, ['average_cadence' => $rawCadence]);
@@ -276,7 +289,10 @@ it('combines multiple technical parts into one sentence', function (): void {
     ]);
 
     expect(builder()->runInsightTechnical($activity, $detail))
-        ->toStartWith('Sesi ini ')
+        // The opener rotates deterministically by activity id (see the
+        // "frames the technical note" test), so match any of the frames
+        // instead of hardcoding one - otherwise this flakes on activity id.
+        ->toMatch('/^(Sesi ini|Catatan teknisnya,|Dari angka-angkanya,|Baca teknisnya:) /')
         ->toContain(', ')
         ->toEndWith('.');
 });

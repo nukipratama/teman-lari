@@ -14,6 +14,7 @@ use App\Models\WeeklySnapshot;
 use App\Services\AI\AnalysisType;
 use App\Services\Run\PostRunNoteReader;
 use App\Services\Run\Story\PastYouMatcher;
+use App\Services\Run\Story\Temari;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Inertia\Inertia;
@@ -100,9 +101,14 @@ class RunController extends Controller
             ->first(fn (WeeklySnapshot $row): bool => (int) $row->runs > 0
                 && ! $row->week_ending->equalTo($currentWeekEnding))?->id;
 
+        $runIds = $runs->pluck('id')->all();
+
         return Inertia::render('Riwayat/Jejak', [
             'runs' => $runs->values(),
-            'notes' => $noteReader->forActivities($runs->pluck('id')->all()),
+            'notes' => $noteReader->forActivities($runIds),
+            // Persisted post-run mood per run, so the list mascot matches the
+            // backend mood even before the speech (and its note) is ready.
+            'moods' => $noteReader->moodsFor($runIds),
             'rangeFilter' => $effectiveRange,
             'rangeStart' => $rangeStart?->toDateString(),
             'rangeAutoWidened' => $rangeAutoWidened,
@@ -320,6 +326,10 @@ class RunController extends Controller
             'detail' => $detail,
             'card' => $activity->runCard,
             'storyLine' => $storyLine,
+            // Backend-computed mood for the (rare) window before the post-run
+            // StoryLine lands, so the detail mascot matches the share card
+            // instead of diverging into a frontend heuristic.
+            'moodFallback' => Temari::moodForActivityOrDefault($activity),
             'isChainHead' => $isChainHead,
             'telegramConnected' => $telegram !== null && ! $telegram->isRevoked(),
             'speechAnalysis' => $payloadFor(AnalysisType::PostRunSpeech),

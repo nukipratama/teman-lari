@@ -39,8 +39,7 @@ class Temari
 
     public function postRunLine(Activity $activity, ActivityDetail $detail): StoryLine
     {
-        $hasPr = PersonalRecord::query()->where('activity_id', $activity->id)->exists();
-        $mood = $this->moodForActivity($detail, $hasPr);
+        $mood = self::moodForActivity($detail, self::hasPr($activity));
 
         return StoryLine::query()->updateOrCreate(
             [
@@ -92,20 +91,49 @@ class Temari
         };
     }
 
+    /**
+     * Mood an activity would carry once its post-run StoryLine is persisted, for
+     * surfaces (share card, reveal) that render before narration lands. Returns the
+     * rest-day default only when there's no detail to read.
+     */
+    public static function moodForActivityOrDefault(Activity $activity): string
+    {
+        $detail = $activity->detail;
+        if ($detail === null) {
+            return self::MOOD_ADEM;
+        }
+
+        return self::moodForActivity($detail, self::hasPr($activity));
+    }
+
+    private static function hasPr(Activity $activity): bool
+    {
+        return PersonalRecord::query()->where('activity_id', $activity->id)->exists();
+    }
+
     // Order matters — first matching rule wins, most-prestigious mood first.
-    private function moodForActivity(ActivityDetail $detail, bool $hasPr): string
+    private static function moodForActivity(ActivityDetail $detail, bool $hasPr): string
     {
         $summary = $detail->streamSummary();
         $hardShare = StreamSummary::hardZoneShare($summary);
         $decoupling = (float) ($summary['decoupling_pct'] ?? 0);
         $hotWeather = (int) ($detail->weather_temp_c ?? 0) >= 31;
+        $negativeSplit = ($summary['negative_split'] ?? false) === true;
+        $hardSession = $hardShare >= 80.0;
 
         return match (true) {
             $hasPr => self::MOOD_NYALA,
-            $hardShare >= 50.0 => self::MOOD_MUMET,
-            $decoupling > 8.0 => self::MOOD_LEMES,
+            // A hard session finished under control (strong negative split, HR held
+            // together): a genuine win, not a grind.
+            $hardSession && $negativeSplit && $decoupling <= 5.0 => self::MOOD_NYALA,
+            // HR drifted well past pace: the body was working hard.
+            $decoupling > 12.0 => self::MOOD_LEMES,
             $hotWeather => self::MOOD_OLENG,
-            ($summary['negative_split'] ?? false) === true => self::MOOD_ENTENG,
+            // A hard grind that never settled into a controlled finish.
+            $hardSession && ! $negativeSplit => self::MOOD_MUMET,
+            // Finished strong (a hard-but-controlled session lands here too, since
+            // an uncontrolled hard session was already caught as mumet above).
+            $negativeSplit => self::MOOD_ENTENG,
             default => self::MOOD_ADEM,
         };
     }

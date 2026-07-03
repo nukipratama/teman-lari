@@ -24,6 +24,27 @@ it('lists the tracked badges for unlock criteria', function (): void {
     ]);
 });
 
+it('exposes an emoji-free prompt label for every case', function (Badge $badge): void {
+    $label = $badge->promptLabel();
+
+    expect($label)->toBeString()->not->toBe('')
+        // First character is a letter: the leading emoji has been stripped.
+        ->and(preg_match('/^\p{L}/u', $label))->toBe(1)
+        // No snake_case slug bled through.
+        ->and($label)->not->toContain('_');
+})->with(Badge::cases());
+
+it('maps representative badges to their emoji-free prompt labels', function (): void {
+    expect(Badge::NegativeSplit->promptLabel())->toBe('Negative Split')
+        ->and(Badge::PejuangHujan->promptLabel())->toBe('Pejuang Hujan')
+        ->and(Badge::TahanDiri->promptLabel())->toBe('Anti Kalap');
+});
+
+it('maps a list of slugs to prompt labels, dropping unknown slugs', function (): void {
+    expect(Badge::promptLabelsFor(['negative_split', 'not_a_badge', 'pejuang_hujan']))
+        ->toBe(['Negative Split', 'Pejuang Hujan']);
+});
+
 it('builds a slug to label catalog covering every case', function (): void {
     $labels = Badge::labels();
 
