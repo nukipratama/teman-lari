@@ -83,7 +83,7 @@ function HeroSide() {
     };
     return (
         <div
-            className="relative flex flex-col items-center justify-center overflow-hidden px-8 py-12 text-cream sm:px-12 lg:px-16 lg:py-[54px]"
+            className="relative flex flex-col items-center justify-center overflow-hidden px-8 pb-12 pt-24 text-cream sm:px-12 lg:px-16 lg:py-[54px]"
             style={{ background: HERO_GRADIENT }}
         >
             <span

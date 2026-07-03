@@ -77,6 +77,20 @@ it('returns the full goal catalog at zero progress for a fresh user', function (
         ->and($byId['accessory.sepatu_cepat']['current'])->toBe(0);
 });
 
+it('renders goal descriptions as real characters, never raw unicode escapes', function (): void {
+    // Guards against `\u{...}` written in a single-quoted PHP string (never interpolated),
+    // e.g. the aura_gerah "31°C" description regression.
+    $user = User::factory()->create();
+
+    $byId = goalsById($this->resolver, $user);
+
+    foreach ($byId as $goal) {
+        expect($goal['description'])->not->toContain('\u{');
+    }
+
+    expect($byId['accessory.aura_gerah']['description'])->toContain('31°C');
+});
+
 it('counts PRs toward the medal goals and caps current at target', function (): void {
     $user = User::factory()->create();
     PersonalRecord::factory()->for($user)->count(6)->sequence(

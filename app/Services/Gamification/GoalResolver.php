@@ -334,7 +334,7 @@ readonly class GoalResolver
             [
                 'id' => 'accessory.aura_gerah',
                 'title' => '3 lari pas gerah',
-                'description' => 'Selesaikan 3 lari saat suhu di atas 31\u{00b0}C.',
+                'description' => 'Selesaikan 3 lari saat suhu di atas 31°C.',
                 'slot' => 'aura',
                 'rarity' => $this->rarityForKey('accessory.aura_gerah', $catalog),
                 'current' => min($bc[Badge::HariPanas->value] ?? 0, 3),
