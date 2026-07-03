@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services\AI\Narrators;
 
+use App\Enums\Badge;
 use App\Models\RunCard;
 use App\Models\User;
 use App\Services\AI\ChatCallOptions;
@@ -59,7 +60,7 @@ class BriefingFeaturedKartuVoiceNarrator
             'name' => $card->special_move,
             'rarity_label' => $card->rarity->label(),
             'km' => $distance !== null ? round($distance / 1000, 1).'km' : '-',
-            'tags' => \array_slice((array) ($card->badges ?? []), 0, 3),
+            'tags' => \array_slice(Badge::promptLabelsFor((array) ($card->badges ?? [])), 0, 3),
         ];
 
         $decoded = $this->caller->call(

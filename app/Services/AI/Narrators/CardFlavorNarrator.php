@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services\AI\Narrators;
 
+use App\Enums\Badge;
 use App\Models\RunCard;
 use App\Services\AI\ChatCallOptions;
 use App\Services\AI\Context\ActivityNarrationContext;
@@ -49,7 +50,7 @@ class CardFlavorNarrator
             'rarity' => $card->rarity->value,
             'rarity_label' => $card->rarity->label(),
             'special_move' => $card->special_move,
-            'badges' => $card->badges,
+            'badges' => Badge::promptLabelsFor((array) ($card->badges ?? [])),
             'distance_km' => $shared->distanceKmOrNull(2),
             'pace_sec_per_km' => $paceSecPerKm !== null ? round($paceSecPerKm, 1) : null,
             'weather_temp_c' => $shared->weatherTempC,
