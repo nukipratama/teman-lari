@@ -3,7 +3,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { Icon } from '@iconify/react';
 import AnalysisStatus from '@/components/temari/AnalysisStatus';
 import Card from '@/components/ui/Card';
-import { useCooldownCountdown } from '@/hooks/useCooldownCountdown';
+import { cooldownAriaLabel, useCooldownCountdown } from '@/hooks/useCooldownCountdown';
 import { csrfToken } from '@/lib/http';
 import { formatDurationHMS } from '@/lib/pace';
 import { renderBold } from '@/lib/richText';
@@ -55,7 +55,7 @@ function bulkButtonLabel(pending: boolean, cooldownRemaining: number): string {
         return 'Lagi dibaca…';
     }
     if (cooldownRemaining > 0) {
-        return `Tunggu ${formatDurationHMS(cooldownRemaining)} ya`;
+        return formatDurationHMS(cooldownRemaining);
     }
     return 'Baca ulang semua';
 }
@@ -121,9 +121,10 @@ export default function FourLensGrid({
                         type="button"
                         onClick={triggerAll}
                         disabled={bulkPending || cooling}
+                        aria-label={cooldownAriaLabel(cooldownRemaining, 'baca ulang semua')}
                         className="focus-ring rounded inline-flex items-center gap-1.5 font-mono font-bold text-[11px] uppercase tracking-[0.1em] text-ink-2 transition hover:text-leaf-deep disabled:cursor-not-allowed disabled:opacity-50"
                     >
-                        <Icon icon={bulkPending ? 'mdi:loading' : 'mdi:refresh'} className={cn(bulkPending && 'animate-spin')} aria-hidden />
+                        <Icon icon={bulkPending ? 'mdi:loading' : 'mdi:auto-awesome'} className={cn(bulkPending && 'animate-spin')} aria-hidden />
                         {bulkLabel}
                     </button>
                 </div>
