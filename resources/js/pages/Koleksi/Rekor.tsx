@@ -268,12 +268,17 @@ function ProgressionSection({
                         )}
                     </div>
                 </div>
-                <ProgressionChart
-                    key={selected}
-                    weeks={series.weeks}
-                    timesSec={series.times_sec}
-                    goalSec={series.goal_sec}
-                />
+                <div>
+                    <p className="mb-1.5 text-label-micro text-ink-3">
+                        Sumbu Y dibalik: makin ke atas, makin cepat.
+                    </p>
+                    <ProgressionChart
+                        key={selected}
+                        weeks={series.weeks}
+                        timesSec={series.times_sec}
+                        goalSec={series.goal_sec}
+                    />
+                </div>
             </div>
         </Card>
     );

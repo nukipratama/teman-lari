@@ -26,7 +26,7 @@ export default function PersonaBar({ mix, className }: Readonly<PersonaBarProps>
 
     return (
         <div className={cn('flex flex-col gap-3', className)}>
-            <div className="flex h-3 w-full overflow-hidden rounded-full">
+            <div className="flex h-4 w-full overflow-hidden rounded-full">
                 {mix.map((slice) => (
                     <div
                         key={slice.mood}
@@ -41,7 +41,7 @@ export default function PersonaBar({ mix, className }: Readonly<PersonaBarProps>
                     <li key={slice.mood} className="inline-flex items-center gap-1.5 text-ink-2">
                         <span aria-hidden className={cn('h-2 w-2 rounded-full', MOOD_FILL[slice.mood])} />
                         <span className="font-medium text-ink">{MOOD_LABEL[slice.mood]}</span>
-                        <span className="font-mono tabular-nums text-ink-3">{slice.percent.toFixed(1)}%</span>
+                        <span className="font-mono font-semibold tabular-nums text-ink-2">{slice.percent.toFixed(1)}%</span>
                     </li>
                 ))}
             </ul>

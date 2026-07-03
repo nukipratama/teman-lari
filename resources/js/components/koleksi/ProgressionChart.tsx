@@ -26,6 +26,45 @@ import {
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Filler, Tooltip, Legend);
 
+/**
+ * Labels only the FIRST and LAST point of the "Best time" line with its formatted
+ * value (every point would clutter a multi-week series), so the progression reads
+ * without hovering for a tooltip.
+ */
+const endpointLabelsPlugin = {
+    id: 'endpointLabels',
+    afterDatasetsDraw(chart: {
+        ctx: CanvasRenderingContext2D;
+        data: { datasets: Array<{ data: Array<number | null> }> };
+        getDatasetMeta: (i: number) => { data: Array<{ x: number; y: number }> };
+    }) {
+        const points = chart.getDatasetMeta(0).data;
+        const values = chart.data.datasets[0]?.data ?? [];
+        const drawn = new Set<number>();
+        const indices = [values.findIndex((v) => v != null), lastDefinedIndex(values)];
+        const ctx = chart.ctx;
+        ctx.save();
+        ctx.font = '600 11px "JetBrains Mono", monospace';
+        ctx.fillStyle = '#3d362a';
+        ctx.textAlign = 'center';
+        for (const i of indices) {
+            if (i < 0 || drawn.has(i) || points[i] == null) continue;
+            drawn.add(i);
+            const v = values[i];
+            if (v == null) continue;
+            ctx.fillText(formatDurationHMS(Math.round(v * 60)), points[i].x, points[i].y - 10);
+        }
+        ctx.restore();
+    },
+};
+
+function lastDefinedIndex(values: ReadonlyArray<number | null>): number {
+    for (let i = values.length - 1; i >= 0; i--) {
+        if (values[i] != null) return i;
+    }
+    return -1;
+}
+
 export default function ProgressionChart({
     weeks,
     timesSec,
@@ -39,7 +78,16 @@ export default function ProgressionChart({
                 label: 'Best time',
                 data: timesSec.map((t) => (t == null ? null : t / 60)),
                 borderColor: 'rgba(232, 160, 118, 1)',
-                backgroundColor: 'rgba(232, 160, 118, 0.18)',
+                // Vertical gradient area fill (denser near the line, fading to the axis)
+                // instead of a flat wash, so the chart reads as intentional, not a default.
+                backgroundColor: (ctx: { chart: { chartArea?: { top: number; bottom: number }; ctx: CanvasRenderingContext2D } }) => {
+                    const { chartArea, ctx: canvasCtx } = ctx.chart;
+                    if (!chartArea) return 'rgba(232, 160, 118, 0.18)';
+                    const g = canvasCtx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom);
+                    g.addColorStop(0, 'rgba(232, 160, 118, 0.32)');
+                    g.addColorStop(1, 'rgba(232, 160, 118, 0.02)');
+                    return g;
+                },
                 borderWidth: 2.5,
                 pointRadius: 4,
                 pointBackgroundColor: 'rgba(208, 138, 96, 1)',
@@ -113,7 +161,7 @@ export default function ProgressionChart({
     return (
         <div className={cn('h-[260px] sm:h-[300px]', className)}>
             <Suspense fallback={<div className="h-full w-full animate-pulse rounded-xl bg-cream-deep/40" />}>
-                <Line data={data} options={options} />
+                <Line data={data} options={options} plugins={[endpointLabelsPlugin]} />
             </Suspense>
         </div>
     );
