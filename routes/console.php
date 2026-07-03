@@ -35,11 +35,13 @@ Schedule::command('ai:weekly-profile')->weeklyOn(1, '00:05');
 // 1st of the month 05:45: same pattern for the monthly recap.
 Schedule::command('ai:monthly-recap')->monthlyOn(1, '05:45');
 
-// Hourly recovery sweep: re-kicks the earliest Pending/Failed link of every
-// connected chain (weekly + monthly + per-activity) per user — for cost-ceiling
-// pauses (release at the midnight dailyCost() reset) and transient link failures.
-// Idempotent (invalidate=false): a no-op on links already advancing, never re-bills.
-Schedule::command('ai:resume-chains')->hourly()->withoutOverlapping(55);
+// Hourly self-heal sweep: re-kicks the earliest stalled AI block per user
+// (weekly + monthly + per-activity chains, plus card/PR narration) — for
+// cost-ceiling pauses (release at the midnight dailyCost() reset) and transient
+// failures. Idempotent (invalidate=false): a no-op on blocks already advancing,
+// never re-bills; Failed blocks are bounded by MAX_SELF_HEAL_ATTEMPTS then
+// dead-lettered. Early-exits while generation is paused.
+Schedule::command('ai:self-heal')->hourly()->withoutOverlapping(55);
 
 // Fallback poll behind the Strava webhook, hourly across the two running peaks
 // (WIB: 04-10 and 16-22). Bounded withoutOverlapping so a strand self-releases, not 24h.

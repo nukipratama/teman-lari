@@ -2,7 +2,8 @@
 title: Per-block manual retry, never auto-retry
 description: Failed AI blocks are never auto-retried; retry is a per-block manual action, capped by cooldown + rate limit.
 tags: [decision, ai]
-status: accepted
+status: superseded
+superseded_by: bounded-self-heal-and-dead-letter
 reviewed: 2026-06-20
 code_refs:
   - app/Jobs/AI/AnalyzeBaseJob.php
@@ -11,6 +12,8 @@ code_refs:
   - resources/js/components/temari/AnalysisStatus.tsx
   - config/ai.php
 ---
+
+> **Superseded (2026-07-04) by [[bounded-self-heal-and-dead-letter]].** The "no self-healing / never auto-retried" stance below is refined there: paused blocks stay honestly Pending and self-heal for free, and genuinely-failed blocks get a bounded auto-retry then dead-letter. The manual "Coba lagi" UI, cooldown, and rate limit documented here still stand.
 
 # Per-block manual retry, never auto-retry
 

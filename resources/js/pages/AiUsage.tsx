@@ -1,4 +1,4 @@
-import { Head, Link, router } from '@inertiajs/react';
+import { Head, Link, router, useForm } from '@inertiajs/react';
 import { type ReactNode, useState } from 'react';
 import { Icon } from '@iconify/react';
 import { formatMonthDayId, formatWeekdayDayId } from '@/lib/pace';
@@ -72,6 +72,19 @@ interface Budget {
     currency: string;
 }
 
+interface DeadLetterBlock {
+    type: string;
+    error: string | null;
+    failed_at: string;
+}
+
+interface DeadLetterGroup {
+    user_id: number;
+    user_name: string;
+    count: number;
+    blocks: DeadLetterBlock[];
+}
+
 type PreviousTotals = Omit<UsageTotals, 'truncated_calls'>;
 
 /** Relative range token resolved server-side; drives preset highlighting. */
@@ -90,6 +103,7 @@ interface AiUsageProps {
     daily: DailyRow[];
     availableKinds: KindOption[];
     budget: Budget;
+    deadLettered: DeadLetterGroup[];
 }
 
 const numberFmt = new Intl.NumberFormat('id-ID');
@@ -166,6 +180,7 @@ export default function AiUsage({
     daily,
     availableKinds,
     budget,
+    deadLettered,
 }: Readonly<AiUsageProps>) {
     const [fromInput, setFromInput] = useState<string>(from);
     const [toInput, setToInput] = useState<string>(to);
@@ -286,6 +301,8 @@ export default function AiUsage({
 
                 <BudgetGauge budget={budget} />
 
+                <DeadLetterPanel groups={deadLettered} />
+
                 {daily.length > 0 && (
                     <section className="mt-10">
                         <SectionHeading
@@ -349,6 +366,73 @@ export default function AiUsage({
                     renderRow={(row) => <UserCells row={row} grandTotal={totals.total} />}
                 />
             </PageContainer>
+        </div>
+    );
+}
+
+/* ─── Dead-letter panel ───────────────────────────────────────────── */
+
+/**
+ * Blocks that ai:self-heal gave up on (Failed past the retry budget). Grouped
+ * per user with a single "Coba lagi semua" that re-arms and re-dispatches all of
+ * that user's stuck blocks. Hidden entirely when nothing is stuck.
+ */
+function DeadLetterPanel({ groups }: Readonly<{ groups: DeadLetterGroup[] }>) {
+    if (groups.length === 0) {
+        return null;
+    }
+
+    return (
+        <section className="mt-10">
+            <SectionHeading
+                icon="mdi:alert-circle-outline"
+                title="Perlu perhatian"
+                subtitle="Blok AI yang gagal berulang dan berhenti dicoba otomatis. Coba lagi manual per user."
+                tone="accent"
+            />
+
+            <div className="mt-4 space-y-3">
+                {groups.map((group) => (
+                    <DeadLetterGroupRow key={group.user_id} group={group} />
+                ))}
+            </div>
+        </section>
+    );
+}
+
+function DeadLetterGroupRow({ group }: Readonly<{ group: DeadLetterGroup }>) {
+    const { post, processing } = useForm();
+
+    function retry(): void {
+        post(`/ai-usage/users/${group.user_id}/retry-failed`, { preserveScroll: true });
+    }
+
+    return (
+        <div className="rounded-2xl border border-line bg-surface-elev p-4">
+            <div className="flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                    <p className="truncate font-medium text-ink">{group.user_name}</p>
+                    <p className="text-xs text-ink-3">{group.count} blok berhenti dicoba otomatis</p>
+                </div>
+                <button
+                    type="button"
+                    onClick={retry}
+                    disabled={processing}
+                    className="focus-ring inline-flex shrink-0 items-center gap-1.5 rounded-full bg-leaf-deep px-3 py-1.5 text-xs font-semibold text-cream transition-opacity hover:opacity-90 disabled:cursor-wait disabled:opacity-60"
+                >
+                    <Icon icon="mdi:auto-awesome" aria-hidden />
+                    <span>{processing ? 'Mengirim…' : 'Coba lagi semua'}</span>
+                </button>
+            </div>
+
+            <ul className="mt-3 space-y-1 border-t border-line pt-3">
+                {group.blocks.map((block, i) => (
+                    <li key={`${block.type}-${i}`} className="flex flex-wrap items-baseline gap-x-2">
+                        <span className="font-mono text-[11px] font-bold uppercase tracking-wider text-ink-3">{block.type}</span>
+                        {block.error && <span className="min-w-0 truncate text-xs text-ink-2">{block.error}</span>}
+                    </li>
+                ))}
+            </ul>
         </div>
     );
 }

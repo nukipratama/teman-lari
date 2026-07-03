@@ -35,6 +35,10 @@ abstract class AnalyzeGroupJob extends AnalyzeBaseJob
             return;
         }
 
+        if ($this->haltForPausedGeneration($service, $pending)) {
+            return;
+        }
+
         try {
             $subject = $this->resolveSubject($this->subjectId);
         } catch (UnavailableException $e) {

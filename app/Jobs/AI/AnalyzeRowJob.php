@@ -23,6 +23,10 @@ abstract class AnalyzeRowJob extends AnalyzeBaseJob
             return;
         }
 
+        if ($this->haltForPausedGeneration($service, [$row])) {
+            return;
+        }
+
         $service->markProcessing($row);
 
         try {

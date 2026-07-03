@@ -8,7 +8,7 @@ code_refs:
   - app/Jobs/AI/AnalyzeBaseJob.php
   - app/Jobs/AI/AnalyzeRowJob.php
   - app/Jobs/AI/AnalyzeActivityJob.php
-  - app/Console/Commands/AI/ResumeChainsCommand.php
+  - app/Console/Commands/AI/SelfHealCommand.php
   - app/Models/AI/Analysis.php
   - app/Http/Controllers/Api/AnalysisController.php
   - database/migrations/2026_05_18_071059_create_ai_analyses_table.php
@@ -27,7 +27,7 @@ A wall of independently-generated narration blocks reads like a stranger writing
 We decided that the chained kinds (WeeklyRecap, MonthlyRecap, and the per-activity group: PostRunSpeech + the three RunInsight types) narrate **oldest first, one link at a time**, predecessor-Done-before-successor:
 
 - A row's [`afterDone`](app/Jobs/AI/AnalyzeRowJob.php) hook (no-op by default on [AnalyzeRowJob](app/Jobs/AI/AnalyzeRowJob.php), which extends [AnalyzeBaseJob](app/Jobs/AI/AnalyzeBaseJob.php)) kicks the next pending link once a link finishes. For the per-activity chain this is overridden at the group level: [AnalyzeActivityJob](app/Jobs/AI/AnalyzeActivityJob.php) walks to the next chronological activity (by `start_date_local`) whose group is still Pending via `requestActivityGroup(invalidate: false)`.
-- A scheduled `ai:resume-chains` ([ResumeChainsCommand](app/Console/Commands/AI/ResumeChainsCommand.php)) is the safety net: it re-kicks the earliest **Pending or Failed** link of every chain (weekly + monthly + per-activity) per user, so a link stranded by a transient failure or a cost-ceiling pause resumes once `dailyCost()` resets. `invalidate:false` makes a capped dispatch a clean no-op (the chain pauses rather than injecting filler).
+- A scheduled `ai:self-heal` ([SelfHealCommand](app/Console/Commands/AI/SelfHealCommand.php)) is the safety net: it re-kicks the earliest **stalled** link of every chain (weekly + monthly + per-activity, plus the standalone card/PR narration) per user, so a link stranded by a transient failure or a cost-ceiling pause resumes once `dailyCost()` resets. `invalidate:false` makes a capped dispatch a clean no-op (the chain pauses rather than injecting filler), and it early-exits entirely while generation is paused. Failed links are bounded by `Analysis::MAX_SELF_HEAL_ATTEMPTS`: once a link burns its retry budget it drops to the /ai-usage dead-letter instead of re-billing every hour.
 - Retry is **chain-aware** in [AnalysisController::trigger](app/Http/Controllers/Api/AnalysisController.php): only the chain *head* (the latest narrated link, a Done row) may regenerate in place. Any other chained click — including a Done mid-history row — resumes the earliest unfilled link *forward* with `invalidate:false`, so re-narrating mid-history never desyncs the later blocks that quoted its old narrative.
 
 ## Consequences

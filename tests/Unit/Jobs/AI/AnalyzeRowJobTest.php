@@ -103,6 +103,20 @@ it('marks row Done with content on successful generation', function (): void {
         ->and($fresh->attempts)->toBe(1);
 });
 
+it('reverts the row to Pending without billing when generation is paused', function (): void {
+    // Azure unset -> generationPaused true. A job dispatched just before the
+    // pause must not call the LLM; it reverts to Pending for ai:self-heal.
+    config(['azure_openai.uri' => '', 'azure_openai.api_key' => '']);
+    $row = makeRowForRowJobTest();
+
+    fakeSuccessRowJob($row->id)->handle(app(AnalysisService::class));
+
+    $fresh = $row->fresh();
+    expect($fresh->status)->toBe(AnalysisStatus::Pending)
+        ->and($fresh->attempts)->toBe(0)  // never reached markProcessing
+        ->and($fresh->content)->toBeNull();
+});
+
 it('marks row Failed without rethrowing for UnavailableException', function (): void {
     $row = makeRowForRowJobTest();
 

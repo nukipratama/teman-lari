@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Illuminate\Support\Facades\Bus;
 use App\Exceptions\AI\UnavailableException;
 use App\Jobs\AI\AnalyzeActivityJob;
 use App\Models\Activity;
@@ -81,6 +82,28 @@ it('writes speech + 3 insight rows Done from one job run', function (): void {
     foreach ($rows as $row) {
         expect($row->status)->toBe(AnalysisStatus::Done);
     }
+});
+
+it('reverts group rows to Pending without billing when generation is paused', function (): void {
+    // Azure unset -> generationPaused true. No narrator is mocked, so if the guard
+    // failed the job would hit the real client; instead it must return early.
+    config(['azure_openai.uri' => '', 'azure_openai.api_key' => '']);
+    $activity = seedActivityForJob();
+    foreach (AnalyzeActivityJob::groupedTypes() as $type) {
+        Analysis::factory()->queued()->create([
+            'subject_type' => Activity::class,
+            'subject_id' => $activity->id,
+            'analysis_type' => $type,
+            'discriminator' => null,
+        ]);
+    }
+
+    (new AnalyzeActivityJob($activity->id))->handle(app(AnalysisService::class));
+
+    $rows = Analysis::query()->where('subject_id', $activity->id)->get();
+    expect($rows)->toHaveCount(4)
+        ->and($rows->pluck('status')->unique()->all())->toBe([AnalysisStatus::Pending])
+        ->and($rows->pluck('attempts')->unique()->all())->toBe([0]);
 });
 
 it('degrades run-insight to rule-based content when the LLM is unavailable', function (): void {
@@ -277,11 +300,11 @@ it('advances the chain to the next chronological Pending activity group on compl
     app()->instance(PostRunSpeechNarrator::class, $speechMock);
     mockInsightNarrator(['technical' => 't', 'splits' => 's', 'zones' => 'z']);
 
-    Illuminate\Support\Facades\Bus::fake();
+    Bus::fake();
     (new AnalyzeActivityJob($first->id))->handle(app(AnalysisService::class));
 
     // The next chronological activity's group is dispatched as the chain link.
-    Illuminate\Support\Facades\Bus::assertDispatched(
+    Bus::assertDispatched(
         AnalyzeActivityJob::class,
         fn (AnalyzeActivityJob $job): bool => $job->subjectId === $next->id,
     );
@@ -299,8 +322,8 @@ it('does not advance the chain when no later activity group is Pending', functio
     app()->instance(PostRunSpeechNarrator::class, $speechMock);
     mockInsightNarrator(['technical' => 't', 'splits' => 's', 'zones' => 'z']);
 
-    Illuminate\Support\Facades\Bus::fake();
+    Bus::fake();
     (new AnalyzeActivityJob($only->id))->handle(app(AnalysisService::class));
 
-    Illuminate\Support\Facades\Bus::assertNotDispatched(AnalyzeActivityJob::class);
+    Bus::assertNotDispatched(AnalyzeActivityJob::class);
 });

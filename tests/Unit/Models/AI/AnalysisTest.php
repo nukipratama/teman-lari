@@ -2,7 +2,12 @@
 
 declare(strict_types=1);
 
+use App\Models\Activity;
 use App\Models\AI\Analysis;
+use App\Models\PersonalRecord;
+use App\Models\RunCard;
+use App\Models\User;
+use App\Models\WeeklySnapshot;
 use App\Services\AI\AnalysisStatus;
 use App\Services\AI\AnalysisType;
 use App\Support\Cooldown;
@@ -115,4 +120,66 @@ it('payloadsForSubjects ignores rows of a different type or subject_type', funct
 
     expect($payloads[30]['id'])->toBeNull()
         ->and($payloads[30]['status'])->toBe('pending');
+});
+
+it('stalled() includes Pending and under-budget Failed rows, excludes Done and dead-lettered', function (): void {
+    $pending = Analysis::factory()->create(['status' => AnalysisStatus::Pending, 'discriminator' => 'p']);
+    $failedUnder = Analysis::factory()->failed()->create(['discriminator' => 'fu']); // attempts 1
+    $failedAtBudget = Analysis::factory()->failed()->create([
+        'discriminator' => 'fb',
+        'attempts' => Analysis::MAX_SELF_HEAL_ATTEMPTS,
+    ]);
+    Analysis::factory()->done('x')->create(['discriminator' => 'd']);
+
+    $ids = Analysis::query()->stalled()->pluck('id');
+
+    expect($ids)->toContain($pending->id)
+        ->toContain($failedUnder->id)
+        ->not->toContain($failedAtBudget->id);
+});
+
+it('deadLettered() is only Failed rows at or over the retry budget', function (): void {
+    $dead = Analysis::factory()->failed()->create([
+        'discriminator' => 'dead',
+        'attempts' => Analysis::MAX_SELF_HEAL_ATTEMPTS,
+    ]);
+    $failedUnder = Analysis::factory()->failed()->create(['discriminator' => 'under']); // attempts 1
+    $pendingMaxed = Analysis::factory()->create([
+        'status' => AnalysisStatus::Pending,
+        'discriminator' => 'pend',
+        'attempts' => Analysis::MAX_SELF_HEAL_ATTEMPTS,
+    ]);
+
+    $ids = Analysis::query()->deadLettered()->pluck('id');
+
+    expect($ids)->toContain($dead->id)
+        ->not->toContain($failedUnder->id)
+        ->not->toContain($pendingMaxed->id); // Pending never dead-letters
+});
+
+it('ownerId resolves the owning user across every subject type', function (): void {
+    $user = User::factory()->create();
+    $activity = Activity::factory()->for($user)->create();
+    $card = RunCard::factory()->for($activity)->create();
+    $pr = PersonalRecord::factory()->for($user)->create();
+    $snap = WeeklySnapshot::factory()->for($user)->create();
+
+    $cases = [
+        [Activity::class, $activity->id],
+        [WeeklySnapshot::class, $snap->id],
+        [RunCard::class, $card->id],
+        [PersonalRecord::class, $pr->id],
+        // A `*_user_*` string subject type: subject_id IS the user id.
+        [AnalysisType::MONTHLY_RECAP_SUBJECT_TYPE, $user->id],
+    ];
+
+    foreach ($cases as [$subjectType, $subjectId]) {
+        $row = new Analysis(['subject_type' => $subjectType, 'subject_id' => $subjectId]);
+        expect($row->ownerId())->toBe($user->id, $subjectType);
+    }
+});
+
+it('ownerId is null when the subject row no longer exists', function (): void {
+    $row = new Analysis(['subject_type' => Activity::class, 'subject_id' => 999999]);
+    expect($row->ownerId())->toBeNull();
 });

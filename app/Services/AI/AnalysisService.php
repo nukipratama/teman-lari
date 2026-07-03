@@ -191,13 +191,21 @@ class AnalysisService
         $row = $this->upsertRow($subjectType, $subjectId, $type, $discriminator);
         $justCreated = $row->wasRecentlyCreated;
 
-        if ($type->isRuleBased() || ! $this->autoDispatchEnabled()) {
+        // Rule-based types carry deterministic content (no LLM) -> fill inline.
+        if ($type->isRuleBased()) {
             if ($justCreated || ($invalidate && $row->status === AnalysisStatus::Done)) {
-                $content = $type->isRuleBased() ? $this->ruleBasedContent($row) : $this->filler->fillFor($row);
-                $this->markDone($row, $content);
+                $this->markDone($row, $this->ruleBasedContent($row));
                 $row->refresh();
             }
 
+            return $row;
+        }
+
+        // Generation paused (cost ceiling / AI off / Azure unset / demo seed):
+        // stay honest -> a fresh row rests Pending for the empty state, an existing
+        // Done keeps its real prose. Never substitute a template; ai:self-heal
+        // resumes it once generation is back (demo flat-fills via its own seeder).
+        if (! $this->autoDispatchEnabled()) {
             return $row;
         }
 
@@ -378,6 +386,20 @@ class AnalysisService
         ]);
     }
 
+    /**
+     * Send a row back to Pending without touching `attempts`, used by the
+     * analyze jobs when generation is paused mid-flight: the row rests Pending
+     * for the empty state and ai:self-heal re-dispatches it later, but its
+     * self-heal budget is preserved (this was not a real LLM attempt).
+     */
+    public function revertToPending(Analysis $row): void
+    {
+        $row->update([
+            'status' => AnalysisStatus::Pending,
+            'queued_at' => null,
+        ]);
+    }
+
     private function dispatchPending(PendingDispatch $pending, ?int $delaySeconds): void
     {
         $pending->onQueue($this->queueName());
@@ -390,6 +412,17 @@ class AnalysisService
         // CardFlavor). Without this the job could run before — or be orphaned by
         // a rollback of — the Analysis row it targets. A no-op when not in a txn.
         $pending->afterCommit();
+    }
+
+    /**
+     * True when LLM generation is paused for everyone right now: daily cost
+     * ceiling hit, the AiEnabled kill-switch off, Azure unconfigured, or a
+     * demo-seed suppression. ai:self-heal early-exits on it and the analyze jobs
+     * refuse to bill on it; a paused row rests Pending until generation resumes.
+     */
+    public function generationPaused(): bool
+    {
+        return ! $this->autoDispatchEnabled();
     }
 
     private function autoDispatchEnabled(): bool
