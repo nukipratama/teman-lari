@@ -157,7 +157,9 @@ it('PostRunSpeechNarrator feeds prev_narrative from the prior activity post-run 
 
     $context = (new PostRunSpeechNarrator(fakeCaller('{"speech":"x"}')))->context($a, $d->fresh(), 'nyala', postRunInsightsFixture());
 
-    expect($context['prev_narrative'])->toBe('Lari kemarin enteng banget.');
+    expect($context['prev_narrative'])->toBe('Lari kemarin enteng banget.')
+        // prev_opener is the first few words, so the model can steer away from it.
+        ->and($context['prev_opener'])->toBe('Lari kemarin enteng banget.');
 });
 
 it('PostRunSpeechNarrator leaves prev_narrative null when there is no prior Done post-run', function (): void {
@@ -175,7 +177,22 @@ it('PostRunSpeechNarrator leaves prev_narrative null when there is no prior Done
 
     $context = (new PostRunSpeechNarrator(fakeCaller('{"speech":"x"}')))->context($a, $d->fresh(), 'nyala', postRunInsightsFixture());
 
-    expect($context['prev_narrative'])->toBeNull();
+    expect($context['prev_narrative'])->toBeNull()
+        ->and($context['prev_opener'])->toBeNull();
+});
+
+it('PostRunSpeechNarrator truncates prev_opener to the first few words of a long prior narrative', function (): void {
+    ['activity' => $a, 'detail' => $d] = postRunFixture();
+    priorActivityWithDoneAnalysis(
+        $a->user,
+        AnalysisType::PostRunSpeech,
+        'Masih nyambung dari sesi kemarin, kali ini penutupmu lebih hidup dan pace makin rapi di akhir.',
+    );
+
+    $context = (new PostRunSpeechNarrator(fakeCaller('{"speech":"x"}')))->context($a, $d->fresh(), 'nyala', postRunInsightsFixture());
+
+    expect($context['prev_opener'])->toBe('Masih nyambung dari sesi kemarin, kali ini penutupmu lebih hidup')
+        ->and(str_word_count((string) $context['prev_opener']))->toBeLessThanOrEqual(10);
 });
 
 // ── DailyGreetingNarrator ─────────────────────────────────────────────

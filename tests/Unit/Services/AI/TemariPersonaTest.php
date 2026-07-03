@@ -64,6 +64,19 @@ it('draws the slang bright line at lo/gue while allowing casual Jakarta vocab', 
         ->toContain('"gak"');
 });
 
+it('makes encouragement soft and optional, not a forced beat', function (): void {
+    expect($this->prompt)
+        ->toContain('OPSIONAL')
+        ->toContain('Jangan maksa nada positif');
+});
+
+it('tells narrators to vary openers and never open with a "nyambung" connector', function (): void {
+    expect($this->prompt)
+        ->toContain('Cara membuka & variasi')
+        ->toContain('masih nyambung')
+        ->toContain('Variasikan cara membuka');
+});
+
 it('forbids preachy / coach-mode phrasing like "kamu harus"', function (): void {
     expect($this->prompt)
         ->toContain('JANGAN menggurui')

@@ -20,34 +20,27 @@ class PostRunSpeechNarrator
     use ReadsPreviousActivityNarrative;
 
     private const string SYSTEM_PROMPT = <<<'PROMPT'
-        Tugas: cerita post-run hangat untuk pengguna setelah selesai lari, 2-3
-        kalimat, maksimal 55 kata.
+        Tugas: cerita post-run hangat setelah pengguna selesai lari. Rangkai
+        2-4 kalimat (maksimal 75 kata) jadi satu cerita kecil beralur: buka dari
+        satu sorotan, tunjukin satu titik menarik di tengah (misalnya pace sempat
+        pecah lalu balik, atau finish yang nyala), lalu tutup dengan enak.
 
         Kamu menerima tiga analisis teknis yang sudah jadi di field insights:
         - technical: terjemahan teknis (cadence, decoupling, HR).
         - splits: split atau pola pacing paling menarik.
         - zones: interpretasi HR zone.
-        Tugasmu MENAFSIRKAN ketiganya jadi satu cerita manusiawi yang
-        menghubungkan satu angka paling menonjol ke perasaan. Saring dan
-        rangkai, JANGAN mendaftar semua angka atau mengulang isi analisis
-        mentah-mentah. Pilih satu sorotan, sisanya jadi latar.
+        Tafsirkan ketiganya jadi satu cerita manusiawi. Pilih SATU sorotan paling
+        menonjol buat dibuka, sisanya jadi latar. JANGAN mendaftar semua angka
+        atau mengulang isi analisis mentah-mentah.
 
-        Sesuaikan tone dengan mood: glow=bangga (PR atau highlight); bouncy=excited
-        (negative split atau strong finish); wobble=empatik (cardiac drift atau HR
-        drift); spinning=catatan kelelahan (sesi keras); squished=acknowledge cuaca
-        panas; dim=netral atau konsisten.
-
-        Hangat dan menghubungkan angka ke perasaan. Jangan mengoreksi atau
-        menggurui.
+        Buka dari sorotan itu, bukan dari status atau basa-basi. Kalau ada,
+        sematkan detail suasana (jam lari, cuaca, medan) biar kerasa nyata.
+        Sesuaikan tone ke mood di field `mood` (kode Daybreak), ikut kalibrasi
+        mood di persona.
 
         JANGAN PERNAH menyebut "PR" atau "personal record" kecuali has_pr bernilai
         true. Kalau has_pr false, rayakan sorotan nyata lain (jarak, konsistensi,
         finish, atau cuaca), bukan PR yang tidak ada.
-
-        KESINAMBUNGAN: kalau prev_narrative ada (post-run lari sebelumnya),
-        lanjutkan benang ceritanya dan variasikan cara membuka, jangan mengulang
-        kalimat yang sama persis. Kalau prev_narrative null (lari pertama), tulis
-        berdiri sendiri tanpa menyinggung lari sebelumnya.
         PROMPT;
 
     public function __construct(private readonly StructuredChatCaller $caller)
@@ -61,7 +54,7 @@ class PostRunSpeechNarrator
     {
         $decoded = $this->caller->call(
             kind: 'post_run_speech',
-            systemPrompt: self::SYSTEM_PROMPT,
+            systemPrompt: self::SYSTEM_PROMPT."\n\n".NarratorContinuity::RULE,
             context: $this->context($activity, $detail, $mood, $insights),
             schemaName: 'TemariPostRunSpeech',
             requiredKeys: ['speech'],
@@ -83,6 +76,12 @@ class PostRunSpeechNarrator
             ? null
             : array_search(max($shared->zonePct), $shared->zonePct, strict: true);
 
+        $prevNarrative = $this->previousActivityNarrative(
+            $activity,
+            $detail,
+            AnalysisType::PostRunSpeech,
+        );
+
         return [
             'mood' => $mood,
             'has_pr' => $hasPr,
@@ -93,11 +92,8 @@ class PostRunSpeechNarrator
             'negative_split' => $shared->negativeSplit,
             'weather_temp_c' => $shared->weatherTempC,
             'weather_rain' => $shared->weatherRain,
-            'prev_narrative' => $this->previousActivityNarrative(
-                $activity,
-                $detail,
-                AnalysisType::PostRunSpeech,
-            ),
+            'prev_narrative' => $prevNarrative,
+            'prev_opener' => NarratorContinuity::opener($prevNarrative),
         ];
     }
 }

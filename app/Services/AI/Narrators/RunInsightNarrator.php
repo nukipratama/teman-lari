@@ -69,12 +69,6 @@ class RunInsightNarrator
         Istilah lari boleh tetap English: easy, tempo, pace, cadence, base,
         negative split, long run.
 
-        KESINAMBUNGAN: kalau prev_narrative ada (catatan teknis lari sebelumnya),
-        lanjutkan benang ceritanya, tunjukkan progres atau perubahan dari sesi itu
-        ke sesi ini, dan variasikan cara membuka. Jangan mengulang kalimat yang
-        sama persis. Kalau prev_narrative null (lari pertama), tulis berdiri
-        sendiri tanpa menyinggung lari sebelumnya.
-
         KONTEKS HISTORIS (pakai kalau ada, jangan dipaksakan kalau null):
         - recent_baseline_28d: rata-rata 28 hari terakhir (pace, HR, decoupling).
           Bandingkan sesi ini dengan baseline-nya: lebih cepat/lambat, HR lebih
@@ -110,7 +104,7 @@ class RunInsightNarrator
     {
         $decoded = $this->caller->call(
             kind: 'run_insight',
-            systemPrompt: self::SYSTEM_PROMPT,
+            systemPrompt: self::SYSTEM_PROMPT."\n\n".NarratorContinuity::RULE,
             context: $this->context($activity, $detail),
             schemaName: 'TemariRunInsight',
             requiredKeys: ['technical', 'splits', 'zones'],
@@ -130,6 +124,11 @@ class RunInsightNarrator
         $summary = $detail->streamSummary();
         $shared = ActivityNarrationContext::fromDetail($detail);
         $asOf = $detail->start_date_local ?? Carbon::now();
+        $prevNarrative = $this->previousActivityNarrative(
+            $activity,
+            $detail,
+            AnalysisType::RunInsightTechnical,
+        );
 
         return [
             'distance_km' => $shared->distanceKm(2),
@@ -151,11 +150,8 @@ class RunInsightNarrator
             'weather_humidity_pct' => $detail->weather_humidity_pct,
             'training_load' => $this->trainingLoadContext($activity, $asOf),
             'recent_baseline_28d' => $this->baseline->forUserAsOf($activity->user_id, $asOf, $activity->id),
-            'prev_narrative' => $this->previousActivityNarrative(
-                $activity,
-                $detail,
-                AnalysisType::RunInsightTechnical,
-            ),
+            'prev_narrative' => $prevNarrative,
+            'prev_opener' => NarratorContinuity::opener($prevNarrative),
         ];
     }
 
