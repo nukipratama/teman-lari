@@ -1,10 +1,11 @@
+import type { ReactNode } from 'react';
 import MetricExplainer from '@/components/MetricExplainer';
 import SectionLabel from '@/components/ui/SectionLabel';
 import { cn } from '@/lib/cn';
 import { formStatusLabel } from '@/lib/formStatus';
 import type { MetricKey } from '@/lib/metricGlossary';
 import { formatSignedForm } from '@/pages/HariIni/helpers';
-import type { BriefingResult, TrainingLoad } from '@/types/inertia';
+import type { BriefingResult, RecoveryTone, TrainingLoad } from '@/types/inertia';
 
 // Form (= ctl − atl) is unbounded, but formStatus() buckets fresh/optimal/fatigued/
 // overreaching within roughly ±40 at typical CTL, so that's the rail's clamp range.
@@ -40,6 +41,7 @@ export default function VitalChips({ briefing, load }: Readonly<{ briefing: Brie
                 value={briefing.recoveryHoursLabel ?? briefing.streakLabel ?? briefing.recoveryLabel}
                 sub="dari lari terakhir"
                 tone="ink"
+                recoveryTone={briefing.recoveryTone}
             />
         </div>
     );
@@ -79,6 +81,24 @@ function VitalGauge({ value, min, max, tone, bipolar, anchors }: Readonly<GaugeC
     );
 }
 
+// Recovery has no numeric gauge, so a thin tone-coloured rail fills the slot its
+// two gauge-bearing siblings occupy, keeping the 3-up row a cohesive family instead
+// of two rich chips beside one sparse one.
+const RECOVERY_RAIL: Record<RecoveryTone, string> = {
+    positive: 'bg-leaf',
+    warning: 'bg-citrus',
+    alert: 'bg-ember',
+    neutral: 'bg-ink-3/40',
+};
+
+function RecoveryRail({ tone }: Readonly<{ tone: RecoveryTone }>) {
+    return (
+        <div className="mt-1.5">
+            <div className={cn('h-1.5 w-full rounded-full', RECOVERY_RAIL[tone])} />
+        </div>
+    );
+}
+
 function VitalChip({
     label,
     value,
@@ -86,7 +106,8 @@ function VitalChip({
     tone,
     explainerKey,
     gauge,
-}: Readonly<{ label: string; value: string; sub: string; tone: 'horizon' | 'leaf' | 'ink'; explainerKey?: MetricKey; gauge?: GaugeConfig }>) {
+    recoveryTone,
+}: Readonly<{ label: string; value: string; sub: string; tone: 'horizon' | 'leaf' | 'ink'; explainerKey?: MetricKey; gauge?: GaugeConfig; recoveryTone?: RecoveryTone }>) {
     // Color the tiny label dot, not the number — keeps the page from feeling
     // like a paint-store sample card while still tagging the metric's family.
     const dotClass = {
@@ -99,6 +120,12 @@ function VitalChip({
         leaf: 'text-leaf',
         ink: 'text-ink',
     }[tone];
+    let middleBand: ReactNode = null;
+    if (gauge) {
+        middleBand = <VitalGauge {...gauge} />;
+    } else if (recoveryTone) {
+        middleBand = <RecoveryRail tone={recoveryTone} />;
+    }
     return (
         <div className="flex h-full flex-col justify-between rounded-xl border border-line bg-surface-card px-3.5 py-4">
             <SectionLabel dot dotClass={dotClass} className="mb-1">
@@ -111,7 +138,7 @@ function VitalChip({
                 <div className={cn('min-w-0 font-sans text-stat-fluid font-bold tabular-nums tracking-[-0.02em]', valueClass)}>
                     {value}
                 </div>
-                {gauge && <VitalGauge {...gauge} />}
+                {middleBand}
                 {sub !== '' && <div className="mt-1 font-display text-xs italic text-ink-3">{sub}</div>}
             </div>
         </div>

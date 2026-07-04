@@ -16,7 +16,7 @@ const PEEK_LINES = [
     'Sedang menunggu lari berikutnya',
     'Coba lihat pace minggu lalu, semakin halus',
     'Ingat istirahat ya, jangan dipaksa terus',
-    'Form kamu sedang bagus, manfaatkan',
+    'Kesiapan kamu lagi bagus, manfaatkan sebelum turun lagi',
     'Ketuk aku untuk reaksi 🌀',
 ] as const;
 

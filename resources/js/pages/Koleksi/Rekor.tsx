@@ -389,7 +389,7 @@ function EmptyState() {
         <Card tone="empty" padding="lg" className="mt-8 text-center">
             <p className="font-display text-3xl italic text-ink-2">Belum ada PR.</p>
             <p className="mt-2 font-sans text-sm text-ink-3">
-                Sinkronkan lari Strava kamu, Temari otomatis nyatet rekor yang kepecahin.
+                Sync Strava kamu, Temari otomatis nyatet rekor yang kepecahin.
             </p>
         </Card>
     );

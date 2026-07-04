@@ -32,7 +32,7 @@ const HERO: Record<StravaSyncState, { eyebrow: string; headline: string; copy: s
 const ACTIONS = [
     {
         icon: 'mdi:cards-outline',
-        title: 'Cek koleksi yang Legendaris',
+        title: 'Cek koleksi yang legendaris',
         desc: 'Liat kartu yang bisa kamu dapetin.',
         href: '/kartu',
     },

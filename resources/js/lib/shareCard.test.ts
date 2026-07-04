@@ -1,5 +1,13 @@
+import polylineCodec from '@mapbox/polyline';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { drawShareCard, shareCardBlob, type Layout, type Format, type ShareKartuData } from './shareCard';
+
+// A straight two-point line: start and finish project to opposite corners of
+// the route box, so `drawRoute`'s point-to-point gate is unambiguously true.
+const pointToPointPolyline = polylineCodec.encode([[0, 0], [0.01, 0.01]]);
+// A loop that returns to its exact starting coordinate, so start === finish
+// and the point-to-point gate is unambiguously false.
+const loopPolyline = polylineCodec.encode([[0, 0], [0, 0.01], [0.01, 0.01], [0, 0]]);
 
 const kartu: ShareKartuData = {
     id: 1,
@@ -63,6 +71,22 @@ function makeCtx() {
         shadowBlur: 0,
         shadowOffsetY: 0,
     };
+}
+
+/** Like `makeCtx`, but records every `lineWidth` assignment so a test can
+ *  inspect the sequence of stroke widths a draw pass actually used. */
+function makeCtxWithLineWidthLog() {
+    const ctx = makeCtx();
+    const widths: number[] = [];
+    let current = ctx.lineWidth;
+    Object.defineProperty(ctx, 'lineWidth', {
+        get: () => current,
+        set: (v: number) => {
+            current = v;
+            widths.push(v);
+        },
+    });
+    return { ctx, widths };
 }
 
 beforeEach(() => {
@@ -359,5 +383,63 @@ describe('drawShareCard — edge / branch cases', () => {
         const canvas = { width: 0, height: 0, getContext: () => ctx } as unknown as HTMLCanvasElement;
         await drawShareCard(canvas, { kartu: { ...kartu, name: '' }, layout: 'kartu', format: 'story' });
         expect(ctx.fillText).toHaveBeenCalled();
+    });
+
+    it.each(['kartu', 'rute'] as Layout[])(
+        'draws a start dot and a hollow finish ring for a point-to-point route on %s, but only the dot for a loop',
+        async (layout) => {
+            const p2pCtx = makeCtx();
+            await drawShareCard(
+                { width: 0, height: 0, getContext: () => p2pCtx } as unknown as HTMLCanvasElement,
+                { kartu: { ...kartu, polyline: pointToPointPolyline }, layout, format: 'story' },
+            );
+            const p2pArcCalls = p2pCtx.arc.mock.calls.length;
+
+            const loopCtx = makeCtx();
+            await drawShareCard(
+                { width: 0, height: 0, getContext: () => loopCtx } as unknown as HTMLCanvasElement,
+                { kartu: { ...kartu, polyline: loopPolyline }, layout, format: 'story' },
+            );
+            const loopArcCalls = loopCtx.arc.mock.calls.length;
+
+            // Both routes draw the start dot; only the point-to-point route also
+            // draws the hollow finish ring (mirrors RouteGlyph's `isPointToPoint`
+            // gate) — so it issues exactly one more `arc` call than the loop.
+            expect(p2pArcCalls).toBe(loopArcCalls + 1);
+        },
+    );
+
+    it('thins the route stroke for a longer distanceKm and keeps it fixed without one', async () => {
+        const shortRun = makeCtxWithLineWidthLog();
+        await drawShareCard(
+            { width: 0, height: 0, getContext: () => shortRun.ctx } as unknown as HTMLCanvasElement,
+            { kartu: { ...kartu, distanceKm: 1 }, layout: 'kartu', format: 'story' },
+        );
+
+        const longRun = makeCtxWithLineWidthLog();
+        await drawShareCard(
+            { width: 0, height: 0, getContext: () => longRun.ctx } as unknown as HTMLCanvasElement,
+            { kartu: { ...kartu, distanceKm: 20 }, layout: 'kartu', format: 'story' },
+        );
+
+        const noDistance = makeCtxWithLineWidthLog();
+        await drawShareCard(
+            { width: 0, height: 0, getContext: () => noDistance.ctx } as unknown as HTMLCanvasElement,
+            { kartu: { ...kartu, distanceKm: null }, layout: 'kartu', format: 'story' },
+        );
+
+        // distanceKm=1 collapses RouteGlyph's log2 thinning to zero, so the base
+        // (18px story) width is used, same as when distanceKm is absent entirely.
+        expect(Math.max(...shortRun.widths)).toBeCloseTo(18, 0);
+        expect(Math.max(...noDistance.widths)).toBeCloseTo(18, 0);
+        // A longer run thins the stroke below that base width.
+        expect(Math.max(...longRun.widths)).toBeLessThan(Math.max(...shortRun.widths));
+    });
+
+    it('draws the temanlari.app attribution handle on every export', async () => {
+        const ctx = makeCtx();
+        const canvas = { width: 0, height: 0, getContext: () => ctx } as unknown as HTMLCanvasElement;
+        await drawShareCard(canvas, { kartu, layout: 'kartu', format: 'story' });
+        expect(ctx.fillText).toHaveBeenCalledWith('temanlari.app', expect.any(Number), expect.any(Number));
     });
 });

@@ -248,10 +248,10 @@ it('completedCount counts only completed goals', function (): void {
     expect($this->resolver->completedCount($goals))->toBe(2);
 });
 
-it('closestToCompletion ranks in-progress goals by pct and pushes completed ones last', function (): void {
+it('closestToCompletion ranks in-progress goals by pct and excludes completed ones', function (): void {
     $user = User::factory()->create();
     // 5 PRs feed medal_emas (5/5 = 100%) but it is NOT unlocked, so it leads.
-    // The completed medal_pertama is pushed to the back.
+    // The completed medal_pertama must not appear at all.
     UserUnlock::factory()->for($user)->create(['unlock_key' => 'accessory.medal_pertama']);
     PersonalRecord::factory()->for($user)->count(5)->sequence(
         ['category' => '1km'],
@@ -265,10 +265,34 @@ it('closestToCompletion ranks in-progress goals by pct and pushes completed ones
 
     // Highest-pct in-progress goal first.
     expect($closest[0]['is_completed'])->toBeFalse()
-        ->and($closest[0]['id'])->toBe('accessory.medal_emas')
-        // The only completed goal is sorted to the very end.
-        ->and($closest[array_key_last($closest)]['id'])->toBe('accessory.medal_pertama')
-        ->and($closest[array_key_last($closest)]['is_completed'])->toBeTrue();
+        ->and($closest[0]['id'])->toBe('accessory.medal_emas');
+
+    // The completed goal never shows up, even under a limit large enough to fit it.
+    $ids = collect($closest)->pluck('id');
+    expect($ids)->not->toContain('accessory.medal_pertama');
+    foreach ($closest as $goal) {
+        expect($goal['is_completed'])->toBeFalse();
+    }
+});
+
+it('closestToCompletion never pads with completed goals when fewer than the limit are incomplete', function (): void {
+    $user = User::factory()->create();
+    // Unlock every goal except one, leaving a single incomplete goal.
+    $goals = $this->resolver->forUser($user);
+    $allIds = collect($goals)->pluck('id');
+    $leftIncomplete = 'accessory.medal_pertama';
+    foreach ($allIds as $id) {
+        if ($id === $leftIncomplete) {
+            continue;
+        }
+        UserUnlock::factory()->for($user)->create(['unlock_key' => $id]);
+    }
+
+    $closest = $this->resolver->closestToCompletion($user, 3);
+
+    expect($closest)->toHaveCount(1)
+        ->and($closest[0]['id'])->toBe($leftIncomplete)
+        ->and($closest[0]['is_completed'])->toBeFalse();
 });
 
 it('reuses precomputed goals in closestToCompletion when provided', function (): void {

@@ -172,6 +172,7 @@ export default function CardReveal({
     tagEmojis: shareBadges.map(badgeEmblem),
     quote: null,
     polyline: pending.summary_polyline ?? null,
+    distanceKm: pending.distance_m != null ? pending.distance_m / 1000 : null,
     edition: pending.edition ?? null,
   };
 

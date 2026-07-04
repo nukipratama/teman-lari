@@ -128,6 +128,7 @@ export default function KartuDetail({
         tagEmojis: badges.map((b) => badgeEmblem(b)),
         quote: card.flavor_analysis.content ?? null,
         polyline: detail?.summary_polyline ?? null,
+        distanceKm: detail?.distance != null ? detail.distance / 1000 : null,
         edition: card.edition ?? null,
     };
 
