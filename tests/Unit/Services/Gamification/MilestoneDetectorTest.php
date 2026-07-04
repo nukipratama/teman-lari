@@ -133,6 +133,19 @@ it('skips the first-ever-pace milestone for slow pace above all thresholds', fun
     expect(array_column($milestones, 'kind'))->not->toContain('first_ever_pace');
 });
 
+it('awards the fastest pace tier crossed, not the slowest (regression for break-on-first-threshold)', function (): void {
+    $user = User::factory()->create();
+    // 5 km in 1425 s = 4:45/km — beats sub-5:00 (300s) but not sub-4:30 (270s).
+    [$activity, $detail] = buildActivity($user, '2026-05-21', 5_000, 1_425);
+
+    $milestones = $this->detector->detect($activity, $detail);
+    $pace = collect($milestones)->firstWhere('kind', 'first_ever_pace');
+
+    expect($pace)->not->toBeNull()
+        ->and($pace['label'])->toContain('5:00')
+        ->and($pace['label'])->not->toContain('7:00');
+});
+
 it('labels half marathon and marathon distance milestones with their named forms', function (): void {
     $user = User::factory()->create();
 

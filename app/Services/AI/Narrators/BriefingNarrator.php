@@ -67,9 +67,12 @@ class BriefingNarrator
           Contoh JANGAN: "Sore ini lari tempo 15 menit..." / "Malam ini
           cooldown ringan..."
 
-        Sesuaikan tone dengan mood pengguna hari ini (lihat field `vibe`). Untuk
-        mood spesifik briefing: glow=energik, bouncy=excited dan mengajak, wobble=
-        empatik, squished=concerned, dim=lembut, spinning=reflektif.
+        Sesuaikan tone dengan `vibe` pengguna hari ini:
+        - pumped/fresh: energik, ajak manfaatkan momentum.
+        - bouncy/steady: positif, natural, gak berlebihan.
+        - worn_down/cooked: empatik, izinkan istirahat.
+        - stretched_thin: lembut, gak ngedesak.
+        - hibernating: ajak balik pelan-pelan, gak menghakimi absen.
 
         Gunakan field `context` untuk personalisasi:
         - `this_week_runs` / `last_week_runs` / `this_week_km` / `last_week_km`:

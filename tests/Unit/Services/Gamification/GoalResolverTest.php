@@ -137,6 +137,9 @@ it('counts rarity cards toward ikat_kepala goals', function (): void {
 });
 
 it('tracks consecutive-week streak for aura_pemanasan', function (): void {
+    // Freeze "now" so the newest week (2026-05-31) is still the current week and
+    // the streak counts as live.
+    Carbon::setTestNow('2026-06-02');
     $user = User::factory()->create();
     // 3 consecutive weeks ending on adjacent Sundays.
     $base = Carbon::parse('2026-05-31');
@@ -150,6 +153,8 @@ it('tracks consecutive-week streak for aura_pemanasan', function (): void {
     $byId = goalsById($this->resolver, $user);
 
     expect($byId['accessory.aura_pemanasan']['current'])->toBe(2); // min(streak, 2)
+
+    Carbon::setTestNow();
 });
 
 it('tracks accumulated distance toward sepatu km goals', function (): void {

@@ -101,6 +101,8 @@ it('converts totalDistanceM to km', function (): void {
 });
 
 it('counts only consecutive weeks for the streak, breaking at the first gap', function (): void {
+    // Freeze "now" so the newest week (2026-03-29) is still the current week.
+    Carbon::setTestNow('2026-03-30');
     $user = User::factory()->create();
     // 4 weeks logged but week_ending dates are NOT adjacent: 1, 5, 9, 13.
     // Before the fix this returned 4; the streak must be 1 (only the most
@@ -114,9 +116,12 @@ it('counts only consecutive weeks for the streak, breaking at the first gap', fu
 
     expect($ctx->streakWeeks)->toBe(1)
         ->and($ctx->twoWeekStreak)->toBe(1);
+
+    Carbon::setTestNow();
 });
 
 it('counts a run of adjacent weeks as a full streak', function (): void {
+    Carbon::setTestNow('2026-06-02');
     $user = User::factory()->create();
     // 4 consecutive Sundays, exactly 7 days apart.
     $base = Carbon::parse('2026-05-31');
@@ -128,9 +133,12 @@ it('counts a run of adjacent weeks as a full streak', function (): void {
 
     expect($ctx->streakWeeks)->toBe(4)
         ->and($ctx->twoWeekStreak)->toBe(2);
+
+    Carbon::setTestNow();
 });
 
 it('breaks the streak at the first gap even when later weeks are adjacent', function (): void {
+    Carbon::setTestNow('2026-06-02');
     $user = User::factory()->create();
     // Most recent two weeks adjacent, then a one-week gap, then two more.
     weekSnapshot($user, '2026-05-31', 2);
@@ -142,9 +150,14 @@ it('breaks the streak at the first gap even when later weeks are adjacent', func
     $ctx = GamificationContext::forUser($user);
 
     expect($ctx->streakWeeks)->toBe(2);
+
+    Carbon::setTestNow();
 });
 
 it('ignores weeks with zero runs when computing the streak', function (): void {
+    // Newest *running* week is 2026-05-24 (05-31 has runs=0), so freeze inside
+    // the week ending 05-31 to keep that streak live.
+    Carbon::setTestNow('2026-05-26');
     $user = User::factory()->create();
     // The most recent adjacent week has runs=0, so it is filtered out and the
     // streak walks the remaining run-bearing weeks (which now have a gap).
@@ -155,6 +168,8 @@ it('ignores weeks with zero runs when computing the streak', function (): void {
     $ctx = GamificationContext::forUser($user);
 
     expect($ctx->streakWeeks)->toBe(2);
+
+    Carbon::setTestNow();
 });
 
 it('returns zero streak when no week has runs', function (): void {

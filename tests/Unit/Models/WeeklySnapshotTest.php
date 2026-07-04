@@ -63,6 +63,8 @@ it('enforces one snapshot per (user_id, week_ending)', function (): void {
 });
 
 it('counts consecutive run-weeks and breaks at the first gap', function (): void {
+    // Freeze "now" so the newest run-week (2026-05-24) is still the current week.
+    Carbon::setTestNow('2026-05-26');
     $user = User::factory()->create();
     // Adjacent run-weeks, then a gap, then an older adjacent week.
     foreach (['2026-05-24', '2026-05-17', '2026-05-10', '2026-04-26'] as $weekEnding) {
@@ -72,6 +74,21 @@ it('counts consecutive run-weeks and breaks at the first gap', function (): void
     WeeklySnapshot::factory()->for($user)->create(['week_ending' => '2026-05-31', 'runs' => 0]);
 
     expect(WeeklySnapshot::consecutiveWeekStreak($user->id))->toBe(3);
+
+    Carbon::setTestNow();
+});
+
+it('returns zero when the streak is stale (a full week has closed with no run)', function (): void {
+    // "Now" is weeks after the last run-week, so the streak is no longer live.
+    Carbon::setTestNow('2026-07-01');
+    $user = User::factory()->create();
+    foreach (['2026-05-24', '2026-05-17', '2026-05-10'] as $weekEnding) {
+        WeeklySnapshot::factory()->for($user)->create(['week_ending' => $weekEnding, 'runs' => 2]);
+    }
+
+    expect(WeeklySnapshot::consecutiveWeekStreak($user->id))->toBe(0);
+
+    Carbon::setTestNow();
 });
 
 it('returns zero streak when no week has runs', function (): void {
