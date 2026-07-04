@@ -37,4 +37,12 @@ describe('RouteGlyph', () => {
         expect(container.querySelector('[data-variant="route"]')).toBeNull();
         expect(container.querySelector('[data-variant="glyph"]')).not.toBeNull();
     });
+
+    it('falls back to the default stroke width when distanceKm is NaN (e.g. an unparsed "—")', () => {
+        // Kartu passes Number.parseFloat(km), which is NaN when km is the '—' placeholder
+        // for a missing distance. NaN must not leak into the strokeWidth SVG attribute.
+        const { container } = render(<RouteGlyph rarity="rare" polyline={SAMPLE_POLYLINE} distanceKm={Number.NaN} />);
+        const path = container.querySelector('[data-variant="route"] path');
+        expect(path?.getAttribute('stroke-width')).toBe('3.8');
+    });
 });

@@ -95,8 +95,12 @@ export default function Target({ goals, completedCount, totalCount }: Readonly<T
     );
 }
 
+/** Incomplete goals at or past this progress get a "hampir!" nudge so the grid also reads as a to-do. */
+const ALMOST_THRESHOLD = 0.75;
+
 function GoalCard({ goal }: Readonly<{ goal: Goal }>) {
     const ratio = goalProgressRatio(goal.current, goal.target);
+    const almost = !goal.is_completed && ratio >= ALMOST_THRESHOLD;
 
     return (
         <Card
@@ -104,14 +108,14 @@ function GoalCard({ goal }: Readonly<{ goal: Goal }>) {
             className={cn(
                 'flex h-full flex-col gap-3',
                 goal.is_completed && 'border-horizon/30 bg-horizon/[0.06]',
+                almost && 'border-horizon/40 ring-1 ring-horizon/30',
             )}
         >
             <div className="flex items-start justify-between gap-2">
                 <h3
                     className={cn(
-                        'font-display text-lg leading-tight tracking-[-0.01em]',
+                        'font-display text-lg leading-tight tracking-[-0.01em] text-ink',
                         RARITY_TEXT[goal.rarity],
-                        goal.is_completed ? 'text-ink' : 'text-ink',
                     )}
                 >
                     {goal.title}
@@ -119,6 +123,11 @@ function GoalCard({ goal }: Readonly<{ goal: Goal }>) {
                 {goal.is_completed && (
                     <span className="flex h-6 w-6 flex-none items-center justify-center rounded-full bg-horizon text-cream">
                         <Icon icon="mdi:check" width={14} height={14} />
+                    </span>
+                )}
+                {almost && (
+                    <span className="flex-none rounded-full bg-horizon/20 px-2 py-0.5 font-mono text-[10px] font-bold uppercase tracking-[0.1em] text-horizon-deep">
+                        Hampir!
                     </span>
                 )}
             </div>
@@ -136,7 +145,7 @@ function GoalCard({ goal }: Readonly<{ goal: Goal }>) {
                         {goal.unit}
                     </span>
                 </div>
-                <ProgressBar value={ratio} tone={goal.is_completed ? 'horizon' : 'sky'} />
+                <ProgressBar value={ratio} tone={goal.is_completed || almost ? 'horizon' : 'sky'} />
             </div>
         </Card>
     );

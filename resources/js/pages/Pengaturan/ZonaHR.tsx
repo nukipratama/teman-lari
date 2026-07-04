@@ -140,10 +140,12 @@ export default function ZonaHR({ profile, hasCustomProfile }: Readonly<ZonaHRPro
                         <PillButton tone="outline" size="sm" onClick={applyDerived}>
                             Hitung otomatis dari Max & Resting
                         </PillButton>
-                        <span className="font-sans text-xs text-ink-3">
-                            Pakai rumus %HRR (Karvonen) sebagai titik awal.
-                        </span>
                     </div>
+                    <p className="mt-3 max-w-xl font-sans text-xs leading-relaxed text-ink-3">
+                        Aku pakai rumus %HRR (Karvonen) sebagai titik awal: ngitung zona dari detak
+                        jantung istirahat sama maksimalmu. Kalau kamu udah punya angka sendiri, tinggal
+                        ubah manual di bawah.
+                    </p>
                 </Card>
 
                 <section className="mt-6">
@@ -186,12 +188,23 @@ export default function ZonaHR({ profile, hasCustomProfile }: Readonly<ZonaHRPro
                                     value={zones[key].lo}
                                     onChange={(v) => editBoundary(key, 'lo', v)}
                                 />
-                                <BoundaryInput
-                                    label={`${key} batas atas`}
-                                    testId={`zone-${key}-hi`}
-                                    value={zones[key].hi}
-                                    onChange={(v) => editBoundary(key, 'hi', v)}
-                                />
+                                {key === 'Z5' ? (
+                                    <span
+                                        data-testid="zone-Z5-hi"
+                                        aria-label="Z5 batas atas: tanpa batas"
+                                        title="Zona teratas tidak punya batas atas"
+                                        className="flex h-[38px] w-20 items-center justify-center rounded-lg border border-cream-deep bg-surface-sunken font-mono text-sm text-ink-3"
+                                    >
+                                        ∞
+                                    </span>
+                                ) : (
+                                    <BoundaryInput
+                                        label={`${key} batas atas`}
+                                        testId={`zone-${key}-hi`}
+                                        value={zones[key].hi}
+                                        onChange={(v) => editBoundary(key, 'hi', v)}
+                                    />
+                                )}
                             </div>
                         ))}
                     </div>

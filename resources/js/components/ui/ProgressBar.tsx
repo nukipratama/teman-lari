@@ -12,7 +12,7 @@ const progressTrackVariants = cva('overflow-hidden rounded-full', {
     variants: {
         size: {
             sm: 'h-1.5 bg-sky/[0.06]',
-            md: 'h-2 bg-cream-deep',
+            md: 'h-2 bg-sky/[0.1]',
         },
     },
     defaultVariants: {

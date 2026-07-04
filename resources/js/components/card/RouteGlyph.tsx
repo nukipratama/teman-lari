@@ -12,6 +12,8 @@ interface RouteGlyphProps {
     rarity: Rarity;
     /** Explicit stroke color (loot-ladder hex). Falls back to the rarity token. */
     color?: string;
+    /** Run distance (km). Thins the stroke on longer routes so a 21K doesn't read as dense as a 5K. */
+    distanceKm?: number | null;
     className?: string;
 }
 
@@ -29,7 +31,7 @@ const MAX_BARS = 16;
  *
  * Variants are tagged via `data-variant` for tests and styling.
  */
-export default function RouteGlyph({ polyline, paceShape, rarity, color, className }: Readonly<RouteGlyphProps>) {
+export default function RouteGlyph({ polyline, paceShape, rarity, color, distanceKm, className }: Readonly<RouteGlyphProps>) {
     const stroke = color ?? `var(--color-rarity-${rarity})`;
     const fill = color
         ? `color-mix(in oklab, ${color} 14%, transparent)`
@@ -38,6 +40,11 @@ export default function RouteGlyph({ polyline, paceShape, rarity, color, classNa
     const route = useMemo(() => projectPolyline(polyline, VB_W, VB_H, PAD, MAX_POINTS), [polyline]);
     if (route !== null) {
         const d = route.points.map((p, i) => `${i === 0 ? 'M' : 'L'}${p[0].toFixed(1)} ${p[1].toFixed(1)}`).join(' ');
+        const strokeWidth = distanceKm != null && Number.isFinite(distanceKm) ? Math.max(2.2, 3.8 - Math.log2(Math.max(distanceKm, 1)) * 0.5) : 3.8;
+        const finish = route.points.at(-1) ?? route.start;
+        // Only mark the finish separately on point-to-point routes; on a loop the ring
+        // would sit on top of the start dot (start≈finish is itself the "loop" cue).
+        const isPointToPoint = Math.hypot(finish[0] - route.start[0], finish[1] - route.start[1]) >= 2;
         return (
             <svg
                 aria-hidden
@@ -50,13 +57,16 @@ export default function RouteGlyph({ polyline, paceShape, rarity, color, classNa
                     d={d}
                     fill={fill}
                     stroke={stroke}
-                    strokeWidth={3.8}
+                    strokeWidth={strokeWidth}
                     strokeLinecap="round"
                     strokeLinejoin="round"
                     opacity={0.95}
                     style={{ filter: `drop-shadow(0 0 1.5px ${stroke})` }}
                 />
                 <circle cx={route.start[0]} cy={route.start[1]} r={3} fill={stroke} />
+                {isPointToPoint && (
+                    <circle cx={finish[0]} cy={finish[1]} r={3.2} fill="none" stroke={stroke} strokeWidth={1.4} />
+                )}
             </svg>
         );
     }

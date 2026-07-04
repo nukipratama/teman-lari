@@ -119,7 +119,7 @@ readonly class GoalResolver
         $items = [
             ['id' => 'accessory.ikat_kepala_berkesan', 'rarityValue' => Rarity::Uncommon->value, 'target' => 3, 'label' => 'Berkesan'],
             ['id' => 'accessory.ikat_kepala_langka', 'rarityValue' => Rarity::Rare->value, 'target' => 3, 'label' => 'Langka'],
-            ['id' => 'accessory.ikat_kepala_epik', 'rarityValue' => Rarity::Epic->value, 'target' => 3, 'label' => 'Luar Biasa'],
+            ['id' => 'accessory.ikat_kepala_epik', 'rarityValue' => Rarity::Epic->value, 'target' => 3, 'label' => 'Istimewa'],
             ['id' => 'accessory.ikat_kepala_legendaris', 'rarityValue' => Rarity::Legendary->value, 'target' => 1, 'label' => 'Legendaris'],
         ];
 
@@ -334,7 +334,7 @@ readonly class GoalResolver
             [
                 'id' => 'accessory.aura_gerah',
                 'title' => '3 lari pas gerah',
-                'description' => 'Selesaikan 3 lari saat suhu di atas 31\u{00b0}C.',
+                'description' => 'Selesaikan 3 lari saat suhu di atas 31°C.',
                 'slot' => 'aura',
                 'rarity' => $this->rarityForKey('accessory.aura_gerah', $catalog),
                 'current' => min($bc[Badge::HariPanas->value] ?? 0, 3),

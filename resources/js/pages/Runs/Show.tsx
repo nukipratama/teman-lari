@@ -13,7 +13,8 @@ import BackLink from '@/components/ui/BackLink';
 import MoodChip from '@/components/ui/MoodChip';
 import SectionLabel from '@/components/ui/SectionLabel';
 import StatTile from '@/components/ui/StatTile';
-import ProgressBar from '@/components/ui/ProgressBar';
+import MetricExplainer from '@/components/MetricExplainer';
+import type { MetricKey } from '@/lib/metricGlossary';
 import Temari from '@/components/temari/Temari';
 import { type TemariPose } from '@/components/temari/TemariProto';
 import { cn } from '@/lib/cn';
@@ -45,7 +46,6 @@ type DetailedActivityDetail = ActivityDetail & {
 };
 
 type DetailedActivity = Activity & {
-    strava_external_id?: string | number | null;
     analyzed_at?: string | null;
     detail: DetailedActivityDetail;
 };
@@ -179,7 +179,7 @@ export default function RunsShow({
                                 <StatTile tone="plainSky" size="md" label="DURASI" value={kartuProps.durasi} />
                                 <StatTile tone="plainSky" size="md" label="PACE" value={pace} unit="/km" />
                                 <StatTile tone="plainSky" size="md" label="HR" value={hr != null ? `${hr}` : '—'} unit="bpm" />
-                                <StatTile tone="plainSky" size="md" label="TRIMP" value={trimp != null ? `${trimp}` : '—'} unit="Edwards" />
+                                <StatTile tone="plainSky" size="md" label="TRIMP" value={trimp != null ? `${trimp}` : '—'} unit="Edwards" explainerKey="trimp" />
                             </div>
 
                             {/* KAMU VS KAMU DULU — inline in hero */}
@@ -271,9 +271,8 @@ export default function RunsShow({
                 {/* SPLITS */}
                 {perKm.length > 0 && <SplitsTable rows={perKm} className="mt-10" />}
 
-                <footer className="mt-8 font-mono font-bold text-[11px] uppercase tracking-[0.1em] text-ink-2">
-                    Strava activity {activity.strava_external_id ?? '—'} · ingested{' '}
-                    {formatIdDate(activity.analyzed_at ?? null, 'long')}
+                <footer className="mt-8 font-mono font-bold text-[11px] uppercase tracking-[0.1em] text-ink-3">
+                    Tersambung otomatis dari Strava · {formatIdDate(activity.analyzed_at ?? null, 'long')}
                 </footer>
             </PageContainer>
         </AppShell>
@@ -326,6 +325,7 @@ interface DetailTile {
     sub?: string;
     warn?: boolean;
     wide?: boolean;
+    metricKey?: MetricKey;
 }
 
 function DetailTiles({
@@ -341,11 +341,11 @@ function DetailTiles({
         tiles.push({ label: 'MAX HR', value: `${detail.max_heartrate}`, sub: 'bpm' });
     }
     if (detail.average_cadence != null) {
-        tiles.push({ label: 'CADENCE', value: `${Math.round(detail.average_cadence * 2)}`, sub: 'spm avg' });
+        tiles.push({ label: 'CADENCE', value: `${Math.round(detail.average_cadence * 2)}`, sub: 'spm avg', metricKey: 'cadence' });
     }
     const ascent = Number(summary.ascent_m);
     if (summary.ascent_m != null && Number.isFinite(ascent)) {
-        tiles.push({ label: 'ASCENT', value: `${ascent}`, sub: 'm' });
+        tiles.push({ label: 'ASCENT', value: `${ascent}`, sub: 'm', metricKey: 'ascent' });
     }
     const decoupling = Number(summary.decoupling_pct);
     if (summary.decoupling_pct != null && Number.isFinite(decoupling)) {
@@ -355,6 +355,7 @@ function DetailTiles({
             sub: 'napas melar di paruh kedua',
             warn: Math.abs(decoupling) > 8,
             wide: true,
+            metricKey: 'decoupling',
         });
     }
 
@@ -376,7 +377,10 @@ function DetailTiles({
                         t.wide && 'col-span-2',
                     )}
                 >
-                    <div className="mb-1.5 font-mono font-bold text-[11px] uppercase tracking-[0.14em] text-ink-2">{t.label}</div>
+                    <div className="mb-1.5 inline-flex items-center gap-1 font-mono font-bold text-[11px] uppercase tracking-[0.14em] text-ink-2">
+                        {t.label}
+                        {t.metricKey && <MetricExplainer metricKey={t.metricKey} size="xs" />}
+                    </div>
                     <div
                         className={cn(
                             'font-sans font-bold leading-none tabular-nums tracking-[-0.01em]',
@@ -405,7 +409,7 @@ function SplitsTable({ rows, className }: Readonly<{ rows: PerKmRow[]; className
 
     return (
         <Card as="section" padding="lg" className={className}>
-            <header className="mb-4 flex flex-wrap items-baseline justify-between gap-3">
+            <header className="mb-1.5 flex flex-wrap items-baseline justify-between gap-3">
                 <SectionLabel>Splits per km</SectionLabel>
                 {fastest != null && fastestKm != null && (
                     <p className="font-display text-sm italic text-ink-2">
@@ -414,9 +418,11 @@ function SplitsTable({ rows, className }: Readonly<{ rows: PerKmRow[]; className
                     </p>
                 )}
             </header>
+            {/* One dense chart at every width (HR + cadence columns fold away on phones);
+                the binary bar color needs a one-line key once the card affordance is gone. */}
+            <p className="mb-3 text-label-micro text-ink-3">Batang oranye = km tercepat, gelap = lainnya.</p>
 
-            {/* Mobile: per-km card stack. Pace is the visual lead. */}
-            <div className="flex flex-col gap-2 lg:hidden">
+            <div className="flex flex-col">
                 {rows.map((row, idx) => {
                     const sec = paceSecOf(row);
                     const isFast = sec != null && sec === fastest;
@@ -425,59 +431,19 @@ function SplitsTable({ rows, className }: Readonly<{ rows: PerKmRow[]; className
                         <div
                             key={row.km ?? `row-${idx}`}
                             className={cn(
-                                'rounded-xl border px-3.5 py-3',
-                                isFast
-                                    ? 'border-horizon/40 bg-horizon/[0.08]'
-                                    : 'border-cream-deep bg-cream',
-                            )}
-                        >
-                            <div className="flex items-baseline justify-between gap-3">
-                                <div className="font-mono text-[12px] font-semibold uppercase tracking-[0.12em] text-ink-2">
-                                    KM {row.km ?? '?'}
-                                </div>
-                                <div className="font-mono text-2xl font-bold tabular-nums leading-none text-ink">
-                                    {row.pace ?? '—'}
-                                    <span className="ml-1 font-mono text-[11px] font-medium text-ink-3">/km</span>
-                                </div>
-                            </div>
-                            <ProgressBar
-                                value={pctWidth / 100}
-                                tone={isFast ? 'horizon' : 'sky'}
-                                size="sm"
-                                className="mt-2"
-                            />
-                            <div className="mt-2 flex items-center gap-4 font-sans text-xs tabular-nums text-ink-2">
-                                <span>♡ {row.avg_hr ?? '—'}</span>
-                                <span>↻ {row.avg_cadence_spm ?? '—'}</span>
-                            </div>
-                        </div>
-                    );
-                })}
-            </div>
-
-            {/* Desktop: dense grid table. */}
-            <div className="hidden flex-col lg:flex">
-                {rows.map((row, idx) => {
-                    const sec = paceSecOf(row);
-                    const isFast = sec != null && sec === fastest;
-                    const pctWidth = computeBarWidth(sec, fastest, slowestSec);
-                    return (
-                        <div
-                            key={row.km ?? `row-${idx}`}
-                            className={cn(
-                                'grid grid-cols-[40px_1fr_70px_70px_70px] items-center gap-3',
+                                'grid grid-cols-[34px_1fr_56px] items-center gap-2.5 lg:grid-cols-[40px_1fr_70px_70px_70px] lg:gap-3',
                                 idx > 0 && !isFast && 'border-t border-cream-deep',
                                 // Alternating row background for readability
                                 idx % 2 === 1 && !isFast && 'bg-cream-deep/30',
                                 // Fast row: tint bleeds out via -mx-3 while px-3 keeps content
                                 // aligned with the other rows, so its bar isn't narrowed.
-                                isFast ? '-mx-3 rounded-lg bg-horizon/[0.08] px-3 py-2.5' : 'px-3 py-2.5',
+                                isFast ? '-mx-3 rounded-lg bg-horizon/[0.08] px-3 py-2 lg:py-2.5' : 'px-3 py-2 lg:py-2.5',
                             )}
                         >
-                            <div className="font-mono text-[12px] uppercase tracking-[0.1em] text-ink-2">
+                            <div className="font-mono text-[11px] uppercase tracking-[0.1em] text-ink-2 lg:text-[12px]">
                                 KM {row.km ?? '?'}
                             </div>
-                            <div className="h-3 overflow-hidden rounded bg-sky/[0.06]">
+                            <div className="h-2.5 overflow-hidden rounded bg-sky/[0.06] lg:h-3">
                                 <div
                                     className={cn('h-full rounded', isFast ? 'bg-horizon' : 'bg-sky')}
                                     style={{ width: `${pctWidth}%` }}
@@ -486,10 +452,10 @@ function SplitsTable({ rows, className }: Readonly<{ rows: PerKmRow[]; className
                             <div className="text-right font-sans text-sm font-semibold tabular-nums text-ink">
                                 {row.pace ?? '—'}
                             </div>
-                            <div className="text-right font-sans text-xs tabular-nums text-ink-2">
+                            <div className="hidden text-right font-sans text-xs tabular-nums text-ink-2 lg:block">
                                 ♡ {row.avg_hr ?? '—'}
                             </div>
-                            <div className="text-right font-sans text-xs tabular-nums text-ink-2">
+                            <div className="hidden text-right font-sans text-xs tabular-nums text-ink-2 lg:block">
                                 ↻ {row.avg_cadence_spm ?? '—'}
                             </div>
                         </div>
@@ -509,10 +475,18 @@ function paceSecOf(row: PerKmRow): number | null {
     return null;
 }
 
+// Per-km spread (seconds) at which the bar-width band reaches its full 50-point swing.
+const FULL_SPREAD_SEC = 30;
+
 function computeBarWidth(sec: number | null, fastest: number | null, slowest: number | null): number {
     if (sec == null || fastest == null || slowest == null || slowest === fastest) return 60;
-    // Faster pace = wider bar. Map [slowest..fastest] → [40..90].
-    const t = (slowest - sec) / (slowest - fastest);
-    return Math.round(40 + t * 50);
+    // Faster pace = wider bar, anchored at 90% for the fastest km. The band amplitude
+    // scales with the ABSOLUTE split spread, so a run where every km is within a second
+    // or two renders as near-equal full-width bars ("konsisten") instead of a misleading
+    // 40→90 swing that contradicts the "pacing sangat konsisten" narration above it.
+    const spread = slowest - fastest;
+    const amplitude = Math.min(spread / FULL_SPREAD_SEC, 1) * 50;
+    const t = (slowest - sec) / spread; // 0 (slowest) .. 1 (fastest)
+    return Math.round(90 - (1 - t) * amplitude);
 }
 
