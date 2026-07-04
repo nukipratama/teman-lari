@@ -1,6 +1,6 @@
 <?php
 
-use App\Http\Middleware\BlockDemoWrites;
+use App\Http\Middleware\BlockDemoTelegramWrites;
 use App\Http\Middleware\HandleInertiaRequests;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -24,7 +24,7 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
 
         $middleware->alias([
-            'block-demo-writes' => BlockDemoWrites::class,
+            'block-demo-telegram' => BlockDemoTelegramWrites::class,
         ]);
 
         // Strava POSTs the webhook with no session/CSRF token; it is guarded by

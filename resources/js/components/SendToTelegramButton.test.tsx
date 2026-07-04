@@ -21,6 +21,15 @@ describe('SendToTelegramButton', () => {
         expect(screen.getByText('Telegram-nya lagi istirahat dulu')).toBeInTheDocument();
     });
 
+    it('renders a disabled button that does nothing on click when not connected', () => {
+        vi.mocked(router.post).mockReset();
+        render(<SendToTelegramButton url="/aktivitas/99/telegram" connected={false} />);
+        const button = screen.getByText('Kirim ke Telegram').closest('button')!;
+        expect(button).toBeDisabled();
+        fireEvent.click(button);
+        expect(router.post).not.toHaveBeenCalled();
+    });
+
     it('disables the button and shows a spinner label while sending', () => {
         vi.mocked(router.post).mockImplementation((_url, _data, options) => {
             options?.onStart?.({} as never);

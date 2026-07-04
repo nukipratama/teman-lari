@@ -8,14 +8,16 @@ use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
-class BlockDemoWrites
+class BlockDemoTelegramWrites
 {
     /**
-     * Makes the shared demo account effectively read-only: any mutating
+     * Guards the Telegram routes against the shared demo account: a demo visitor
+     * could disconnect the shared bot or spam real messages, so any mutating
      * request (POST/PUT/PATCH/DELETE) from `is_demo` is rejected before it
-     * reaches the controller, so a visitor's writes never persist and leak
-     * into the next visitor's session. Logout and the "Baca ulang" analysis
-     * trigger are excluded at the route level (`withoutMiddleware`), not here.
+     * reaches the controller. Applied only to the Telegram send/connection
+     * routes (not blanket) — the rest of the demo is an interactive sandbox.
+     * The frontend disables these controls up front, so this is the
+     * defense-in-depth net for a direct API call that bypasses the UI.
      *
      * Inertia visits (`router.post`/`patch`/`delete`) get a redirect back with
      * a flashed error so the existing `$errors` bag renders it; plain `fetch`

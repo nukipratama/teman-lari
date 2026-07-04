@@ -27,7 +27,7 @@ describe('StravaSyncButton', () => {
 
     it('disables the button and relabels while the sync request is in flight', () => {
         vi.mocked(router.post).mockImplementation((_url, _data, options) => {
-            options?.onStart?.();
+            options?.onStart?.({} as never);
         });
         render(<StravaSyncButton state="ready" />);
         fireEvent.click(screen.getByText('Sync sekarang'));
@@ -38,8 +38,8 @@ describe('StravaSyncButton', () => {
 
     it('re-enables the button once the sync request finishes', () => {
         vi.mocked(router.post).mockImplementation((_url, _data, options) => {
-            options?.onStart?.();
-            options?.onFinish?.();
+            options?.onStart?.({} as never);
+            options?.onFinish?.({} as never);
         });
         render(<StravaSyncButton state="ready" />);
         fireEvent.click(screen.getByText('Sync sekarang'));

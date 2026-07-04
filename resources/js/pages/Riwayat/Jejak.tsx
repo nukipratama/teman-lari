@@ -272,11 +272,12 @@ const WeekSection = memo(function WeekSection({ bucket, snapshot, notes, moods, 
                                 awaitingSchedule={snapshot.is_current_week}
                                 isChainHead={snapshot.is_chain_head}
                             />
-                            {telegramConnected && snapshot.recap_analysis.status === 'done' && (
+                            {snapshot.recap_analysis.status === 'done' && (
                                 <div className="mt-3">
                                     <SendToTelegramButton
                                         url={`/rekap-mingguan/${snapshot.id}/telegram`}
                                         retryAfterSeconds={snapshot.telegram_retry_after_seconds}
+                                        connected={telegramConnected}
                                     />
                                 </div>
                             )}

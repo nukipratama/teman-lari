@@ -143,12 +143,11 @@ export default function RunsShow({
                         />
                         {resyncing ? 'Lagi narik…' : 'Resync dari Strava'}
                     </PillButton>
-                    {telegramConnected && (
-                        <SendToTelegramButton
-                            url={`/aktivitas/${activity.id}/telegram`}
-                            retryAfterSeconds={telegramRetryAfterSeconds}
-                        />
-                    )}
+                    <SendToTelegramButton
+                        url={`/aktivitas/${activity.id}/telegram`}
+                        retryAfterSeconds={telegramRetryAfterSeconds}
+                        connected={telegramConnected}
+                    />
                 </div>
 
                 {/* HERO — stats left + route map right */}
@@ -461,7 +460,7 @@ function SplitsTable({ rows, className }: Readonly<{ rows: PerKmRow[]; className
                                 rowFill,
                             )}
                         >
-                            <div className="font-mono text-[11px] uppercase tracking-[0.1em] text-ink-2 lg:text-[12px]">
+                            <div className="font-mono text-[11px] uppercase tracking-[0.1em] text-ink-2">
                                 KM {row.km ?? '?'}
                             </div>
                             <div className="h-2.5 overflow-hidden rounded bg-sky/[0.06] lg:h-3">

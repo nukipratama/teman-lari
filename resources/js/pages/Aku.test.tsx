@@ -87,6 +87,29 @@ describe('Aku', () => {
         expect(link).toHaveAttribute('href', 'https://t.me/temari_bot?start=tok');
     });
 
+    it('disables the connect button and opens the demo modal for a demo user', () => {
+        setMockPage({
+            auth: { user: makeUser({ is_demo: true }) },
+            flash: {},
+            demoLoginEnabled: false,
+        });
+        const telegram = {
+            connected: false,
+            username: null,
+            connect_url: 'https://t.me/temari_bot?start=tok',
+            notify_post_run: true,
+            notify_weekly_recap: true,
+            notify_monthly_recap: true,
+            notify_daily_briefing: false,
+        };
+        render(<Aku identity={identity} stats={stats} telegram={telegram} />);
+
+        // Not an anchor (can't deep-link the shared bot); tapping explains why.
+        expect(screen.getByText('Hubungkan Telegram').closest('a')).toBeNull();
+        fireEvent.click(screen.getByText('Hubungkan Telegram'));
+        expect(screen.getByText('Telegram-nya lagi istirahat dulu')).toBeInTheDocument();
+    });
+
     it('shows the preference toggles when Telegram is connected', () => {
         const telegram = {
             connected: true,
@@ -231,6 +254,30 @@ describe('Aku', () => {
         expect(router.patch).not.toHaveBeenCalled();
         // Local state doesn't flip either, so the UI stays honest about what happened.
         expect(toggle).toHaveAttribute('aria-checked', 'false');
+        expect(screen.getByText('Telegram-nya lagi istirahat dulu')).toBeInTheDocument();
+    });
+
+    it('opens the demo-blocked modal instead of disconnecting for a demo user', () => {
+        setMockPage({
+            auth: { user: makeUser({ is_demo: true }) },
+            flash: {},
+            demoLoginEnabled: false,
+        });
+        vi.mocked(router.delete).mockReset();
+        const telegram = {
+            connected: true,
+            username: null,
+            connect_url: null,
+            notify_post_run: true,
+            notify_weekly_recap: true,
+            notify_monthly_recap: true,
+            notify_daily_briefing: false,
+        };
+        render(<Aku identity={identity} stats={stats} telegram={telegram} />);
+
+        fireEvent.click(screen.getByText('Putuskan'));
+
+        expect(router.delete).not.toHaveBeenCalled();
         expect(screen.getByText('Telegram-nya lagi istirahat dulu')).toBeInTheDocument();
     });
 

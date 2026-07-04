@@ -17,7 +17,7 @@ interface DemoBlockedModalProps {
 
 /**
  * Friendly front door for a demo visitor hitting a blocked Telegram action.
- * The `block-demo-writes` middleware is the real guard; this is the soft
+ * The `block-demo-telegram` middleware is the real guard; this is the soft
  * upsell shown instead of a silent 403/redirect. Reuses the ShareCardModal
  * shell (not the celebration shell) since this is a calm nudge, not a win.
  */

@@ -5,7 +5,7 @@ import type { SharedProps } from '@/types/inertia';
 /**
  * Front-door for the demo write-guard: a demo visitor's Telegram action opens
  * the friendly `DemoBlockedModal` instead of silently hitting the backend
- * `block-demo-writes` 403/redirect. Non-demo users pass straight through.
+ * `block-demo-telegram` 403/redirect. Non-demo users pass straight through.
  */
 export function useDemoGuard() {
     const isDemo = usePage<SharedProps>().props.auth.user?.is_demo ?? false;

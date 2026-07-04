@@ -251,7 +251,7 @@ function TelegramPanel({ telegram }: Readonly<{ telegram: TelegramPayload }>) {
     const [weeklyRecap, setWeeklyRecap] = useState(telegram.notify_weekly_recap);
     const [monthlyRecap, setMonthlyRecap] = useState(telegram.notify_monthly_recap);
     const [dailyBriefing, setDailyBriefing] = useState(telegram.notify_daily_briefing);
-    const { open, setOpen, guard } = useDemoGuard();
+    const { isDemo, open, setOpen, guard } = useDemoGuard();
 
     const savePrefs = (
         notifyPostRun: boolean,
@@ -272,22 +272,41 @@ function TelegramPanel({ telegram }: Readonly<{ telegram: TelegramPayload }>) {
     };
 
     if (!telegram.connected) {
+        let connectAffordance;
+        if (telegram.connect_url === null) {
+            connectAffordance = <p className="font-sans text-[12px] text-ink-3">Bot Telegram belum dikonfigurasi.</p>;
+        } else if (isDemo) {
+            // Demo shares one bot, so it can't link a personal chat: show the
+            // button disabled and route the tap to the friendly demo modal.
+            connectAffordance = (
+                <button
+                    type="button"
+                    onClick={() => setOpen(true)}
+                    className="inline-flex items-center gap-2 self-start rounded-full bg-[#229ED9] px-5 py-2.5 text-sm font-semibold text-white opacity-60 transition"
+                >
+                    <Icon icon="mdi:telegram" width={18} height={18} aria-hidden />
+                    Hubungkan Telegram
+                </button>
+            );
+        } else {
+            connectAffordance = (
+                <a
+                    href={telegram.connect_url}
+                    className="inline-flex items-center gap-2 self-start rounded-full bg-[#229ED9] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#1c8cbf]"
+                >
+                    <Icon icon="mdi:telegram" width={18} height={18} aria-hidden />
+                    Hubungkan Telegram
+                </a>
+            );
+        }
+
         return (
             <div className="flex flex-col gap-4">
                 <p className="font-display text-base italic text-ink-2">
                     Sambungin Telegram biar Temari bisa kabarin kamu tiap abis lari sama pas rekap mingguan.
                 </p>
-                {telegram.connect_url ? (
-                    <a
-                        href={telegram.connect_url}
-                        className="inline-flex items-center gap-2 self-start rounded-full bg-[#229ED9] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#1c8cbf]"
-                    >
-                        <Icon icon="mdi:telegram" width={18} height={18} aria-hidden />
-                        Hubungkan Telegram
-                    </a>
-                ) : (
-                    <p className="font-sans text-[12px] text-ink-3">Bot Telegram belum dikonfigurasi.</p>
-                )}
+                {connectAffordance}
+                <DemoBlockedModal open={open} onClose={() => setOpen(false)} />
             </div>
         );
     }
@@ -300,7 +319,7 @@ function TelegramPanel({ telegram }: Readonly<{ telegram: TelegramPayload }>) {
                 </Chip>
                 <button
                     type="button"
-                    onClick={() => router.delete('/profil/telegram', { preserveScroll: true })}
+                    onClick={() => guard(() => router.delete('/profil/telegram', { preserveScroll: true }))}
                     className="focus-ring rounded font-mono text-[12px] font-semibold uppercase tracking-[0.14em] text-ink-3 transition hover:text-ember-deep"
                 >
                     Putuskan

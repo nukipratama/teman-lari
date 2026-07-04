@@ -84,16 +84,16 @@ Route::middleware(['auth'])->group(function (): void {
         ->middleware('throttle:strava-sync')
         ->name('aktivitas.resync');
     Route::post('/aktivitas/{activity}/telegram', SendActivityNotificationController::class)
-        ->middleware('block-demo-writes')
+        ->middleware('block-demo-telegram')
         ->name('aktivitas.telegram');
 
     Route::get('/kalender', CalendarController::class)->name('kalender');
 
     Route::post('/rekap-mingguan/{snapshot}/telegram', SendWeeklyRecapNotificationController::class)
-        ->middleware('block-demo-writes')
+        ->middleware('block-demo-telegram')
         ->name('rekap.mingguan.telegram');
     Route::post('/rekap-bulanan/{month}/telegram', SendMonthlyRecapNotificationController::class)
-        ->middleware('block-demo-writes')
+        ->middleware('block-demo-telegram')
         ->name('rekap.bulanan.telegram');
 
     Route::get('/kartu', [CardController::class, 'index'])->name('kartu.index');
@@ -115,9 +115,9 @@ Route::middleware(['auth'])->group(function (): void {
     // demo:seed). Telegram is the one write worth guarding: a visitor could disconnect
     // the shared bot or spam real messages via the send/test endpoints. So the demo
     // write-guard is applied to Telegram routes only, not blanket.
-    Route::patch('/profil/telegram', [TelegramConnectionController::class, 'update'])->middleware('block-demo-writes')->name('telegram.preferences.update');
-    Route::delete('/profil/telegram', [TelegramConnectionController::class, 'destroy'])->middleware('block-demo-writes')->name('telegram.disconnect');
-    Route::post('/profil/telegram/test', [TelegramConnectionController::class, 'test'])->middleware('block-demo-writes')->name('telegram.test');
+    Route::patch('/profil/telegram', [TelegramConnectionController::class, 'update'])->middleware('block-demo-telegram')->name('telegram.preferences.update');
+    Route::delete('/profil/telegram', [TelegramConnectionController::class, 'destroy'])->middleware('block-demo-telegram')->name('telegram.disconnect');
+    Route::post('/profil/telegram/test', [TelegramConnectionController::class, 'test'])->middleware('block-demo-telegram')->name('telegram.test');
 
     Route::get('/pengaturan/zona', [RunnerZonesController::class, 'index'])->name('pengaturan.zona');
     Route::patch('/pengaturan/zona', [RunnerZonesController::class, 'update'])->name('pengaturan.zona.update');
