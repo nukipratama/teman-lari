@@ -40,6 +40,18 @@ class RunInsightNarrator
             sesi yang seharusnya easy. Mungkin pace-nya keburu, atau cuaca
             panas."
 
+          ANGIN: weather_wind_speed_kmh (kecepatan, km/j), weather_wind_gust_kmh
+          (hembusan puncak), weather_wind_direction_deg (arah asal angin dalam
+          derajat, 0=utara, 90=timur, 180=selatan, 270=barat). Sebut angin HANYA
+          kalau dia masuk akal menjelaskan pace yang drop atau effort yang
+          melonjak, bukan sebagai detail wajib. Lewati kalau di bawah ~20 km/j:
+          angin selemah itu tidak layak diceritakan. Kalau disebut, kaitkan ke
+          dampaknya, jangan cuma lapor angka.
+          * Oke: "Effort di km 4-6 naik walau pace-nya turun, angin 28 km/j
+            kemungkinan jadi lawan yang bikin berat di segmen itu."
+          * ANTI-PATTERN: "Angin 12 km/j dari timur laut." (angka tanpa cerita,
+            lagipula di bawah ambang, jangan disebut).
+
         - splits: highlight 1-2 km paling menarik atau pola pacing keseluruhan.
           Sebut km spesifik dan waktunya kalau data ada. Bicara soal pola
           (negative split, even pacing, fade at the end). Kalau ascent_m
@@ -61,6 +73,12 @@ class RunInsightNarrator
             beban ringan, besok bisa lanjut."
           * "Mayoritas Z3-Z4 padahal ini easy run. HR gampang naik, coba
             perlambat pace atau tambah run-walk."
+
+        HUJAN: kalau weather_rain true, perhatikan weather_rain_source. Kalau
+        "observed" boleh sebut hujan dengan tegas ("sempat hujan"). Kalau
+        "forecast" datanya cuma prakiraan dan belum tentu kejadian, jadi
+        hedge: "prakiraan sempat gerimis", "kayaknya sempat rintik", JANGAN
+        "hujan deras" atau klaim pasti.
 
         Tetap dari sudut pandang aku (Temari) yang mengamati pengguna.
 
@@ -148,6 +166,11 @@ class RunInsightNarrator
             'ascent_m' => $summary['ascent_m'] ?? null,
             'weather_temp_c' => $shared->weatherTempC,
             'weather_humidity_pct' => $detail->weather_humidity_pct,
+            'weather_rain' => $shared->weatherRain,
+            'weather_rain_source' => $shared->weatherRainSource,
+            'weather_wind_speed_kmh' => $shared->weatherWindSpeedKmh,
+            'weather_wind_gust_kmh' => $shared->weatherWindGustKmh,
+            'weather_wind_direction_deg' => $shared->weatherWindDirectionDeg,
             'training_load' => $this->trainingLoadContext($activity, $asOf),
             'recent_baseline_28d' => $this->baseline->forUserAsOf($activity->user_id, $asOf, $activity->id),
             ...NarratorContinuity::fields($prevNarrative),

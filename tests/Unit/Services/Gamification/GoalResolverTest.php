@@ -63,8 +63,8 @@ it('returns the full goal catalog at zero progress for a fresh user', function (
 
     $goals = $this->resolver->forUser($user);
 
-    // 4 medal + 4 ikat_kepala + 4 kaus + 4 celana + 4 sepatu + 4 aura.
-    expect($goals)->toHaveCount(24);
+    // 4 medal + 4 ikat_kepala + 4 kaus + 4 celana + 4 sepatu + 5 aura.
+    expect($goals)->toHaveCount(25);
 
     foreach ($goals as $goal) {
         expect($goal['is_completed'])->toBeFalse()
@@ -185,13 +185,15 @@ it('counts badge-bearing cards toward kaus_pagi, kaus_hujan and aura goals', fun
     makeCard($user, Rarity::Common, [Badge::PejuangHujan->value]);
     makeCard($user, Rarity::Common, [Badge::HariPanas->value]);
     makeCard($user, Rarity::Common, [Badge::Z2Master->value]);
+    makeCard($user, Rarity::Common, [Badge::LawanAngin->value]);
 
     $byId = goalsById($this->resolver, $user);
 
     expect($byId['accessory.kaus_pagi']['current'])->toBe(1)
         ->and($byId['accessory.kaus_hujan']['current'])->toBe(1)
         ->and($byId['accessory.aura_gerah']['current'])->toBe(1)
-        ->and($byId['accessory.aura_tenang']['current'])->toBe(1);
+        ->and($byId['accessory.aura_tenang']['current'])->toBe(1)
+        ->and($byId['accessory.aura_angin']['current'])->toBe(1);
 });
 
 it('counts 5k/10k/half-marathon distance runs toward the celana goals', function (): void {

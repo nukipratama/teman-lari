@@ -379,6 +379,7 @@ final readonly class RuleBasedNarrationFiller
             Badge::Santai->value => 'Beneran easy, HR dijaga rendah.',
             Badge::Berturut->value => 'Seminggu penuh tanpa skip, keren.',
             Badge::HariSpesial->value => 'Lari pas hari libur nasional.',
+            Badge::LawanAngin->value => 'Angin kencang gak bikin kamu mundur.',
         ];
 
         // Highlight one of the card's badges, chosen by seed so multi-badge

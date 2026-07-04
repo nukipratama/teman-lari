@@ -284,6 +284,10 @@ function MapWeatherPanel({ detail }: Readonly<{ detail: DetailedActivityDetail }
     const humidity = detail.weather_humidity_pct;
     const location = detail.location_name;
     const hasPolyline = detail.summary_polyline != null && detail.summary_polyline.length > 0;
+    const windSpeed = detail.weather_wind_speed_kmh;
+    const gust = detail.weather_wind_gust_kmh;
+    const direction = detail.weather_wind_direction_deg;
+    const showGust = gust != null && windSpeed != null && gust - windSpeed >= 8;
 
     return (
         <div className="relative flex flex-col gap-4 overflow-hidden rounded-2xl bg-sky px-5 py-4 text-cream">
@@ -297,6 +301,23 @@ function MapWeatherPanel({ detail }: Readonly<{ detail: DetailedActivityDetail }
                             {humidity != null && (
                                 <div className="mt-1 font-mono text-[10px] uppercase tracking-[0.12em] text-ink-on-sky">
                                     {Math.round(humidity)}% lembab
+                                </div>
+                            )}
+                            {windSpeed != null && (
+                                <div className="mt-0.5 flex items-center gap-1 font-mono text-[10px] uppercase tracking-[0.12em] text-ink-on-sky">
+                                    <Icon icon="mdi:weather-windy" width={11} height={11} aria-hidden />
+                                    {Math.round(windSpeed)} km/j
+                                    {showGust && <span className="text-cream/40">· gust {Math.round(gust)}</span>}
+                                    {direction != null && (
+                                        <Icon
+                                            icon="mdi:navigation"
+                                            width={10}
+                                            height={10}
+                                            aria-hidden
+                                            style={{ transform: `rotate(${direction}deg)` }}
+                                            className="text-horizon"
+                                        />
+                                    )}
                                 </div>
                             )}
                         </div>

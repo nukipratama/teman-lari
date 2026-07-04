@@ -79,6 +79,14 @@ it('appends a badge coda when the card carries a known badge', function (): void
     expect($flavor)->toContain('Paruh kedua');
 });
 
+it('appends the lawan_angin badge coda', function (): void {
+    $card = seededCard(Rarity::Uncommon, 'Wind Breaker', [Badge::LawanAngin->value]);
+
+    $flavor = app(RuleBasedNarrationFiller::class)->fillFor(fillerRow(AnalysisType::CardFlavor, $card->id));
+
+    expect($flavor)->toContain('Angin kencang gak bikin kamu mundur.');
+});
+
 it('falls back to a flat line when the card is missing', function (): void {
     $flavor = app(RuleBasedNarrationFiller::class)->fillFor(fillerRow(AnalysisType::CardFlavor, 999_999));
 

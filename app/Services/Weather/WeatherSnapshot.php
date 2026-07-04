@@ -10,6 +10,10 @@ final readonly class WeatherSnapshot
         public int $tempC,
         public int $humidityPct,
         public bool $rainDetected,
+        public ?int $windSpeedKmh = null,
+        public ?int $windGustKmh = null,
+        public ?int $windDirectionDeg = null,
+        public bool $rainIsForecast = false,
     ) {
     }
 }

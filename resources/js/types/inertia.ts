@@ -192,6 +192,10 @@ export interface ActivityDetail {
     weather_temp_c?: number | null;
     weather_humidity_pct?: number | null;
     weather_rain_detected?: boolean | null;
+    weather_wind_speed_kmh?: number | null;
+    weather_wind_gust_kmh?: number | null;
+    weather_wind_direction_deg?: number | null;
+    weather_rain_is_forecast?: boolean | null;
     summary_polyline?: string | null;
     stream_summary?: StreamSummary | null;
     activity?: Activity;

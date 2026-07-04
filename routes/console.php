@@ -59,6 +59,12 @@ Schedule::command('strava:ingest')->everyFiveMinutes()->withoutOverlapping(10);
 // transient Nominatim misses and rows ingested before geo-on-ingest landed.
 Schedule::command('geo:backfill-locations')->hourly()->withoutOverlapping(55);
 
+// 03:15 daily: correct forecast-sourced weather (rainIsForecast=true) once the
+// archive/reanalysis endpoint is reliable for it (6+ days old). Free HTTP, no
+// LLM; a miss just leaves the row for the next run to retry. Never touches
+// RunCard badges, only the weather_* columns.
+Schedule::command('weather:correct-forecast')->dailyAt('03:15')->withoutOverlapping(55);
+
 // Saturday 18:00: nudge a user whose weekly streak is live but has no run yet
 // this week, while there's still time to save it before Sunday's week-close
 // breaks it. Demo excluded (checked inside the command); the streak_reminders

@@ -108,6 +108,15 @@ export default function KartuDetail({
           })()
         : null;
 
+    const shareWeather = (() => {
+        if (detail?.weather_temp_c == null) {
+            return null;
+        }
+        const temp = `${Math.round(detail.weather_temp_c)}°C`;
+        const wind = detail.weather_wind_speed_kmh != null ? `, angin ${Math.round(detail.weather_wind_speed_kmh)} km/j` : '';
+        return `${temp}${wind}`;
+    })();
+
     const shareData: ShareKartuData = {
         id: card.id,
         name: card.special_move,
@@ -125,7 +134,7 @@ export default function KartuDetail({
         fastestKm: fastestKm != null ? `${fastestKm}/km` : null,
         zonePct,
         location: detail?.location_name ?? null,
-        weather: detail?.weather_temp_c != null ? `${Math.round(detail.weather_temp_c)}°C` : null,
+        weather: shareWeather,
         tags: badges.map((b) => badgeName(b)),
         tagEmojis: badges.map((b) => badgeEmblem(b)),
         quote: card.flavor_analysis.content ?? null,

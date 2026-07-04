@@ -344,6 +344,31 @@ describe('drawShareCard — edge / branch cases', () => {
         expect(ctx.fillText).toHaveBeenCalled();
     });
 
+    it('draws the date + weather footer line together on the rute layout', async () => {
+        const ctx = makeCtx();
+        const canvas = { width: 0, height: 0, getContext: () => ctx } as unknown as HTMLCanvasElement;
+        await drawShareCard(canvas, { kartu, layout: 'rute', format: 'story' });
+        expect(ctx.fillText).toHaveBeenCalledWith(
+            '30 Mei 2026 · 06:30 · 27°C',
+            expect.any(Number),
+            expect.any(Number),
+        );
+    });
+
+    it('draws only the weather footer line when date is absent', async () => {
+        const ctx = makeCtx();
+        const canvas = { width: 0, height: 0, getContext: () => ctx } as unknown as HTMLCanvasElement;
+        await drawShareCard(canvas, { kartu: { ...kartu, date: null }, layout: 'rute', format: 'story' });
+        expect(ctx.fillText).toHaveBeenCalledWith('27°C', expect.any(Number), expect.any(Number));
+    });
+
+    it('draws no footer line when both date and weather are absent', async () => {
+        const ctx = makeCtx();
+        const canvas = { width: 0, height: 0, getContext: () => ctx } as unknown as HTMLCanvasElement;
+        await drawShareCard(canvas, { kartu: { ...kartu, date: null, weather: null }, layout: 'rute', format: 'story' });
+        expect(ctx.fillText).not.toHaveBeenCalledWith('27°C', expect.any(Number), expect.any(Number));
+    });
+
     it('renders the rute layout with no stat cells', async () => {
         const ctx = makeCtx();
         const canvas = { width: 0, height: 0, getContext: () => ctx } as unknown as HTMLCanvasElement;

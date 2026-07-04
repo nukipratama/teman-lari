@@ -34,6 +34,7 @@ export const BADGE_LABELS: Record<string, string> = {
     santai: '☺️ Santai',
     berturut: '🔥 Berturut',
     hari_spesial: '🎉 Hari Spesial',
+    lawan_angin: '🌬️ Lawan Angin',
 };
 
 // One-line "ability" meaning per badge, accurate to RunCardFactory::badges()
@@ -57,6 +58,7 @@ export const BADGE_ABILITY: Record<string, string> = {
     santai: 'HR rata-rata di bawah 70% max, beneran easy.',
     berturut: 'Lari 7 hari berturut-turut, tanpa skip.',
     hari_spesial: 'Lari pas hari libur nasional.',
+    lawan_angin: 'Lari nembus angin kencang, 20 km/j ke atas.',
 };
 
 export const RARITY_BORDER: Record<Rarity, string> = {

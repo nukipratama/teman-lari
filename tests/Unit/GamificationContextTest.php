@@ -56,6 +56,7 @@ it('returns zero counts for a user with no data', function (): void {
             'negative_split' => 0,
             'hari_panas' => 0,
             'z2_master' => 0,
+            'lawan_angin' => 0,
         ]);
 });
 

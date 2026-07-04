@@ -37,6 +37,10 @@ use Override;
  * @property int|null $weather_temp_c
  * @property int|null $weather_humidity_pct
  * @property bool|null $weather_rain_detected
+ * @property int|null $weather_wind_speed_kmh
+ * @property int|null $weather_wind_gust_kmh
+ * @property int|null $weather_wind_direction_deg
+ * @property bool|null $weather_rain_is_forecast
  * @property float|null $start_lat
  * @property float|null $start_lng
  * @property string|null $location_name
@@ -66,6 +70,10 @@ use Override;
     'weather_temp_c',
     'weather_humidity_pct',
     'weather_rain_detected',
+    'weather_wind_speed_kmh',
+    'weather_wind_gust_kmh',
+    'weather_wind_direction_deg',
+    'weather_rain_is_forecast',
     'start_lat',
     'start_lng',
     'location_name',
@@ -141,6 +149,10 @@ class ActivityDetail extends Model
             'weather_temp_c' => 'integer',
             'weather_humidity_pct' => 'integer',
             'weather_rain_detected' => 'boolean',
+            'weather_wind_speed_kmh' => 'integer',
+            'weather_wind_gust_kmh' => 'integer',
+            'weather_wind_direction_deg' => 'integer',
+            'weather_rain_is_forecast' => 'boolean',
             'start_lat' => 'float',
             'start_lng' => 'float',
             'location_resolved_at' => 'datetime',

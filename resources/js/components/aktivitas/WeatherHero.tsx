@@ -5,6 +5,7 @@ interface WeatherDetail {
     weather_temp_c?: number | null;
     weather_humidity_pct?: number | null;
     weather_rain_detected?: boolean | null;
+    weather_rain_is_forecast?: boolean | null;
     location_name?: string | null;
 }
 
@@ -36,6 +37,7 @@ export default function WeatherHero({ detail }: Readonly<WeatherHeroProps>) {
     const temp = detail.weather_temp_c;
     const humidity = detail.weather_humidity_pct;
     const rain = detail.weather_rain_detected === true;
+    const isForecast = detail.weather_rain_is_forecast === true;
     const location = detail.location_name;
 
     if (temp == null && humidity == null && !rain && location == null) {
@@ -58,7 +60,12 @@ export default function WeatherHero({ detail }: Readonly<WeatherHeroProps>) {
                     <p className="mt-1 text-xs text-ink-3">
                         {humidity != null && `${humidity}% humidity`}
                         {humidity != null && rain && ' · '}
-                        {rain && <span className="font-semibold text-mood-mumet">hujan saat lari</span>}
+                        {rain && (
+                            <span className="font-semibold text-mood-mumet">
+                                hujan saat lari
+                                {isForecast && <span className="ml-1 font-normal normal-case text-ink-3">(prakiraan)</span>}
+                            </span>
+                        )}
                     </p>
                 </div>
                 <span aria-hidden className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/80 text-ink shadow-sm ring-1 ring-line">

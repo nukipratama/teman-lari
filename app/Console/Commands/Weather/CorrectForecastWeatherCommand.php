@@ -11,45 +11,56 @@ use Illuminate\Console\Attributes\Description;
 use Illuminate\Console\Attributes\Signature;
 use Illuminate\Console\Command;
 
-#[Signature('weather:backfill {--limit=200 : Cap on rows handled per run}')]
-#[Description('Re-fetch weather for activities with stored coords but a null weather_temp_c (transient Open-Meteo misses).')]
-class BackfillActivityWeatherCommand extends Command
+#[Signature('weather:correct-forecast {--limit=200 : Cap on rows handled per run}')]
+#[Description('Re-fetch weather from the archive endpoint for rows still sourced from a forecast, once the archive is reliable (6+ days old).')]
+class CorrectForecastWeatherCommand extends Command
 {
+    /** Archive/reanalysis data lags behind real-time; before this, a re-fetch would just hit the same forecast-derived gap. */
+    private const int MIN_AGE_DAYS = 6;
+
     public function handle(OpenMeteoClient $weather): int
     {
         $limit = (int) $this->option('limit');
+        $cutoff = CarbonImmutable::now()->subDays(self::MIN_AGE_DAYS);
 
         $query = ActivityDetail::query()
-            ->whereNull('weather_temp_c')
+            ->where('weather_rain_is_forecast', true)
             ->whereNotNull('start_lat')
             ->whereNotNull('start_lng')
-            ->whereNotNull('start_date_local')
-            ->orderBy('id')
+            ->where('start_date_local', '<', $cutoff)
+            ->orderBy('start_date_local')
             ->limit($limit);
 
-        $filled = 0;
+        $corrected = 0;
         foreach ($query->cursor() as $detail) {
-            if ($this->backfill($weather, $detail)) {
-                $filled++;
+            if ($this->correct($weather, $detail)) {
+                $corrected++;
             }
         }
 
         $this->info(sprintf(
-            'Backfilled weather for %d activity detail(s) (limit %d).',
-            $filled,
+            'Corrected forecast-sourced weather for %d activity detail(s) (limit %d).',
+            $corrected,
             $limit,
         ));
 
         return self::SUCCESS;
     }
 
-    private function backfill(OpenMeteoClient $weather, ActivityDetail $detail): bool
+    /**
+     * Only the weather columns are touched here. RunCard badges (PejuangHujan,
+     * HariPanas, LawanAngin, ...) are derived once at unlock time and are never
+     * recomputed retroactively: stripping an earned badge because the archive
+     * later disagrees with the forecast would revoke an unlocked accessory,
+     * which is worse UX than a slightly-stale badge.
+     */
+    private function correct(OpenMeteoClient $weather, ActivityDetail $detail): bool
     {
         if ($detail->start_date_local === null) {
             return false;
         }
 
-        $snapshot = $weather->fetchForActivity(
+        $snapshot = $weather->fetchArchive(
             (float) $detail->start_lat,
             (float) $detail->start_lng,
             CarbonImmutable::instance($detail->start_date_local),

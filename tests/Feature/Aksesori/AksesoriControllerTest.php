@@ -25,7 +25,7 @@ it('renders the catalog + equipped slots', function (): void {
             ->where('equipped.ikat_kepala', 'accessory.ikat_kepala_epik')
             ->where('equipped.medal', null)
             ->where('equipped.aura', null)
-            ->has('items', 24));
+            ->has('items', 25));
 });
 
 it('equips an ikat_kepala + un-equips the previous sibling', function (): void {

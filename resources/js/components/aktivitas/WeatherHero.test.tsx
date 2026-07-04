@@ -43,4 +43,20 @@ describe('WeatherHero', () => {
         render(<WeatherHero detail={{ location_name: 'Senayan, Jakarta' }} />);
         expect(screen.getByText('Senayan, Jakarta')).toBeInTheDocument();
     });
+
+    it('appends the prakiraan hedge when rain is forecast rather than detected', () => {
+        render(
+            <WeatherHero
+                detail={{ weather_temp_c: 25, weather_rain_detected: true, weather_rain_is_forecast: true }}
+            />,
+        );
+        expect(screen.getByText(/hujan saat lari/)).toBeInTheDocument();
+        expect(screen.getByText('(prakiraan)')).toBeInTheDocument();
+    });
+
+    it('omits the prakiraan hedge when rain is directly detected', () => {
+        render(<WeatherHero detail={{ weather_temp_c: 25, weather_rain_detected: true }} />);
+        expect(screen.getByText(/hujan saat lari/)).toBeInTheDocument();
+        expect(screen.queryByText('(prakiraan)')).not.toBeInTheDocument();
+    });
 });

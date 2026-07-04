@@ -11,8 +11,8 @@ declare(strict_types=1);
 | icon (Iconify), a short description, a rarity tier, and a criteria
 | summary shown in locked silhouette state on the Profil koleksi grid.
 |
-| 24 items across 6 slots (4 per slot). Slots: medal, ikat_kepala,
-| kaus, celana, sepatu, aura.
+| 25 items across 6 slots (4 per slot, aura has 5). Slots: medal,
+| ikat_kepala, kaus, celana, sepatu, aura.
 |
 */
 
@@ -219,5 +219,13 @@ return [
         'icon' => 'mdi:blur',
         'description' => 'Aura kilat buat yang punya 3 kartu Legendaris.',
         'criteria' => 'Dapatkan 3 kartu Legendaris.',
+    ],
+    'accessory.aura_angin' => [
+        'name' => 'Aura Angin',
+        'slot' => 'aura',
+        'rarity' => 'rare',
+        'icon' => 'mdi:weather-windy',
+        'description' => 'Aura angin buat yang tetap ngebut walau angin kencang 3 kali.',
+        'criteria' => 'Selesaikan 3 lari saat angin di atas 20 km/j.',
     ],
 ];

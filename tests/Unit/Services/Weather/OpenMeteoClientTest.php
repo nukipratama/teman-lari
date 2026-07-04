@@ -27,6 +27,9 @@ it('hits the forecast endpoint for recent activities', function (): void {
                 'temperature_2m' => [25.0, 27.2, 29.5],
                 'relative_humidity_2m' => [82, 78, 70],
                 'precipitation' => [0, 0, 0],
+                'wind_speed_10m' => [10.4, 27.6, 15.0],
+                'wind_gusts_10m' => [18.2, 41.9, 22.0],
+                'wind_direction_10m' => [90, 133.6, 180],
             ],
         ]),
     ]);
@@ -36,9 +39,15 @@ it('hits the forecast endpoint for recent activities', function (): void {
     expect($snap)->toBeInstanceOf(WeatherSnapshot::class)
         ->and($snap->tempC)->toBe(27)
         ->and($snap->humidityPct)->toBe(78)
-        ->and($snap->rainDetected)->toBeFalse();
+        ->and($snap->rainDetected)->toBeFalse()
+        ->and($snap->windSpeedKmh)->toBe(28)
+        ->and($snap->windGustKmh)->toBe(42)
+        ->and($snap->windDirectionDeg)->toBe(134)
+        // forecast endpoint => rain flag is uncertain
+        ->and($snap->rainIsForecast)->toBeTrue();
 
-    Http::assertSent(fn ($req): bool => str_contains((string) $req->url(), 'api.open-meteo.com/v1/forecast'));
+    Http::assertSent(fn ($req): bool => str_contains((string) $req->url(), 'api.open-meteo.com/v1/forecast')
+        && str_contains(urldecode((string) $req->url()), 'wind_speed_10m'));
 });
 
 it('hits the archive endpoint for activities older than 7 days', function (): void {
@@ -50,6 +59,9 @@ it('hits the archive endpoint for activities older than 7 days', function (): vo
                 'temperature_2m' => [29, 30, 31],
                 'relative_humidity_2m' => [65, 68, 71],
                 'precipitation' => [0, 0, 0],
+                'wind_speed_10m' => [12, 24, 18],
+                'wind_gusts_10m' => [20, 36, 28],
+                'wind_direction_10m' => [45, 270, 90],
             ],
         ]),
     ]);
@@ -57,7 +69,36 @@ it('hits the archive endpoint for activities older than 7 days', function (): vo
     $snap = (new OpenMeteoClient())->fetchForActivity(-6.2, 106.8, $startedAt);
 
     expect($snap)->toBeInstanceOf(WeatherSnapshot::class)
-        ->and($snap->tempC)->toBe(30);
+        ->and($snap->tempC)->toBe(30)
+        ->and($snap->windSpeedKmh)->toBe(24)
+        ->and($snap->windDirectionDeg)->toBe(270)
+        // archive endpoint => rain flag is observed, not a forecast
+        ->and($snap->rainIsForecast)->toBeFalse();
+
+    Http::assertSent(fn ($req): bool => str_contains((string) $req->url(), 'archive-api.open-meteo.com/v1/archive'));
+});
+
+it('fetchArchive forces the archive endpoint and returns an observed (non-forecast) snapshot', function (): void {
+    $startedAt = CarbonImmutable::parse('2026-05-10 06:30:00'); // within the forecast window, but forced to archive
+    Http::fake([
+        'archive-api.open-meteo.com/*' => Http::response([
+            'hourly' => [
+                'time' => ['2026-05-10T06:00'],
+                'temperature_2m' => [26],
+                'relative_humidity_2m' => [88],
+                'precipitation' => [0],
+                'wind_speed_10m' => [14],
+                'wind_gusts_10m' => [22],
+                'wind_direction_10m' => [200],
+            ],
+        ]),
+    ]);
+
+    $snap = (new OpenMeteoClient())->fetchArchive(-6.2, 106.8, $startedAt);
+
+    expect($snap)->toBeInstanceOf(WeatherSnapshot::class)
+        ->and($snap->tempC)->toBe(26)
+        ->and($snap->rainIsForecast)->toBeFalse();
 
     Http::assertSent(fn ($req): bool => str_contains((string) $req->url(), 'archive-api.open-meteo.com/v1/archive'));
 });
@@ -201,7 +242,7 @@ it('refetches when the cached value is a legacy non-array (self-heals poisoned k
     $startedAt = CarbonImmutable::parse('2026-05-10 06:00:00');
     // Simulate a poisoned cache entry left by an older runtime: a bare object
     // where the array shape is now expected. It must NOT blow up the return type.
-    $key = 'weather:-6.200:106.800:2026-05-10T06:00';
+    $key = 'weather:v2:-6.200:106.800:2026-05-10T06:00';
     Cache::put($key, new WeatherSnapshot(tempC: 99, humidityPct: 1, rainDetected: true), 3600);
 
     Http::fake([
@@ -223,8 +264,8 @@ it('refetches when the cached value is a legacy non-array (self-heals poisoned k
 
 it('round-trips the cached array shape back into a WeatherSnapshot', function (): void {
     $startedAt = CarbonImmutable::parse('2026-05-10 06:00:00');
-    $key = 'weather:-6.200:106.800:2026-05-10T06:00';
-    Cache::put($key, ['t' => 21, 'h' => 64, 'r' => true], 3600);
+    $key = 'weather:v2:-6.200:106.800:2026-05-10T06:00';
+    Cache::put($key, ['t' => 21, 'h' => 64, 'r' => true, 'ws' => 24, 'wg' => 38, 'wd' => 200, 'rf' => true], 3600);
 
     Http::fake(); // any HTTP call would fail the assertion below
 
@@ -233,7 +274,11 @@ it('round-trips the cached array shape back into a WeatherSnapshot', function ()
     expect($snap)->toBeInstanceOf(WeatherSnapshot::class)
         ->and($snap->tempC)->toBe(21)
         ->and($snap->humidityPct)->toBe(64)
-        ->and($snap->rainDetected)->toBeTrue();
+        ->and($snap->rainDetected)->toBeTrue()
+        ->and($snap->windSpeedKmh)->toBe(24)
+        ->and($snap->windGustKmh)->toBe(38)
+        ->and($snap->windDirectionDeg)->toBe(200)
+        ->and($snap->rainIsForecast)->toBeTrue();
     Http::assertNothingSent();
 });
 

@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Enums\Badge;
 use App\Enums\Rarity;
 use App\Models\Activity;
 use App\Models\PersonalRecord;
@@ -100,6 +101,20 @@ it('grants ikat_kepala_epik after three Epik run cards', function (): void {
 
     expect($this->engine->grantEligible($user))
         ->toContain('accessory.ikat_kepala_epik');
+});
+
+it('grants aura_angin after three lawan_angin badge cards', function (): void {
+    $user = User::factory()->create();
+    foreach (range(1, 3) as $_) {
+        $activity = Activity::factory()->for($user)->create();
+        RunCard::factory()->create([
+            'activity_id' => $activity->id,
+            'badges' => [Badge::LawanAngin->value],
+        ]);
+    }
+
+    expect($this->engine->grantEligible($user))
+        ->toContain('accessory.aura_angin');
 });
 
 it('flashes a toast payload to the session when a session is active', function (): void {

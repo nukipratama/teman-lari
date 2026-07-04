@@ -191,6 +191,56 @@ it('awards pejuang_hujan badge on rain detection', function (): void {
     expect($card->badges)->toContain('pejuang_hujan');
 });
 
+it('awards lawan_angin badge when wind speed is 20 km/h or more', function (): void {
+    $user = User::factory()->create();
+    $prev = Activity::factory()->for($user)->create();
+    ActivityDetail::factory()->for($prev)->create([
+        'distance' => 3_000,
+        'start_date_local' => Carbon::parse('2026-04-20 10:00:00'),
+    ]);
+
+    $activity = Activity::factory()->for($user)->create();
+    $detail = ActivityDetail::factory()->for($activity)->create([
+        'distance' => 5_000,
+        'start_date_local' => Carbon::parse('2026-05-10 10:00:00'),
+        'weather_temp_c' => 25,
+        'weather_rain_detected' => false,
+        'weather_wind_speed_kmh' => 20,
+        'total_elevation_gain' => 0,
+        'average_heartrate' => 150,
+        'max_heartrate' => 190,
+    ]);
+
+    $card = app(RunCardFactory::class)->build($activity, $detail);
+
+    expect($card->badges)->toContain('lawan_angin');
+});
+
+it('does not award lawan_angin badge when wind speed is under 20 km/h', function (): void {
+    $user = User::factory()->create();
+    $prev = Activity::factory()->for($user)->create();
+    ActivityDetail::factory()->for($prev)->create([
+        'distance' => 3_000,
+        'start_date_local' => Carbon::parse('2026-04-20 10:00:00'),
+    ]);
+
+    $activity = Activity::factory()->for($user)->create();
+    $detail = ActivityDetail::factory()->for($activity)->create([
+        'distance' => 5_000,
+        'start_date_local' => Carbon::parse('2026-05-10 10:00:00'),
+        'weather_temp_c' => 25,
+        'weather_rain_detected' => false,
+        'weather_wind_speed_kmh' => 19,
+        'total_elevation_gain' => 0,
+        'average_heartrate' => 150,
+        'max_heartrate' => 190,
+    ]);
+
+    $card = app(RunCardFactory::class)->build($activity, $detail);
+
+    expect($card->badges)->not->toContain('lawan_angin');
+});
+
 it('awards anak_pagi badge when start hour is before 06:00', function (): void {
     $user = User::factory()->create();
     $prev = Activity::factory()->for($user)->create();

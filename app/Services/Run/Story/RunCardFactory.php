@@ -271,6 +271,9 @@ class RunCardFactory
         if ($detail->weather_rain_detected === true) {
             $badges[] = Badge::PejuangHujan->value;
         }
+        if (($detail->weather_wind_speed_kmh ?? 0) >= 20) {
+            $badges[] = Badge::LawanAngin->value;
+        }
         if ($detail->start_date_local !== null && (int) $detail->start_date_local->format('H') < 6) {
             $badges[] = Badge::AnakPagi->value;
         }

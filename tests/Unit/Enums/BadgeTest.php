@@ -10,7 +10,8 @@ it('returns a non-empty label for every case', function (Badge $badge): void {
 
 it('exposes a representative label', function (): void {
     expect(Badge::HariPanas->label())->toBe('🔥 Tahan Gerah')
-        ->and(Badge::HariSpesial->label())->toBe('🎉 Hari Spesial');
+        ->and(Badge::HariSpesial->label())->toBe('🎉 Hari Spesial')
+        ->and(Badge::LawanAngin->label())->toBe('🌬️ Lawan Angin');
 });
 
 it('lists the tracked badges for unlock criteria', function (): void {
@@ -21,6 +22,7 @@ it('lists the tracked badges for unlock criteria', function (): void {
         Badge::NegativeSplit,
         Badge::HariPanas,
         Badge::Z2Master,
+        Badge::LawanAngin,
     ]);
 });
 

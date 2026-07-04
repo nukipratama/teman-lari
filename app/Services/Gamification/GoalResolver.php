@@ -355,6 +355,17 @@ readonly class GoalResolver
                 'unit' => 'kartu',
                 'is_completed' => \in_array('accessory.aura_jagoan', $unlockedKeys, true),
             ],
+            [
+                'id' => 'accessory.aura_angin',
+                'title' => '3 lari lawan angin',
+                'description' => 'Selesaikan 3 lari saat angin di atas 20 km/j.',
+                'slot' => 'aura',
+                'rarity' => $this->rarityForKey('accessory.aura_angin', $catalog),
+                'current' => min($bc[Badge::LawanAngin->value] ?? 0, 3),
+                'target' => 3,
+                'unit' => 'lari',
+                'is_completed' => \in_array('accessory.aura_angin', $unlockedKeys, true),
+            ],
         ];
     }
 

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services\Run\Story;
 
+use App\Models\ActivityDetail;
 use App\Models\RunCard;
 use App\Services\Geo\PolylineProjector;
 use Imagick;
@@ -80,9 +81,8 @@ class RunCardImageRenderer
 
         $dateLabel = $detail?->start_date_local?->translatedFormat('j M Y');
         $location = $detail?->location_name;
-        $metaLine = $this->escape(trim(
-            ($dateLabel ?? '') . ($dateLabel !== null && $location !== null ? '  ·  ' : '') . ($location ?? ''),
-        ));
+        $weather = $this->weatherLabel($detail);
+        $metaLine = $this->escape(implode('  ·  ', array_filter([$dateLabel, $location, $weather])));
 
         $routePoints = $this->projector->project(
             $detail?->summary_polyline,
@@ -166,6 +166,25 @@ SVG;
         $imagick->clear();
 
         return $png;
+    }
+
+    /**
+     * "31°C, angin 15 km/j" style label, omitting gracefully when temp/wind
+     * are absent. Wind only appears alongside a temperature reading.
+     */
+    private function weatherLabel(?ActivityDetail $detail): ?string
+    {
+        if ($detail?->weather_temp_c === null) {
+            return null;
+        }
+
+        $label = "{$detail->weather_temp_c}°C";
+
+        if ($detail->weather_wind_speed_kmh !== null) {
+            $label .= ", angin {$detail->weather_wind_speed_kmh} km/j";
+        }
+
+        return $label;
     }
 
     private function formatKm(?float $distanceMeters): string

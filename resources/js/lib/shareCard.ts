@@ -386,7 +386,10 @@ function drawWordmark(ctx: CanvasRenderingContext2D, w: number, h: number, pal: 
 /** Bottom-left mono date stamp, shared by the poster and angka templates. */
 function drawDateFooter(d: DrawCtx): void {
     const { ctx, h, cfg, pal } = d;
-    if (!cfg.kartu.date) {
+    const parts = [cfg.kartu.date?.replace('\n', ' · '), cfg.kartu.weather].filter(
+        (part): part is string => part != null && part !== '',
+    );
+    if (parts.length === 0) {
         return;
     }
     ctx.font = '500 30px "JetBrains Mono"';
@@ -394,7 +397,7 @@ function drawDateFooter(d: DrawCtx): void {
     ctx.fillStyle = pal.meta;
     ctx.textAlign = 'left';
     ctx.textBaseline = 'alphabetic';
-    ctx.fillText(cfg.kartu.date.replace('\n', ' · '), PAD, h - PAD);
+    ctx.fillText(parts.join(' · '), PAD, h - PAD);
     ctx.letterSpacing = '0px';
 }
 
