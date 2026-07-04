@@ -1,6 +1,8 @@
 import { Icon } from '@iconify/react';
 import PillButton from '@/components/ui/PillButton';
+import DemoBlockedModal from '@/components/DemoBlockedModal';
 import { usePendingPost } from '@/hooks/usePendingPost';
+import { useDemoGuard } from '@/hooks/useDemoGuard';
 import { cooldownAriaLabel, useCooldownCountdown } from '@/hooks/useCooldownCountdown';
 import { formatDurationHMS } from '@/lib/pace';
 
@@ -16,6 +18,7 @@ export default function SendToTelegramButton({
     retryAfterSeconds,
 }: Readonly<{ url: string; retryAfterSeconds?: number | null }>) {
     const [sending, send] = usePendingPost(url, { preserveScroll: true });
+    const { open, setOpen, guard } = useDemoGuard();
     const cooldownRemaining = useCooldownCountdown(retryAfterSeconds);
     const cooling = cooldownRemaining > 0;
 
@@ -27,22 +30,25 @@ export default function SendToTelegramButton({
     }
 
     return (
-        <PillButton
-            tone="outline"
-            size="sm"
-            disabled={sending || cooling}
-            className="disabled:opacity-60 disabled:cursor-not-allowed"
-            onClick={send}
-            aria-label={cooldownAriaLabel(cooldownRemaining, 'kirim ke Telegram')}
-        >
-            <Icon
-                icon={sending ? 'mdi:loading' : 'mdi:send'}
-                width={15}
-                height={15}
-                className={sending ? 'animate-spin' : undefined}
-                aria-hidden
-            />
-            {label}
-        </PillButton>
+        <>
+            <PillButton
+                tone="outline"
+                size="sm"
+                disabled={sending || cooling}
+                className="disabled:opacity-60 disabled:cursor-not-allowed"
+                onClick={() => guard(send)}
+                aria-label={cooldownAriaLabel(cooldownRemaining, 'kirim ke Telegram')}
+            >
+                <Icon
+                    icon={sending ? 'mdi:loading' : 'mdi:send'}
+                    width={15}
+                    height={15}
+                    className={sending ? 'animate-spin' : undefined}
+                    aria-hidden
+                />
+                {label}
+            </PillButton>
+            <DemoBlockedModal open={open} onClose={() => setOpen(false)} />
+        </>
     );
 }

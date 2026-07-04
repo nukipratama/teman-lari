@@ -15,6 +15,8 @@ export interface AuthUser {
     name: string;
     first_name: string;
     avatar_url: string | null;
+    /** Demo account: Telegram writes are guarded (show the demo-limit modal). */
+    is_demo: boolean;
 }
 
 export interface PendingReveal {

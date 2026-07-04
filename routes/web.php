@@ -75,7 +75,7 @@ Route::middleware('guest')->group(function (): void {
     Route::post('/auth/demo', [DemoAuthController::class, 'login'])->name('auth.demo');
 });
 
-Route::middleware(['auth', 'block-demo-writes'])->group(function (): void {
+Route::middleware(['auth'])->group(function (): void {
     Route::get('/', DashboardController::class)->name('dashboard');
 
     Route::get('/aktivitas', [RunController::class, 'index'])->name('aktivitas.index');
@@ -84,13 +84,16 @@ Route::middleware(['auth', 'block-demo-writes'])->group(function (): void {
         ->middleware('throttle:strava-sync')
         ->name('aktivitas.resync');
     Route::post('/aktivitas/{activity}/telegram', SendActivityNotificationController::class)
+        ->middleware('block-demo-writes')
         ->name('aktivitas.telegram');
 
     Route::get('/kalender', CalendarController::class)->name('kalender');
 
     Route::post('/rekap-mingguan/{snapshot}/telegram', SendWeeklyRecapNotificationController::class)
+        ->middleware('block-demo-writes')
         ->name('rekap.mingguan.telegram');
     Route::post('/rekap-bulanan/{month}/telegram', SendMonthlyRecapNotificationController::class)
+        ->middleware('block-demo-writes')
         ->name('rekap.bulanan.telegram');
 
     Route::get('/kartu', [CardController::class, 'index'])->name('kartu.index');
@@ -108,9 +111,13 @@ Route::middleware(['auth', 'block-demo-writes'])->group(function (): void {
 
     Route::get('/profil', ProfileController::class)->name('profil');
 
-    Route::patch('/profil/telegram', [TelegramConnectionController::class, 'update'])->name('telegram.preferences.update');
-    Route::delete('/profil/telegram', [TelegramConnectionController::class, 'destroy'])->name('telegram.disconnect');
-    Route::post('/profil/telegram/test', [TelegramConnectionController::class, 'test'])->name('telegram.test');
+    // The demo is otherwise a fully-interactive shared sandbox (drift resets on
+    // demo:seed). Telegram is the one write worth guarding: a visitor could disconnect
+    // the shared bot or spam real messages via the send/test endpoints. So the demo
+    // write-guard is applied to Telegram routes only, not blanket.
+    Route::patch('/profil/telegram', [TelegramConnectionController::class, 'update'])->middleware('block-demo-writes')->name('telegram.preferences.update');
+    Route::delete('/profil/telegram', [TelegramConnectionController::class, 'destroy'])->middleware('block-demo-writes')->name('telegram.disconnect');
+    Route::post('/profil/telegram/test', [TelegramConnectionController::class, 'test'])->middleware('block-demo-writes')->name('telegram.test');
 
     Route::get('/pengaturan/zona', [RunnerZonesController::class, 'index'])->name('pengaturan.zona');
     Route::patch('/pengaturan/zona', [RunnerZonesController::class, 'update'])->name('pengaturan.zona.update');
@@ -120,7 +127,6 @@ Route::middleware(['auth', 'block-demo-writes'])->group(function (): void {
         ->name('strava.sync');
 
     Route::post('/logout', [StravaAuthController::class, 'logout'])
-        ->withoutMiddleware('block-demo-writes')
         ->name('auth.logout');
 
     // Legacy 301 redirects — keep deep links working from external bookmarks.
@@ -132,28 +138,17 @@ Route::middleware(['auth', 'block-demo-writes'])->group(function (): void {
     Route::permanentRedirect('/pengaturan', '/profil');
     Route::permanentRedirect('/profile', '/profil');
 
-    // Card seen/replay are passive UX-tracking writes fired automatically on a
-    // reveal dismiss, not user-data mutations. They stay live for the demo account
-    // (excluded from the write guard) so a demo visitor's card reveal dismisses
-    // cleanly without a 403 in the console; nothing sensitive leaks.
     Route::post('/api/kartu/{card}/seen', CardSeenController::class)
-        ->name('api.kartu.seen')
-        ->withoutMiddleware('block-demo-writes');
+        ->name('api.kartu.seen');
     Route::post('/api/kartu/{card}/replay', CardReplayController::class)
-        ->name('api.kartu.replay')
-        ->withoutMiddleware('block-demo-writes');
+        ->name('api.kartu.replay');
 
     Route::get('/api/analyses/{type}/{subjectId}', [AnalysisController::class, 'show'])
         ->whereNumber('subjectId')
         ->name('api.analyses.show');
-    // "Baca ulang" stays live for the demo account by design: it's the one
-    // place a reviewer can trigger a real per-block LLM call on demand (see
-    // docs/decisions/demo-user-billing-exclusion.md), so it's excluded from
-    // the otherwise-blanket demo write guard.
     Route::post('/api/analyses/{type}/{subjectId}/trigger', [AnalysisController::class, 'trigger'])
         ->whereNumber('subjectId')
         ->middleware('throttle:analysis-trigger')
-        ->withoutMiddleware('block-demo-writes')
         ->name('api.analyses.trigger');
 
 });

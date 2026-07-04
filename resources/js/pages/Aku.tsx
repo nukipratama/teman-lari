@@ -10,6 +10,8 @@ import PrCard from '@/components/card/PrCard';
 import SectionLabel from '@/components/ui/SectionLabel';
 import Temari from '@/components/temari/Temari';
 import AnalysisStatus from '@/components/temari/AnalysisStatus';
+import DemoBlockedModal from '@/components/DemoBlockedModal';
+import { useDemoGuard } from '@/hooks/useDemoGuard';
 import { cn } from '@/lib/cn';
 import PageContainer from '@/components/ui/PageContainer';
 import { formatIdDate, formatNaiveIdDate, formatShortDateId, monthsSinceId } from '@/lib/pace';
@@ -249,6 +251,7 @@ function TelegramPanel({ telegram }: Readonly<{ telegram: TelegramPayload }>) {
     const [weeklyRecap, setWeeklyRecap] = useState(telegram.notify_weekly_recap);
     const [monthlyRecap, setMonthlyRecap] = useState(telegram.notify_monthly_recap);
     const [dailyBriefing, setDailyBriefing] = useState(telegram.notify_daily_briefing);
+    const { open, setOpen, guard } = useDemoGuard();
 
     const savePrefs = (
         notifyPostRun: boolean,
@@ -307,43 +310,52 @@ function TelegramPanel({ telegram }: Readonly<{ telegram: TelegramPayload }>) {
                 <NotifyToggle
                     label="Cerita abis lari"
                     checked={postRun}
-                    onChange={(value) => {
-                        setPostRun(value);
-                        savePrefs(value, weeklyRecap, monthlyRecap, dailyBriefing);
-                    }}
+                    onChange={(value) =>
+                        guard(() => {
+                            setPostRun(value);
+                            savePrefs(value, weeklyRecap, monthlyRecap, dailyBriefing);
+                        })
+                    }
                 />
                 <NotifyToggle
                     label="Rekap mingguan"
                     checked={weeklyRecap}
-                    onChange={(value) => {
-                        setWeeklyRecap(value);
-                        savePrefs(postRun, value, monthlyRecap, dailyBriefing);
-                    }}
+                    onChange={(value) =>
+                        guard(() => {
+                            setWeeklyRecap(value);
+                            savePrefs(postRun, value, monthlyRecap, dailyBriefing);
+                        })
+                    }
                 />
                 <NotifyToggle
                     label="Rekap bulanan"
                     checked={monthlyRecap}
-                    onChange={(value) => {
-                        setMonthlyRecap(value);
-                        savePrefs(postRun, weeklyRecap, value, dailyBriefing);
-                    }}
+                    onChange={(value) =>
+                        guard(() => {
+                            setMonthlyRecap(value);
+                            savePrefs(postRun, weeklyRecap, value, dailyBriefing);
+                        })
+                    }
                 />
                 <NotifyToggle
                     label="Ringkasan harian"
                     checked={dailyBriefing}
-                    onChange={(value) => {
-                        setDailyBriefing(value);
-                        savePrefs(postRun, weeklyRecap, monthlyRecap, value);
-                    }}
+                    onChange={(value) =>
+                        guard(() => {
+                            setDailyBriefing(value);
+                            savePrefs(postRun, weeklyRecap, monthlyRecap, value);
+                        })
+                    }
                 />
             </div>
             <button
                 type="button"
-                onClick={() => router.post('/profil/telegram/test', {}, { preserveScroll: true })}
+                onClick={() => guard(() => router.post('/profil/telegram/test', {}, { preserveScroll: true }))}
                 className="focus-ring self-start rounded-full border border-cream-deep bg-cream px-4 py-2 font-sans text-[13px] font-semibold text-ink-2 transition hover:text-ink"
             >
                 Kirim notifikasi tes
             </button>
+            <DemoBlockedModal open={open} onClose={() => setOpen(false)} />
         </div>
     );
 }

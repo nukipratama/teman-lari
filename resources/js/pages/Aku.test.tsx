@@ -207,6 +207,57 @@ describe('Aku', () => {
         expect(router.post).toHaveBeenCalledWith('/profil/telegram/test', {}, { preserveScroll: true });
     });
 
+    it('opens the demo-blocked modal instead of patching when a demo user flips a toggle', () => {
+        setMockPage({
+            auth: { user: makeUser({ is_demo: true }) },
+            flash: {},
+            demoLoginEnabled: false,
+        });
+        vi.mocked(router.patch).mockReset();
+        const telegram = {
+            connected: true,
+            username: null,
+            connect_url: null,
+            notify_post_run: true,
+            notify_weekly_recap: false,
+            notify_monthly_recap: true,
+            notify_daily_briefing: false,
+        };
+        render(<Aku identity={identity} stats={stats} telegram={telegram} />);
+
+        const toggle = screen.getByRole('switch', { name: 'Rekap mingguan' });
+        fireEvent.click(toggle);
+
+        expect(router.patch).not.toHaveBeenCalled();
+        // Local state doesn't flip either, so the UI stays honest about what happened.
+        expect(toggle).toHaveAttribute('aria-checked', 'false');
+        expect(screen.getByText('Telegram-nya lagi istirahat dulu')).toBeInTheDocument();
+    });
+
+    it('opens the demo-blocked modal instead of posting a test notification for a demo user', () => {
+        setMockPage({
+            auth: { user: makeUser({ is_demo: true }) },
+            flash: {},
+            demoLoginEnabled: false,
+        });
+        vi.mocked(router.post).mockReset();
+        const telegram = {
+            connected: true,
+            username: null,
+            connect_url: null,
+            notify_post_run: true,
+            notify_weekly_recap: true,
+            notify_monthly_recap: true,
+            notify_daily_briefing: false,
+        };
+        render(<Aku identity={identity} stats={stats} telegram={telegram} />);
+
+        fireEvent.click(screen.getByText('Kirim notifikasi tes'));
+
+        expect(router.post).not.toHaveBeenCalled();
+        expect(screen.getByText('Telegram-nya lagi istirahat dulu')).toBeInTheDocument();
+    });
+
     it('does not show a reconnect CTA when Strava is connected', () => {
         setMockPage({
             auth: { user: makeUser() },
