@@ -62,6 +62,12 @@ Route::get('/k/{card}', [PublicCardController::class, 'show'])
     ->middleware('signed')
     ->name('kartu.publik');
 
+// Server-rendered share/OG card image. Deliberately NOT signed: OG crawlers and
+// Telegram fetch it without a signature, so card-id enumeration is an accepted
+// trade for a public share asset (no private data beyond what the card shows).
+Route::get('/k/{card}/image.png', [PublicCardController::class, 'image'])
+    ->name('kartu.image');
+
 Route::middleware('guest')->group(function (): void {
     Route::get('/login', [LoginController::class, 'show'])->name('login');
     Route::get('/auth/strava/redirect', [StravaAuthController::class, 'redirect'])->name('auth.strava.redirect');

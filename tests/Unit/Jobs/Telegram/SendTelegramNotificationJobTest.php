@@ -6,9 +6,11 @@ use App\Jobs\Telegram\SendTelegramNotificationJob;
 use App\Models\Activity;
 use App\Models\ActivityDetail;
 use App\Models\AI\Analysis;
+use App\Models\RunCard;
 use App\Models\TelegramConnection;
 use App\Models\User;
 use App\Services\AI\AnalysisType;
+use App\Services\Run\Story\RunCardImageRenderer;
 use App\Services\Telegram\Exceptions\TelegramApiException;
 use App\Services\Telegram\NotifiableAnalysis;
 use App\Services\Telegram\TelegramClient;
@@ -47,6 +49,7 @@ function runSend(int $analysisId): void
     (new SendTelegramNotificationJob($analysisId))->handle(
         app(NotifiableAnalysis::class),
         app(TelegramClient::class),
+        app(RunCardImageRenderer::class),
     );
 }
 
@@ -62,6 +65,45 @@ it('sends the narration to the connected, opted-in user', function (): void {
         && str_contains((string) $request['text'], 'Pace konsisten.'));
 
     $this->assertDatabaseHas('telegram_deliveries', ['analysis_id' => $analysisId]);
+});
+
+it('sends the post-run notification as a single photo with the narration as caption when the activity has a card', function (): void {
+    fakeTelegramOk();
+    $user = User::factory()->create();
+    TelegramConnection::factory()->for($user)->create(['chat_id' => 4242, 'notify_post_run' => true]);
+
+    $activity = Activity::factory()->for($user)->create();
+    ActivityDetail::factory()->for($activity)->create(['distance' => 5_280, 'summary_polyline' => '_p~iF~ps|U_ulLnnqC_mqNvxq`@', 'start_date_local' => now()]);
+    RunCard::factory()->for($activity)->create(['rarity' => 'epic', 'special_move' => 'Tendangan Balik']);
+    $analysisId = Analysis::factory()->done('Pace konsisten.')->create([
+        'analysis_type' => AnalysisType::PostRunSpeech,
+        'subject_type' => Activity::class,
+        'subject_id' => $activity->id,
+        'discriminator' => null,
+    ])->id;
+
+    runSend($analysisId);
+
+    Http::assertSent(function ($request): bool {
+        $caption = collect($request->data())->firstWhere('name', 'caption')['contents'] ?? null;
+
+        return str_contains((string) $request->url(), '/sendPhoto')
+            && str_contains((string) $caption, 'Pace konsisten.');
+    });
+    Http::assertNotSent(fn ($request): bool => str_contains((string) $request->url(), '/sendMessage'));
+});
+
+it('falls back to a text message when the post-run activity has no card', function (): void {
+    fakeTelegramOk();
+    $user = User::factory()->create();
+    TelegramConnection::factory()->for($user)->create(['chat_id' => 4242, 'notify_post_run' => true]);
+    $analysisId = postRunAnalysisFor($user, 'Tanpa kartu.');
+
+    runSend($analysisId);
+
+    Http::assertSent(fn ($request): bool => str_contains((string) $request->url(), '/sendMessage')
+        && str_contains((string) $request['text'], 'Tanpa kartu.'));
+    Http::assertNotSent(fn ($request): bool => str_contains((string) $request->url(), '/sendPhoto'));
 });
 
 it('never sends to the demo user', function (): void {
@@ -152,6 +194,7 @@ function runForceSend(int $analysisId): void
     (new SendTelegramNotificationJob($analysisId, force: true))->handle(
         app(NotifiableAnalysis::class),
         app(TelegramClient::class),
+        app(RunCardImageRenderer::class),
     );
 }
 

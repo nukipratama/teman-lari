@@ -64,3 +64,35 @@ it('rejects a missing signature with 403', function (): void {
 
     $this->get("/k/{$card->id}")->assertForbidden();
 });
+
+it('points the OG image at the dynamic card image route', function (): void {
+    $user = User::factory()->create();
+    $activity = Activity::factory()->for($user)->analyzed()->create();
+    ActivityDetail::factory()->for($activity)->create();
+    $card = RunCard::factory()->for($activity)->create();
+
+    $response = $this->get(signedCardUrl($card));
+
+    $response->assertSee(route('kartu.image', $card), escape: false);
+    $response->assertDontSee('/og-card.png', escape: false);
+});
+
+it('serves the card image as a PNG without a signature', function (): void {
+    $user = User::factory()->create();
+    $activity = Activity::factory()->for($user)->analyzed()->create();
+    ActivityDetail::factory()->for($activity)->create([
+        'distance' => 5_280,
+        'summary_polyline' => '_p~iF~ps|U_ulLnnqC_mqNvxq`@',
+    ]);
+    $card = RunCard::factory()->for($activity)->create();
+
+    $response = $this->get(route('kartu.image', $card));
+
+    $response->assertSuccessful();
+    $response->assertHeader('Content-Type', 'image/png');
+    expect(str_starts_with($response->getContent(), "\x89PNG\r\n\x1a\n"))->toBeTrue();
+});
+
+it('404s the card image for a missing card', function (): void {
+    $this->get('/k/999999/image.png')->assertNotFound();
+});

@@ -1,7 +1,6 @@
 @php
     $km = $distanceKm !== null ? rtrim(rtrim(number_format($distanceKm, 2, '.', ''), '0'), '.') : null;
     $dateLabel = $date?->translatedFormat('j M Y');
-    $ogImage = $appUrl . '/og-card.png';
     $ogDescription = 'Kartu lari' . ($km !== null ? " {$km} km" : '') . ', rarity ' . $rarityLabel . ', dari teman-lari.';
     $rarityColors = [
         'common' => '#7d8694',

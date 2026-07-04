@@ -25,7 +25,14 @@ RUN install-php-extensions \
         intl \
         bcmath \
         opcache \
-        pcntl
+        pcntl \
+        imagick
+
+# librsvg is ImageMagick's SVG delegate — without it Imagick can't rasterise the
+# server-rendered run-card SVG to PNG (for the Telegram post-run photo + OG image).
+# font-dejavu + fontconfig let librsvg actually render the card's text (name/km);
+# without a font the SVG <text> comes out blank.
+RUN apk add --no-cache librsvg font-dejavu fontconfig
 
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
@@ -106,7 +113,14 @@ RUN install-php-extensions \
         intl \
         bcmath \
         opcache \
-        pcntl
+        pcntl \
+        imagick
+
+# librsvg is ImageMagick's SVG delegate — without it Imagick can't rasterise the
+# server-rendered run-card SVG to PNG (for the Telegram post-run photo + OG image).
+# font-dejavu + fontconfig let librsvg actually render the card's text (name/km);
+# without a font the SVG <text> comes out blank.
+RUN apk add --no-cache librsvg font-dejavu fontconfig
 
 COPY --from=vendor /var/www/html /var/www/html
 COPY --from=assets /var/www/html/public/build /var/www/html/public/build
