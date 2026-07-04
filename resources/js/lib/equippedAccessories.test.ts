@@ -12,9 +12,9 @@ const emptyEquipped: EquippedAccessories = {
 };
 
 describe('ACCESSORY_KEYS', () => {
-    it('contains all 24 unlock keys', () => {
+    it('contains all 25 unlock keys', () => {
         const keys = Object.values(ACCESSORY_KEYS);
-        expect(keys).toHaveLength(24);
+        expect(keys).toHaveLength(25);
     });
 });
 
