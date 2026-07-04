@@ -31,6 +31,23 @@ describe('UserMenu', () => {
         expect(screen.queryByText('Keluar')).not.toBeInTheDocument();
     });
 
+    it('returns focus to the trigger button when Escape is pressed', () => {
+        render(<UserMenu name="Ada Lovelace" avatarUrl={null} />);
+        const trigger = screen.getByLabelText(/Buka menu Ada Lovelace/);
+        trigger.focus();
+        fireEvent.click(trigger);
+        fireEvent.keyDown(document, { key: 'Escape' });
+        expect(document.activeElement).toBe(trigger);
+    });
+
+    it('does not adopt ARIA menu semantics (disclosure popover, not a menu)', () => {
+        render(<UserMenu name="Ada Lovelace" avatarUrl={null} />);
+        fireEvent.click(screen.getByLabelText(/Buka menu Ada Lovelace/));
+        expect(screen.queryByRole('menu')).not.toBeInTheDocument();
+        expect(screen.queryByRole('menuitem')).not.toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'Keluar' })).toBeInTheDocument();
+    });
+
     it('renders the avatar image when avatar_url is provided', () => {
         render(<UserMenu name="Ada Lovelace" avatarUrl="https://example.com/a.jpg" />);
         const avatarButton = screen.getByLabelText(/Buka menu Ada/);

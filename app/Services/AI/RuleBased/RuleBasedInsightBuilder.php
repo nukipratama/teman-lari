@@ -225,11 +225,22 @@ final class RuleBasedInsightBuilder
 
         /** @var list<string> $parts */
         $parts = [];
-        $this->appendSplitDirectionPart($summary, $perKm, $parts);
+        $consistencyStated = $this->appendSplitDirectionPart($summary, $perKm, $parts);
         $this->appendKmRangePart($perKm, $parts);
-        $this->appendVariabilityCommentPart($summary, $parts);
+        $this->appendVariabilityCommentPart($summary, $parts, $consistencyStated);
 
-        return ucfirst(implode('. ', $parts)) . '.';
+        return $this->joinSentences($parts);
+    }
+
+    /**
+     * Join clauses into sentences, capitalising the first letter of each so a
+     * multi-clause note reads sentence-cased (not "Foo. bar. baz.").
+     *
+     * @param  list<string>  $parts
+     */
+    private function joinSentences(array $parts): string
+    {
+        return implode(' ', array_map(fn (string $part): string => ucfirst($part) . '.', $parts));
     }
 
     /**
@@ -238,21 +249,30 @@ final class RuleBasedInsightBuilder
      * either a genuine positive split (second half meaningfully slower) or an
      * even effort, distinguished here from the per-km paces.
      *
+     * Returns true when the note already asserted pace consistency (an even
+     * effort), so the variability layer can skip restating the same idea.
+     *
      * @param  array<string, mixed>  $summary
      * @param  array<int, array{km: int, pace: string}>  $perKm
      * @param  list<string>  $parts
      */
-    private function appendSplitDirectionPart(array $summary, array $perKm, array &$parts): void
+    private function appendSplitDirectionPart(array $summary, array $perKm, array &$parts): bool
     {
         if (($summary['negative_split'] ?? null) === true) {
             $parts[] = 'negative split, paruh kedua lebih cepat dari awal';
 
-            return;
+            return false;
         }
 
-        $parts[] = $this->isPositiveSplit($perKm)
-            ? 'positive split, pace melambat di paruh kedua'
-            : 'pacing cukup merata dari awal sampai akhir';
+        if ($this->isPositiveSplit($perKm)) {
+            $parts[] = 'positive split, pace melambat di paruh kedua';
+
+            return false;
+        }
+
+        $parts[] = 'pacing cukup merata dari awal sampai akhir';
+
+        return true;
     }
 
     /**
@@ -309,7 +329,7 @@ final class RuleBasedInsightBuilder
         $parts[] = match (true) {
             $rangeSec > self::PACE_DIFF_WIDE => $this->kmRangeWide($perKm, $fastest, $slowest),
             $rangeSec > self::PACE_DIFF_NOTICEABLE => "km {$fastest} tercepat, gap-nya wajar",
-            default => 'gap antar km sangat kecil, pacing sangat konsisten',
+            default => 'gap antar km sangat kecil',
         };
     }
 
@@ -328,8 +348,12 @@ final class RuleBasedInsightBuilder
      * @param  array<string, mixed>  $summary
      * @param  list<string>  $parts
      */
-    private function appendVariabilityCommentPart(array $summary, array &$parts): void
+    private function appendVariabilityCommentPart(array $summary, array &$parts, bool $consistencyStated): void
     {
+        if ($consistencyStated) {
+            return;
+        }
+
         $raw = $summary['pace_variability_sec'] ?? null;
         if ($raw === null) {
             return;

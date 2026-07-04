@@ -28,7 +28,7 @@ export default function UnlockToast() {
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: 10 }}
-                        className="fixed bottom-6 left-1/2 z-50 flex -translate-x-1/2 items-center gap-3 rounded-2xl border border-citrus/25 bg-surface-elev px-5 py-3 shadow-lg"
+                        className="fixed bottom-[calc(5.5rem+env(safe-area-inset-bottom))] left-1/2 z-50 flex -translate-x-1/2 items-center gap-3 rounded-2xl border border-citrus/25 bg-surface-elev px-5 py-3 shadow-lg lg:bottom-6"
                         role="status"
                     >
                         <Icon icon={active.icon} width={24} height={24} className="text-citrus-deep" aria-hidden />

@@ -74,6 +74,24 @@ describe('VitalChips', () => {
         expect(screen.getByText('—')).toBeInTheDocument();
     });
 
+    it('gives each gauge an accessible name and value via a visually-hidden <meter>', () => {
+        render(<VitalChips briefing={briefing} load={load} />);
+        const vibeMeter = screen.getByRole('meter', { name: 'Vibe' });
+        expect(vibeMeter).toHaveAttribute('value', '2.5');
+        expect(vibeMeter).toHaveAttribute('min', '0');
+        expect(vibeMeter).toHaveAttribute('max', '40');
+
+        const kesiapanMeter = screen.getByRole('meter', { name: 'Kesiapan' });
+        expect(kesiapanMeter).toHaveAttribute('value', '-2.5');
+        expect(kesiapanMeter).toHaveAttribute('min', '-40');
+        expect(kesiapanMeter).toHaveAttribute('max', '40');
+    });
+
+    it('renders no gauges when load is null', () => {
+        render(<VitalChips briefing={briefing} load={null} />);
+        expect(screen.queryByRole('meter')).not.toBeInTheDocument();
+    });
+
     it('falls back to streakLabel then recoveryLabel for the Recovery chip', () => {
         const noHours: BriefingResult = { ...briefing, recoveryHoursLabel: null };
         const { rerender } = render(<VitalChips briefing={noHours} load={load} />);

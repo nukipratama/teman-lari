@@ -178,6 +178,29 @@ describe('Aku', () => {
         expect(router.post).toHaveBeenCalledWith('/profil/telegram/test', {}, { preserveScroll: true });
     });
 
+    it('does not show a reconnect CTA when Strava is connected', () => {
+        setMockPage({
+            auth: { user: makeUser() },
+            flash: {},
+            demoLoginEnabled: false,
+            stravaSync: { state: 'ready', last_synced_at: '2026-07-04T00:00:00Z' },
+        });
+        render(<Aku identity={identity} stats={stats} />);
+        expect(screen.queryByText(/Sambungkan ulang Strava/)).not.toBeInTheDocument();
+    });
+
+    it('shows a persistent reconnect CTA when the Strava connection is revoked', () => {
+        setMockPage({
+            auth: { user: makeUser() },
+            flash: {},
+            demoLoginEnabled: false,
+            stravaSync: { state: 'revoked', last_synced_at: null },
+        });
+        render(<Aku identity={identity} stats={stats} />);
+        const link = screen.getByText('Sambungkan ulang Strava').closest('a');
+        expect(link).toHaveAttribute('href', '/auth/strava/redirect');
+    });
+
     it('renders the AksesoriStrip when unlock catalog has entries', () => {
         const unlockCatalog = {
             'accessory.ikat_kepala_epik': {

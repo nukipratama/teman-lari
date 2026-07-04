@@ -145,7 +145,11 @@ function GoalCard({ goal }: Readonly<{ goal: Goal }>) {
                         {goal.unit}
                     </span>
                 </div>
-                <ProgressBar value={ratio} tone={goal.is_completed || almost ? 'horizon' : 'sky'} />
+                <ProgressBar
+                    value={ratio}
+                    tone={goal.is_completed || almost ? 'horizon' : 'sky'}
+                    ariaLabel={`${goal.title}: ${formatGoalNumber(goal.current)}/${formatGoalNumber(goal.target)} ${goal.unit}`}
+                />
             </div>
         </Card>
     );

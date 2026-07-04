@@ -17,19 +17,36 @@ export default function StravaSyncBadge({ sync, density = 'normal' }: Readonly<S
     const isCompact = density === 'compact';
 
     const { label, ariaLabel, icon, iconClass } = resolveBadge(state, relative, isCompact);
-
-    return (
-        <span
-            aria-label={ariaLabel}
-            className={cn(
-                'inline-flex items-center whitespace-nowrap rounded-full bg-sky/[0.06] font-mono font-bold uppercase tracking-[0.1em] text-ink-2',
-                isCompact ? 'gap-1.5 px-2.5 py-1.5 text-[11px]' : 'gap-2 px-3.5 py-2 text-[11px]',
-            )}
-        >
+    const badgeClass = cn(
+        'inline-flex items-center whitespace-nowrap rounded-full bg-sky/[0.06] font-mono font-bold uppercase tracking-[0.1em] text-ink-2',
+        isCompact ? 'gap-1.5 px-2.5 py-1.5 text-[11px]' : 'gap-2 px-3.5 py-2 text-[11px]',
+    );
+    const content = (
+        <>
             {/* The sync glyph labels the badge as sync freshness, so a bare relative time
                 ("19 jam lalu") on the compact top bar can't misread as "last run 19h ago". */}
             <Icon icon={icon} width={13} height={13} aria-hidden className={cn('shrink-0', iconClass)} />
             {label}
+        </>
+    );
+
+    // Revoked is the only state with an obvious fix, so the badge itself becomes
+    // the reconnect affordance instead of staying an inert status readout.
+    if (state === 'revoked') {
+        return (
+            <a
+                href="/auth/strava/redirect"
+                aria-label={ariaLabel}
+                className={cn(badgeClass, 'focus-ring transition hover:bg-sky/[0.12]')}
+            >
+                {content}
+            </a>
+        );
+    }
+
+    return (
+        <span aria-label={ariaLabel} className={badgeClass}>
+            {content}
         </span>
     );
 }
@@ -58,8 +75,8 @@ function resolveBadge(
             };
         case 'revoked':
             return {
-                label: isCompact ? 'Putus' : 'Strava putus',
-                ariaLabel: 'Sambungan Strava putus',
+                label: isCompact ? 'Sambungkan ulang' : 'Strava putus · Sambungkan ulang',
+                ariaLabel: 'Sambungan Strava putus, sambungkan ulang',
                 icon: 'mdi:cloud-alert-outline',
                 iconClass: 'text-ember-deep',
             };

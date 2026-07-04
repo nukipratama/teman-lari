@@ -1,4 +1,5 @@
 import { motion, useMotionValue, useTransform } from 'framer-motion';
+import type { KeyboardEvent } from 'react';
 import { cn } from '@/lib/cn';
 import { BunnyGlyph } from '@/components/BrandMark';
 import { RARITY_HEX } from '@/lib/runcard';
@@ -55,6 +56,13 @@ export default function PackWrapper({ rarity, onOpen, className }: Readonly<Pack
         // Anything short of the threshold springs back via dragSnapToOrigin.
     };
 
+    const handleKeyDown = (e: KeyboardEvent): void => {
+        if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            onOpen();
+        }
+    };
+
     return (
         <motion.div
             data-testid="pack-wrapper"
@@ -65,6 +73,9 @@ export default function PackWrapper({ rarity, onOpen, className }: Readonly<Pack
             style={{ x }}
             onDragEnd={handleDragEnd}
             onClick={onOpen}
+            onKeyDown={handleKeyDown}
+            tabIndex={0}
+            role="button"
             aria-label="Tarik atau ketuk buat buka kartu"
             initial={{ opacity: 1 }}
             exit={{ opacity: 0, x: '60%', rotate: 10, scale: 1.06, transition: { duration: 0.45, ease: [0.4, 0, 0.2, 1] } }}

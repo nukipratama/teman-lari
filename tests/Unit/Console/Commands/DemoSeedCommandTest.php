@@ -65,6 +65,11 @@ it('seeds a complete, login-ready demo dataset and stays idempotent across re-ru
     $equipped = UserUnlock::query()->where('user_id', $user->id)->where('equipped', true)->pluck('unlock_key')->all();
     expect($equipped)->toContain('accessory.ikat_kepala_legendaris', 'accessory.medal_emas');
 
+    // At most one unlock equipped per slot: no double-equipped Medali (#53).
+    $slots = new App\Services\Gamification\EquippedAccessories();
+    $equippedSlots = array_map(fn (string $key): ?string => $slots->slotFor($key), $equipped);
+    expect($equippedSlots)->toBe(array_unique($equippedSlots));
+
     // Persona summary is backfilled to a done analysis row.
     $persona = Analysis::query()
         ->where('subject_type', AnalysisType::PERSONA_SUMMARY_SUBJECT_TYPE)

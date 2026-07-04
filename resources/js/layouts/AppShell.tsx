@@ -57,9 +57,13 @@ export default function AppShell({ children, withNav = true }: Readonly<AppShell
             </main>
 
             <MobileBottomNav />
-            <UnlockToast />
+            {/* Celebration overlays are sequenced, not stacked: CardReveal (a pack
+                reveal) takes priority over the aksesori-unlock modal, which in turn
+                takes priority over the UnlockToast, so a sync that fires more than
+                one celebration plays them back-to-back instead of all at once. */}
+            {!pending && majorUnlock === null && <UnlockToast />}
             {pending && <CardReveal pending={pending} />}
-            <AksesoriUnlockModal unlock={majorUnlock} onClose={() => setMajorUnlock(null)} />
+            <AksesoriUnlockModal unlock={pending ? null : majorUnlock} onClose={() => setMajorUnlock(null)} />
         </div>
         </MotionConfig>
     );

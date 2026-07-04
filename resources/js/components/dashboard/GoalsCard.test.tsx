@@ -50,4 +50,20 @@ describe('GoalsCard', () => {
         // target 0 -> "0/0", no divide-by-zero NaN.
         expect(screen.getByText((_, el) => el?.textContent === '0/0')).toBeInTheDocument();
     });
+
+    it('gives each progress bar a meaningful accessible name', () => {
+        const goalsSummary: GoalsSummary = {
+            total: 1,
+            completed: 0,
+            closest: [{ id: 'g1', title: 'Lari 100 KM bulan ini', current: 40, target: 100, unit: 'km' }],
+        };
+        setMockPage({
+            auth: { user: makeUser() },
+            flash: {},
+            demoLoginEnabled: false,
+            goalsSummary,
+        });
+        render(<GoalsCard />);
+        expect(screen.getByRole('progressbar', { name: 'Lari 100 KM bulan ini: 40/100 km' })).toBeInTheDocument();
+    });
 });

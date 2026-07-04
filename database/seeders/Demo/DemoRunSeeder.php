@@ -136,6 +136,12 @@ class DemoRunSeeder
 
             // Equip the best-in-slot accessories (one per slot) so the demo
             // Temari actually shows off its hardware everywhere it appears.
+            // Clear every equipped flag first so a re-seed can't leave a stale
+            // sibling equipped in the same slot (two medals at once).
+            UserUnlock::query()
+                ->where('user_id', $user->id)
+                ->update(['equipped' => false]);
+
             UserUnlock::query()
                 ->where('user_id', $user->id)
                 ->whereIn('unlock_key', [

@@ -8,6 +8,7 @@ import PackWrapper from "./PackWrapper";
 import PillButton from "@/components/ui/PillButton";
 import ShareCardModal from "./ShareCardModal";
 import type { ShareKartuData } from "@/lib/shareCard";
+import { useFocusTrap } from "@/hooks/useFocusTrap";
 import Temari from "@/components/temari/Temari";
 import { type TemariPose } from "@/components/temari/TemariProto";
 import { RARITY_HEX, RARITY_LABELS, badgeEmblem, badgeName, buildCardStats, paceShapeFromDetail, zonePctFromDetail } from "@/lib/runcard";
@@ -49,6 +50,7 @@ export default function CardReveal({
   const [showButtons, setShowButtons] = useState(prefersReducedMotion);
   const [dismissed, setDismissed] = useState(false);
   const sentRef = useRef(false);
+  const panelRef = useRef<HTMLDivElement>(null);
 
   // /api/kartu/{card}/seen returns plain JSON, so Inertia's router can't
   // call it (it errors on non-Inertia responses).
@@ -113,6 +115,8 @@ export default function CardReveal({
     document.addEventListener("keydown", handler);
     return () => document.removeEventListener("keydown", handler);
   }, [dismiss]);
+
+  useFocusTrap(!dismissed, panelRef);
 
   const km = formatKm(pending.distance_m);
   const durasi =
@@ -183,6 +187,7 @@ export default function CardReveal({
   return (
     <>
       <div
+        ref={panelRef}
         role="dialog"
         aria-modal="true"
         aria-label="Kartu baru"

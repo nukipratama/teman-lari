@@ -104,7 +104,9 @@ built with `@apply` so they compose with token utilities. Prefer these over re-t
 | `.text-meta` | `font-mono text-[11px] tracking-[0.04em] text-ink-3` | Date / timestamp / footnote (non-uppercase metadata) |
 | `.voice` | `font-display text-quote-lg italic text-ink` | Temari voice (display serif italic) |
 
-Text floor is **11px** — no `text-[9px]` / `text-[10px]`. Prefer a role utility over a raw size.
+Text floor is **11px** in app chrome — no `text-[9px]` / `text-[10px]`. Prefer a role utility over a raw size.
+
+**Card-scoped exception:** the collectible **Kartu** (and `KartuMini` / its on-card `ZoneBar` legend) is a deliberate TCG artifact rendered in `font-collectible` (Oswald), where a sub-11px nameplate, `km` unit, edition number, and zone legend are part of the trading-card look, not app chrome. Sub-11px is allowed **only inside the card art**; everywhere else the 11px floor holds.
 
 ## Variant maps (cva)
 

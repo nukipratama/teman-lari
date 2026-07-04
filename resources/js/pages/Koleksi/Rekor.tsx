@@ -277,6 +277,7 @@ function ProgressionSection({
                         weeks={series.weeks}
                         timesSec={series.times_sec}
                         goalSec={series.goal_sec}
+                        category={label}
                     />
                 </div>
             </div>
@@ -328,6 +329,8 @@ function Medallion({ pr }: Readonly<{ pr: ExtendedPR }>) {
     );
 }
 
+const PACE_FILLER_KEYS = ['pace-filler-a', 'pace-filler-b', 'pace-filler-c'] as const;
+
 function PaceTicker({ records }: Readonly<{ records: ExtendedPR[] }>) {
     return (
         <section className="mt-8">
@@ -351,6 +354,9 @@ function PaceTicker({ records }: Readonly<{ records: ExtendedPR[] }>) {
                 <div className="relative grid gap-1 sm:grid-cols-2 lg:grid-cols-4">
                     {records.map((r) => (
                         <PaceCell key={r.id} pr={r} />
+                    ))}
+                    {PACE_FILLER_KEYS.slice(0, (4 - (records.length % 4)) % 4).map((k) => (
+                        <div key={k} aria-hidden className="rounded-xl bg-sky/10" />
                     ))}
                 </div>
             </div>

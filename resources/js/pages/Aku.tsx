@@ -93,7 +93,9 @@ export default function Aku({
     profileVoice,
     telegram = TELEGRAM_DEFAULT,
 }: Readonly<AkuProps>) {
-    const sharedUser = usePage<SharedProps>().props.auth.user;
+    const { auth, stravaSync } = usePage<SharedProps>().props;
+    const sharedUser = auth.user;
+    const stravaRevoked = stravaSync?.state === 'revoked';
     const firstName = sharedUser?.first_name ?? identity.name.split(' ')[0] ?? '';
     const firstRunShort = identity.first_run_at ? formatShortDateId(identity.first_run_at) : null;
     const memberSince = identity.member_since ? formatIdDate(identity.member_since, 'long') : null;
@@ -139,11 +141,19 @@ export default function Aku({
                                     )}
                                 />
                             )}
-                            <div className="mt-5 flex flex-wrap gap-2">
+                            <div className="mt-5 flex flex-wrap items-center gap-2">
                                 <Chip tone="onSky">
                                     {identity.strava_connected ? 'Strava aktif' : 'Strava off'}
                                 </Chip>
                                 {memberSince && <Chip tone="onSky">Gabung sejak {memberSince}</Chip>}
+                                {stravaRevoked && (
+                                    <a
+                                        href="/auth/strava/redirect"
+                                        className="focus-ring rounded-full border border-cream-deep/40 px-3 py-1 font-mono text-[11px] font-semibold uppercase tracking-[0.1em] text-cream transition hover:bg-cream/10"
+                                    >
+                                        Sambungkan ulang Strava
+                                    </a>
+                                )}
                             </div>
                         </div>
                     </div>

@@ -159,18 +159,44 @@ describe("CardReveal", () => {
     );
   });
 
-  it("does not unwrap the card via keyboard (touch-first tear)", async () => {
+  it("does not unwrap the card via arrow keys (only Enter/Space tear it)", async () => {
     const u = userEvent.setup();
     render(<CardReveal pending={epicReveal} />);
     expect(screen.getByTestId("pack-wrapper")).toBeInTheDocument();
-    // No keyboard gesture tears the foil — it stays sealed.
-    await u.keyboard(" ");
-    await u.keyboard("{Enter}");
     await u.keyboard("{ArrowRight}");
     expect(screen.getByTestId("pack-wrapper")).toBeInTheDocument();
     // The sealed eyebrow only flips to the rarity label once torn.
     expect(screen.getByText("Sync masuk")).toBeInTheDocument();
     expect(screen.queryByText(/★ Istimewa/)).toBeNull();
+  });
+
+  it("tears the pack open via Enter for keyboard users (focus lands there via the focus trap)", async () => {
+    const u = userEvent.setup();
+    render(<CardReveal pending={epicReveal} />);
+    // The focus trap moves focus to the pack wrapper (the sole tabbable while sealed).
+    expect(screen.getByTestId("pack-wrapper")).toHaveFocus();
+    await u.keyboard("{Enter}");
+    expect(screen.getByText(/★ Istimewa/)).toBeInTheDocument();
+  });
+
+  it("tears the pack open via Space for keyboard users", async () => {
+    const u = userEvent.setup();
+    render(<CardReveal pending={epicReveal} />);
+    expect(screen.getByTestId("pack-wrapper")).toHaveFocus();
+    await u.keyboard(" ");
+    expect(screen.getByText(/★ Istimewa/)).toBeInTheDocument();
+  });
+
+  it("restores focus to the previously-focused element on dismiss (focus trap cleanup)", async () => {
+    const trigger = document.createElement("button");
+    trigger.textContent = "opener";
+    document.body.appendChild(trigger);
+    trigger.focus();
+    const u = userEvent.setup();
+    render(<CardReveal pending={epicReveal} />);
+    await u.click(screen.getByText("Tutup"));
+    expect(trigger).toHaveFocus();
+    trigger.remove();
   });
 
   it("ignites the card with a rarity ring when the pack is torn", async () => {

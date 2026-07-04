@@ -19,13 +19,11 @@ const EXEMPT = new Set<string>([
     'components/MobileBottomNav.tsx',
     'components/MobileTopBar.tsx',
     'components/PersonaBar.tsx',
-    'components/StravaSyncBadge.tsx',
     'components/UserAvatar.tsx',
     'components/card/PrCard.tsx',
     'components/koleksi/CollectionHeader.tsx',
     'components/koleksi/KoleksiTabs.tsx',
     'components/riwayat/RiwayatTabs.tsx',
-    'components/run/EmptyRunsState.tsx',
     'components/temari/UnavailableNote.tsx',
 ]);
 

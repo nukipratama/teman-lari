@@ -31,6 +31,16 @@ describe('UnlockToast', () => {
         expect(screen.getByText('Unlock baru')).toBeInTheDocument();
     });
 
+    it('clears the mobile bottom nav with a safe-area-aware offset, resetting to bottom-6 on lg', () => {
+        setMockPage({
+            flash: flashWithUnlock({ unlock_key: 'accessory.medal_emas', name: 'Medali Emas', icon: 'mdi:medal' }),
+        });
+        render(<UnlockToast />);
+        const toast = screen.getByRole('status');
+        expect(toast.className).toContain('bottom-[calc(5.5rem+env(safe-area-inset-bottom))]');
+        expect(toast.className).toContain('lg:bottom-6');
+    });
+
     it('schedules the auto-dismiss timer when flash.unlock is present', () => {
         const setTimeoutSpy = vi.spyOn(globalThis, 'setTimeout');
         setMockPage({

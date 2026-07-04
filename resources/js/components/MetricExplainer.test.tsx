@@ -44,6 +44,16 @@ describe('MetricExplainer', () => {
         await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
     });
 
+    it('returns focus to the trigger button when Escape is pressed', async () => {
+        render(<MetricExplainer metricKey="ctl" />);
+        const trigger = screen.getByRole('button', { name: 'Penjelasan Fitness' });
+        trigger.focus();
+        fireEvent.click(trigger);
+        fireEvent.keyDown(document, { key: 'Escape' });
+        await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+        expect(document.activeElement).toBe(trigger);
+    });
+
     it('closes on pointerdown outside the trigger + popover', async () => {
         render(
             <div>

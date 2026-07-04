@@ -26,7 +26,7 @@ export default function VitalChips({ briefing, load }: Readonly<{ briefing: Brie
                 sub={vibeSub}
                 tone="horizon"
                 explainerKey="vibe_vs_mood"
-                gauge={load?.form != null ? { value: Math.abs(load.form), min: 0, max: FORM_RANGE, tone: 'horizon', anchors: ['0', String(FORM_RANGE)] } : undefined}
+                gauge={load?.form != null ? { label: 'Vibe', value: Math.abs(load.form), min: 0, max: FORM_RANGE, tone: 'horizon', anchors: ['0', String(FORM_RANGE)] } : undefined}
             />
             <VitalChip
                 label="Kesiapan"
@@ -34,7 +34,7 @@ export default function VitalChips({ briefing, load }: Readonly<{ briefing: Brie
                 sub={load ? formStatusLabel(load.form_status) : ''}
                 tone="leaf"
                 explainerKey="form"
-                gauge={load?.form != null ? { value: load.form, min: -FORM_RANGE, max: FORM_RANGE, tone: 'leaf', bipolar: true, anchors: [`−${FORM_RANGE}`, `+${FORM_RANGE}`] } : undefined}
+                gauge={load?.form != null ? { label: 'Kesiapan', value: load.form, min: -FORM_RANGE, max: FORM_RANGE, tone: 'leaf', bipolar: true, anchors: [`−${FORM_RANGE}`, `+${FORM_RANGE}`] } : undefined}
             />
             <VitalChip
                 label="Recovery"
@@ -48,6 +48,8 @@ export default function VitalChips({ briefing, load }: Readonly<{ briefing: Brie
 }
 
 interface GaugeConfig {
+    /** Accessible name for the gauge (the metric label, e.g. "Kesiapan"). */
+    label: string;
     value: number;
     min: number;
     max: number;
@@ -57,7 +59,7 @@ interface GaugeConfig {
 }
 
 /** Thin bounded rail so a raw signed score reads as "where am I in the range" at a glance. */
-function VitalGauge({ value, min, max, tone, bipolar, anchors }: Readonly<GaugeConfig>) {
+function VitalGauge({ label, value, min, max, tone, bipolar, anchors }: Readonly<GaugeConfig>) {
     const clamped = Math.min(Math.max(value, min), max);
     const pct = ((clamped - min) / (max - min)) * 100;
     // Bipolar (Kesiapan): fill grows from the zero mark; leaf when positive, ember when negative.
@@ -66,14 +68,15 @@ function VitalGauge({ value, min, max, tone, bipolar, anchors }: Readonly<GaugeC
     const zeroPct = bipolar ? ((0 - min) / (max - min)) * 100 : 0;
     return (
         <div className="mt-1.5">
-            <div className="relative h-1.5 w-full overflow-hidden rounded-full bg-sky/[0.08]">
+            <meter className="sr-only" aria-label={label} value={clamped} min={min} max={max} />
+            <div aria-hidden className="relative h-1.5 w-full overflow-hidden rounded-full bg-sky/[0.08]">
                 <div
                     className={cn('absolute top-0 h-full rounded-full', fillColor)}
                     style={{ left: `${Math.min(pct, zeroPct)}%`, width: `${Math.abs(pct - zeroPct)}%` }}
                 />
                 {bipolar && <div className="absolute inset-y-[-1px] w-px bg-ink-3/40" style={{ left: `${zeroPct}%` }} />}
             </div>
-            <div className="mt-1 flex justify-between font-mono text-[9px] tabular-nums text-ink-3">
+            <div className="mt-1 flex justify-between font-mono text-[11px] tabular-nums text-ink-3">
                 <span>{anchors[0]}</span>
                 <span>{anchors[1]}</span>
             </div>

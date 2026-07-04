@@ -40,7 +40,11 @@ export default function GoalsCard() {
                                         {goal.unit}
                                     </span>
                                 </div>
-                                <ProgressBar value={ratio} tone="horizon" />
+                                <ProgressBar
+                                    value={ratio}
+                                    tone="horizon"
+                                    ariaLabel={`${goal.title}: ${formatGoalNumber(goal.current)}/${formatGoalNumber(goal.target)} ${goal.unit}`}
+                                />
                             </div>
                         </LinkCard>
                     );

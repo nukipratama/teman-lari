@@ -88,6 +88,7 @@ class ProgressionSeriesBuilder
             if ($bestByWeek === []) {
                 continue;
             }
+            $this->snapBestToRecord($bestByWeek, $band['record']);
             ksort($bestByWeek);
             $category = $band['record']->category;
             $out[$category->value] = [
@@ -99,6 +100,21 @@ class ProgressionSeriesBuilder
         }
 
         return $out;
+    }
+
+    /**
+     * Overwrite the best (minimum) weekly point with the PersonalRecord's stored
+     * time. The chart's labeled best endpoint then matches the /rekor hero and
+     * trophy wall exactly, instead of drifting a second or two because the weekly
+     * series scales whole-run moving_time while the PR is split-interpolated to
+     * the exact target distance. Non-best weeks keep their linearly-scaled trend.
+     *
+     * @param  array<string, int>  $bestByWeek
+     */
+    private function snapBestToRecord(array &$bestByWeek, PersonalRecord $record): void
+    {
+        $minWeek = array_keys($bestByWeek, min($bestByWeek), true)[0];
+        $bestByWeek[$minWeek] = (int) round($record->value_sec);
     }
 
     /**

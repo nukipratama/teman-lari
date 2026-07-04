@@ -8,6 +8,8 @@ interface ProgressionChartProps {
     weeks: ReadonlyArray<string>;
     timesSec: ReadonlyArray<number | null>;
     goalSec: number | null;
+    /** Category name shown in the chart's accessible label, e.g. "5K". */
+    category?: string;
     className?: string;
 }
 
@@ -68,8 +70,16 @@ export default function ProgressionChart({
     weeks,
     timesSec,
     goalSec,
+    category,
     className,
 }: Readonly<ProgressionChartProps>) {
+    const chartLabel = category ? `Grafik progresi waktu terbaik ${category}` : 'Grafik progresi waktu terbaik';
+    const firstIdx = timesSec.findIndex((t) => t != null);
+    const lastIdx = lastDefinedIndex(timesSec);
+    const summarySentence =
+        firstIdx >= 0 && lastIdx >= 0
+            ? `Dari ${formatDurationHMS(timesSec[firstIdx]!)} pada ${formatNaiveIdDate(weeks[firstIdx], 'short')} menjadi ${formatDurationHMS(timesSec[lastIdx]!)} pada ${formatNaiveIdDate(weeks[lastIdx], 'short')}.`
+            : 'Belum ada data waktu untuk periode ini.';
     const data = useMemo(() => ({
         labels: weeks.map((w) => formatNaiveIdDate(w, 'short')),
         datasets: [
@@ -158,7 +168,8 @@ export default function ProgressionChart({
     }
 
     return (
-        <div className={cn('h-[260px] sm:h-[300px]', className)}>
+        <div role="img" aria-label={`${chartLabel}. ${summarySentence}`} className={cn('h-[260px] sm:h-[300px]', className)}>
+            <span className="sr-only">{summarySentence}</span>
             <Suspense fallback={<div className="h-full w-full animate-pulse rounded-xl bg-cream-deep/40" />}>
                 <Line data={data} options={options} plugins={[endpointLabelsPlugin]} />
             </Suspense>
