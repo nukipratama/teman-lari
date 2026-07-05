@@ -243,17 +243,18 @@ function MonthlyRecapCard({
                         chained
                         isChainHead={recap.is_chain_head}
                         awaitingSchedule={awaitingSchedule}
-                        awaitingScheduleLabel="Recap bulan ini belum tersedia."
+                        awaitingScheduleLabel="Rekap bulan ini belum tersedia."
                         size="md"
                         renderContent={(content) => (
                             <p className="text-sm leading-relaxed text-ink">{renderBold(content)}</p>
                         )}
                     />
-                    {telegramConnected && recap.status === 'done' && (
+                    {recap.status === 'done' && (
                         <div className="mt-3">
                             <SendToTelegramButton
                                 url={`/rekap-bulanan/${month}/telegram`}
                                 retryAfterSeconds={recap.telegram_retry_after_seconds}
+                                connected={telegramConnected}
                             />
                         </div>
                     )}
@@ -361,7 +362,7 @@ function WeekSummary({ week }: Readonly<{ week: WeekRow }>) {
                         {week.totalKm.toFixed(1)}
                         <span className="text-[10px] font-medium text-ink-3 lg:ml-0.5 lg:text-sm">km</span>
                     </span>
-                    <span className="font-mono font-bold text-[9px] uppercase tracking-[0.06em] text-ink-2 lg:text-[11px] lg:tracking-[0.14em]">
+                    <span className="font-mono font-bold text-[11px] uppercase tracking-[0.06em] text-ink-2 lg:tracking-[0.14em]">
                         WK {week.weekNumber}
                     </span>
                 </>

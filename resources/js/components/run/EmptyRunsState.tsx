@@ -1,5 +1,6 @@
-import { Link, usePage } from '@inertiajs/react';
+import { Link, usePage, usePoll } from '@inertiajs/react';
 import { Icon } from '@iconify/react';
+import { useEffect } from 'react';
 import Card from '@/components/ui/Card';
 import SectionLabel from '@/components/ui/SectionLabel';
 import StravaSyncButton from '@/components/StravaSyncButton';
@@ -32,7 +33,7 @@ const HERO: Record<StravaSyncState, { eyebrow: string; headline: string; copy: s
 const ACTIONS = [
     {
         icon: 'mdi:cards-outline',
-        title: 'Cek koleksi yang Legendaris',
+        title: 'Cek koleksi yang legendaris',
         desc: 'Liat kartu yang bisa kamu dapetin.',
         href: '/kartu',
     },
@@ -54,6 +55,24 @@ export default function EmptyRunsState() {
     const { stravaSync } = usePage<SharedProps>().props;
     const state: StravaSyncState = stravaSync?.state ?? 'disconnected';
     const hero = HERO[state];
+    const isSyncing = state === 'syncing';
+
+    // Post-connect backfill runs server-side with no push channel back to the
+    // client, so this is the only way the first card lands without a manual
+    // reload. Stops the moment `stravaSync.state` flips off `syncing`.
+    const { start, stop } = usePoll(
+        7000,
+        { only: ['recentRuns', 'stravaSync'] },
+        { autoStart: false },
+    );
+
+    useEffect(() => {
+        if (isSyncing) {
+            start();
+        } else {
+            stop();
+        }
+    }, [isSyncing, start, stop]);
 
     return (
         <div className="flex flex-col items-center gap-8 px-5 py-10 sm:px-8 lg:px-14">

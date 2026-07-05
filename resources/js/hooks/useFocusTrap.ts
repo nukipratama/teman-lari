@@ -1,4 +1,5 @@
 import { type RefObject, useEffect } from 'react';
+import { useFocusReturn } from './useFocusReturn';
 
 const TABBABLE_SELECTOR = [
     'a[href]',
@@ -24,6 +25,8 @@ function tabbablesIn(panel: HTMLElement): HTMLElement[] {
  * SSR-/null-safe: no-ops when there is no document or the panel ref is empty.
  */
 export function useFocusTrap(isOpen: boolean, panelRef: RefObject<HTMLElement | null>): void {
+    useFocusReturn(isOpen);
+
     useEffect(() => {
         if (!isOpen || typeof document === 'undefined') {
             return;
@@ -32,8 +35,6 @@ export function useFocusTrap(isOpen: boolean, panelRef: RefObject<HTMLElement | 
         if (panel === null) {
             return;
         }
-
-        const previouslyFocused = document.activeElement as HTMLElement | null;
 
         const first = tabbablesIn(panel)[0];
         if (first === undefined) {
@@ -75,9 +76,6 @@ export function useFocusTrap(isOpen: boolean, panelRef: RefObject<HTMLElement | 
 
         return () => {
             document.removeEventListener('keydown', onKey);
-            if (previouslyFocused !== null && typeof previouslyFocused.focus === 'function') {
-                previouslyFocused.focus();
-            }
         };
     }, [isOpen, panelRef]);
 }

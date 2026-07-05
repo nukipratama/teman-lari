@@ -21,6 +21,12 @@ describe('ZoneBar', () => {
         expect(container.firstChild).toBeNull();
     });
 
+    it('exposes a textual zone-distribution summary for assistive tech', () => {
+        render(<ZoneBar zonePct={{ Z1: 20, Z2: 50, Z3: 30 }} />);
+        expect(screen.getByText(/didominasi Z2 \(50%\)/)).toBeInTheDocument();
+        expect(screen.getByText(/Z1 20%, Z2 50%, Z3 30%/)).toBeInTheDocument();
+    });
+
     it('shows Z1..Z5 labels only when the legend is enabled', () => {
         const { rerender } = render(<ZoneBar zonePct={{ Z1: 50, Z5: 50 }} />);
         expect(screen.queryByText('Z1')).toBeNull();

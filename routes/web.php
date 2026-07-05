@@ -15,6 +15,7 @@ use App\Http\Controllers\ClientErrorController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\GoalController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\PublicCardController;
 use App\Http\Controllers\RekorController;
 use App\Http\Controllers\RunController;
 use App\Http\Controllers\RunnerZonesController;
@@ -53,6 +54,22 @@ Route::post('/client-errors', ClientErrorController::class)
     ->middleware('throttle:client-errors')
     ->name('client-errors');
 
+// Public shareable card view. Unauthenticated on purpose so a link recipient
+// without a Strava session still sees the card; gated by Laravel's `signed`
+// middleware, so only a server-minted signed URL (URL::signedRoute) is honored
+// and possession of the link is the grant (no per-card token column needed).
+Route::get('/k/{card}', [PublicCardController::class, 'show'])
+    ->middleware(['signed', 'throttle:public-card'])
+    ->name('kartu.publik');
+
+// Server-rendered share/OG card image. Deliberately NOT signed: OG crawlers and
+// Telegram fetch it without a signature, so card-id enumeration is an accepted
+// trade for a public share asset (no private data beyond what the card shows).
+// Per-IP throttled so that enumeration can't flood the synchronous renders.
+Route::get('/k/{card}/image.png', [PublicCardController::class, 'image'])
+    ->middleware('throttle:public-card')
+    ->name('kartu.image');
+
 Route::middleware('guest')->group(function (): void {
     Route::get('/login', [LoginController::class, 'show'])->name('login');
     Route::get('/auth/strava/redirect', [StravaAuthController::class, 'redirect'])->name('auth.strava.redirect');
@@ -60,7 +77,7 @@ Route::middleware('guest')->group(function (): void {
     Route::post('/auth/demo', [DemoAuthController::class, 'login'])->name('auth.demo');
 });
 
-Route::middleware('auth')->group(function (): void {
+Route::middleware(['auth'])->group(function (): void {
     Route::get('/', DashboardController::class)->name('dashboard');
 
     Route::get('/aktivitas', [RunController::class, 'index'])->name('aktivitas.index');
@@ -69,13 +86,16 @@ Route::middleware('auth')->group(function (): void {
         ->middleware('throttle:strava-sync')
         ->name('aktivitas.resync');
     Route::post('/aktivitas/{activity}/telegram', SendActivityNotificationController::class)
+        ->middleware('block-demo-telegram')
         ->name('aktivitas.telegram');
 
     Route::get('/kalender', CalendarController::class)->name('kalender');
 
     Route::post('/rekap-mingguan/{snapshot}/telegram', SendWeeklyRecapNotificationController::class)
+        ->middleware('block-demo-telegram')
         ->name('rekap.mingguan.telegram');
     Route::post('/rekap-bulanan/{month}/telegram', SendMonthlyRecapNotificationController::class)
+        ->middleware('block-demo-telegram')
         ->name('rekap.bulanan.telegram');
 
     Route::get('/kartu', [CardController::class, 'index'])->name('kartu.index');
@@ -93,9 +113,13 @@ Route::middleware('auth')->group(function (): void {
 
     Route::get('/profil', ProfileController::class)->name('profil');
 
-    Route::patch('/profil/telegram', [TelegramConnectionController::class, 'update'])->name('telegram.preferences.update');
-    Route::delete('/profil/telegram', [TelegramConnectionController::class, 'destroy'])->name('telegram.disconnect');
-    Route::post('/profil/telegram/test', [TelegramConnectionController::class, 'test'])->name('telegram.test');
+    // The demo is otherwise a fully-interactive shared sandbox (drift resets on
+    // demo:seed). Telegram is the one write worth guarding: a visitor could disconnect
+    // the shared bot or spam real messages via the send/test endpoints. So the demo
+    // write-guard is applied to Telegram routes only, not blanket.
+    Route::patch('/profil/telegram', [TelegramConnectionController::class, 'update'])->middleware('block-demo-telegram')->name('telegram.preferences.update');
+    Route::delete('/profil/telegram', [TelegramConnectionController::class, 'destroy'])->middleware('block-demo-telegram')->name('telegram.disconnect');
+    Route::post('/profil/telegram/test', [TelegramConnectionController::class, 'test'])->middleware('block-demo-telegram')->name('telegram.test');
 
     Route::get('/pengaturan/zona', [RunnerZonesController::class, 'index'])->name('pengaturan.zona');
     Route::patch('/pengaturan/zona', [RunnerZonesController::class, 'update'])->name('pengaturan.zona.update');
@@ -104,7 +128,8 @@ Route::middleware('auth')->group(function (): void {
         ->middleware('throttle:strava-sync')
         ->name('strava.sync');
 
-    Route::post('/logout', [StravaAuthController::class, 'logout'])->name('auth.logout');
+    Route::post('/logout', [StravaAuthController::class, 'logout'])
+        ->name('auth.logout');
 
     // Legacy 301 redirects — keep deep links working from external bookmarks.
     Route::permanentRedirect('/runs', '/aktivitas');
@@ -135,5 +160,6 @@ Route::middleware('auth')->group(function (): void {
 // here (session-less -> a configured ops-email allow-list would deny the null
 // user), so edge basicauth is the sole gate for the mutating retry too.
 Route::get('/ai-usage', [TokenUsageController::class, 'show'])->name('ai-usage');
-Route::post('/ai-usage/users/{user}/retry-failed', [TokenUsageController::class, 'retryFailed'])
+Route::post('/ai-usage/users/{userId}/retry-failed', [TokenUsageController::class, 'retryFailed'])
+    ->whereNumber('userId')
     ->name('ai-usage.retry-failed');

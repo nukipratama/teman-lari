@@ -385,8 +385,50 @@ it('describes km range bands (wide, moderate, tight)', function (array $perKm, s
         ['km' => 1, 'pace' => '5:00'],
         ['km' => 2, 'pace' => '5:02'],
         ['km' => 3, 'pace' => '5:05'], // range 5s
-    ], 'pacing sangat konsisten'],
+    ], 'Gap antar km sangat kecil'],
 ]);
+
+it('capitalises every sentence, not just the first, in a multi-clause splits note', function (): void {
+    $user = User::factory()->create();
+    // Positive split so two sentences assemble: direction + km range.
+    [, $detail] = makeRun($user, [
+        'stream_summary' => ['per_km' => [
+            ['km' => 1, 'pace' => '4:30'],
+            ['km' => 2, 'pace' => '5:00'],
+            ['km' => 3, 'pace' => '5:30'],
+        ]],
+    ]);
+
+    $out = builder()->runInsightSplits($detail);
+
+    expect($out)
+        ->toStartWith('Positive split')
+        ->toEndWith('.')
+        // No lowercase letter directly after a sentence-ending period + space.
+        ->not->toMatch('/\. [a-z]/');
+});
+
+it('does not restate pace consistency three times on an even-effort run', function (): void {
+    $user = User::factory()->create();
+    // Even effort (merata) with a tight range and low variability: the old
+    // builder said "merata" + "pacing sangat konsisten" + "konsistensi pace ...".
+    [, $detail] = makeRun($user, [
+        'stream_summary' => [
+            'pace_variability_sec' => 5.0,
+            'per_km' => [
+                ['km' => 1, 'pace' => '5:00'],
+                ['km' => 2, 'pace' => '5:00'],
+                ['km' => 3, 'pace' => '5:00'],
+            ],
+        ],
+    ]);
+
+    $out = builder()->runInsightSplits($detail);
+
+    expect($out)
+        ->toBe('Pacing cukup merata dari awal sampai akhir. Gap antar km sangat kecil.')
+        ->not->toContain('konsisten'); // the redundant restatements are gone
+});
 
 it('skips the km range part when fewer than three valid paces parse', function (): void {
     $user = User::factory()->create();
@@ -419,7 +461,7 @@ it('renders the wide km range with the fastest km pace string', function (): voi
     ]);
 
     expect(builder()->runInsightSplits($detail))
-        ->toContain('km 1 tercepat (4:30)')
+        ->toContain('Km 1 tercepat (4:30)') // sentence-start capitalization (#56)
         ->toContain('km 3 paling lambat');
 });
 
@@ -437,8 +479,8 @@ it('comments on variability consistency for splits (sangat bagus / cukup baik)',
 
     expect(builder()->runInsightSplits($detail))->toContain($expected);
 })->with([
-    'consistent' => [5.0, 'konsistensi pace sangat bagus'],
-    'moderate' => [12.0, 'konsistensi pace cukup baik'],
+    'consistent' => [5.0, 'Konsistensi pace sangat bagus'],
+    'moderate' => [12.0, 'Konsistensi pace cukup baik'],
 ]);
 
 it('omits the variability comment when variability is high or absent', function (?float $var): void {

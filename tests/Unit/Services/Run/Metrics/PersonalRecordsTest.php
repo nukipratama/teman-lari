@@ -57,6 +57,22 @@ it('interpolates time at distance from splits (no walk-past inflation)', functio
     expect($secs)->toBeFloat()->toEqualWithDelta(10167.75, 1.0);
 });
 
+it('records the fastest embedded window, not the opening segment, on a negative-split run', function (): void {
+    // Slow first 5 km (400s/km) then a fast closing 5 km (300s/km). The opening
+    // 5 km is 2000s; the genuine best 5 km is the closing window at 1500s.
+    $splits = [];
+    for ($km = 1; $km <= 5; $km++) {
+        $splits[] = ['split' => $km, 'distance' => 1000.0, 'moving_time' => 400.0];
+    }
+    for ($km = 6; $km <= 10; $km++) {
+        $splits[] = ['split' => $km, 'distance' => 1000.0, 'moving_time' => 300.0];
+    }
+
+    $secs = $this->records->timeAtDistance($splits, 5000.0);
+
+    expect($secs)->toBeFloat()->toEqualWithDelta(1500.0, 0.01);
+});
+
 it('uses moving_time, not elapsed_time, so paused seconds do not inflate the PR', function (): void {
     // A paused run: each km took 600s moving but 900s elapsed (5 min of pauses).
     // The PR must reflect the 5-km moving time (3000s), not elapsed (4500s).

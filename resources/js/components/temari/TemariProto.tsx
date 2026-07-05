@@ -18,7 +18,7 @@ export interface TemariEquipped {
     kaus?: 'pemula' | 'pagi' | 'hujan' | 'legendaris' | null;
     celana?: 'ringan' | 'jarak' | 'split' | 'maraton' | null;
     sepatu?: 'basic' | 'cepat' | 'tahan' | 'legendaris' | null;
-    aura?: 'pemanasan' | 'gerah' | 'tenang' | 'jagoan' | boolean | null;
+    aura?: 'pemanasan' | 'gerah' | 'tenang' | 'jagoan' | 'angin' | boolean | null;
 }
 
 export interface TemariProtoProps {
@@ -106,6 +106,7 @@ const AURA_PALETTE: Record<string, { inner: string; mid: string; outer: string }
     gerah: { inner: '#E8A076', mid: '#C4623F', outer: '#C4623F' },
     tenang: { inner: '#8CB4D8', mid: '#5E89B5', outer: '#5E89B5' },
     jagoan: { inner: '#D8F0FF', mid: '#D9B23A', outer: '#B8941E' },
+    angin: { inner: '#D6F0EC', mid: '#6FBAAE', outer: '#5FA79B' },
 };
 
 // ── Pose configs ────────────────────────────────────────────────────

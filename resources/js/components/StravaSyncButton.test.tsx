@@ -18,7 +18,33 @@ describe('StravaSyncButton', () => {
         vi.mocked(router.post).mockReset();
         render(<StravaSyncButton state="ready" />);
         fireEvent.click(screen.getByText('Sync sekarang'));
-        expect(router.post).toHaveBeenCalledWith('/strava/sync', {}, { preserveScroll: true });
+        expect(router.post).toHaveBeenCalledWith(
+            '/strava/sync',
+            {},
+            expect.objectContaining({ preserveScroll: true }),
+        );
+    });
+
+    it('disables the button and relabels while the sync request is in flight', () => {
+        vi.mocked(router.post).mockImplementation((_url, _data, options) => {
+            options?.onStart?.({} as never);
+        });
+        render(<StravaSyncButton state="ready" />);
+        fireEvent.click(screen.getByText('Sync sekarang'));
+
+        const button = screen.getByRole('button', { name: 'Menyinkron…' });
+        expect(button).toBeDisabled();
+    });
+
+    it('re-enables the button once the sync request finishes', () => {
+        vi.mocked(router.post).mockImplementation((_url, _data, options) => {
+            options?.onStart?.({} as never);
+            options?.onFinish?.({} as never);
+        });
+        render(<StravaSyncButton state="ready" />);
+        fireEvent.click(screen.getByText('Sync sekarang'));
+
+        expect(screen.getByRole('button', { name: 'Sync sekarang' })).not.toBeDisabled();
     });
 
     it('renders nothing while syncing', () => {

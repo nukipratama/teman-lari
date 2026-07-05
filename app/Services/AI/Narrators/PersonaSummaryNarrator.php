@@ -8,19 +8,18 @@ use App\Models\StoryLine;
 use App\Models\User;
 use App\Services\AI\ChatCallOptions;
 use App\Services\AI\StructuredChatCaller;
+use App\Services\AI\TemariPersona;
 use Illuminate\Support\Carbon;
 
 class PersonaSummaryNarrator
 {
     private const int LOOKBACK_WEEKS = 12;
 
-    private const string SYSTEM_PROMPT = <<<'PROMPT'
+    private const string SYSTEM_PROMPT_TEMPLATE = <<<'PROMPT'
         Tugas: 2-3 kalimat (maksimal 75 kata) yang ngebaca persona lari pengguna
         berdasarkan distribusi mood lari mereka 12 minggu terakhir.
 
-        Mood vocabulary Daybreak: nyala (cerah-stabil), enteng (ringan-cepat),
-        oleng (kepayahan tapi selesai), lemes (overload), mumet (intervals
-        / dizzy-but-running), adem (recovery / shake-out).
+        Mood vocabulary Daybreak: %s.
 
         Struktur:
         1. Identitas dominan: mood apa yang paling sering dan apa artinya
@@ -51,11 +50,16 @@ class PersonaSummaryNarrator
     {
     }
 
+    private function systemPrompt(): string
+    {
+        return str_replace('%s', TemariPersona::MOOD_VOCAB, self::SYSTEM_PROMPT_TEMPLATE);
+    }
+
     public function generate(User $user): string
     {
         $decoded = $this->caller->call(
             kind: 'persona_summary',
-            systemPrompt: self::SYSTEM_PROMPT,
+            systemPrompt: $this->systemPrompt(),
             context: $this->context($user),
             schemaName: 'TemariPersonaSummary',
             requiredKeys: ['narrative'],

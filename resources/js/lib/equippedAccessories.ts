@@ -31,6 +31,7 @@ export const ACCESSORY_KEYS = {
     auraGerah: 'accessory.aura_gerah',
     auraTenang: 'accessory.aura_tenang',
     auraJagoan: 'accessory.aura_jagoan',
+    auraAngin: 'accessory.aura_angin',
 } as const;
 
 /**
@@ -103,6 +104,7 @@ const VARIANT_MAPS = {
         aura_tenang: 'tenang',
         aura_gerah: 'gerah',
         aura_pemanasan: 'pemanasan',
+        aura_angin: 'angin',
     } as Record<string, TemariEquipped['aura']>,
 } as const;
 

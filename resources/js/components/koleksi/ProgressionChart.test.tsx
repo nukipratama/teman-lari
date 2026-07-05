@@ -97,6 +97,26 @@ describe('ProgressionChart', () => {
         expect(lastData!.datasets).toHaveLength(1);
     });
 
+    it('exposes an accessible name and data summary via role="img"', () => {
+        render(
+            <ProgressionChart
+                weeks={['2026-01-05', '2026-01-12', '2026-01-19']}
+                timesSec={[1500, null, 1440]}
+                goalSec={null}
+                category="5K"
+            />,
+        );
+
+        const chart = screen.getByRole('img', { name: /Grafik progresi waktu terbaik 5K/ });
+        expect(chart).toBeInTheDocument();
+        expect(screen.getByText(/Dari 25:00 pada/)).toBeInTheDocument();
+    });
+
+    it('falls back to a generic accessible name when no category is given', () => {
+        render(<ProgressionChart weeks={['2026-01-05']} timesSec={[1500]} goalSec={null} />);
+        expect(screen.getByRole('img', { name: /^Grafik progresi waktu terbaik\./ })).toBeInTheDocument();
+    });
+
     it('applies a custom className to the chart wrapper', () => {
         const { container } = render(
             <ProgressionChart

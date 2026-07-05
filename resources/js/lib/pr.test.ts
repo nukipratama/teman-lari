@@ -3,10 +3,10 @@ import { PR_CATEGORY_LABELS, formatPrValue } from './pr';
 
 describe('PR_CATEGORY_LABELS', () => {
     it('maps the canonical distance + effort categories to display labels', () => {
-        expect(PR_CATEGORY_LABELS['5km']).toBe('5 KM');
+        expect(PR_CATEGORY_LABELS['5km']).toBe('5 km');
         expect(PR_CATEGORY_LABELS.half_marathon).toBe('Half Marathon');
-        expect(PR_CATEGORY_LABELS.best_20min).toBe('Best 20 minutes');
-        expect(PR_CATEGORY_LABELS.best_30min).toBe('Best 30 minutes');
+        expect(PR_CATEGORY_LABELS.best_20min).toBe('Best 20 menit');
+        expect(PR_CATEGORY_LABELS.best_30min).toBe('Best 30 menit');
     });
 });
 

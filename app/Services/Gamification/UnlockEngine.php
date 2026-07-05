@@ -235,6 +235,9 @@ class UnlockEngine
         if (($ctx->rarityCounts[Rarity::Legendary->value] ?? 0) >= 3) {
             $keys[] = 'accessory.aura_jagoan';
         }
+        if (($ctx->badgeCounts[Badge::LawanAngin->value] ?? 0) >= 3) {
+            $keys[] = 'accessory.aura_angin';
+        }
 
         return $keys;
     }

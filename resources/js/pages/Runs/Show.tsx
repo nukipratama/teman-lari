@@ -143,12 +143,11 @@ export default function RunsShow({
                         />
                         {resyncing ? 'Lagi narik…' : 'Resync dari Strava'}
                     </PillButton>
-                    {telegramConnected && (
-                        <SendToTelegramButton
-                            url={`/aktivitas/${activity.id}/telegram`}
-                            retryAfterSeconds={telegramRetryAfterSeconds}
-                        />
-                    )}
+                    <SendToTelegramButton
+                        url={`/aktivitas/${activity.id}/telegram`}
+                        retryAfterSeconds={telegramRetryAfterSeconds}
+                        connected={telegramConnected}
+                    />
                 </div>
 
                 {/* HERO — stats left + route map right */}
@@ -284,6 +283,10 @@ function MapWeatherPanel({ detail }: Readonly<{ detail: DetailedActivityDetail }
     const humidity = detail.weather_humidity_pct;
     const location = detail.location_name;
     const hasPolyline = detail.summary_polyline != null && detail.summary_polyline.length > 0;
+    const windSpeed = detail.weather_wind_speed_kmh;
+    const gust = detail.weather_wind_gust_kmh;
+    const direction = detail.weather_wind_direction_deg;
+    const showGust = gust != null && windSpeed != null && gust - windSpeed >= 8;
 
     return (
         <div className="relative flex flex-col gap-4 overflow-hidden rounded-2xl bg-sky px-5 py-4 text-cream">
@@ -299,6 +302,23 @@ function MapWeatherPanel({ detail }: Readonly<{ detail: DetailedActivityDetail }
                                     {Math.round(humidity)}% lembab
                                 </div>
                             )}
+                            {windSpeed != null && (
+                                <div className="mt-0.5 flex items-center gap-1 font-mono text-[10px] uppercase tracking-[0.12em] text-ink-on-sky">
+                                    <Icon icon="mdi:weather-windy" width={11} height={11} aria-hidden />
+                                    {Math.round(windSpeed)} km/j
+                                    {showGust && <span>· gust {Math.round(gust)}</span>}
+                                    {direction != null && (
+                                        <Icon
+                                            icon="mdi:navigation"
+                                            width={10}
+                                            height={10}
+                                            aria-hidden
+                                            style={{ transform: `rotate(${direction}deg)` }}
+                                            className="text-horizon"
+                                        />
+                                    )}
+                                </div>
+                            )}
                         </div>
                     )}
                     {location != null && (
@@ -311,7 +331,7 @@ function MapWeatherPanel({ detail }: Readonly<{ detail: DetailedActivityDetail }
             {hasPolyline && (
                 <div className="mt-3 overflow-hidden rounded-xl bg-cream/[0.04]">
                     <Suspense fallback={<div className="h-[180px] animate-pulse" />}>
-                        <RouteMap polyline={detail.summary_polyline ?? ''} />
+                        <RouteMap polyline={detail.summary_polyline ?? ''} distanceKm={formatKm(detail.distance)} />
                     </Suspense>
                 </div>
             )}
@@ -422,25 +442,25 @@ function SplitsTable({ rows, className }: Readonly<{ rows: PerKmRow[]; className
                 the binary bar color needs a one-line key once the card affordance is gone. */}
             <p className="mb-3 text-label-micro text-ink-3">Batang oranye = km tercepat, gelap = lainnya.</p>
 
-            <div className="flex flex-col">
+            <div className="flex flex-col gap-1">
                 {rows.map((row, idx) => {
                     const sec = paceSecOf(row);
                     const isFast = sec != null && sec === fastest;
                     const pctWidth = computeBarWidth(sec, fastest, slowestSec);
+                    const rowFill = splitRowFill(isFast, idx);
                     return (
                         <div
                             key={row.km ?? `row-${idx}`}
                             className={cn(
                                 'grid grid-cols-[34px_1fr_56px] items-center gap-2.5 lg:grid-cols-[40px_1fr_70px_70px_70px] lg:gap-3',
-                                idx > 0 && !isFast && 'border-t border-cream-deep',
-                                // Alternating row background for readability
-                                idx % 2 === 1 && !isFast && 'bg-cream-deep/30',
-                                // Fast row: tint bleeds out via -mx-3 while px-3 keeps content
-                                // aligned with the other rows, so its bar isn't narrowed.
-                                isFast ? '-mx-3 rounded-lg bg-horizon/[0.08] px-3 py-2 lg:py-2.5' : 'px-3 py-2 lg:py-2.5',
+                                // Every row gets the same rounded background box + -mx-3/px-3
+                                // bleed-and-realign so the fast row's alignment isn't special —
+                                // only the bar color should differ (see computeBarWidth caller).
+                                '-mx-3 rounded-lg px-3 py-2 lg:py-2.5',
+                                rowFill,
                             )}
                         >
-                            <div className="font-mono text-[11px] uppercase tracking-[0.1em] text-ink-2 lg:text-[12px]">
+                            <div className="font-mono text-[11px] uppercase tracking-[0.1em] text-ink-2">
                                 KM {row.km ?? '?'}
                             </div>
                             <div className="h-2.5 overflow-hidden rounded bg-sky/[0.06] lg:h-3">
@@ -464,6 +484,14 @@ function SplitsTable({ rows, className }: Readonly<{ rows: PerKmRow[]; className
             </div>
         </Card>
     );
+}
+
+// Every splits row shares the same rounded box (see SplitsTable); only this
+// fill differs — horizon tint for the fastest km, a faint zebra stripe otherwise.
+function splitRowFill(isFast: boolean, idx: number): string {
+    if (isFast) return 'bg-horizon/[0.08]';
+    if (idx % 2 === 1) return 'bg-cream-deep/30';
+    return 'bg-sky/[0.03]';
 }
 
 function paceSecOf(row: PerKmRow): number | null {

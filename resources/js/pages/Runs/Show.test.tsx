@@ -20,6 +20,9 @@ const detail: ActivityDetail & {
     weather_temp_c?: number | null;
     weather_humidity_pct?: number | null;
     weather_rain_detected?: boolean | null;
+    weather_wind_speed_kmh?: number | null;
+    weather_wind_gust_kmh?: number | null;
+    weather_wind_direction_deg?: number | null;
 } = {
     id: 11,
     activity_id: 99,
@@ -192,6 +195,31 @@ describe('Runs/Show', () => {
         expect(screen.getByText('Senayan, Jakarta Pusat')).toBeInTheDocument();
     });
 
+    it('hides the wind row when weather_wind_speed_kmh is absent', () => {
+        renderShow();
+        expect(screen.queryByText(/km\/j/)).not.toBeInTheDocument();
+    });
+
+    it('renders the wind row when weather_wind_speed_kmh is present', () => {
+        const withWind = { ...detail, weather_wind_speed_kmh: 18 };
+        renderShow({ activity: { id: 99, user_id: 1, analyzed_at: '2026-05-10', detail: withWind }, detail: withWind });
+        expect(screen.getByText(/18 km\/j/)).toBeInTheDocument();
+        expect(screen.queryByText(/gust/)).not.toBeInTheDocument();
+    });
+
+    it('shows the gust reading when it clears the 8 km/j delta threshold', () => {
+        const withGust = { ...detail, weather_wind_speed_kmh: 18, weather_wind_gust_kmh: 30 };
+        renderShow({ activity: { id: 99, user_id: 1, analyzed_at: '2026-05-10', detail: withGust }, detail: withGust });
+        expect(screen.getByText(/gust 30/)).toBeInTheDocument();
+    });
+
+    it('hides the gust reading when it is within the 8 km/j delta threshold', () => {
+        const smallGust = { ...detail, weather_wind_speed_kmh: 18, weather_wind_gust_kmh: 24 };
+        renderShow({ activity: { id: 99, user_id: 1, analyzed_at: '2026-05-10', detail: smallGust }, detail: smallGust });
+        expect(screen.getByText(/18 km\/j/)).toBeInTheDocument();
+        expect(screen.queryByText(/gust/)).not.toBeInTheDocument();
+    });
+
     it('hides the map area when no polyline is present', () => {
         const noPolyline = { ...detail, summary_polyline: null };
         const { container } = renderShow({ activity: { id: 99, user_id: 1, analyzed_at: '2026-05-10', detail: noPolyline }, detail: noPolyline });
@@ -306,9 +334,11 @@ describe('Runs/Show', () => {
         expect(button).toHaveTextContent('Lagi narik…');
     });
 
-    it('hides the Telegram push button when not connected', () => {
+    it('shows a muted Telegram button that nudges (no send) when not connected', () => {
+        vi.mocked(router.post).mockReset();
         renderShow();
-        expect(screen.queryByText('Kirim ke Telegram')).not.toBeInTheDocument();
+        fireEvent.click(screen.getByText('Kirim ke Telegram'));
+        expect(router.post).not.toHaveBeenCalled();
     });
 
     it('pushes the run to Telegram when connected and the button is clicked', () => {

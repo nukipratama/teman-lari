@@ -28,6 +28,16 @@ describe('RouteMap', () => {
         expect(screen.getByTestId('polyline').getAttribute('data-points')).toBe('3');
     });
 
+    it('gives the map a generic accessible name when no distance is provided', () => {
+        render(<RouteMap polyline="good" />);
+        expect(screen.getByRole('img', { name: 'Peta rute lari' })).toBeInTheDocument();
+    });
+
+    it('threads the distance into the accessible name when provided', () => {
+        render(<RouteMap polyline="good" distanceKm="10.42" />);
+        expect(screen.getByRole('img', { name: 'Peta rute lari, 10.42 km' })).toBeInTheDocument();
+    });
+
     it('falls back to a placeholder when the polyline decodes to <2 points', () => {
         render(<RouteMap polyline="one" />);
         expect(screen.queryByTestId('polyline')).not.toBeInTheDocument();

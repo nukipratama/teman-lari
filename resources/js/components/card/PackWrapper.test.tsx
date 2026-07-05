@@ -23,4 +23,27 @@ describe('PackWrapper', () => {
         await userEvent.setup().click(screen.getByTestId('pack-wrapper'));
         expect(onOpen).toHaveBeenCalledTimes(1);
     });
+
+    it('is keyboard-focusable and exposes a button role', () => {
+        render(<PackWrapper rarity="epic" onOpen={vi.fn()} />);
+        const wrapper = screen.getByTestId('pack-wrapper');
+        expect(wrapper).toHaveAttribute('tabindex', '0');
+        expect(wrapper).toHaveAttribute('role', 'button');
+    });
+
+    it('calls onOpen when Enter is pressed while focused', async () => {
+        const onOpen = vi.fn();
+        render(<PackWrapper rarity="epic" onOpen={onOpen} />);
+        screen.getByTestId('pack-wrapper').focus();
+        await userEvent.setup().keyboard('{Enter}');
+        expect(onOpen).toHaveBeenCalledTimes(1);
+    });
+
+    it('calls onOpen when Space is pressed while focused', async () => {
+        const onOpen = vi.fn();
+        render(<PackWrapper rarity="epic" onOpen={onOpen} />);
+        screen.getByTestId('pack-wrapper').focus();
+        await userEvent.setup().keyboard(' ');
+        expect(onOpen).toHaveBeenCalledTimes(1);
+    });
 });

@@ -124,9 +124,34 @@ class PersonalRecords
     }
 
     /**
+     * Fastest time over any contiguous window of splits that covers the target
+     * distance, so a negative-split run records its genuine best embedded effort
+     * rather than only its opening segment. Null when no window reaches the target.
+     *
      * @param  array<int, array<string, mixed>>  $splits
      */
     public function timeAtDistance(array $splits, float $targetMeters): ?float
+    {
+        $best = null;
+        $count = count($splits);
+
+        for ($start = 0; $start < $count; $start++) {
+            $window = $this->windowTime(array_slice($splits, $start), $targetMeters);
+            if ($window !== null && ($best === null || $window < $best)) {
+                $best = $window;
+            }
+        }
+
+        return $best;
+    }
+
+    /**
+     * Time to cover the target distance from the first split onward, interpolating
+     * within the final partial split. Null when the given splits fall short.
+     *
+     * @param  array<int, array<string, mixed>>  $splits
+     */
+    private function windowTime(array $splits, float $targetMeters): ?float
     {
         $accDist = 0.0;
         $accTime = 0.0;

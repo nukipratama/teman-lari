@@ -15,6 +15,8 @@ export interface AuthUser {
     name: string;
     first_name: string;
     avatar_url: string | null;
+    /** Demo account: Telegram writes are guarded (show the demo-limit modal). */
+    is_demo: boolean;
 }
 
 export interface PendingReveal {
@@ -31,6 +33,7 @@ export interface PendingReveal {
     average_heartrate?: number | null;
     stream_summary?: StreamSummary | null;
     summary_polyline?: string | null;
+    public_share_url: string;
     edition: CardEdition;
 }
 
@@ -78,6 +81,8 @@ export interface SharedProps {
     hrZonesChangedAt?: string | null;
     /** Whether the auth user has a live (non-revoked) Telegram connection. */
     telegramConnected?: boolean;
+    /** Inertia's shared validation/error bag, keyed by field (e.g. `strava`). */
+    errors?: Record<string, string>;
     [key: string]: unknown;
 }
 
@@ -191,6 +196,10 @@ export interface ActivityDetail {
     weather_temp_c?: number | null;
     weather_humidity_pct?: number | null;
     weather_rain_detected?: boolean | null;
+    weather_wind_speed_kmh?: number | null;
+    weather_wind_gust_kmh?: number | null;
+    weather_wind_direction_deg?: number | null;
+    weather_rain_is_forecast?: boolean | null;
     summary_polyline?: string | null;
     stream_summary?: StreamSummary | null;
     activity?: Activity;

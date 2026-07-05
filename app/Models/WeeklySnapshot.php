@@ -78,6 +78,11 @@ class WeeklySnapshot extends Model
      * when their `week_ending` dates are exactly 7 days apart; the first gap
      * ends the streak. Non-adjacent weeks (e.g. weeks 1, 5, 9) yield a streak
      * of 1, not 3.
+     *
+     * A streak only counts as *live* when its most recent running week is the
+     * current or the immediately-prior week. If an entire week has closed since
+     * the last run, the streak is broken and this returns 0 regardless of how
+     * long the historical run was.
      */
     public static function consecutiveWeekStreak(int $userId): int
     {
@@ -90,6 +95,13 @@ class WeeklySnapshot extends Model
             ->all();
 
         if ($weekEndings === []) {
+            return 0;
+        }
+
+        // Weeks end on Sunday (see WeeklyAggregator). If the newest running week
+        // is older than last week's ending, a full week has closed with no run.
+        $lastWeekEnding = Carbon::today()->endOfWeek(Carbon::SUNDAY)->startOfDay()->subDays(7);
+        if ($weekEndings[0]->copy()->startOfDay()->lt($lastWeekEnding)) {
             return 0;
         }
 

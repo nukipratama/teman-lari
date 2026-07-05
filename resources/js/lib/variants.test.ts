@@ -116,9 +116,16 @@ describe('toggleButtonVariants', () => {
 describe('iconButtonVariants', () => {
     it('defaults to a sm square hit target with a focus-ring', () => {
         const cls = iconButtonVariants();
-        expect(cls).toContain('h-8');
-        expect(cls).toContain('w-8');
+        expect(cls).toContain('h-10');
+        expect(cls).toContain('w-10');
         expect(cls).toContain('focus-ring');
+    });
+
+    it('enforces a >=44px tap target floor regardless of size', () => {
+        expect(iconButtonVariants({ size: 'sm' })).toContain('min-h-11');
+        expect(iconButtonVariants({ size: 'sm' })).toContain('min-w-11');
+        expect(iconButtonVariants({ size: 'md' })).toContain('min-h-11');
+        expect(iconButtonVariants({ size: 'md' })).toContain('min-w-11');
     });
 
     it('flips to the cream-on-sky treatment via onSky', () => {

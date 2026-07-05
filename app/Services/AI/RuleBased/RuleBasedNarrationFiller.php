@@ -165,7 +165,7 @@ final readonly class RuleBasedNarrationFiller
     private function dailyGreeting(int $seed): string
     {
         return $this->select([
-            'Halo. Semoga harimu tenang, kapanpun kamu siap lari aku nunggu.',
+            'Halo. Aku di sini, siap nemenin begitu kamu mulai lari.',
             'Halo! Aku udah siap kalau kamu mau lari hari ini. Tapi gak buru-buru juga gak apa-apa.',
             'Pagi. Udara masih seger, tapi kalau belum mood, aku tetap di sini.',
             'Halo. Hari baru, peluang baru buat lari. Atau istirahat, kamu yang tentuin.',
@@ -294,7 +294,11 @@ final readonly class RuleBasedNarrationFiller
             $templates = $pool; // every pool keeps km-less variants; stay non-empty regardless
         }
 
-        $base = strtr($this->select($templates, $cardId), ['{move}' => $move, '{km}' => (string) $km]);
+        // Fold the badge set into the base pick (not just the appended clause) so
+        // two commons that differ only by badge don't also land on the identical
+        // base sentence. Badgeless cards fold a constant, so they still vary by id.
+        $flavorSeed = $cardId + (int) crc32(implode(',', $card->badges ?? []));
+        $base = strtr($this->select($templates, $flavorSeed), ['{move}' => $move, '{km}' => (string) $km]);
         $badgeClause = $this->badgeClause($card->badges, $cardId);
 
         return $badgeClause === null ? $base : $base . ' ' . $badgeClause;
@@ -375,6 +379,7 @@ final readonly class RuleBasedNarrationFiller
             Badge::Santai->value => 'Beneran easy, HR dijaga rendah.',
             Badge::Berturut->value => 'Seminggu penuh tanpa skip, keren.',
             Badge::HariSpesial->value => 'Lari pas hari libur nasional.',
+            Badge::LawanAngin->value => 'Angin kencang gak bikin kamu mundur.',
         ];
 
         // Highlight one of the card's badges, chosen by seed so multi-badge

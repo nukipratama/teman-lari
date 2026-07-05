@@ -80,10 +80,34 @@ describe('Aku', () => {
             notify_post_run: true,
             notify_weekly_recap: true,
             notify_monthly_recap: true,
+            notify_daily_briefing: false,
         };
         render(<Aku identity={identity} stats={stats} telegram={telegram} />);
         const link = screen.getByText('Hubungkan Telegram').closest('a');
         expect(link).toHaveAttribute('href', 'https://t.me/temari_bot?start=tok');
+    });
+
+    it('disables the connect button and opens the demo modal for a demo user', () => {
+        setMockPage({
+            auth: { user: makeUser({ is_demo: true }) },
+            flash: {},
+            demoLoginEnabled: false,
+        });
+        const telegram = {
+            connected: false,
+            username: null,
+            connect_url: 'https://t.me/temari_bot?start=tok',
+            notify_post_run: true,
+            notify_weekly_recap: true,
+            notify_monthly_recap: true,
+            notify_daily_briefing: false,
+        };
+        render(<Aku identity={identity} stats={stats} telegram={telegram} />);
+
+        // Not an anchor (can't deep-link the shared bot); tapping explains why.
+        expect(screen.getByText('Hubungkan Telegram').closest('a')).toBeNull();
+        fireEvent.click(screen.getByText('Hubungkan Telegram'));
+        expect(screen.getByText('Telegram-nya lagi istirahat dulu')).toBeInTheDocument();
     });
 
     it('shows the preference toggles when Telegram is connected', () => {
@@ -94,12 +118,14 @@ describe('Aku', () => {
             notify_post_run: true,
             notify_weekly_recap: false,
             notify_monthly_recap: true,
+            notify_daily_briefing: false,
         };
         render(<Aku identity={identity} stats={stats} telegram={telegram} />);
         expect(screen.getByText(/Telegram aktif/)).toBeInTheDocument();
         expect(screen.getByRole('switch', { name: 'Cerita abis lari' })).toHaveAttribute('aria-checked', 'true');
         expect(screen.getByRole('switch', { name: 'Rekap mingguan' })).toHaveAttribute('aria-checked', 'false');
         expect(screen.getByRole('switch', { name: 'Rekap bulanan' })).toHaveAttribute('aria-checked', 'true');
+        expect(screen.getByRole('switch', { name: 'Ringkasan harian' })).toHaveAttribute('aria-checked', 'false');
     });
 
     it('patches preferences when a toggle is flipped, carrying all current values', () => {
@@ -111,6 +137,7 @@ describe('Aku', () => {
             notify_post_run: true,
             notify_weekly_recap: false,
             notify_monthly_recap: true,
+            notify_daily_briefing: false,
         };
         render(<Aku identity={identity} stats={stats} telegram={telegram} />);
 
@@ -118,7 +145,7 @@ describe('Aku', () => {
 
         expect(router.patch).toHaveBeenCalledWith(
             '/profil/telegram',
-            { notify_post_run: true, notify_weekly_recap: true, notify_monthly_recap: true },
+            { notify_post_run: true, notify_weekly_recap: true, notify_monthly_recap: true, notify_daily_briefing: false },
             { preserveScroll: true },
         );
     });
@@ -132,6 +159,7 @@ describe('Aku', () => {
             notify_post_run: true,
             notify_weekly_recap: true,
             notify_monthly_recap: true,
+            notify_daily_briefing: false,
         };
         render(<Aku identity={identity} stats={stats} telegram={telegram} />);
 
@@ -139,7 +167,29 @@ describe('Aku', () => {
 
         expect(router.patch).toHaveBeenCalledWith(
             '/profil/telegram',
-            { notify_post_run: true, notify_weekly_recap: true, notify_monthly_recap: false },
+            { notify_post_run: true, notify_weekly_recap: true, notify_monthly_recap: false, notify_daily_briefing: false },
+            { preserveScroll: true },
+        );
+    });
+
+    it('patches the daily briefing flag when its toggle is flipped', () => {
+        vi.mocked(router.patch).mockReset();
+        const telegram = {
+            connected: true,
+            username: null,
+            connect_url: null,
+            notify_post_run: true,
+            notify_weekly_recap: true,
+            notify_monthly_recap: true,
+            notify_daily_briefing: false,
+        };
+        render(<Aku identity={identity} stats={stats} telegram={telegram} />);
+
+        fireEvent.click(screen.getByRole('switch', { name: 'Ringkasan harian' }));
+
+        expect(router.patch).toHaveBeenCalledWith(
+            '/profil/telegram',
+            { notify_post_run: true, notify_weekly_recap: true, notify_monthly_recap: true, notify_daily_briefing: true },
             { preserveScroll: true },
         );
     });
@@ -153,6 +203,7 @@ describe('Aku', () => {
             notify_post_run: true,
             notify_weekly_recap: true,
             notify_monthly_recap: true,
+            notify_daily_briefing: false,
         };
         render(<Aku identity={identity} stats={stats} telegram={telegram} />);
 
@@ -170,12 +221,111 @@ describe('Aku', () => {
             notify_post_run: true,
             notify_weekly_recap: true,
             notify_monthly_recap: true,
+            notify_daily_briefing: false,
         };
         render(<Aku identity={identity} stats={stats} telegram={telegram} />);
 
         fireEvent.click(screen.getByText('Kirim notifikasi tes'));
 
         expect(router.post).toHaveBeenCalledWith('/profil/telegram/test', {}, { preserveScroll: true });
+    });
+
+    it('opens the demo-blocked modal instead of patching when a demo user flips a toggle', () => {
+        setMockPage({
+            auth: { user: makeUser({ is_demo: true }) },
+            flash: {},
+            demoLoginEnabled: false,
+        });
+        vi.mocked(router.patch).mockReset();
+        const telegram = {
+            connected: true,
+            username: null,
+            connect_url: null,
+            notify_post_run: true,
+            notify_weekly_recap: false,
+            notify_monthly_recap: true,
+            notify_daily_briefing: false,
+        };
+        render(<Aku identity={identity} stats={stats} telegram={telegram} />);
+
+        const toggle = screen.getByRole('switch', { name: 'Rekap mingguan' });
+        fireEvent.click(toggle);
+
+        expect(router.patch).not.toHaveBeenCalled();
+        // Local state doesn't flip either, so the UI stays honest about what happened.
+        expect(toggle).toHaveAttribute('aria-checked', 'false');
+        expect(screen.getByText('Telegram-nya lagi istirahat dulu')).toBeInTheDocument();
+    });
+
+    it('opens the demo-blocked modal instead of disconnecting for a demo user', () => {
+        setMockPage({
+            auth: { user: makeUser({ is_demo: true }) },
+            flash: {},
+            demoLoginEnabled: false,
+        });
+        vi.mocked(router.delete).mockReset();
+        const telegram = {
+            connected: true,
+            username: null,
+            connect_url: null,
+            notify_post_run: true,
+            notify_weekly_recap: true,
+            notify_monthly_recap: true,
+            notify_daily_briefing: false,
+        };
+        render(<Aku identity={identity} stats={stats} telegram={telegram} />);
+
+        fireEvent.click(screen.getByText('Putuskan'));
+
+        expect(router.delete).not.toHaveBeenCalled();
+        expect(screen.getByText('Telegram-nya lagi istirahat dulu')).toBeInTheDocument();
+    });
+
+    it('opens the demo-blocked modal instead of posting a test notification for a demo user', () => {
+        setMockPage({
+            auth: { user: makeUser({ is_demo: true }) },
+            flash: {},
+            demoLoginEnabled: false,
+        });
+        vi.mocked(router.post).mockReset();
+        const telegram = {
+            connected: true,
+            username: null,
+            connect_url: null,
+            notify_post_run: true,
+            notify_weekly_recap: true,
+            notify_monthly_recap: true,
+            notify_daily_briefing: false,
+        };
+        render(<Aku identity={identity} stats={stats} telegram={telegram} />);
+
+        fireEvent.click(screen.getByText('Kirim notifikasi tes'));
+
+        expect(router.post).not.toHaveBeenCalled();
+        expect(screen.getByText('Telegram-nya lagi istirahat dulu')).toBeInTheDocument();
+    });
+
+    it('does not show a reconnect CTA when Strava is connected', () => {
+        setMockPage({
+            auth: { user: makeUser() },
+            flash: {},
+            demoLoginEnabled: false,
+            stravaSync: { state: 'ready', last_synced_at: '2026-07-04T00:00:00Z' },
+        });
+        render(<Aku identity={identity} stats={stats} />);
+        expect(screen.queryByText(/Sambungin lagi/)).not.toBeInTheDocument();
+    });
+
+    it('shows a persistent reconnect CTA when the Strava connection is revoked', () => {
+        setMockPage({
+            auth: { user: makeUser() },
+            flash: {},
+            demoLoginEnabled: false,
+            stravaSync: { state: 'revoked', last_synced_at: null },
+        });
+        render(<Aku identity={identity} stats={stats} />);
+        const link = screen.getByText('Sambungin lagi').closest('a');
+        expect(link).toHaveAttribute('href', '/auth/strava/redirect');
     });
 
     it('renders the AksesoriStrip when unlock catalog has entries', () => {

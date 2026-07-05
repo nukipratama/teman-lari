@@ -171,20 +171,19 @@ describe('Kalender', () => {
     });
 
     it('renders a Filter button that opens a mood filter menu', () => {
-        const { container } = render(<Kalender {...BASE_PROPS} cells={TWO_WEEK_CELLS} />);
+        render(<Kalender {...BASE_PROPS} cells={TWO_WEEK_CELLS} />);
         const filterButton = screen.getByRole('button', { name: /filter/i });
         expect(filterButton).toHaveAttribute('aria-expanded', 'false');
         fireEvent.click(filterButton);
         expect(filterButton).toHaveAttribute('aria-expanded', 'true');
-        expect(container.querySelector('[role="menu"]')).not.toBeNull();
-        expect(screen.getByRole('menuitemcheckbox', { name: /Nyala/ })).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: /Nyala/ })).toHaveAttribute('aria-pressed');
     });
 
     it('dims cells whose mood is not in the active filter set', () => {
         const { container } = render(<Kalender {...BASE_PROPS} cells={TWO_WEEK_CELLS} />);
         fireEvent.click(screen.getByRole('button', { name: /filter/i }));
         // Toggle only "Nyala" — cells with mood enteng/mumet should now be dimmed.
-        fireEvent.click(screen.getByRole('menuitemcheckbox', { name: /Nyala/ }));
+        fireEvent.click(screen.getByRole('button', { name: /Nyala/ }));
         // Find the May 1 cell (mood: enteng, activity_id: 100) — it should pick up the dim opacity class.
         const link = container.querySelector('a[href="/aktivitas/100"]');
         expect(link?.className).toContain('opacity-30');
@@ -260,7 +259,7 @@ describe('Kalender', () => {
                     monthlyRecap={makeRecap({ status: 'pending', content: null, id: null, is_chain_head: false })}
                 />,
             );
-            expect(screen.getByText('Recap bulan ini belum tersedia.')).toBeInTheDocument();
+            expect(screen.getByText('Rekap bulan ini belum tersedia.')).toBeInTheDocument();
             expect(screen.queryByRole('button', { name: /Minta Temari bacain/ })).not.toBeInTheDocument();
         });
 
@@ -286,10 +285,12 @@ describe('Kalender', () => {
             expect(screen.queryByRole('button', { name: /Baca ulang/ })).not.toBeInTheDocument();
         });
 
-        it('hides the Telegram button when not connected', () => {
+        it('shows a muted Telegram button that nudges (no send) when not connected', () => {
             // telegramConnected defaults to falsy in beforeEach.
+            vi.mocked(router.post).mockReset();
             render(<Kalender {...BASE_PROPS} month="2026-04" cells={TWO_WEEK_CELLS} monthlyRecap={makeRecap()} />);
-            expect(screen.queryByText('Kirim ke Telegram')).not.toBeInTheDocument();
+            fireEvent.click(screen.getByText('Kirim ke Telegram'));
+            expect(router.post).not.toHaveBeenCalled();
         });
 
         it('force-sends the monthly recap to Telegram when connected and the button is clicked', () => {

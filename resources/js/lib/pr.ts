@@ -4,17 +4,17 @@ import { formatDurationHMS } from '@/lib/pace';
 const DISTANCE_CATEGORIES = new Set(['1km', '5km', '10km', '15km', 'half_marathon', 'marathon']);
 
 export const PR_CATEGORY_LABELS: Record<string, string> = {
-    '1km': '1 KM',
-    '5km': '5 KM',
-    '10km': '10 KM',
-    '15km': '15 KM',
+    '1km': '1 km',
+    '5km': '5 km',
+    '10km': '10 km',
+    '15km': '15 km',
     half_marathon: 'Half Marathon',
     marathon: 'Marathon',
-    best_5min: 'Best 5 minutes',
-    best_10min: 'Best 10 minutes',
-    best_20min: 'Best 20 minutes',
-    best_30min: 'Best 30 minutes',
-    best_60min: 'Best 60 minutes',
+    best_5min: 'Best 5 menit',
+    best_10min: 'Best 10 menit',
+    best_20min: 'Best 20 menit',
+    best_30min: 'Best 30 menit',
+    best_60min: 'Best 60 menit',
 };
 
 /**

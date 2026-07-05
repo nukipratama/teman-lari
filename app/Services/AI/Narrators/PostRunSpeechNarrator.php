@@ -38,6 +38,11 @@ class PostRunSpeechNarrator
         Sesuaikan tone ke mood di field `mood` (kode Daybreak), ikut kalibrasi
         mood di persona.
 
+        Soal hujan: kalau weather_rain true, lihat weather_rain_source. "observed"
+        boleh disebut tegas ("sempat kehujanan"). "forecast" cuma prakiraan, belum
+        tentu benar kejadian, jadi hedge ("prakiraan sempat gerimis", "kayaknya
+        sempat rintik"), jangan bilang "hujan deras" atau klaim pasti.
+
         JANGAN PERNAH menyebut "PR" atau "personal record" kecuali has_pr bernilai
         true. Kalau has_pr false, rayakan sorotan nyata lain (jarak, konsistensi,
         finish, atau cuaca), bukan PR yang tidak ada.
@@ -92,6 +97,10 @@ class PostRunSpeechNarrator
             'negative_split' => $shared->negativeSplit,
             'weather_temp_c' => $shared->weatherTempC,
             'weather_rain' => $shared->weatherRain,
+            'weather_rain_source' => $shared->weatherRainSource,
+            'weather_wind_speed_kmh' => $shared->weatherWindSpeedKmh,
+            'weather_wind_gust_kmh' => $shared->weatherWindGustKmh,
+            'weather_wind_direction_deg' => $shared->weatherWindDirectionDeg,
             ...NarratorContinuity::fields($prevNarrative),
         ];
     }

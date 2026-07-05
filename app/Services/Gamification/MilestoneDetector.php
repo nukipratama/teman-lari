@@ -175,11 +175,13 @@ class MilestoneDetector
      */
     private function firstEverPace(Activity $activity, ActivityDetail $detail, int $paceSec): ?array
     {
+        // Keep the fastest (smallest) threshold the pace beats, not the first. The
+        // list is slowest-first, so iterating without breaking lands on the tightest
+        // tier crossed, mirroring firstEverDistance()'s largest-distance logic.
         $thresholdMatched = null;
         foreach (self::PACE_THRESHOLDS_SEC as $threshold) {
             if ($paceSec <= $threshold) {
                 $thresholdMatched = $threshold;
-                break;
             }
         }
         if ($thresholdMatched === null) {

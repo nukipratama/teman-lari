@@ -74,4 +74,15 @@ describe('Target', () => {
         const bar = container.querySelector('[style*="width: 0%"]');
         expect(bar).toBeInTheDocument();
     });
+
+    it('gives each progress bar a meaningful accessible name', () => {
+        render(
+            <Target
+                goals={[makeGoal({ title: 'Catat PR ke-1', current: 0, target: 1, unit: 'PR' })]}
+                completedCount={0}
+                totalCount={1}
+            />,
+        );
+        expect(screen.getByRole('progressbar', { name: 'Catat PR ke-1: 0/1 PR' })).toBeInTheDocument();
+    });
 });

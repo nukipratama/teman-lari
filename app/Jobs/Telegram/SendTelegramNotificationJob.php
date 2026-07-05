@@ -6,7 +6,10 @@ namespace App\Jobs\Telegram;
 
 use Throwable;
 use App\Models\AI\Analysis;
+use App\Models\RunCard;
 use App\Models\TelegramConnection;
+use App\Services\AI\AnalysisType;
+use App\Services\Run\Story\RunCardImageRenderer;
 use App\Services\Telegram\NotifiableAnalysis;
 use App\Services\Telegram\TelegramClient;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -40,7 +43,7 @@ class SendTelegramNotificationJob implements ShouldQueue
     {
     }
 
-    public function handle(NotifiableAnalysis $registry, TelegramClient $client): void
+    public function handle(NotifiableAnalysis $registry, TelegramClient $client, RunCardImageRenderer $imageRenderer): void
     {
         $analysis = Analysis::query()->find($this->analysisId);
         if ($analysis === null) {
@@ -58,7 +61,7 @@ class SendTelegramNotificationJob implements ShouldQueue
             return;
         }
 
-        $this->send($registry, $client, $analysis, $connection);
+        $this->send($registry, $client, $imageRenderer, $analysis, $connection);
     }
 
     /** Resolves the notify target, or null when any demo/connection guard fails. */
@@ -98,10 +101,10 @@ class SendTelegramNotificationJob implements ShouldQueue
         return $claimed !== 0;
     }
 
-    private function send(NotifiableAnalysis $registry, TelegramClient $client, Analysis $analysis, TelegramConnection $connection): void
+    private function send(NotifiableAnalysis $registry, TelegramClient $client, RunCardImageRenderer $imageRenderer, Analysis $analysis, TelegramConnection $connection): void
     {
         try {
-            $client->sendMessage($connection->chat_id, $registry->format($analysis));
+            $this->deliver($client, $imageRenderer, $registry, $analysis, $connection);
         } catch (Throwable $e) {
             // A manual push has no delivery claim to dedupe a retry, so a failure
             // after the message already reached Telegram would resend on retry.
@@ -119,6 +122,56 @@ class SendTelegramNotificationJob implements ShouldQueue
             DB::table('telegram_deliveries')->where('analysis_id', $analysis->id)->delete();
 
             throw $e;
+        }
+    }
+
+    /**
+     * A post-run push with a generated card goes out as a single photo message
+     * (the card image + the narration as its caption); everything else, and a
+     * post-run whose card isn't generated yet or fails to render, falls back to a
+     * plain text message. Rendering is best-effort — a render failure degrades to
+     * text rather than dropping the notification — but a real send failure
+     * propagates so the caller's retry/claim-release path still applies.
+     */
+    private function deliver(TelegramClient $client, RunCardImageRenderer $imageRenderer, NotifiableAnalysis $registry, Analysis $analysis, TelegramConnection $connection): void
+    {
+        $text = $registry->format($analysis);
+        $png = $this->renderPostRunCard($imageRenderer, $analysis);
+
+        if ($png !== null) {
+            $client->sendPhoto($connection->chat_id, $png, $text);
+
+            return;
+        }
+
+        $client->sendMessage($connection->chat_id, $text);
+    }
+
+    /**
+     * The rendered card PNG for a post-run notification whose activity has a
+     * generated card, or null (send as text) for any other type, a card-less
+     * activity, or a render failure.
+     */
+    private function renderPostRunCard(RunCardImageRenderer $imageRenderer, Analysis $analysis): ?string
+    {
+        if ($analysis->analysis_type !== AnalysisType::PostRunSpeech) {
+            return null;
+        }
+
+        $card = RunCard::query()->where('activity_id', $analysis->subject_id)->first();
+        if ($card === null) {
+            return null;
+        }
+
+        try {
+            return $imageRenderer->render($card);
+        } catch (Throwable $e) {
+            Log::warning('telegram.card_photo.render_failed', [
+                'analysis_id' => $analysis->id,
+                'reason' => $e->getMessage(),
+            ]);
+
+            return null;
         }
     }
 }

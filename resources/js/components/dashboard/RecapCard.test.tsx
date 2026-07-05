@@ -86,6 +86,16 @@ describe('RecapCard', () => {
         expect(screen.queryByText(/beruntun/)).toBeNull();
     });
 
+    it('nudges when a live streak has no run yet this week (in-app fallback for the Telegram reminder)', () => {
+        render(<RecapCard recap={makeRecap({ streak_weeks: 3, this_week_runs: 0 })} />);
+        expect(screen.getByText(/belum keisi minggu ini/)).toBeInTheDocument();
+    });
+
+    it('does not nudge when this week already has a run', () => {
+        render(<RecapCard recap={makeRecap({ streak_weeks: 3, this_week_runs: 4 })} />);
+        expect(screen.queryByText(/belum keisi minggu ini/)).toBeNull();
+    });
+
     it('renders the best card special move and its rarity label', () => {
         render(<RecapCard recap={makeRecap()} />);
         expect(screen.getByText('Kartu terbaik')).toBeInTheDocument();
@@ -109,7 +119,8 @@ describe('RecapCard', () => {
     });
 
     it('shows an encouraging empty state when there were no runs this week', () => {
-        render(<RecapCard recap={makeRecap({ this_week_runs: 0, this_week_km: 0, best_card: null })} />);
+        // No live streak, so the generic empty state (not the at-risk nudge) shows.
+        render(<RecapCard recap={makeRecap({ this_week_runs: 0, this_week_km: 0, best_card: null, streak_weeks: 0 })} />);
         expect(screen.getByText(/Minggu ini masih kosong/)).toBeInTheDocument();
         // No km hero, no share button, no best card in the empty state.
         expect(screen.queryByText(/Bagikan minggu ini/)).toBeNull();

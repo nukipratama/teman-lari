@@ -6,11 +6,15 @@ namespace App\Services\Telegram;
 
 use App\Services\Telegram\Exceptions\TelegramApiException;
 use Illuminate\Http\Client\ConnectionException;
+use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Support\Facades\Http;
 
 class TelegramClient
 {
     private const string API_BASE_URL = 'https://api.telegram.org';
+
+    /** Telegram's hard cap on a photo `caption` (characters). */
+    private const int CAPTION_MAX = 1024;
 
     /**
      * Send a plain-text message to a chat. Returns nothing; throws on failure so
@@ -22,6 +26,35 @@ class TelegramClient
             'chat_id' => $chatId,
             'text' => $text,
         ]);
+    }
+
+    /**
+     * Send a photo to a chat by uploading the raw PNG bytes as multipart, so it
+     * works without a publicly-fetchable URL. The caption is truncated to
+     * Telegram's 1024-character cap. Throws on failure like {@see sendMessage}.
+     */
+    public function sendPhoto(int $chatId, string $photo, ?string $caption): void
+    {
+        // Multipart form fields are strings on the wire; cast so the chat id is
+        // sent as "4242" rather than a bare int part.
+        $params = ['chat_id' => (string) $chatId];
+        if ($caption !== null && $caption !== '') {
+            $params['caption'] = $this->truncateCaption($caption);
+        }
+
+        $this->call('sendPhoto', $params, request: fn (PendingRequest $http): PendingRequest => $http
+            ->asMultipart()
+            ->attach('photo', $photo, 'kartu.png'));
+    }
+
+    /** Cut a caption to Telegram's character cap, marking a truncation with an ellipsis. */
+    private function truncateCaption(string $caption): string
+    {
+        if (mb_strlen($caption) <= self::CAPTION_MAX) {
+            return $caption;
+        }
+
+        return mb_substr($caption, 0, self::CAPTION_MAX - 1) . '…';
     }
 
     /**
@@ -63,16 +96,18 @@ class TelegramClient
      * @param  array<string, mixed>  $params
      * @param  int  $longPollTimeout  Seconds Telegram may hold the request open;
      *                                the HTTP client timeout is set above it.
+     * @param  (callable(PendingRequest): PendingRequest)|null  $request  Customises
+     *         the pending request (e.g. multipart upload); defaults to a JSON body.
      */
-    private function call(string $method, array $params, int $longPollTimeout = 0): mixed
+    private function call(string $method, array $params, int $longPollTimeout = 0, ?callable $request = null): mixed
     {
         $token = (string) config('services.telegram.bot_token');
 
+        $http = Http::baseUrl(self::API_BASE_URL . '/bot' . $token)->timeout($longPollTimeout + 10);
+        $http = $request !== null ? $request($http) : $http->asJson();
+
         try {
-            $response = Http::baseUrl(self::API_BASE_URL . '/bot' . $token)
-                ->timeout($longPollTimeout + 10)
-                ->asJson()
-                ->post('/' . $method, $params);
+            $response = $http->post('/' . $method, $params);
         } catch (ConnectionException $e) {
             throw new TelegramApiException(
                 "Telegram [{$method}] could not reach the API: {$e->getMessage()}",

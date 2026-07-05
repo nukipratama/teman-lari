@@ -2,6 +2,7 @@ import { Link } from '@inertiajs/react';
 import { Icon } from '@iconify/react';
 import { useCallback, useRef, useState } from 'react';
 import { useDismissable } from '@/hooks/useDismissable';
+import { useFocusReturn } from '@/hooks/useFocusReturn';
 import { cn } from '@/lib/cn';
 import type { Mood } from '@/types/inertia';
 
@@ -61,6 +62,7 @@ export default function RiwayatFilter<V extends string>({
     const containerRef = useRef<HTMLDivElement>(null);
     const close = useCallback(() => setOpen(false), []);
     useDismissable(open, containerRef, close);
+    useFocusReturn(open);
 
     const moodActive = mood?.selected.size ?? 0;
     // Range counts as "active" only when the user picked something other than
@@ -74,8 +76,10 @@ export default function RiwayatFilter<V extends string>({
         <div ref={containerRef} className={cn('relative', className)}>
             <button
                 type="button"
-                onClick={() => setOpen((v) => !v)}
-                aria-haspopup="menu"
+                onClick={(e) => {
+                    e.currentTarget.focus();
+                    setOpen((v) => !v);
+                }}
                 aria-expanded={open}
                 aria-label="Buka filter"
                 className={cn(
@@ -101,10 +105,7 @@ export default function RiwayatFilter<V extends string>({
                 />
             </button>
             {open && (
-                <div
-                    role="menu"
-                    className="absolute right-0 top-[calc(100%+8px)] z-40 w-72 overflow-hidden rounded-2xl border border-line bg-surface-elev shadow-lg"
-                >
+                <div className="absolute right-0 top-[calc(100%+8px)] z-40 w-72 overflow-hidden rounded-2xl border border-line bg-surface-elev shadow-lg">
                     {(totalActive > 0 || onReset) && (
                         <div className="flex items-center justify-between border-b border-line/60 px-3 py-2">
                             <span className="font-mono text-[11px] font-bold uppercase tracking-[0.14em] text-ink-2">
@@ -145,10 +146,9 @@ function RangeSectionView<V extends string>({ section }: Readonly<{ section: Ran
                             only={section.only ? [...section.only] : undefined}
                             preserveScroll
                             preserveState
-                            role="menuitemradio"
-                            aria-checked={active}
+                            aria-current={active ? 'true' : undefined}
                             className={cn(
-                                'focus-ring flex w-full items-baseline justify-between rounded-lg px-2 py-1.5 text-left text-xs transition lg:text-sm',
+                                'focus-ring flex min-h-11 w-full items-center justify-between rounded-lg px-2 py-2 text-left text-xs transition lg:text-sm',
                                 active ? 'bg-sky/10 font-semibold text-sky' : 'text-ink hover:bg-surface-warm',
                             )}
                         >
@@ -177,11 +177,10 @@ function MoodSectionView({ section }: Readonly<{ section: MoodSection }>) {
                         <button
                             key={mood}
                             type="button"
-                            role="menuitemcheckbox"
-                            aria-checked={active}
+                            aria-pressed={active}
                             onClick={() => section.onToggle(mood)}
                             className={cn(
-                                'focus-ring flex items-center gap-2 rounded-lg px-2 py-1.5 text-left text-xs font-medium transition',
+                                'focus-ring flex min-h-11 items-center gap-2 rounded-lg px-2 py-2 text-left text-xs font-medium transition',
                                 active ? 'bg-sky/10 text-sky' : 'text-ink hover:bg-surface-warm',
                             )}
                         >

@@ -26,6 +26,11 @@ final readonly class ActivityNarrationContext
         public array $zonePct,
         public ?int $weatherTempC,
         public ?bool $weatherRain,
+        public ?int $weatherWindSpeedKmh,
+        public ?int $weatherWindGustKmh,
+        public ?int $weatherWindDirectionDeg,
+        /** 'forecast' when the rain flag is from the (uncertain) forecast endpoint, else 'observed'. */
+        public string $weatherRainSource,
     ) {
     }
 
@@ -40,6 +45,10 @@ final readonly class ActivityNarrationContext
             zonePct: StreamSummary::zonePct($summary),
             weatherTempC: $detail?->weather_temp_c,
             weatherRain: $detail?->weather_rain_detected,
+            weatherWindSpeedKmh: $detail?->weather_wind_speed_kmh,
+            weatherWindGustKmh: $detail?->weather_wind_gust_kmh,
+            weatherWindDirectionDeg: $detail?->weather_wind_direction_deg,
+            weatherRainSource: $detail?->weather_rain_is_forecast ? 'forecast' : 'observed',
         );
     }
 

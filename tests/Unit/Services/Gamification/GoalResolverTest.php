@@ -63,8 +63,8 @@ it('returns the full goal catalog at zero progress for a fresh user', function (
 
     $goals = $this->resolver->forUser($user);
 
-    // 4 medal + 4 ikat_kepala + 4 kaus + 4 celana + 4 sepatu + 4 aura.
-    expect($goals)->toHaveCount(24);
+    // 4 medal + 4 ikat_kepala + 4 kaus + 4 celana + 4 sepatu + 5 aura.
+    expect($goals)->toHaveCount(25);
 
     foreach ($goals as $goal) {
         expect($goal['is_completed'])->toBeFalse()
@@ -137,6 +137,9 @@ it('counts rarity cards toward ikat_kepala goals', function (): void {
 });
 
 it('tracks consecutive-week streak for aura_pemanasan', function (): void {
+    // Freeze "now" so the newest week (2026-05-31) is still the current week and
+    // the streak counts as live.
+    Carbon::setTestNow('2026-06-02');
     $user = User::factory()->create();
     // 3 consecutive weeks ending on adjacent Sundays.
     $base = Carbon::parse('2026-05-31');
@@ -150,6 +153,8 @@ it('tracks consecutive-week streak for aura_pemanasan', function (): void {
     $byId = goalsById($this->resolver, $user);
 
     expect($byId['accessory.aura_pemanasan']['current'])->toBe(2); // min(streak, 2)
+
+    Carbon::setTestNow();
 });
 
 it('tracks accumulated distance toward sepatu km goals', function (): void {
@@ -180,13 +185,15 @@ it('counts badge-bearing cards toward kaus_pagi, kaus_hujan and aura goals', fun
     makeCard($user, Rarity::Common, [Badge::PejuangHujan->value]);
     makeCard($user, Rarity::Common, [Badge::HariPanas->value]);
     makeCard($user, Rarity::Common, [Badge::Z2Master->value]);
+    makeCard($user, Rarity::Common, [Badge::LawanAngin->value]);
 
     $byId = goalsById($this->resolver, $user);
 
     expect($byId['accessory.kaus_pagi']['current'])->toBe(1)
         ->and($byId['accessory.kaus_hujan']['current'])->toBe(1)
         ->and($byId['accessory.aura_gerah']['current'])->toBe(1)
-        ->and($byId['accessory.aura_tenang']['current'])->toBe(1);
+        ->and($byId['accessory.aura_tenang']['current'])->toBe(1)
+        ->and($byId['accessory.aura_angin']['current'])->toBe(1);
 });
 
 it('counts 5k/10k/half-marathon distance runs toward the celana goals', function (): void {
@@ -243,10 +250,10 @@ it('completedCount counts only completed goals', function (): void {
     expect($this->resolver->completedCount($goals))->toBe(2);
 });
 
-it('closestToCompletion ranks in-progress goals by pct and pushes completed ones last', function (): void {
+it('closestToCompletion ranks in-progress goals by pct and excludes completed ones', function (): void {
     $user = User::factory()->create();
     // 5 PRs feed medal_emas (5/5 = 100%) but it is NOT unlocked, so it leads.
-    // The completed medal_pertama is pushed to the back.
+    // The completed medal_pertama must not appear at all.
     UserUnlock::factory()->for($user)->create(['unlock_key' => 'accessory.medal_pertama']);
     PersonalRecord::factory()->for($user)->count(5)->sequence(
         ['category' => '1km'],
@@ -260,10 +267,34 @@ it('closestToCompletion ranks in-progress goals by pct and pushes completed ones
 
     // Highest-pct in-progress goal first.
     expect($closest[0]['is_completed'])->toBeFalse()
-        ->and($closest[0]['id'])->toBe('accessory.medal_emas')
-        // The only completed goal is sorted to the very end.
-        ->and($closest[array_key_last($closest)]['id'])->toBe('accessory.medal_pertama')
-        ->and($closest[array_key_last($closest)]['is_completed'])->toBeTrue();
+        ->and($closest[0]['id'])->toBe('accessory.medal_emas');
+
+    // The completed goal never shows up, even under a limit large enough to fit it.
+    $ids = collect($closest)->pluck('id');
+    expect($ids)->not->toContain('accessory.medal_pertama');
+    foreach ($closest as $goal) {
+        expect($goal['is_completed'])->toBeFalse();
+    }
+});
+
+it('closestToCompletion never pads with completed goals when fewer than the limit are incomplete', function (): void {
+    $user = User::factory()->create();
+    // Unlock every goal except one, leaving a single incomplete goal.
+    $goals = $this->resolver->forUser($user);
+    $allIds = collect($goals)->pluck('id');
+    $leftIncomplete = 'accessory.medal_pertama';
+    foreach ($allIds as $id) {
+        if ($id === $leftIncomplete) {
+            continue;
+        }
+        UserUnlock::factory()->for($user)->create(['unlock_key' => $id]);
+    }
+
+    $closest = $this->resolver->closestToCompletion($user, 3);
+
+    expect($closest)->toHaveCount(1)
+        ->and($closest[0]['id'])->toBe($leftIncomplete)
+        ->and($closest[0]['is_completed'])->toBeFalse();
 });
 
 it('reuses precomputed goals in closestToCompletion when provided', function (): void {

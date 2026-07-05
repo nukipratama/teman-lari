@@ -2,6 +2,7 @@ import { Icon } from '@iconify/react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useCallback, useId, useRef, useState } from 'react';
 import { useDismissable } from '@/hooks/useDismissable';
+import { useFocusReturn } from '@/hooks/useFocusReturn';
 import { METRIC_GLOSSARY, type MetricGlossaryEntry, type MetricKey } from '@/lib/metricGlossary';
 import { cn } from '@/lib/cn';
 
@@ -32,6 +33,7 @@ export default function MetricExplainer({
 
     const close = useCallback(() => setOpen(false), []);
     useDismissable(open, containerRef, close);
+    useFocusReturn(open);
 
     const iconSize = size === 'xs' ? 12 : 14;
     const buttonClass =
@@ -62,7 +64,7 @@ export default function MetricExplainer({
                         animate={{ opacity: 1, y: 0, scale: 1 }}
                         exit={{ opacity: 0, y: -4, scale: 0.97 }}
                         transition={{ duration: 0.15 }}
-                        className="absolute left-1/2 top-full z-30 mt-2 w-64 max-w-[min(18rem,calc(100vw-2rem))] -translate-x-1/2 overflow-hidden rounded-xl border border-leaf/25 bg-gradient-to-br from-surface-warm via-surface-elev to-leaf/10 text-left normal-case shadow-xl ring-1 ring-leaf/15"
+                        className="absolute left-1/2 top-full z-30 mt-2 w-64 max-w-[min(18rem,calc(100vw-2rem))] -translate-x-1/2 overflow-hidden rounded-xl border border-leaf/25 bg-gradient-to-br from-surface-warm to-surface-elev text-left normal-case shadow-xl ring-1 ring-leaf/15"
                     >
                         <div aria-hidden className="absolute inset-y-0 left-0 w-1 bg-leaf" />
                         <div className="px-3.5 py-3 pl-4">

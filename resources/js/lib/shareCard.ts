@@ -23,6 +23,8 @@ const HR_ZONES = ['Z1', 'Z2', 'Z3', 'Z4', 'Z5'] as const;
 export interface ShareKartuData {
     id: number;
     name: string;
+    /** Signed public share URL (server-minted). The share fallback copies/shares this. */
+    shareUrl: string;
     rarity: Rarity;
     /** The run's Temari mood, used as the card's "element/type". */
     mood: Mood;
@@ -47,6 +49,8 @@ export interface ShareKartuData {
     quote: string | null;
     /** Encoded route polyline for the card / route templates (optional). */
     polyline?: string | null;
+    /** Run distance (km). Thins the route stroke on longer routes, mirroring RouteGlyph. */
+    distanceKm?: number | null;
     /** Collector number within the rarity (optional). */
     edition?: CardEdition | null;
 }
@@ -145,10 +149,21 @@ function roundRectPath(ctx: CanvasRenderingContext2D, x: number, y: number, w: n
     ctx.closePath();
 }
 
+// Ratios lifted from RouteGlyph's SVG markers (start dot r=3, finish ring
+// r=3.2/strokeWidth=1.4 against its base stroke of 3.8), so the canvas markers
+// stay proportional to whatever stroke width is actually drawn here.
+const START_DOT_RATIO = 3 / 3.8;
+const FINISH_RING_RATIO = 3.2 / 3.8;
+const FINISH_RING_STROKE_RATIO = 1.4 / 3.8;
+
 /**
  * Stroke a route polyline inside a box (x, y, w, h) using the shared
- * `projectPolyline` geometry (same normalization as the on-card RouteGlyph).
- * Returns false (drew nothing) when there's no drawable route, so callers fall back.
+ * `projectPolyline` geometry (same normalization as the on-card RouteGlyph),
+ * then mark the start (filled dot) and, for point-to-point routes, the finish
+ * (hollow ring) — mirroring RouteGlyph's markers. `distanceKm` thins the
+ * stroke on longer routes the same way RouteGlyph does, scaled to this
+ * template's larger base `lineWidth`. Returns false (drew nothing) when
+ * there's no drawable route, so callers fall back.
  */
 function drawRoute(
     ctx: CanvasRenderingContext2D,
@@ -157,11 +172,19 @@ function drawRoute(
     stroke: string,
     lineWidth: number,
     glow = false,
+    distanceKm?: number | null,
 ): boolean {
     const projected = projectPolyline(polyline, box.w, box.h, lineWidth * 1.5, 240);
     if (projected === null) {
         return false;
     }
+
+    // Same log2 thinning as RouteGlyph's `strokeWidth`, proportional to this
+    // template's own base width instead of copying its literal 3.8/2.2/0.5.
+    const strokeWidth =
+        distanceKm != null && Number.isFinite(distanceKm)
+            ? Math.max(lineWidth * (2.2 / 3.8), lineWidth - Math.log2(Math.max(distanceKm, 1)) * (lineWidth * (0.5 / 3.8)))
+            : lineWidth;
 
     ctx.save();
     ctx.beginPath();
@@ -175,18 +198,39 @@ function drawRoute(
         }
     });
     ctx.strokeStyle = stroke;
-    ctx.lineWidth = lineWidth;
+    ctx.lineWidth = strokeWidth;
     ctx.lineJoin = 'round';
     ctx.lineCap = 'round';
     if (glow) {
         // A soft halo in the route's own hue, then a crisp core on top so the
         // line lifts off the backdrop without smearing.
         ctx.shadowColor = stroke;
-        ctx.shadowBlur = lineWidth * 1.8;
+        ctx.shadowBlur = strokeWidth * 1.8;
         ctx.stroke();
         ctx.shadowBlur = 0;
     }
     ctx.stroke();
+
+    const [startX, startY] = projected.points[0];
+    const [endX, endY] = projected.points.at(-1) ?? [startX, startY];
+    // Same hypot test as RouteGlyph's `isPointToPoint`, scaled from its 100×64
+    // viewBox threshold (2) to this box's own diagonal.
+    const boxDiagonal = Math.hypot(box.w, box.h);
+    const isPointToPoint = Math.hypot(endX - startX, endY - startY) >= boxDiagonal * (2 / Math.hypot(100, 64));
+
+    ctx.beginPath();
+    ctx.fillStyle = stroke;
+    ctx.arc(box.x + startX, box.y + startY, strokeWidth * START_DOT_RATIO, 0, Math.PI * 2);
+    ctx.fill();
+
+    if (isPointToPoint) {
+        ctx.beginPath();
+        ctx.strokeStyle = stroke;
+        ctx.lineWidth = strokeWidth * FINISH_RING_STROKE_RATIO;
+        ctx.arc(box.x + endX, box.y + endY, strokeWidth * FINISH_RING_RATIO, 0, Math.PI * 2);
+        ctx.stroke();
+    }
+
     ctx.restore();
     return true;
 }
@@ -323,10 +367,29 @@ interface DrawCtx {
     moodBunny: HTMLImageElement | null;
 }
 
+/**
+ * Tasteful bottom-right attribution handle so a reshared image still carries
+ * the source. Drawn once per export, on top of every template, using the same
+ * muted meta tone as the rest of the card chrome.
+ */
+function drawWordmark(ctx: CanvasRenderingContext2D, w: number, h: number, pal: Palette): void {
+    ctx.save();
+    ctx.font = '600 24px "JetBrains Mono"';
+    ctx.letterSpacing = '1px';
+    ctx.fillStyle = pal.meta;
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'alphabetic';
+    ctx.fillText('temanlari.app', w - PAD, h - PAD * 0.55);
+    ctx.restore();
+}
+
 /** Bottom-left mono date stamp, shared by the poster and angka templates. */
 function drawDateFooter(d: DrawCtx): void {
     const { ctx, h, cfg, pal } = d;
-    if (!cfg.kartu.date) {
+    const parts = [cfg.kartu.date?.replace('\n', ' · '), cfg.kartu.weather].filter(
+        (part): part is string => part != null && part !== '',
+    );
+    if (parts.length === 0) {
         return;
     }
     ctx.font = '500 30px "JetBrains Mono"';
@@ -334,7 +397,7 @@ function drawDateFooter(d: DrawCtx): void {
     ctx.fillStyle = pal.meta;
     ctx.textAlign = 'left';
     ctx.textBaseline = 'alphabetic';
-    ctx.fillText(cfg.kartu.date.replace('\n', ' · '), PAD, h - PAD);
+    ctx.fillText(parts.join(' · '), PAD, h - PAD);
     ctx.letterSpacing = '0px';
 }
 
@@ -350,7 +413,7 @@ function drawRute(d: DrawCtx): void {
 
     // The route is the hero: bolder and rarity-glowing so it lifts off the navy.
     const box = { x: PAD, y: PAD + (story ? 110 : 88), w: w - PAD * 2, h: h * (story ? 0.4 : 0.36) };
-    drawRoute(ctx, k.polyline, box, rarityCol, story ? 14 : 12, true);
+    drawRoute(ctx, k.polyline, box, rarityCol, story ? 14 : 12, true, k.distanceKm);
 
     let y = box.y + box.h + (story ? 84 : 56);
     ctx.textAlign = 'left';
@@ -532,7 +595,7 @@ function drawHeroArtWindow(
         w: box.w * 0.86,
         h: box.h * 0.78,
     };
-    const hasRoute = drawRoute(ctx, k.polyline, routeBox, rarityCol, story ? 18 : 15, true);
+    const hasRoute = drawRoute(ctx, k.polyline, routeBox, rarityCol, story ? 18 : 15, true, k.distanceKm);
     drawHeroShimmer(ctx, box.x, box.y, box.w, box.h, k.rarity, rarityCol);
 
     // Temari, drawn on top as a crisp character (mirrors the live Kartu's corner
@@ -989,6 +1052,7 @@ export async function drawShareCard(canvas: HTMLCanvasElement, cfg: ShareCardCon
 
     const d: DrawCtx = { ctx, w, h, cfg, pal, bunny, moodBunny };
     TEMPLATES[cfg.layout](d);
+    drawWordmark(ctx, w, h, pal);
 }
 
 /** Render the card and return it as a PNG blob (full internal resolution). */

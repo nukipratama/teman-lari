@@ -1,4 +1,5 @@
 import { Head, Link, router } from '@inertiajs/react';
+import { Icon } from '@iconify/react';
 import { useState } from 'react';
 import { csrfToken } from '@/lib/http';
 import { aktivitasUrl, kartuUrl } from '@/lib/routes';
@@ -9,7 +10,6 @@ import HeroPanel from '@/components/ui/HeroPanel';
 import BackLink from '@/components/ui/BackLink';
 import KartuComponent from '@/components/card/Kartu';
 import PillButton from '@/components/ui/PillButton';
-import PillLink from '@/components/ui/PillLink';
 import SectionLabel from '@/components/ui/SectionLabel';
 import Temari from '@/components/temari/Temari';
 import AnalysisStatus from '@/components/temari/AnalysisStatus';
@@ -18,20 +18,11 @@ import type { ShareKartuData } from '@/lib/shareCard';
 import { cn } from '@/lib/cn';
 import PageContainer from '@/components/ui/PageContainer';
 import { formatNaiveIdDate, formatNaiveTimeId, formatPace, formatShortDateId, paceSecPerKm } from '@/lib/pace';
-import { RARITY_BORDER, RARITY_LABELS, RARITY_POSE, avgCadenceFromDetail, badgeEmblem, badgeName, fastestKmFromDetail, kartuPropsFromDetail } from '@/lib/runcard';
+import { BADGE_ABILITY, RARITY_BORDER, RARITY_LABELS, RARITY_POSE, avgCadenceFromDetail, badgeEmblem, badgeName, fastestKmFromDetail, kartuPropsFromDetail } from '@/lib/runcard';
 import { renderBold } from '@/lib/richText';
 import type { ActivityDetail, AnalysisPayload, CardEdition, Mood, Rarity } from '@/types/inertia';
 
 // Short Indonesian descriptions for each badge key
-const BADGE_DESCS: Record<string, string> = {
-    negative_split: 'Paruh kedua lebih kenceng dari paruh pertama.',
-    hari_panas: 'Tetap lari dan kontrol HR walau suhu tinggi.',
-    pejuang_hujan: 'Nggak berhenti meski hujan, komitmen penuh.',
-    anak_pagi: 'Mulai sebelum matahari tinggi, sebelum orang lain bangun.',
-    long_slow_distance: 'Jarak panjang di pace santai, fondasi aerobik yang rapi.',
-    tahan_diri: 'Pace terkontrol, HR rapi dari awal sampai akhir.',
-};
-
 interface CardPayload {
     id: number;
     activity_id: number;
@@ -42,6 +33,7 @@ interface CardPayload {
     detail: ActivityDetail | null;
     edition?: CardEdition | null;
     flavor_analysis: AnalysisPayload;
+    public_share_url: string;
 }
 
 interface RelatedCard {
@@ -107,9 +99,19 @@ export default function KartuDetail({
           })()
         : null;
 
+    const shareWeather = (() => {
+        if (detail?.weather_temp_c == null) {
+            return null;
+        }
+        const temp = `${Math.round(detail.weather_temp_c)}°C`;
+        const wind = detail.weather_wind_speed_kmh != null ? `, angin ${Math.round(detail.weather_wind_speed_kmh)} km/j` : '';
+        return `${temp}${wind}`;
+    })();
+
     const shareData: ShareKartuData = {
         id: card.id,
         name: card.special_move,
+        shareUrl: card.public_share_url,
         rarity: card.rarity,
         mood: card.mood,
         subtitle,
@@ -123,11 +125,12 @@ export default function KartuDetail({
         fastestKm: fastestKm != null ? `${fastestKm}/km` : null,
         zonePct,
         location: detail?.location_name ?? null,
-        weather: detail?.weather_temp_c != null ? `${Math.round(detail.weather_temp_c)}°C` : null,
+        weather: shareWeather,
         tags: badges.map((b) => badgeName(b)),
         tagEmojis: badges.map((b) => badgeEmblem(b)),
         quote: card.flavor_analysis.content ?? null,
         polyline: detail?.summary_polyline ?? null,
+        distanceKm: detail?.distance != null ? detail.distance / 1000 : null,
         edition: card.edition ?? null,
     };
 
@@ -148,6 +151,15 @@ export default function KartuDetail({
                         style={{ background: 'linear-gradient(165deg, var(--color-sky-deep), var(--color-sky-2))' }}
                     >
                         <div className="relative flex flex-col items-center gap-6 text-center">
+                            {/* Corner exit: navigates out to the run detail, kept
+                                distinct from the card actions at the bottom. */}
+                            <Link
+                                href={aktivitasUrl(card)}
+                                className="focus-ring absolute right-0 top-0 z-10 inline-flex items-center gap-1 rounded-full border border-cream/15 bg-cream/[0.06] px-3 py-1.5 font-mono text-[11px] font-bold uppercase tracking-[0.1em] text-cream/90 backdrop-blur transition hover:bg-cream/[0.12]"
+                            >
+                                <Icon icon="mdi:arrow-top-right" width={13} height={13} aria-hidden />
+                                Detail lari
+                            </Link>
                             {/* Glow */}
                             <span
                                 aria-hidden
@@ -188,6 +200,7 @@ export default function KartuDetail({
                                     size="sm"
                                     onClick={() => setShareOpen(true)}
                                 >
+                                    <Icon icon="mdi:share-variant" width={14} height={14} aria-hidden />
                                     Bagikan
                                 </PillButton>
                                 <PillButton
@@ -197,11 +210,15 @@ export default function KartuDetail({
                                     onClick={replayReveal}
                                     disabled={replaying}
                                 >
+                                    <Icon
+                                        icon="mdi:refresh"
+                                        width={14}
+                                        height={14}
+                                        className={replaying ? 'animate-spin' : undefined}
+                                        aria-hidden
+                                    />
                                     {replaying ? 'Menyiapkan…' : 'Buka ulang kartu'}
                                 </PillButton>
-                                <PillLink href={aktivitasUrl(card)} tone="ghost" onSky size="sm">
-                                    Lihat detail lari
-                                </PillLink>
                             </div>
                         </div>
                     </HeroPanel>
@@ -231,10 +248,17 @@ export default function KartuDetail({
                             </div>
                         </div>
 
-                        {/* Kenapa [rarity] — badge lore */}
-                        {badges.length > 0 && (
-                            <Card tone="cream-deep" padding="lg" className="flex flex-col gap-4">
-                                <SectionLabel>Kenapa {rarityLabel}</SectionLabel>
+                        {/* Kenapa [rarity] — how the rarity was earned. Always shown
+                            (even with no badges): rarity is a composite of PR, pace,
+                            distance and consistency, so a badge-less card still deserves
+                            an honest explanation instead of a blank. */}
+                        <Card tone="cream-deep" padding="lg" className="flex flex-col gap-4">
+                            <SectionLabel>Kenapa {rarityLabel}</SectionLabel>
+                            <p className="text-sm text-ink-2">
+                                Rarity dihitung dari gabungan hal keren di lari ini: PR, pace yang stabil atau
+                                makin ngebut, jarak jauh, konsistensi mingguan, plus badge yang kamu dapet.
+                            </p>
+                            {badges.length > 0 && (
                                 <div className="flex flex-col gap-3">
                                     {badges.map((b, i) => (
                                         <div
@@ -248,14 +272,14 @@ export default function KartuDetail({
                                         >
                                             <Chip tone="horizon">{badgeName(b)}</Chip>
                                             <p className="flex-1 text-sm text-ink-2">
-                                                {BADGE_DESCS[b] ??
+                                                {BADGE_ABILITY[b] ??
                                                     'Kondisi spesial yang bikin lari ini istimewa.'}
                                             </p>
                                         </div>
                                     ))}
                                 </div>
-                            </Card>
-                        )}
+                            )}
+                        </Card>
 
                         {/* Linked run */}
                         {detail && (

@@ -45,6 +45,7 @@ const epicCard = {
     badges: ['negative_split', 'anak_pagi'] as string[],
     detail,
     flavor_analysis: doneAnalysis,
+    public_share_url: 'https://teman-lari.test/k/xyz',
 };
 
 const relatedCards = [

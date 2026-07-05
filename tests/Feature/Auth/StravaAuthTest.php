@@ -221,7 +221,7 @@ it('updates an existing user on subsequent strava callbacks', function (): void 
 it('redirects back to login when strava returns an error', function (): void {
     $this->get(route('auth.strava.callback', ['error' => 'access_denied']))
         ->assertRedirect(route('login'))
-        ->assertSessionHasErrors(['strava' => 'Strava authorization was cancelled or denied.']);
+        ->assertSessionHasErrors(['strava' => 'Sambungan ke Strava dibatalin. Coba lagi ya kalau mau lanjut.']);
 
     $this->assertGuest();
 });
@@ -231,7 +231,7 @@ it('redirects back to login when fetching the strava user fails', function (): v
 
     $this->get(route('auth.strava.callback'))
         ->assertRedirect(route('login'))
-        ->assertSessionHasErrors(['strava' => 'We could not complete the Strava sign-in. Please try again.']);
+        ->assertSessionHasErrors(['strava' => 'Gagal nyambungin Strava. Coba lagi sebentar ya.']);
 
     $this->assertGuest();
 });

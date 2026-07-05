@@ -32,7 +32,7 @@ export function setMockPage(props: Record<string, unknown>, url = DEFAULT_URL) {
 // Authenticated-user fixture for `usePage().props.auth.user`. Defaults to the
 // demo user shape; pass overrides to vary name etc.
 export function makeUser(overrides: Record<string, unknown> = {}) {
-    return { id: 1, name: 'Ada Lovelace', first_name: 'Ada', avatar_url: null, ...overrides };
+    return { id: 1, name: 'Ada Lovelace', first_name: 'Ada', avatar_url: null, is_demo: false, ...overrides };
 }
 
 // Safe default fetch: any test that renders a component which fires fetch on
@@ -119,6 +119,7 @@ vi.mock('@inertiajs/react', async () => {
             reset: vi.fn(),
         }),
         router: { post: vi.fn(), get: vi.fn(), patch: vi.fn(), delete: vi.fn(), reload: vi.fn(), visit: vi.fn() },
+        usePoll: vi.fn(() => ({ start: vi.fn(), stop: vi.fn() })),
     };
 });
 

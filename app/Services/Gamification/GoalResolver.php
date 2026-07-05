@@ -58,25 +58,16 @@ readonly class GoalResolver
     public function closestToCompletion(User $user, int $limit = 3, ?array $precomputedGoals = null): array
     {
         $goals = $precomputedGoals ?? $this->forUser($user);
+        $incomplete = array_values(array_filter($goals, fn (array $g): bool => ! $g['is_completed']));
 
         $scored = array_map(function (array $goal): array {
             $pct = $goal['target'] > 0 ? $goal['current'] / $goal['target'] : 0;
             $capped = min($pct, 1.0);
 
             return ['goal' => $goal, 'pct' => $capped];
-        }, $goals);
+        }, $incomplete);
 
-        usort($scored, function (array $a, array $b): int {
-            if ($a['goal']['is_completed'] && ! $b['goal']['is_completed']) {
-                return 1;
-            }
-
-            if (! $a['goal']['is_completed'] && $b['goal']['is_completed']) {
-                return -1;
-            }
-
-            return $b['pct'] <=> $a['pct'];
-        });
+        usort($scored, fn (array $a, array $b): int => $b['pct'] <=> $a['pct']);
 
         return array_map(fn (array $s): array => $s['goal'], array_slice($scored, 0, $limit));
     }
@@ -297,8 +288,8 @@ readonly class GoalResolver
             ],
             [
                 'id' => 'accessory.sepatu_legendaris',
-                'title' => 'Akumulasi jarak 1000 km',
-                'description' => 'Akumulasi jarak 1000 km.',
+                'title' => 'Total jarak 1000 km',
+                'description' => 'Kumpulin jarak sampai 1000 km.',
                 'slot' => 'sepatu',
                 'rarity' => $this->rarityForKey('accessory.sepatu_legendaris', $catalog),
                 'current' => min($ctx->totalDistanceKm(), 1000),
@@ -323,7 +314,7 @@ readonly class GoalResolver
             [
                 'id' => 'accessory.aura_pemanasan',
                 'title' => '2 minggu beruntun lari',
-                'description' => 'Lari di 2 minggu berturut-turut.',
+                'description' => 'Lari di 2 minggu beruntun.',
                 'slot' => 'aura',
                 'rarity' => $this->rarityForKey('accessory.aura_pemanasan', $catalog),
                 'current' => min($ctx->twoWeekStreak, 2),
@@ -344,8 +335,8 @@ readonly class GoalResolver
             ],
             [
                 'id' => 'accessory.aura_tenang',
-                'title' => '5 lari HR Zone 2',
-                'description' => 'Catat 5 lari di HR Zone 2 (bawah 70% HRmax).',
+                'title' => '5 lari Zona HR 2',
+                'description' => 'Catat 5 lari di Zona HR 2 (bawah 70% HR maks).',
                 'slot' => 'aura',
                 'rarity' => $this->rarityForKey('accessory.aura_tenang', $catalog),
                 'current' => min($bc[Badge::Z2Master->value] ?? 0, 5),
@@ -363,6 +354,17 @@ readonly class GoalResolver
                 'target' => 3,
                 'unit' => 'kartu',
                 'is_completed' => \in_array('accessory.aura_jagoan', $unlockedKeys, true),
+            ],
+            [
+                'id' => 'accessory.aura_angin',
+                'title' => '3 lari lawan angin',
+                'description' => 'Selesaikan 3 lari saat angin di atas 20 km/j.',
+                'slot' => 'aura',
+                'rarity' => $this->rarityForKey('accessory.aura_angin', $catalog),
+                'current' => min($bc[Badge::LawanAngin->value] ?? 0, 3),
+                'target' => 3,
+                'unit' => 'lari',
+                'is_completed' => \in_array('accessory.aura_angin', $unlockedKeys, true),
             ],
         ];
     }

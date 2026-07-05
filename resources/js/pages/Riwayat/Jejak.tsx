@@ -13,6 +13,8 @@ import RiwayatTabs from '@/components/riwayat/RiwayatTabs';
 import BackLink from '@/components/ui/BackLink';
 import StravaSyncButton from '@/components/StravaSyncButton';
 import Temari from '@/components/temari/Temari';
+import MetricExplainer from '@/components/MetricExplainer';
+import { type MetricKey } from '@/lib/metricGlossary';
 import { cn } from '@/lib/cn';
 import { poseForFormStatus } from '@/lib/temariPose';
 import { formStatusLabel } from '@/lib/formStatus';
@@ -272,11 +274,12 @@ const WeekSection = memo(function WeekSection({ bucket, snapshot, notes, moods, 
                                 awaitingSchedule={snapshot.is_current_week}
                                 isChainHead={snapshot.is_chain_head}
                             />
-                            {telegramConnected && snapshot.recap_analysis.status === 'done' && (
+                            {snapshot.recap_analysis.status === 'done' && (
                                 <div className="mt-3">
                                     <SendToTelegramButton
                                         url={`/rekap-mingguan/${snapshot.id}/telegram`}
                                         retryAfterSeconds={snapshot.telegram_retry_after_seconds}
+                                        connected={telegramConnected}
                                     />
                                 </div>
                             )}
@@ -315,6 +318,7 @@ function WeeklyStatusChips({ snapshot }: Readonly<{ snapshot: WeeklySnapshotRow 
                     label="Variasi"
                     value={snapshot.monotony.toFixed(2)}
                     alert={monotonyAlert}
+                    explainerKey="monotony"
                 />
             )}
             {snapshot.avg_decoupling !== null && (
@@ -322,11 +326,12 @@ function WeeklyStatusChips({ snapshot }: Readonly<{ snapshot: WeeklySnapshotRow 
                     label="Drift"
                     value={`${snapshot.avg_decoupling.toFixed(1)}%`}
                     alert={decouplingAlert}
+                    explainerKey="decoupling"
                 />
             )}
             {snapshot.ctl_42d !== null && (
                 <span className="inline-flex items-center gap-1 rounded-full bg-leaf/15 px-2.5 py-0.5 text-xs font-semibold text-leaf-deep">
-                    Fit {snapshot.ctl_42d.toFixed(1)}
+                    Fondasi {snapshot.ctl_42d.toFixed(1)}
                 </span>
             )}
             {snapshot.form !== null && (
@@ -353,7 +358,8 @@ function MetricChip({
     label,
     value,
     alert = false,
-}: Readonly<{ label: string; value: string; alert?: boolean }>) {
+    explainerKey,
+}: Readonly<{ label: string; value: string; alert?: boolean; explainerKey?: MetricKey }>) {
     return (
         <span
             className={cn(
@@ -365,6 +371,7 @@ function MetricChip({
         >
             <span className="font-mono font-bold text-[11px] uppercase tracking-wider text-ink-2">{label}</span>
             <span className="tabular-nums">{value}</span>
+            {explainerKey && <MetricExplainer metricKey={explainerKey} size="xs" />}
         </span>
     );
 }

@@ -29,6 +29,7 @@ enum Badge: string
     case Santai = 'santai';
     case Berturut = 'berturut';
     case HariSpesial = 'hari_spesial';
+    case LawanAngin = 'lawan_angin';
 
     public function label(): string
     {
@@ -51,6 +52,7 @@ enum Badge: string
             self::Santai => '☺️ Santai',
             self::Berturut => '🔥 Berturut',
             self::HariSpesial => '🎉 Hari Spesial',
+            self::LawanAngin => '🌬️ Lawan Angin',
         };
     }
 
@@ -68,6 +70,7 @@ enum Badge: string
             self::NegativeSplit,
             self::HariPanas,
             self::Z2Master,
+            self::LawanAngin,
         ];
     }
 

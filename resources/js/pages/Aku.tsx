@@ -10,6 +10,8 @@ import PrCard from '@/components/card/PrCard';
 import SectionLabel from '@/components/ui/SectionLabel';
 import Temari from '@/components/temari/Temari';
 import AnalysisStatus from '@/components/temari/AnalysisStatus';
+import DemoBlockedModal from '@/components/DemoBlockedModal';
+import { useDemoGuard } from '@/hooks/useDemoGuard';
 import { cn } from '@/lib/cn';
 import PageContainer from '@/components/ui/PageContainer';
 import { formatIdDate, formatNaiveIdDate, formatShortDateId, monthsSinceId } from '@/lib/pace';
@@ -59,6 +61,7 @@ interface TelegramPayload {
     notify_post_run: boolean;
     notify_weekly_recap: boolean;
     notify_monthly_recap: boolean;
+    notify_daily_briefing: boolean;
 }
 
 interface AkuProps {
@@ -80,6 +83,7 @@ const TELEGRAM_DEFAULT: TelegramPayload = {
     notify_post_run: true,
     notify_weekly_recap: true,
     notify_monthly_recap: true,
+    notify_daily_briefing: false,
 };
 
 export default function Aku({
@@ -93,7 +97,9 @@ export default function Aku({
     profileVoice,
     telegram = TELEGRAM_DEFAULT,
 }: Readonly<AkuProps>) {
-    const sharedUser = usePage<SharedProps>().props.auth.user;
+    const { auth, stravaSync } = usePage<SharedProps>().props;
+    const sharedUser = auth.user;
+    const stravaRevoked = stravaSync?.state === 'revoked';
     const firstName = sharedUser?.first_name ?? identity.name.split(' ')[0] ?? '';
     const firstRunShort = identity.first_run_at ? formatShortDateId(identity.first_run_at) : null;
     const memberSince = identity.member_since ? formatIdDate(identity.member_since, 'long') : null;
@@ -139,11 +145,19 @@ export default function Aku({
                                     )}
                                 />
                             )}
-                            <div className="mt-5 flex flex-wrap gap-2">
+                            <div className="mt-5 flex flex-wrap items-center gap-2">
                                 <Chip tone="onSky">
                                     {identity.strava_connected ? 'Strava aktif' : 'Strava off'}
                                 </Chip>
                                 {memberSince && <Chip tone="onSky">Gabung sejak {memberSince}</Chip>}
+                                {stravaRevoked && (
+                                    <a
+                                        href="/auth/strava/redirect"
+                                        className="focus-ring rounded-full border border-cream-deep/40 px-3 py-1 font-mono text-[11px] font-semibold uppercase tracking-[0.1em] text-cream transition hover:bg-cream/10"
+                                    >
+                                        Sambungin lagi
+                                    </a>
+                                )}
                             </div>
                         </div>
                     </div>
@@ -224,6 +238,27 @@ export default function Aku({
                         catalog={unlockCatalog}
                     />
                 </section>
+
+                <section className="mt-10">
+                    <SectionLabel>Pengaturan</SectionLabel>
+                    <Card padding="lg">
+                        <Link
+                            href="/pengaturan/zona"
+                            className="focus-ring -m-2 flex items-center justify-between gap-3 rounded-xl p-2 transition hover:bg-cream-deep/40"
+                        >
+                            <span className="flex items-center gap-3">
+                                <Icon icon="mdi:heart-pulse" width={20} height={20} className="text-ink-3" aria-hidden />
+                                <span className="flex flex-col">
+                                    <span className="font-sans text-sm font-semibold text-ink">Zona HR</span>
+                                    <span className="font-sans text-[12px] text-ink-3">
+                                        Atur sendiri batas Z1-Z5 biar Temari baca larimu lebih pas.
+                                    </span>
+                                </span>
+                            </span>
+                            <Icon icon="mdi:chevron-right" width={18} height={18} className="text-ink-3" aria-hidden />
+                        </Link>
+                    </Card>
+                </section>
             </PageContainer>
         </AppShell>
     );
@@ -236,36 +271,63 @@ function TelegramPanel({ telegram }: Readonly<{ telegram: TelegramPayload }>) {
     const [postRun, setPostRun] = useState(telegram.notify_post_run);
     const [weeklyRecap, setWeeklyRecap] = useState(telegram.notify_weekly_recap);
     const [monthlyRecap, setMonthlyRecap] = useState(telegram.notify_monthly_recap);
+    const [dailyBriefing, setDailyBriefing] = useState(telegram.notify_daily_briefing);
+    const { isDemo, open, setOpen, guard } = useDemoGuard();
 
-    const savePrefs = (notifyPostRun: boolean, notifyWeeklyRecap: boolean, notifyMonthlyRecap: boolean) => {
+    const savePrefs = (
+        notifyPostRun: boolean,
+        notifyWeeklyRecap: boolean,
+        notifyMonthlyRecap: boolean,
+        notifyDailyBriefing: boolean,
+    ) => {
         router.patch(
             '/profil/telegram',
             {
                 notify_post_run: notifyPostRun,
                 notify_weekly_recap: notifyWeeklyRecap,
                 notify_monthly_recap: notifyMonthlyRecap,
+                notify_daily_briefing: notifyDailyBriefing,
             },
             { preserveScroll: true },
         );
     };
 
     if (!telegram.connected) {
+        let connectAffordance;
+        if (telegram.connect_url === null) {
+            connectAffordance = <p className="font-sans text-[12px] text-ink-3">Bot Telegram belum dikonfigurasi.</p>;
+        } else if (isDemo) {
+            // Demo shares one bot, so it can't link a personal chat: show the
+            // button disabled and route the tap to the friendly demo modal.
+            connectAffordance = (
+                <button
+                    type="button"
+                    onClick={() => setOpen(true)}
+                    className="inline-flex items-center gap-2 self-start rounded-full bg-[#229ED9] px-5 py-2.5 text-sm font-semibold text-white opacity-60 transition"
+                >
+                    <Icon icon="mdi:telegram" width={18} height={18} aria-hidden />
+                    Hubungkan Telegram
+                </button>
+            );
+        } else {
+            connectAffordance = (
+                <a
+                    href={telegram.connect_url}
+                    className="inline-flex items-center gap-2 self-start rounded-full bg-[#229ED9] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#1c8cbf]"
+                >
+                    <Icon icon="mdi:telegram" width={18} height={18} aria-hidden />
+                    Hubungkan Telegram
+                </a>
+            );
+        }
+
         return (
             <div className="flex flex-col gap-4">
                 <p className="font-display text-base italic text-ink-2">
                     Sambungin Telegram biar Temari bisa kabarin kamu tiap abis lari sama pas rekap mingguan.
                 </p>
-                {telegram.connect_url ? (
-                    <a
-                        href={telegram.connect_url}
-                        className="inline-flex items-center gap-2 self-start rounded-full bg-[#229ED9] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#1c8cbf]"
-                    >
-                        <Icon icon="mdi:telegram" width={18} height={18} aria-hidden />
-                        Hubungkan Telegram
-                    </a>
-                ) : (
-                    <p className="font-sans text-[12px] text-ink-3">Bot Telegram belum dikonfigurasi.</p>
-                )}
+                {connectAffordance}
+                <DemoBlockedModal open={open} onClose={() => setOpen(false)} />
             </div>
         );
     }
@@ -278,9 +340,10 @@ function TelegramPanel({ telegram }: Readonly<{ telegram: TelegramPayload }>) {
                 </Chip>
                 <button
                     type="button"
-                    onClick={() => router.delete('/profil/telegram', { preserveScroll: true })}
-                    className="focus-ring rounded font-mono text-[12px] font-semibold uppercase tracking-[0.14em] text-ink-3 transition hover:text-ember-deep"
+                    onClick={() => guard(() => router.delete('/profil/telegram', { preserveScroll: true }))}
+                    className="focus-ring inline-flex items-center gap-1 rounded font-mono text-[12px] font-semibold uppercase tracking-[0.14em] text-ink-3 transition hover:text-ember-deep"
                 >
+                    <Icon icon="mdi:link-off" width={13} height={13} aria-hidden />
                     Putuskan
                 </button>
             </div>
@@ -288,35 +351,53 @@ function TelegramPanel({ telegram }: Readonly<{ telegram: TelegramPayload }>) {
                 <NotifyToggle
                     label="Cerita abis lari"
                     checked={postRun}
-                    onChange={(value) => {
-                        setPostRun(value);
-                        savePrefs(value, weeklyRecap, monthlyRecap);
-                    }}
+                    onChange={(value) =>
+                        guard(() => {
+                            setPostRun(value);
+                            savePrefs(value, weeklyRecap, monthlyRecap, dailyBriefing);
+                        })
+                    }
                 />
                 <NotifyToggle
                     label="Rekap mingguan"
                     checked={weeklyRecap}
-                    onChange={(value) => {
-                        setWeeklyRecap(value);
-                        savePrefs(postRun, value, monthlyRecap);
-                    }}
+                    onChange={(value) =>
+                        guard(() => {
+                            setWeeklyRecap(value);
+                            savePrefs(postRun, value, monthlyRecap, dailyBriefing);
+                        })
+                    }
                 />
                 <NotifyToggle
                     label="Rekap bulanan"
                     checked={monthlyRecap}
-                    onChange={(value) => {
-                        setMonthlyRecap(value);
-                        savePrefs(postRun, weeklyRecap, value);
-                    }}
+                    onChange={(value) =>
+                        guard(() => {
+                            setMonthlyRecap(value);
+                            savePrefs(postRun, weeklyRecap, value, dailyBriefing);
+                        })
+                    }
+                />
+                <NotifyToggle
+                    label="Ringkasan harian"
+                    checked={dailyBriefing}
+                    onChange={(value) =>
+                        guard(() => {
+                            setDailyBriefing(value);
+                            savePrefs(postRun, weeklyRecap, monthlyRecap, value);
+                        })
+                    }
                 />
             </div>
             <button
                 type="button"
-                onClick={() => router.post('/profil/telegram/test', {}, { preserveScroll: true })}
-                className="focus-ring self-start rounded-full border border-cream-deep bg-cream px-4 py-2 font-sans text-[13px] font-semibold text-ink-2 transition hover:text-ink"
+                onClick={() => guard(() => router.post('/profil/telegram/test', {}, { preserveScroll: true }))}
+                className="focus-ring inline-flex items-center gap-1.5 self-start rounded-full border border-cream-deep bg-cream px-4 py-2 font-sans text-[13px] font-semibold text-ink-2 transition hover:text-ink"
             >
+                <Icon icon="mdi:send-outline" width={14} height={14} aria-hidden />
                 Kirim notifikasi tes
             </button>
+            <DemoBlockedModal open={open} onClose={() => setOpen(false)} />
         </div>
     );
 }
@@ -382,7 +463,7 @@ function StatCard({
             <div className="mt-2 flex items-baseline gap-1.5">
                 <span
                     className={cn(
-                        'font-sans text-display-sm font-black leading-none tabular-nums',
+                        'font-sans text-display-lg font-black leading-none tabular-nums',
                         tone.value,
                     )}
                 >
