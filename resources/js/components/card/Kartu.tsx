@@ -46,12 +46,6 @@ interface KartuProps {
     /** Run route polyline + per-km pace seconds, for the art-window glyph. */
     polyline?: string | null;
     paceShape?: ReadonlyArray<number> | null;
-    /**
-     * Temari's flavor line for this card. When present it takes the metrics
-     * section's place (the collectible carries its narration; the share card
-     * keeps the stat grid). Falls back to the stat grid when absent.
-     */
-    narration?: string | null;
     /** Collector number within the rarity ("#3/12"). */
     edition?: CardEdition | null;
     size?: 'md' | 'lg' | 'xl';
@@ -87,13 +81,6 @@ const SIZE_KM: Record<NonNullable<KartuProps['size']>, string> = {
     xl: 'text-[42px]',
 };
 
-// Flavor-narration size per tier + how many lines it may take before clamping.
-const SIZE_NARRATION: Record<NonNullable<KartuProps['size']>, string> = {
-    md: 'text-[11px] leading-snug line-clamp-3',
-    lg: 'text-[15px] leading-snug line-clamp-4',
-    xl: 'text-[17px] leading-relaxed line-clamp-4',
-};
-
 /**
  * The collectible run card — a dark-frame, One-Piece-dense TCG card.
  *
@@ -117,7 +104,6 @@ export default function Kartu({
     zonePct,
     polyline,
     paceShape,
-    narration,
     edition,
     size = 'md',
     className,
@@ -221,16 +207,8 @@ export default function Kartu({
                     </div>
                 )}
 
-                {/* Temari's flavor line takes the metrics section's place (the
-                    collectible carries its narration); falls back to the stat grid
-                    when there's no narration to show. */}
-                {narration != null && narration !== '' ? (
-                    <p className={cn('mt-2.5 text-balance font-collectible font-medium text-cream', SIZE_NARRATION[size])}>
-                        &ldquo;{narration}&rdquo;
-                    </p>
-                ) : (
-                    <StatGrid stats={stats} durasi={durasi} />
-                )}
+                {/* Labeled stat grid — the dense TCG stat block */}
+                <StatGrid stats={stats} durasi={durasi} />
 
                 {/* HR-zone effort bar — bare (no Z1..Z5 legend), matching the share
                     card's rounded legendless bar. */}

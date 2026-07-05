@@ -72,7 +72,7 @@ interface PerKmRow {
 interface ShowProps {
     activity: DetailedActivity;
     detail: DetailedActivityDetail;
-    card: (RunCardModel & { narration?: string | null }) | null;
+    card: RunCardModel | null;
     storyLine: StoryLine | null;
     speechAnalysis: AnalysisPayload;
     insightTechnical: AnalysisPayload;
@@ -268,7 +268,6 @@ export default function RunsShow({
                                         zonePct={kartuProps.zonePct}
                                         polyline={detail.summary_polyline}
                                         paceShape={kartuProps.paceShape}
-                                        narration={card.narration}
                                         size="md"
                                     />
                                 </Link>

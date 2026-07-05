@@ -309,13 +309,7 @@ it('shows a single run detail with Temari speech + run card', function (): void 
             'decoupling_pct' => 4.2,
         ],
     ]);
-    $card = RunCard::factory()->for($activity)->create(['special_move' => 'Paru-paru Baja']);
-    Analysis::factory()->done('Paru-paru baja, pace kejaga.')->create([
-        'subject_type' => RunCard::class,
-        'subject_id' => $card->id,
-        'analysis_type' => AnalysisType::CardFlavor,
-        'discriminator' => null,
-    ]);
+    RunCard::factory()->for($activity)->create(['special_move' => 'Paru-paru Baja']);
     StoryLine::factory()->for($activity)->create([
         'user_id' => $user->id,
         'speech' => 'Run yang solid, paru-paru baja keluar.',
@@ -327,8 +321,7 @@ it('shows a single run detail with Temari speech + run card', function (): void 
             ->component('Runs/Show')
             ->where('detail.name', 'Morning Run')
             ->where('storyLine.speech', 'Run yang solid, paru-paru baja keluar.')
-            ->where('card.special_move', 'Paru-paru Baja')
-            ->where('card.narration', 'Paru-paru baja, pace kejaga.'));
+            ->where('card.special_move', 'Paru-paru Baja'));
 });
 
 it('surfaces the run speech Telegram cooldown when a send is on cooldown', function (): void {

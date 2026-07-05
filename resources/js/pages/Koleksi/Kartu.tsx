@@ -40,7 +40,6 @@ interface FeaturedCardPayload {
 
 type CardWithRel = RunCardModel & {
     mood: Mood;
-    narration?: string | null;
     activity: Activity & { detail: ActivityDetail };
 };
 
@@ -169,7 +168,6 @@ function SlimBanner({ featured }: Readonly<{ featured: FeaturedCardPayload }>) {
             mood: featured.mood,
             badges: featured.badges ?? [],
             polyline: detail?.summary_polyline,
-            narration: featured.flavor_analysis?.content ?? null,
             edition: featured.edition,
             size: 'md' as const,
         };
@@ -327,7 +325,6 @@ const CardCell = memo(function CardCell({
                 zonePct={derived.zonePct}
                 polyline={detail.summary_polyline}
                 paceShape={derived.paceShape}
-                narration={card.narration}
                 edition={card.edition}
                 size="md"
             />
