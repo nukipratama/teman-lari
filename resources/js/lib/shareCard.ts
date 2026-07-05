@@ -432,11 +432,16 @@ function drawRute(d: DrawCtx): void {
     }
 
     // Fill the space below the KM hero with a stat row (both formats — the square
-    // looked bare without it).
+    // looked bare without it), then a badges row (story only) so the tall 9:16's
+    // lower third carries the run's tags instead of dead navy.
     const sy = y + kmSize * 0.8 + (story ? 64 : 40);
     const cells = story ? heroStatCells(k) : heroStatCells(k).slice(0, 3);
     if (cells.length > 0) {
         drawHeroStatGrid(ctx, cells, PAD, sy, w - PAD * 2, story);
+        if (story) {
+            const statH = Math.ceil(cells.length / 3) * 70;
+            drawBadgesRow(ctx, k, PAD, sy + statH + 44, w - PAD * 2, story);
+        }
     }
 
     drawDateFooter(d);
@@ -735,9 +740,10 @@ function heroZoneBarRow(s: HeroBlock, y: number): number {
 }
 
 /**
- * Badge pills stacked vertically and right-aligned to `rightX`, vertically
- * centred on `centerY` — they live in the empty gutter beside the KM hero
- * instead of a horizontal row, so the tall share doesn't waste that space.
+ * Badge pills in a right-aligned 2-column grid (max 4) beside the KM hero,
+ * vertically centred on `centerY` — they live in the empty gutter to the right
+ * of the KM number, so the tall share doesn't waste that space. Bigger + paired
+ * so 3-4 badges read as a cluster instead of a thin tower.
  */
 function drawBadgesVertical(
     ctx: CanvasRenderingContext2D,
@@ -746,26 +752,88 @@ function drawBadgesVertical(
     centerY: number,
     story: boolean,
 ): void {
-    const tags = k.tags.slice(0, 3);
+    const tags = k.tags.slice(0, 4);
     if (tags.length === 0) {
         return;
     }
-    ctx.font = `500 ${story ? 26 : 22}px "JetBrains Mono"`;
-    const pillH = story ? 50 : 42;
-    const gap = story ? 12 : 10;
-    let by = centerY - (tags.length * pillH + (tags.length - 1) * gap) / 2;
+    ctx.font = `500 ${story ? 30 : 25}px "JetBrains Mono"`;
+    const pillH = story ? 56 : 46;
+    const rowGap = story ? 14 : 11;
+    const colGap = story ? 12 : 10;
+    const padX = 20;
+    const pills = tags.map((tag, i) => {
+        const label = (k.tagEmojis[i] ?? '✦') + ' ' + tag;
+        return { label, w: ctx.measureText(label).width + padX * 2 };
+    });
+    // Rows of up to 2, each row right-aligned to `rightX` (packed from the right).
+    const rows: Array<typeof pills> = [];
+    for (let i = 0; i < pills.length; i += 2) {
+        rows.push(pills.slice(i, i + 2));
+    }
+    const totalH = rows.length * pillH + (rows.length - 1) * rowGap;
+    let by = centerY - totalH / 2;
+    rows.forEach((row) => {
+        const rowW = row.reduce((sum, p) => sum + p.w, 0) + (row.length - 1) * colGap;
+        let bx = rightX - rowW;
+        row.forEach((p) => {
+            drawBadgePill(ctx, p.label, bx, by, p.w, pillH, padX);
+            bx += p.w + colGap;
+        });
+        by += pillH + rowGap;
+    });
+    ctx.textBaseline = 'alphabetic';
+}
+
+/** A single translucent badge pill with left-aligned label. */
+function drawBadgePill(
+    ctx: CanvasRenderingContext2D,
+    label: string,
+    x: number,
+    y: number,
+    w: number,
+    h: number,
+    padX: number,
+): void {
+    roundRectPath(ctx, x, y, w, h, h / 2);
+    ctx.fillStyle = 'rgba(246,241,232,0.10)';
+    ctx.fill();
+    ctx.fillStyle = 'rgba(246,241,232,0.85)';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(label, x + padX, y + h / 2 + 1);
+}
+
+/**
+ * Horizontal, left-aligned badge row (wraps if needed) — used by the route
+ * poster to fill the otherwise-empty space below its stat grid.
+ */
+function drawBadgesRow(
+    ctx: CanvasRenderingContext2D,
+    k: ShareKartuData,
+    left: number,
+    y: number,
+    w: number,
+    story: boolean,
+): void {
+    const tags = k.tags.slice(0, 4);
+    if (tags.length === 0) {
+        return;
+    }
+    ctx.font = `500 ${story ? 30 : 25}px "JetBrains Mono"`;
+    const pillH = story ? 56 : 46;
+    const gap = story ? 14 : 11;
+    const padX = 20;
+    let x = left;
+    let by = y;
     tags.forEach((tag, i) => {
         const label = (k.tagEmojis[i] ?? '✦') + ' ' + tag;
-        const pillW = ctx.measureText(label).width + 34;
-        const bx = rightX - pillW;
-        roundRectPath(ctx, bx, by, pillW, pillH, pillH / 2);
-        ctx.fillStyle = 'rgba(246,241,232,0.10)';
-        ctx.fill();
-        ctx.fillStyle = 'rgba(246,241,232,0.85)';
-        ctx.textAlign = 'left';
-        ctx.textBaseline = 'middle';
-        ctx.fillText(label, bx + 17, by + pillH / 2 + 1);
-        by += pillH + gap;
+        const pillW = ctx.measureText(label).width + padX * 2;
+        if (x + pillW > left + w && x > left) {
+            x = left;
+            by += pillH + gap;
+        }
+        drawBadgePill(ctx, label, x, by, pillW, pillH, padX);
+        x += pillW + gap;
     });
     ctx.textBaseline = 'alphabetic';
 }

@@ -140,6 +140,20 @@ describe('drawShareCard', () => {
         expect(ctx.drawImage).toHaveBeenCalled();
     });
 
+    it('renders a multi-badge cluster on both layouts (2-col beside KM / row on rute)', async () => {
+        const many = {
+            ...kartu,
+            tags: ['Pejuang Hujan', 'Rajin', 'Z2 Master', 'Negative Split'],
+            tagEmojis: ['🌧️', '💪', '❤️‍🔥', '⚡'],
+        };
+        for (const layout of ['kartu', 'rute'] as Layout[]) {
+            const ctx = makeCtx();
+            const canvas = { width: 0, height: 0, getContext: () => ctx } as unknown as HTMLCanvasElement;
+            await drawShareCard(canvas, { kartu: many, layout, format: 'story' });
+            expect(ctx.fillText).toHaveBeenCalledWith(expect.stringContaining('Rajin'), expect.any(Number), expect.any(Number));
+        }
+    });
+
     it('still renders the kartu hero when the run has no GPS route', async () => {
         const ctx = makeCtx();
         const canvas = { width: 0, height: 0, getContext: () => ctx } as unknown as HTMLCanvasElement;
