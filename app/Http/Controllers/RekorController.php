@@ -9,6 +9,8 @@ use App\Models\AI\Analysis;
 use App\Models\PersonalRecord;
 use App\Models\User;
 use App\Services\AI\AnalysisType;
+use App\Services\Run\Metrics\ThresholdEstimator;
+use App\Services\Run\Metrics\VdotEstimator;
 use App\Services\Run\ProgressionSeriesBuilder;
 use App\Services\Run\PrScoreboardBuilder;
 use Illuminate\Database\Eloquent\Collection;
@@ -34,6 +36,8 @@ class RekorController extends Controller
     public function __construct(
         private readonly ProgressionSeriesBuilder $progressionSeriesBuilder,
         private readonly PrScoreboardBuilder $scoreboardBuilder,
+        private readonly VdotEstimator $vdotEstimator,
+        private readonly ThresholdEstimator $thresholdEstimator,
     ) {
     }
 
@@ -75,7 +79,31 @@ class RekorController extends Controller
             'personalRecords' => $payload,
             'featuredExtras' => $this->scoreboardBuilder->featuredExtras($featured),
             'progressionByCategory' => $progressionByCategory,
+            'fitness' => $this->fitness($user),
         ]);
+    }
+
+    /**
+     * Daniels VDOT (fitness score) + estimated lactate-threshold pace, both
+     * derived from the runner's PRs. Null when there aren't enough PRs to
+     * estimate either, so the panel hides rather than showing an empty shell.
+     *
+     * @return array{vdot: float|null, threshold_pace_sec: float|null, threshold_confidence: string|null}|null
+     */
+    private function fitness(User $user): ?array
+    {
+        $vdot = $this->vdotEstimator->estimate($user);
+        $threshold = $this->thresholdEstimator->estimate($user);
+
+        if ($vdot === null && $threshold === null) {
+            return null;
+        }
+
+        return [
+            'vdot' => $vdot['vdot'] ?? null,
+            'threshold_pace_sec' => $threshold['pace_sec'] ?? null,
+            'threshold_confidence' => $threshold['confidence'] ?? null,
+        ];
     }
 
     /**

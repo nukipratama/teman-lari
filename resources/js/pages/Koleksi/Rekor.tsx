@@ -15,7 +15,7 @@ import SplitsSparkline from '@/components/run/SplitsSparkline';
 import Temari from '@/components/temari/Temari';
 import AnalysisStatus from '@/components/temari/AnalysisStatus';
 import PageContainer from '@/components/ui/PageContainer';
-import { formatDurationHMS, formatNaiveIdDate } from '@/lib/pace';
+import { formatDurationHMS, formatNaiveIdDate, formatPace } from '@/lib/pace';
 import { renderBold } from '@/lib/richText';
 import { PR_CATEGORY_LABELS, formatPrValue } from '@/lib/pr';
 import { emberGlowStyle } from '@/lib/styles';
@@ -46,10 +46,17 @@ interface ProgressionSeries {
     goal_sec: number | null;
 }
 
+interface FitnessPayload {
+    vdot: number | null;
+    threshold_pace_sec: number | null;
+    threshold_confidence: string | null;
+}
+
 interface RekorProps {
     personalRecords: ExtendedPR[];
     featuredExtras?: FeaturedExtras | null;
     progressionByCategory?: Record<string, ProgressionSeries> | null;
+    fitness?: FitnessPayload | null;
 }
 
 // Order + short labels for the progression distance selector.
@@ -76,6 +83,7 @@ export default function KoleksiRekor({
     personalRecords,
     featuredExtras = null,
     progressionByCategory = null,
+    fitness = null,
 }: Readonly<RekorProps>) {
     const distancePRs = personalRecords
         .filter((p) => DISTANCE_CATEGORIES.includes(p.category as (typeof DISTANCE_CATEGORIES)[number]))
@@ -112,8 +120,47 @@ export default function KoleksiRekor({
                 {progressionByCategory && Object.keys(progressionByCategory).length > 0 && (
                     <ProgressionSection byCategory={progressionByCategory} />
                 )}
+
+                {fitness && (fitness.vdot != null || fitness.threshold_pace_sec != null) && (
+                    <FitnessPanel fitness={fitness} />
+                )}
             </PageContainer>
         </AppShell>
+    );
+}
+
+function FitnessPanel({ fitness }: Readonly<{ fitness: FitnessPayload }>) {
+    return (
+        <section className="mt-10">
+            <SectionLabel>Estimasi kebugaran</SectionLabel>
+            <div className="mt-3 grid gap-3.5 sm:grid-cols-2">
+                {fitness.vdot != null && (
+                    <Card padding="lg">
+                        <div className="font-mono text-[11px] font-bold uppercase tracking-[0.14em] text-ink-3">VDOT</div>
+                        <div className="mt-1 font-sans text-display-sm font-black tabular-nums text-ink">
+                            {fitness.vdot.toFixed(1)}
+                        </div>
+                        <p className="mt-1 font-display text-sm italic leading-relaxed text-ink-3">
+                            Skor kebugaran lari dari PR terbaikmu, makin tinggi makin bugar.
+                        </p>
+                    </Card>
+                )}
+                {fitness.threshold_pace_sec != null && (
+                    <Card padding="lg">
+                        <div className="font-mono text-[11px] font-bold uppercase tracking-[0.14em] text-ink-3">
+                            Pace ambang
+                        </div>
+                        <div className="mt-1 font-sans text-display-sm font-black tabular-nums text-ink">
+                            {formatPace(fitness.threshold_pace_sec)}
+                            <span className="ml-1 text-base font-bold text-ink-3">/km</span>
+                        </div>
+                        <p className="mt-1 font-display text-sm italic leading-relaxed text-ink-3">
+                            Perkiraan pace threshold, patokan buat sesi tempo.
+                        </p>
+                    </Card>
+                )}
+            </div>
+        </section>
     );
 }
 

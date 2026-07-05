@@ -35,7 +35,20 @@ it('shows empty PR ledger when the user has none', function (): void {
         ->assertSuccessful()
         ->assertInertia(fn (Assert $page) => $page
             ->component('Koleksi/Rekor')
-            ->where('personalRecords', []));
+            ->where('personalRecords', [])
+            // No PRs -> nothing to estimate, so the fitness panel data is null.
+            ->where('fitness', null));
+});
+
+it('surfaces a VDOT fitness estimate from a distance PR', function (): void {
+    $user = User::factory()->create();
+    PersonalRecord::factory()->for($user)->create(['category' => '5km', 'value_sec' => 1500.0]);
+
+    $this->actingAs($user)->get('/rekor')
+        ->assertSuccessful()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('Koleksi/Rekor')
+            ->where('fitness.vdot', fn ($vdot) => is_numeric($vdot) && $vdot > 0));
 });
 
 it('computes hero scoreboard extras + progression series for a distance PR with splits', function (): void {
