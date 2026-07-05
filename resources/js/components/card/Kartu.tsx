@@ -225,7 +225,7 @@ export default function Kartu({
                     collectible carries its narration); falls back to the stat grid
                     when there's no narration to show. */}
                 {narration != null && narration !== '' ? (
-                    <p className={cn('mt-2.5 text-balance font-display italic text-cream', SIZE_NARRATION[size])}>
+                    <p className={cn('mt-2.5 text-balance font-collectible font-medium text-cream', SIZE_NARRATION[size])}>
                         &ldquo;{narration}&rdquo;
                     </p>
                 ) : (
