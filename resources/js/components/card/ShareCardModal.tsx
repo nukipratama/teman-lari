@@ -6,9 +6,9 @@ import { useDismissable } from '@/hooks/useDismissable';
 import { useFocusTrap } from '@/hooks/useFocusTrap';
 import PillButton from '@/components/ui/PillButton';
 import { iconButtonVariants, toggleButtonVariants } from '@/lib/variants';
-import { RARITY_HEADBAND, RARITY_LABELS, RARITY_POSE } from '@/lib/runcard';
+import { RARITY_LABELS, RARITY_POSE } from '@/lib/runcard';
 import { drawShareCard, shareCardBlob, type Format, type Layout, type ShareKartuData } from '@/lib/shareCard';
-import TemariProto from '@/components/temari/TemariProto';
+import Temari from '@/components/temari/Temari';
 
 export type { ShareKartuData };
 
@@ -267,16 +267,11 @@ export default function ShareCardModal({ kartu, onClose }: Readonly<ShareCardMod
                     </div>
                 </motion.div>
             </motion.div>
-            {/* Hidden container — TemariProto renders its SVG here with the SAME
-                rarity-driven pose + headband the live Kartu uses, so the share
-                mascot matches the in-app card instead of the user's full outfit. */}
+            {/* Hidden container — Temari renders its SVG here dressed in the user's
+                equipped accessories (same as the live Kartu corner companion), so
+                the share mascot matches the mascot everywhere else in the app. */}
             <div ref={temariContainerRef} aria-hidden className="sr-only pointer-events-none">
-                <TemariProto
-                    pose={RARITY_POSE[kartu.rarity]}
-                    equipped={{ headband: RARITY_HEADBAND[kartu.rarity], medal: 'none' }}
-                    size={120}
-                    animate={false}
-                />
+                <Temari pose={RARITY_POSE[kartu.rarity]} size={120} animate={false} />
             </div>
         </AnimatePresence>
     );

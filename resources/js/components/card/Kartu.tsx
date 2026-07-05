@@ -2,7 +2,6 @@ import { cn } from '@/lib/cn';
 import {
     BADGE_ABILITY,
     RARITY_BORDER,
-    RARITY_HEADBAND,
     RARITY_HEX,
     RARITY_LABELS,
     RARITY_POSE,
@@ -14,7 +13,7 @@ import {
 import { MOOD_FILL, MOOD_LABEL, moodSigilColor } from '@/lib/mood';
 import RouteGlyph from '@/components/card/RouteGlyph';
 import ZoneBar from '@/components/card/ZoneBar';
-import TemariProto from '@/components/temari/TemariProto';
+import Temari from '@/components/temari/Temari';
 import type { CardEdition, Mood, Rarity, ZonePct } from '@/types/inertia';
 import type { CSSProperties } from 'react';
 
@@ -153,12 +152,13 @@ export default function Kartu({
                     <RouteGlyph rarity={rarity} color={rarityHex} polyline={polyline} paceShape={paceShape} distanceKm={Number.parseFloat(km)} />
                 </div>
 
-                {/* Bunny corner companion */}
+                {/* Bunny corner companion — dressed in the user's equipped
+                    accessories (not a rarity headband), so it matches the mascot
+                    everywhere else Temari appears. */}
                 <span aria-hidden className="pointer-events-none absolute bottom-1 right-1">
-                    <TemariProto
+                    <Temari
                         pose={RARITY_POSE[rarity]}
                         size={MASCOT_SIZE[size]}
-                        equipped={{ headband: RARITY_HEADBAND[rarity], medal: 'none' }}
                         animate={isFull}
                         dropShadow={false}
                     />
