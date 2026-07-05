@@ -110,6 +110,18 @@ export function shortenLocation(name: string | null): string | null {
     return parts.length === 1 ? parts[0] : `${parts[0]}, ${parts[1]}`;
 }
 
+/**
+ * The district-level location only, skipping the specific venue/landmark first
+ * part: "Gelora Bung Karno, Jakarta Pusat, DKI Jakarta" -> "Jakarta Pusat".
+ * Falls back to the sole part when there's no district segment.
+ */
+export function districtFromLocation(name: string | null): string | null {
+    if (name === null || name === '') return null;
+    const parts = name.split(',').map((s) => s.trim()).filter(Boolean);
+    if (parts.length === 0) return null;
+    return parts[1] ?? parts[0];
+}
+
 export function formatWeather(tempC: number | null, humidityPct: number | null, rain: boolean | null): string | null {
     const bits: string[] = [];
     if (tempC !== null) bits.push(`${Math.round(tempC)}°C`);

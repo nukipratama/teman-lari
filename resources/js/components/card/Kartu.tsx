@@ -313,7 +313,7 @@ function StatGrid({ stats, durasi }: Readonly<{ stats: KartuStats | undefined; d
     }
 
     return (
-        <dl className="mt-2 grid grid-cols-3 gap-x-2 gap-y-1.5">
+        <dl className="mt-2 grid grid-cols-3 gap-x-2 gap-y-1.5 text-center">
             {cells.map((cell) => (
                 <div key={cell.label} className="min-w-0">
                     <dt className="font-mono text-[8px] uppercase tracking-[0.1em] text-ink-on-sky">{cell.label}</dt>

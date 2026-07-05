@@ -18,7 +18,7 @@ import type { ShareKartuData } from '@/lib/shareCard';
 import { cn } from '@/lib/cn';
 import PageContainer from '@/components/ui/PageContainer';
 import { formatNaiveIdDate, formatNaiveTimeId, formatPace, formatShortDateId, paceSecPerKm } from '@/lib/pace';
-import { shortenLocation } from '@/pages/HariIni/helpers';
+import { districtFromLocation } from '@/pages/HariIni/helpers';
 import { BADGE_ABILITY, RARITY_BORDER, RARITY_LABELS, avgCadenceFromDetail, badgeEmblem, badgeName, fastestKmFromDetail, kartuPropsFromDetail } from '@/lib/runcard';
 import { renderBold } from '@/lib/richText';
 import type { ActivityDetail, AnalysisPayload, CardEdition, Mood, Rarity } from '@/types/inertia';
@@ -126,7 +126,7 @@ export default function KartuDetail({
         fastestKm: fastestKm != null ? `${fastestKm}/km` : null,
         ascent: detail?.total_elevation_gain != null ? `${Math.round(detail.total_elevation_gain)} m` : null,
         zonePct,
-        location: shortenLocation(detail?.location_name ?? null),
+        location: districtFromLocation(detail?.location_name ?? null),
         weather: shareWeather,
         wind: detail?.weather_wind_speed_kmh != null ? `${Math.round(detail.weather_wind_speed_kmh)} km/j` : null,
         tags: badges.map((b) => badgeName(b)),

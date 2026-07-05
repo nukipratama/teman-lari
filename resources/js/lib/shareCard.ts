@@ -914,9 +914,10 @@ function drawHeroStatGrid(
     const valueSize = story ? 36 : 30;
     const maxValueW = colW - 16; // gutter so a wide value never bleeds into the next column
     cells.forEach((cell, i) => {
-        const cx = left + (i % 3) * colW;
+        // Centre each label + value within its column.
+        const cx = left + (i % 3) * colW + colW / 2;
         const cy = y + Math.floor(i / 3) * rowH;
-        ctx.textAlign = 'left';
+        ctx.textAlign = 'center';
         ctx.textBaseline = 'alphabetic';
         ctx.font = `700 ${labelSize}px "JetBrains Mono"`;
         ctx.letterSpacing = '2px';
@@ -934,6 +935,7 @@ function drawHeroStatGrid(
         ctx.fillStyle = C.cream;
         ctx.fillText(cell.value, cx, cy + labelSize + valueSize + 4);
     });
+    ctx.textAlign = 'left';
 }
 
 /** Stacked Z1..Z5 effort bar with tiny labels, using the shared HR-zone hexes. */
