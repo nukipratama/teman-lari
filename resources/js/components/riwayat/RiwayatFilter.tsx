@@ -148,7 +148,7 @@ function RangeSectionView<V extends string>({ section }: Readonly<{ section: Ran
                             preserveState
                             aria-current={active ? 'true' : undefined}
                             className={cn(
-                                'focus-ring flex w-full items-baseline justify-between rounded-lg px-2 py-1.5 text-left text-xs transition lg:text-sm',
+                                'focus-ring flex min-h-11 w-full items-center justify-between rounded-lg px-2 py-2 text-left text-xs transition lg:text-sm',
                                 active ? 'bg-sky/10 font-semibold text-sky' : 'text-ink hover:bg-surface-warm',
                             )}
                         >
@@ -180,7 +180,7 @@ function MoodSectionView({ section }: Readonly<{ section: MoodSection }>) {
                             aria-pressed={active}
                             onClick={() => section.onToggle(mood)}
                             className={cn(
-                                'focus-ring flex items-center gap-2 rounded-lg px-2 py-1.5 text-left text-xs font-medium transition',
+                                'focus-ring flex min-h-11 items-center gap-2 rounded-lg px-2 py-2 text-left text-xs font-medium transition',
                                 active ? 'bg-sky/10 text-sky' : 'text-ink hover:bg-surface-warm',
                             )}
                         >

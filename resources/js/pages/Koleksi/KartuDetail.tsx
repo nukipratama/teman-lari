@@ -248,10 +248,17 @@ export default function KartuDetail({
                             </div>
                         </div>
 
-                        {/* Kenapa [rarity] — badge lore */}
-                        {badges.length > 0 && (
-                            <Card tone="cream-deep" padding="lg" className="flex flex-col gap-4">
-                                <SectionLabel>Kenapa {rarityLabel}</SectionLabel>
+                        {/* Kenapa [rarity] — how the rarity was earned. Always shown
+                            (even with no badges): rarity is a composite of PR, pace,
+                            distance and consistency, so a badge-less card still deserves
+                            an honest explanation instead of a blank. */}
+                        <Card tone="cream-deep" padding="lg" className="flex flex-col gap-4">
+                            <SectionLabel>Kenapa {rarityLabel}</SectionLabel>
+                            <p className="text-sm text-ink-2">
+                                Rarity dihitung dari gabungan hal keren di lari ini: PR, pace yang stabil atau
+                                makin ngebut, jarak jauh, konsistensi mingguan, plus badge yang kamu dapet.
+                            </p>
+                            {badges.length > 0 && (
                                 <div className="flex flex-col gap-3">
                                     {badges.map((b, i) => (
                                         <div
@@ -271,8 +278,8 @@ export default function KartuDetail({
                                         </div>
                                     ))}
                                 </div>
-                            </Card>
-                        )}
+                            )}
+                        </Card>
 
                         {/* Linked run */}
                         {detail && (
