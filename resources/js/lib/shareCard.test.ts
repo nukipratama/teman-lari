@@ -2,12 +2,8 @@ import polylineCodec from '@mapbox/polyline';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { drawShareCard, shareCardBlob, type Layout, type Format, type ShareKartuData } from './shareCard';
 
-// A straight two-point line: start and finish project to opposite corners of
-// the route box, so `drawRoute`'s point-to-point gate is unambiguously true.
+// A straight two-point line used to exercise the route-stroke path.
 const pointToPointPolyline = polylineCodec.encode([[0, 0], [0.01, 0.01]]);
-// A loop that returns to its exact starting coordinate, so start === finish
-// and the point-to-point gate is unambiguously false.
-const loopPolyline = polylineCodec.encode([[0, 0], [0, 0.01], [0.01, 0.01], [0, 0]]);
 
 const kartu: ShareKartuData = {
     id: 1,
@@ -426,24 +422,16 @@ describe('drawShareCard — edge / branch cases', () => {
     });
 
     it.each(['kartu', 'rute'] as Layout[])(
-        'always marks both start and finish on %s, whether loop or point-to-point',
+        'strokes the route path on %s (no start/finish markers)',
         async (layout) => {
-            const p2pCtx = makeCtx();
+            const ctx = makeCtx();
             await drawShareCard(
-                { width: 0, height: 0, getContext: () => p2pCtx } as unknown as HTMLCanvasElement,
+                { width: 0, height: 0, getContext: () => ctx } as unknown as HTMLCanvasElement,
                 { kartu: { ...kartu, polyline: pointToPointPolyline }, layout, format: 'story' },
             );
-
-            const loopCtx = makeCtx();
-            await drawShareCard(
-                { width: 0, height: 0, getContext: () => loopCtx } as unknown as HTMLCanvasElement,
-                { kartu: { ...kartu, polyline: loopPolyline }, layout, format: 'story' },
-            );
-
-            // Both ends are always marked (green start + red finish), so a loop and
-            // a point-to-point route issue the same number of marker arcs.
-            expect(p2pCtx.arc).toHaveBeenCalled();
-            expect(p2pCtx.arc.mock.calls.length).toBe(loopCtx.arc.mock.calls.length);
+            // The route is drawn as a stroked path; markers were removed.
+            expect(ctx.stroke).toHaveBeenCalled();
+            expect(ctx.lineTo).toHaveBeenCalled();
         },
     );
 

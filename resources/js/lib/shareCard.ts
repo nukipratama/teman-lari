@@ -153,11 +153,25 @@ function roundRectPath(ctx: CanvasRenderingContext2D, x: number, y: number, w: n
     ctx.closePath();
 }
 
-// Ratios lifted from RouteGlyph's SVG markers (start dot r=3, finish ring
-// r=3.2/strokeWidth=1.4 against its base stroke of 3.8), so the canvas markers
-// stay proportional to whatever stroke width is actually drawn here.
-const START_DOT_RATIO = 3 / 3.8;
-const FINISH_RING_STROKE_RATIO = 1.4 / 3.8;
+/** Rounded rectangle with independent per-corner radii, for corner-attached chips. */
+function roundRectPathCorners(
+    ctx: CanvasRenderingContext2D,
+    x: number, y: number, w: number, h: number,
+    radii: { tl: number; tr: number; br: number; bl: number },
+): void {
+    const { tl, tr, br, bl } = radii;
+    ctx.beginPath();
+    ctx.moveTo(x + tl, y);
+    ctx.lineTo(x + w - tr, y);
+    ctx.arcTo(x + w, y, x + w, y + tr, tr);
+    ctx.lineTo(x + w, y + h - br);
+    ctx.arcTo(x + w, y + h, x + w - br, y + h, br);
+    ctx.lineTo(x + bl, y + h);
+    ctx.arcTo(x, y + h, x, y + h - bl, bl);
+    ctx.lineTo(x, y + tl);
+    ctx.arcTo(x, y, x + tl, y, tl);
+    ctx.closePath();
+}
 
 /**
  * Stroke a route polyline inside a box (x, y, w, h) using the shared
@@ -212,21 +226,6 @@ function drawRoute(
         ctx.stroke();
         ctx.shadowBlur = 0;
     }
-    ctx.stroke();
-
-    const [startX, startY] = projected.points[0];
-    const [endX, endY] = projected.points.at(-1) ?? [startX, startY];
-    // Simple markers in the route's own neon hue: a filled start dot and a hollow
-    // finish ring (they stack into a target on a loop — itself the start/finish cue).
-    const markR = strokeWidth * START_DOT_RATIO * 1.5;
-    ctx.beginPath();
-    ctx.fillStyle = stroke;
-    ctx.arc(box.x + startX, box.y + startY, markR, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.beginPath();
-    ctx.strokeStyle = stroke;
-    ctx.lineWidth = strokeWidth * FINISH_RING_STROKE_RATIO * 1.4;
-    ctx.arc(box.x + endX, box.y + endY, markR * 1.5, 0, Math.PI * 2);
     ctx.stroke();
 
     ctx.restore();
@@ -489,53 +488,54 @@ function drawHeroArtBadges(
     moodCol: string,
     rarityCol: string,
 ): void {
-    const badgePad = 18;
-    const badgeH = 48;
-    const top = box.y + 18;
-    const mid = top + badgeH / 2;
-    const bottom = box.y + box.h - 18 - badgeH;
-    const dark = 'rgba(22,27,51,0.82)';
+    const pad = 26;
+    const h = 60;
+    const outerR = 24; // matches the art window corner radius
+    const innerR = 20; // the free (inner) corner rounds off
+    const dark = 'rgba(22,27,51,0.86)';
+    const midTop = box.y + h / 2;
     ctx.textBaseline = 'middle';
 
-    // Top-left: rarity chip.
-    ctx.font = '700 26px "JetBrains Mono"';
+    // Top-left: rarity chip, stuck flush into the corner.
+    ctx.font = '700 28px "JetBrains Mono"';
     ctx.letterSpacing = '2px';
     const rarText = RARITY_SYMBOL[k.rarity] + ' ' + RARITY_LABELS[k.rarity].toUpperCase();
-    const rarW = ctx.measureText(rarText).width + badgePad * 2;
-    roundRectPath(ctx, box.x + 18, top, rarW, badgeH, badgeH / 2);
+    const rarW = ctx.measureText(rarText).width + pad * 2;
+    roundRectPathCorners(ctx, box.x, box.y, rarW, h, { tl: outerR, tr: 0, br: innerR, bl: 0 });
     ctx.fillStyle = dark;
     ctx.fill();
     ctx.fillStyle = rarityCol;
     ctx.textAlign = 'left';
-    ctx.fillText(rarText, box.x + 18 + badgePad, mid + 1);
+    ctx.fillText(rarText, box.x + pad, midTop + 1);
     ctx.letterSpacing = '0px';
 
-    // Top-right: TRIMP power (mood dot + number).
-    ctx.font = '700 28px "JetBrains Mono"';
+    // Top-right: TRIMP power (mood dot + number), stuck flush into the corner.
+    ctx.font = '700 30px "JetBrains Mono"';
     const trimpText = String(k.trimp);
-    const trimpW = ctx.measureText(trimpText).width + badgePad * 2 + 30;
-    const bx = box.x + box.w - 18 - trimpW;
-    roundRectPath(ctx, bx, top, trimpW, badgeH, badgeH / 2);
+    const trimpW = ctx.measureText(trimpText).width + pad * 2 + 34;
+    const tx = box.x + box.w - trimpW;
+    roundRectPathCorners(ctx, tx, box.y, trimpW, h, { tl: 0, tr: outerR, br: 0, bl: innerR });
     ctx.fillStyle = dark;
     ctx.fill();
     ctx.beginPath();
-    ctx.arc(bx + badgePad + 9, mid, 9, 0, Math.PI * 2);
+    ctx.arc(tx + pad + 10, midTop, 10, 0, Math.PI * 2);
     ctx.fillStyle = moodCol;
     ctx.fill();
     ctx.fillStyle = C.cream;
     ctx.textAlign = 'left';
-    ctx.fillText(trimpText, bx + badgePad + 26, mid + 1);
+    ctx.fillText(trimpText, tx + pad + 30, midTop + 1);
 
-    // Bottom-left: edition number.
+    // Bottom-left: edition number, stuck into the bottom corner.
     if (k.edition) {
-        ctx.font = '600 26px "JetBrains Mono"';
+        ctx.font = '600 27px "JetBrains Mono"';
         const edText = '#' + String(k.edition.index) + '/' + String(k.edition.total);
-        const edW = ctx.measureText(edText).width + badgePad * 2;
-        roundRectPath(ctx, box.x + 18, bottom, edW, badgeH, badgeH / 2);
+        const edW = ctx.measureText(edText).width + pad * 2;
+        const ey = box.y + box.h - h;
+        roundRectPathCorners(ctx, box.x, ey, edW, h, { tl: 0, tr: innerR, br: 0, bl: outerR });
         ctx.fillStyle = dark;
         ctx.fill();
         ctx.fillStyle = C.cream;
-        ctx.fillText(edText, box.x + 18 + badgePad, bottom + badgeH / 2 + 1);
+        ctx.fillText(edText, box.x + pad, ey + h / 2 + 1);
     }
     ctx.textBaseline = 'alphabetic';
 }
@@ -769,7 +769,7 @@ function heroStatGridRow(s: HeroBlock, y: number): number {
     if (draw) {
         drawHeroStatGrid(ctx, cells, box.x, y, box.w, story);
     }
-    return y + Math.ceil(cells.length / 3) * (story ? 74 : 60);
+    return y + Math.ceil(cells.length / 3) * (story ? 92 : 74);
 }
 
 function heroZoneBarRow(s: HeroBlock, y: number): number {
@@ -908,7 +908,7 @@ function drawHeroStatGrid(
     story: boolean,
 ): void {
     const colW = w / 3;
-    const rowH = story ? 74 : 60;
+    const rowH = story ? 92 : 74;
     const labelSize = story ? 23 : 18;
     const valueSize = story ? 39 : 31;
     const maxValueW = colW - 16; // gutter so a wide value never bleeds into the next column

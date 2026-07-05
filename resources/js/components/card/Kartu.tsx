@@ -162,15 +162,18 @@ export default function Kartu({
                     />
                 </span>
 
-                {/* Floating corners (mirrors the share card): rarity chip top-left,
+                {/* Corner-attached chips (mirrors the share card): rarity top-left,
                     TRIMP "power" top-right, edition bottom-left; the mascot owns
-                    bottom-right. */}
-                <div className="absolute inset-x-1.5 top-1.5 flex items-start justify-between gap-1">
+                    bottom-right. overflow-hidden clips their outer corners to the
+                    art window radius so they read as stuck to the corner. */}
+                <div className="absolute left-0 top-0">
                     <RarityChip rarity={rarity} />
+                </div>
+                <div className="absolute right-0 top-0">
                     <TRIMPBadge trimp={trimp} mood={mood} />
                 </div>
                 {edition && (
-                    <div className="absolute bottom-1.5 left-1.5">
+                    <div className="absolute bottom-0 left-0">
                         <EditionMark edition={edition} />
                     </div>
                 )}
@@ -231,7 +234,7 @@ export default function Kartu({
 
 function RarityChip({ rarity }: Readonly<{ rarity: Rarity }>) {
     return (
-        <span className="inline-flex items-center gap-1 rounded-full bg-sky-deep/90 px-2 py-0.5 leading-none">
+        <span className="inline-flex items-center gap-1 rounded-br-[10px] bg-sky-deep/90 px-2.5 py-1 leading-none">
             <span aria-hidden className={cn('text-[10px] leading-none', RARITY_TEXT[rarity])}>{RARITY_SYMBOL[rarity]}</span>
             <span className={cn('font-mono text-[9px] font-bold uppercase tracking-[0.14em]', RARITY_TEXT[rarity])}>
                 {RARITY_LABELS[rarity]}
@@ -242,7 +245,7 @@ function RarityChip({ rarity }: Readonly<{ rarity: Rarity }>) {
 
 function EditionMark({ edition }: Readonly<{ edition: CardEdition }>) {
     return (
-        <span className="inline-flex rounded-full bg-sky-deep/90 px-2 py-0.5 font-collectible text-[10px] font-semibold tabular-nums text-cream leading-none">
+        <span className="inline-flex rounded-tr-[10px] bg-sky-deep/90 px-2.5 py-1 font-collectible text-[10px] font-semibold tabular-nums text-cream leading-none">
             #{edition.index}
             <span className="opacity-60">/{edition.total}</span>
         </span>
@@ -251,7 +254,7 @@ function EditionMark({ edition }: Readonly<{ edition: CardEdition }>) {
 
 function TRIMPBadge({ trimp, mood }: Readonly<{ trimp: string | number; mood: Mood }>) {
     return (
-        <span className="inline-flex items-center gap-1 rounded-full bg-sky-deep/90 px-2 py-0.5 leading-none">
+        <span className="inline-flex items-center gap-1 rounded-bl-[10px] bg-sky-deep/90 px-2.5 py-1 leading-none">
             <span
                 aria-label={`Vibe ${MOOD_LABEL[mood]}`}
                 className={cn('h-3 w-3 shrink-0 rounded-full', MOOD_FILL[mood])}
