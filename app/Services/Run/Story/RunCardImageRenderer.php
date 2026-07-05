@@ -95,7 +95,7 @@ class RunCardImageRenderer
   <text x="88" y="188" font-size="62" font-weight="700" fill="{$cream}">{$name}</text>
   <text x="90" y="226" font-size="22" fill="{$inkOnSky}">{$metaLine}</text>
 
-  <text x="88" y="360" font-size="120" font-weight="700" fill="{$cream}">{$km}</text>
+  <text x="88" y="360" font-size="120" font-weight="700" fill="{$rarity}">{$km}</text>
   <text x="90" y="398" font-size="26" font-weight="700" letter-spacing="4" fill="{$inkOnSky}">KILOMETER</text>
 
   {$stats}
@@ -103,8 +103,7 @@ class RunCardImageRenderer
 
   {$panel}
 
-  <text x="90" y="575" font-size="24" font-weight="700" fill="{$cream}">teman-lari</text>
-  <text x="238" y="575" font-size="24" fill="{$inkOnSky}">· teman lari kamu.</text>
+  <text x="1150" y="575" font-size="24" font-weight="700" letter-spacing="1" fill="{$inkOnSky}" text-anchor="end">temanlari.app</text>
 </svg>
 SVG;
     }

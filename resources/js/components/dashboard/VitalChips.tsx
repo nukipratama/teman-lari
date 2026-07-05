@@ -12,10 +12,11 @@ import type { BriefingResult, RecoveryTone, TrainingLoad } from '@/types/inertia
 const FORM_RANGE = 40;
 
 export default function VitalChips({ briefing, load }: Readonly<{ briefing: BriefingResult; load: TrainingLoad | null }>) {
-    // Vibe primary value: use the absolute form score as a numeric proxy
-    // (no dedicated numeric vibe score in the data model). Qualitative label
-    // moves to the sub-line.
-    const vibeValue = load?.form != null ? Math.abs(load.form).toFixed(1) : briefing.vibeLabel;
+    // Vibe leads with the qualitative emoji: there's no numeric vibe score, and
+    // the old absolute-form proxy duplicated Kesiapan's number whenever form was
+    // positive (|form| == form). The label sits on the sub-line; the horizon
+    // gauge still shows form intensity.
+    const vibeValue = briefing.vibeEmoji;
     const vibeSub = briefing.vibeLabel.toLowerCase();
 
     return (

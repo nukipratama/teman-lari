@@ -105,7 +105,7 @@
             font-size: 48px;
             font-weight: 600;
             line-height: 0.9;
-            color: var(--cream);
+            color: var(--rarity);
         }
         .stat__km span { font-size: 18px; color: var(--ink-on-sky); margin-left: 3px; }
         .stat__meta {

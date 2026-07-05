@@ -51,10 +51,11 @@ describe('VitalChips', () => {
         expect(screen.getByText('Recovery')).toBeInTheDocument();
     });
 
-    it('uses the absolute form score as the Vibe value and signed form for Kesiapan', () => {
+    it('leads the Vibe tile with the qualitative emoji (not a form-derived number) and signed form for Kesiapan', () => {
         render(<VitalChips briefing={briefing} load={load} />);
-        // |−2.5| → "2.5"
-        expect(screen.getByText('2.5')).toBeInTheDocument();
+        // Vibe shows the emoji, not the |form| number that duplicated Kesiapan.
+        expect(screen.getByText('💥')).toBeInTheDocument();
+        expect(screen.queryByText('2.5')).not.toBeInTheDocument();
         // signed form → "-2.5"
         expect(screen.getByText('-2.5')).toBeInTheDocument();
         // recovery hours label
@@ -67,10 +68,9 @@ describe('VitalChips', () => {
         expect(screen.getByText('-2.5').className).toContain('text-stat-fluid');
     });
 
-    it('falls back to em-dash and the qualitative vibe label when load is null', () => {
+    it('still shows the vibe emoji and an em-dash Kesiapan when load is null', () => {
         render(<VitalChips briefing={briefing} load={null} />);
-        // Vibe value falls back to the label; Kesiapan falls back to "—".
-        expect(screen.getByText('Membara')).toBeInTheDocument();
+        expect(screen.getByText('💥')).toBeInTheDocument();
         expect(screen.getByText('—')).toBeInTheDocument();
     });
 
