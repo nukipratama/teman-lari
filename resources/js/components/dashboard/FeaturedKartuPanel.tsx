@@ -33,7 +33,6 @@ export default function FeaturedKartuPanel({
             card={
                 <Kartu
                     name={featured.name}
-                    subtitle={featured.subtitle}
                     km={featured.km}
                     durasi={featured.durasi}
                     trimp={featured.trimp}

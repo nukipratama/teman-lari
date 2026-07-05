@@ -279,7 +279,6 @@ export default function CardReveal({
                   </AnimatePresence>
                   <Kartu
                     name={pending.special_move}
-                    subtitle={subtitle}
                     km={km}
                     durasi={durasi}
                     trimp={trimp}

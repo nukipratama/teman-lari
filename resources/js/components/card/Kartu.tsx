@@ -31,7 +31,6 @@ export interface KartuStats {
 
 interface KartuProps {
     name: string;
-    subtitle?: string | null;
     km: string;
     durasi: string;
     trimp: string | number;
@@ -87,7 +86,7 @@ const SIZE_KM: Record<NonNullable<KartuProps['size']>, string> = {
  *
  * A dark navy frame holds a bright art window where the **route is the hero**
  * (bold, filled) with Temari as a small corner companion. Below sits a dark
- * stat block: rarity ribbon, special-move name, subtitle, the run's numbers
+ * stat block: rarity ribbon, special-move name, the run's numbers
  * (KM big; a labeled PACE · HR · CADENCE · DURASI · BEST grid on the full tier),
  * and a Z1..Z5 HR-zone effort bar. Rarity drives a vivid loot-ladder color
  * (gray → green → blue → purple → gold) on the frame, ribbon, and route, with a
@@ -95,7 +94,6 @@ const SIZE_KM: Record<NonNullable<KartuProps['size']>, string> = {
  */
 export default function Kartu({
     name,
-    subtitle,
     km,
     durasi,
     trimp,
@@ -191,13 +189,6 @@ export default function Kartu({
                     {name}
                 </div>
 
-                {/* Subtitle */}
-                {subtitle != null && subtitle !== '' && (
-                    <div className="mt-0.5 truncate font-mono text-[9px] uppercase tracking-[0.08em] text-ink-on-sky">
-                        {subtitle}
-                    </div>
-                )}
-
                 {/* KM hero + (md only) inline pace · HR */}
                 <div className="mt-1.5 flex items-end justify-between gap-2">
                     <div className="flex items-baseline gap-1">
@@ -221,9 +212,10 @@ export default function Kartu({
                 {/* Full-tier labeled stat grid — a dense TCG stat block */}
                 {isFull && <StatGrid stats={stats} durasi={durasi} />}
 
-                {/* HR-zone effort bar (compact on md, labeled on full) */}
+                {/* HR-zone effort bar — bare (no Z1..Z5 legend), matching the share
+                    card's rounded legendless bar. */}
                 {zonePct != null && (
-                    <ZoneBar zonePct={zonePct} showLegend={isFull} className="mt-1.5" />
+                    <ZoneBar zonePct={zonePct} showLegend={false} className="mt-1.5" />
                 )}
 
                 {/* Badges (full tier only) */}
@@ -314,6 +306,7 @@ function StatGrid({ stats, durasi }: Readonly<{ stats: KartuStats | undefined; d
     push('Cadence', stats?.cadence);
     push('Durasi', durasi);
     push('Best km', stats?.fastestKm);
+    push('Elevasi', stats?.elevation);
 
     if (cells.length === 0) {
         return null;

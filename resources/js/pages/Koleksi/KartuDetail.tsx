@@ -170,7 +170,6 @@ export default function KartuDetail({
                             <div className="relative w-full max-w-xs rounded-[16px] shadow-2xl">
                                 <KartuComponent
                                     name={card.special_move}
-                                    subtitle={subtitle ?? undefined}
                                     km={km}
                                     durasi={durasi}
                                     trimp={trimp}

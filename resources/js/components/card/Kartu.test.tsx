@@ -130,9 +130,10 @@ describe('Kartu', () => {
         const { container } = render(
             <Kartu name="x" km="1" durasi="1:00" trimp={1} size="lg" zonePct={{ Z1: 20, Z2: 50, Z3: 30 }} />,
         );
-        // The bar segments carry per-zone titles; the legend shows Z labels.
+        // The bar segments carry per-zone titles. The card uses the bare bar now
+        // (no Z1..Z5 legend), matching the share card.
         expect(container.querySelector('[title="Z2: 50%"]')).not.toBeNull();
-        expect(screen.getByText('Z1')).toBeInTheDocument();
+        expect(screen.queryByText('Z1')).toBeNull();
     });
 
     it('omits the HR-zone bar when there is no zone data', () => {
@@ -160,11 +161,6 @@ describe('Kartu', () => {
             />,
         );
         expect(screen.getByText('👻')).toBeInTheDocument();
-    });
-
-    it('renders the subtitle when provided', () => {
-        render(<Kartu name="x" km="1" durasi="1:00" trimp={1} subtitle="Pagi negatif-split" />);
-        expect(screen.getByText('Pagi negatif-split')).toBeInTheDocument();
     });
 
     it('falls back to the slug name as the pip title when a badge has no ability', () => {

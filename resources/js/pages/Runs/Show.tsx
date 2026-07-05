@@ -244,7 +244,6 @@ export default function RunsShow({
                             >
                                 <Kartu
                                     name={card.special_move}
-                                    subtitle={kartuProps.subtitle ?? undefined}
                                     km={kartuProps.km}
                                     durasi={kartuProps.durasi}
                                     trimp={kartuProps.trimp}

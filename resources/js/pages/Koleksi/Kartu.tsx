@@ -161,11 +161,9 @@ export default function KoleksiKartu({
 function SlimBanner({ featured }: Readonly<{ featured: FeaturedCardPayload }>) {
     const detail = featured.detail;
     const kartuProps = useMemo(() => {
-        const { subtitle, ...rest } = kartuPropsFromDetail(detail);
         return {
             name: featured.special_move,
-            subtitle: subtitle ?? undefined,
-            ...rest,
+            ...kartuPropsFromDetail(detail),
             rarity: featured.rarity,
             mood: featured.mood,
             badges: featured.badges ?? [],
@@ -317,7 +315,6 @@ const CardCell = memo(function CardCell({
         >
             <Kartu
                 name={card.special_move}
-                subtitle={derived.subtitle}
                 km={derived.km}
                 durasi={derived.durasi}
                 trimp={derived.trimp}
