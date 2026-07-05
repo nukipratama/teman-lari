@@ -18,14 +18,17 @@ afterEach(fn () => Carbon::setTestNow());
 /**
  * @return array{user: User, featured: PersonalRecord}
  */
-function progressionFixture(string $category, int $valueSec): array
+function progressionFixture(string $category, int $valueSec, string $setAt = '2020-01-01 00:00:00'): array
 {
     $user = User::factory()->create();
     $activity = Activity::factory()->for($user)->analyzed()->create();
+    // set_at defaults far outside any test's run weeks so the PR-week snap is a
+    // no-op unless a test explicitly aligns it (the factory default is random).
     $featured = PersonalRecord::factory()->for($user)->create([
         'category' => $category,
         'value_sec' => $valueSec,
         'activity_id' => $activity->id,
+        'set_at' => $setAt,
     ]);
 
     return ['user' => $user, 'featured' => $featured];
@@ -72,7 +75,8 @@ it('snaps the series best to the authoritative PR time so the chart matches the 
     // PR time (2400s) differs from the linearly-scaled weekly best of the same
     // near-target run (10.1km/2450s => ~2426s). The chart's best point must show
     // the PR time, not the scaled approximation, so /rekor reads one number.
-    ['user' => $user, 'featured' => $featured] = progressionFixture('10km', 2_400);
+    // set_at is aligned to the run's week so the snap targets it.
+    ['user' => $user, 'featured' => $featured] = progressionFixture('10km', 2_400, '2026-05-04 07:00:00');
 
     $a = Activity::factory()->for($user)->analyzed()->create();
     ActivityDetail::factory()->for($a)->create([
@@ -85,6 +89,25 @@ it('snaps the series best to the authoritative PR time so the chart matches the 
 
     expect(min($series['times_sec']))->toBe(2_400)
         ->and($series['times_sec'])->toContain(2_400);
+});
+
+it('does not stamp the PR time onto a more recent week when the PR predates the window', function (): void {
+    // The PR was set long before the 26-week window and hasn't been beaten since,
+    // so its week isn't in the series. A newer in-window run must keep its own
+    // scaled time, not get relabeled with the old PR value (the fabricated-point bug).
+    ['user' => $user, 'featured' => $featured] = progressionFixture('5km', 1_500, '2024-01-01 07:00:00');
+
+    $a = Activity::factory()->for($user)->analyzed()->create();
+    ActivityDetail::factory()->for($a)->create([
+        'distance' => 5_000,
+        'moving_time' => 1_550, // scales to 1550 at the 5km target; distinct from the 1500 PR
+        'start_date_local' => Carbon::parse('2026-05-04 07:00:00'),
+    ]);
+
+    $series = (new ProgressionSeriesBuilder())->build($user, $featured, 1_485);
+
+    expect($series['times_sec'])->toBe([1_550])
+        ->and($series['times_sec'])->not->toContain(1_500);
 });
 
 it('keeps only the best (lowest) scaled time per week', function (): void {

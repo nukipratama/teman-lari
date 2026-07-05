@@ -1,4 +1,5 @@
 import { Head, Link, router } from '@inertiajs/react';
+import { Icon } from '@iconify/react';
 import { useState } from 'react';
 import { csrfToken } from '@/lib/http';
 import { aktivitasUrl, kartuUrl } from '@/lib/routes';
@@ -150,6 +151,15 @@ export default function KartuDetail({
                         style={{ background: 'linear-gradient(165deg, var(--color-sky-deep), var(--color-sky-2))' }}
                     >
                         <div className="relative flex flex-col items-center gap-6 text-center">
+                            {/* Corner exit: navigates out to the run detail, kept
+                                distinct from the card actions at the bottom. */}
+                            <Link
+                                href={aktivitasUrl(card)}
+                                className="focus-ring absolute right-0 top-0 z-10 inline-flex items-center gap-1 rounded-full border border-cream/15 bg-cream/[0.06] px-3 py-1.5 font-mono text-[11px] font-bold uppercase tracking-[0.1em] text-cream/90 backdrop-blur transition hover:bg-cream/[0.12]"
+                            >
+                                <Icon icon="mdi:arrow-top-right" width={13} height={13} aria-hidden />
+                                Detail lari
+                            </Link>
                             {/* Glow */}
                             <span
                                 aria-hidden
@@ -190,6 +200,7 @@ export default function KartuDetail({
                                     size="sm"
                                     onClick={() => setShareOpen(true)}
                                 >
+                                    <Icon icon="mdi:share-variant" width={14} height={14} aria-hidden />
                                     Bagikan
                                 </PillButton>
                                 <PillButton
@@ -199,14 +210,15 @@ export default function KartuDetail({
                                     onClick={replayReveal}
                                     disabled={replaying}
                                 >
+                                    <Icon
+                                        icon="mdi:refresh"
+                                        width={14}
+                                        height={14}
+                                        className={replaying ? 'animate-spin' : undefined}
+                                        aria-hidden
+                                    />
                                     {replaying ? 'Menyiapkan…' : 'Buka ulang kartu'}
                                 </PillButton>
-                                <Link
-                                    href={aktivitasUrl(card)}
-                                    className="focus-ring inline-flex items-center gap-1 self-center rounded font-mono text-[11px] font-bold uppercase tracking-[0.12em] text-horizon transition hover:text-cream"
-                                >
-                                    Lihat detail lari →
-                                </Link>
                             </div>
                         </div>
                     </HeroPanel>

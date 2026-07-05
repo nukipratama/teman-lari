@@ -103,18 +103,28 @@ class ProgressionSeriesBuilder
     }
 
     /**
-     * Overwrite the best (minimum) weekly point with the PersonalRecord's stored
-     * time. The chart's labeled best endpoint then matches the /rekor hero and
-     * trophy wall exactly, instead of drifting a second or two because the weekly
-     * series scales whole-run moving_time while the PR is split-interpolated to
-     * the exact target distance. Non-best weeks keep their linearly-scaled trend.
+     * Overwrite the PR's own week with its stored time, so the chart's labeled
+     * best point matches the /rekor hero and trophy wall exactly instead of
+     * drifting a second or two (the weekly series scales whole-run moving_time
+     * while the PR is split-interpolated to the exact target distance).
+     *
+     * Only the PR's own ISO week is snapped: if the PR was set before the
+     * 26-week window (an old best not beaten since), its week isn't in the
+     * series, so we leave the scaled trend untouched rather than stamp the PR
+     * time onto a different, more recent week that never actually ran it.
      *
      * @param  array<string, int>  $bestByWeek
      */
     private function snapBestToRecord(array &$bestByWeek, PersonalRecord $record): void
     {
-        $minWeek = array_keys($bestByWeek, min($bestByWeek), true)[0];
-        $bestByWeek[$minWeek] = (int) round($record->value_sec);
+        if ($record->set_at === null) {
+            return;
+        }
+
+        $recordWeek = Carbon::parse($record->set_at)->startOfWeek(Carbon::MONDAY)->toDateString();
+        if (isset($bestByWeek[$recordWeek])) {
+            $bestByWeek[$recordWeek] = (int) round($record->value_sec);
+        }
     }
 
     /**
