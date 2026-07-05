@@ -62,59 +62,59 @@ export default function TemariNudgeModal({
     return (
         <AnimatePresence>
             {open && (
-            <motion.div
-                key="temari-nudge-backdrop"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="fixed inset-0 z-[51] flex items-center justify-center p-4"
-                style={{ background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(6px)' }}
-            >
                 <motion.div
-                    key="temari-nudge-panel"
-                    ref={panelRef}
-                    role="dialog"
-                    aria-modal="true"
-                    aria-labelledby="temari-nudge-title"
-                    initial={{ opacity: 0, scale: 0.96, y: 8 }}
-                    animate={{ opacity: 1, scale: 1, y: 0 }}
-                    exit={{ opacity: 0, scale: 0.96, y: 8 }}
-                    transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
-                    className="flex w-full max-w-sm flex-col overflow-hidden rounded-3xl bg-cream shadow-2xl"
+                    key="temari-nudge-backdrop"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="fixed inset-0 z-[51] flex items-center justify-center p-4"
+                    style={{ background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(6px)' }}
                 >
-                    <div className="flex justify-start px-3 pt-3">
-                        <button
-                            type="button"
-                            onClick={onClose}
-                            aria-label="Tutup"
-                            className={iconButtonVariants({ size: 'sm' })}
-                        >
-                            <Icon icon="mdi:close" width={16} height={16} />
-                        </button>
-                    </div>
+                    <motion.div
+                        key="temari-nudge-panel"
+                        ref={panelRef}
+                        role="dialog"
+                        aria-modal="true"
+                        aria-labelledby="temari-nudge-title"
+                        initial={{ opacity: 0, scale: 0.96, y: 8 }}
+                        animate={{ opacity: 1, scale: 1, y: 0 }}
+                        exit={{ opacity: 0, scale: 0.96, y: 8 }}
+                        transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+                        className="flex w-full max-w-sm flex-col overflow-hidden rounded-3xl bg-cream shadow-2xl"
+                    >
+                        <div className="flex justify-start px-3 pt-3">
+                            <button
+                                type="button"
+                                onClick={onClose}
+                                aria-label="Tutup"
+                                className={iconButtonVariants({ size: 'sm' })}
+                            >
+                                <Icon icon="mdi:close" width={16} height={16} />
+                            </button>
+                        </div>
 
-                    <div className="flex flex-col items-center gap-4 px-6 pb-6 pt-1 text-center">
-                        <TemariProto pose={pose} size={120} equipped={equipped} animate />
-                        <h2 id="temari-nudge-title" className="font-display text-2xl tracking-tight text-ink">
-                            {title}
-                        </h2>
-                        <p className="font-sans text-sm leading-relaxed text-ink-2">{body}</p>
-                    </div>
+                        <div className="flex flex-col items-center gap-4 px-6 pb-6 pt-1 text-center">
+                            <TemariProto pose={pose} size={120} equipped={equipped} animate />
+                            <h2 id="temari-nudge-title" className="font-display text-2xl tracking-tight text-ink">
+                                {title}
+                            </h2>
+                            <p className="font-sans text-sm leading-relaxed text-ink-2">{body}</p>
+                        </div>
 
-                    <div className="flex flex-col gap-2 border-t border-cream-deep bg-cream px-5 py-4">
-                        <PillButton
-                            tone="horizon"
-                            onClick={onPrimary}
-                            className="w-full justify-center py-3.5 font-semibold"
-                        >
-                            {primaryLabel}
-                        </PillButton>
-                        <PillButton tone="ghost" onClick={onClose} className="w-full justify-center">
-                            {secondaryLabel}
-                        </PillButton>
-                    </div>
+                        <div className="flex flex-col gap-2 border-t border-cream-deep bg-cream px-5 py-4">
+                            <PillButton
+                                tone="horizon"
+                                onClick={onPrimary}
+                                className="w-full justify-center py-3.5 font-semibold"
+                            >
+                                {primaryLabel}
+                            </PillButton>
+                            <PillButton tone="ghost" onClick={onClose} className="w-full justify-center">
+                                {secondaryLabel}
+                            </PillButton>
+                        </div>
+                    </motion.div>
                 </motion.div>
-            </motion.div>
             )}
         </AnimatePresence>
     );
