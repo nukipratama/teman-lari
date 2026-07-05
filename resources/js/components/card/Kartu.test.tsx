@@ -1,5 +1,5 @@
-import { render, screen, fireEvent } from '@testing-library/react';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { render, screen } from '@testing-library/react';
+import { describe, expect, it } from 'vitest';
 import Kartu from './Kartu';
 import type { Rarity } from '@/types/inertia';
 
@@ -75,22 +75,12 @@ describe('Kartu', () => {
                 durasi="1:00"
                 trimp={1}
                 badges={['negative_split']}
-                flavor="Some quote."
                 size="lg"
             />,
         );
         expect(screen.getByText('Negative Split')).toBeInTheDocument();
         // Description lives in the title attribute, not visible DOM text.
         expect(screen.queryByText(/malah lebih ngebut/)).toBeNull();
-    });
-
-    it('shows the flavor quote in the art overlay only on the full tier', () => {
-        const { rerender } = render(
-            <Kartu name="x" km="1" durasi="1:00" trimp={1} flavor="Comeback paruh kedua." size="md" />,
-        );
-        expect(screen.queryByText(/Comeback paruh kedua/)).toBeNull();
-        rerender(<Kartu name="x" km="1" durasi="1:00" trimp={1} flavor="Comeback paruh kedua." size="lg" />);
-        expect(screen.getByText(/Comeback paruh kedua/)).toBeInTheDocument();
     });
 
     it('exposes the mood via the TRIMP badge aria-label', () => {
@@ -166,7 +156,6 @@ describe('Kartu', () => {
                 durasi="1:00"
                 trimp={1}
                 badges={['negative_split']}
-                flavor="Some quote."
                 size="lg"
             />,
         );
@@ -196,54 +185,4 @@ describe('Kartu', () => {
         expect(screen.queryByText('Durasi')).toBeNull();
     });
 
-    describe('hover tilt handlers', () => {
-        const originalMatchMedia = globalThis.matchMedia;
-
-        afterEach(() => {
-            globalThis.matchMedia = originalMatchMedia;
-        });
-
-        function mockMatchMedia(reduced: boolean) {
-            globalThis.matchMedia = vi.fn().mockReturnValue({
-                matches: reduced,
-                media: '',
-                addEventListener: vi.fn(),
-                removeEventListener: vi.fn(),
-            }) as unknown as typeof globalThis.matchMedia;
-        }
-
-        it('sets tilt CSS vars on mouse move and clears them on mouse leave', () => {
-            mockMatchMedia(false);
-            render(<Kartu name="x" km="1" durasi="1:00" trimp={1} />);
-            const card = screen.getByRole('img', { name: 'x' });
-            // jsdom gives a zero-size rect; the math still runs and writes vars.
-            vi.spyOn(card, 'getBoundingClientRect').mockReturnValue({
-                left: 0,
-                top: 0,
-                width: 200,
-                height: 280,
-                right: 200,
-                bottom: 280,
-                x: 0,
-                y: 0,
-                toJSON: () => ({}),
-            } as DOMRect);
-
-            fireEvent.mouseMove(card, { clientX: 150, clientY: 70 });
-            expect(card.style.getPropertyValue('--tilt-x')).not.toBe('');
-            expect(card.style.getPropertyValue('--tilt-y')).not.toBe('');
-
-            fireEvent.mouseLeave(card);
-            expect(card.style.getPropertyValue('--tilt-x')).toBe('');
-            expect(card.style.getPropertyValue('--tilt-y')).toBe('');
-        });
-
-        it('skips the tilt when the user prefers reduced motion', () => {
-            mockMatchMedia(true);
-            render(<Kartu name="x" km="1" durasi="1:00" trimp={1} />);
-            const card = screen.getByRole('img', { name: 'x' });
-            fireEvent.mouseMove(card, { clientX: 10, clientY: 10 });
-            expect(card.style.getPropertyValue('--tilt-x')).toBe('');
-        });
-    });
 });

@@ -1,4 +1,3 @@
-import { useRef } from 'react';
 import { cn } from '@/lib/cn';
 import {
     BADGE_ABILITY,
@@ -49,8 +48,6 @@ interface KartuProps {
     /** Run route polyline + per-km pace seconds, for the art-window glyph. */
     polyline?: string | null;
     paceShape?: ReadonlyArray<number> | null;
-    /** Temari flavor quote — shown in the stat block on the full tier. */
-    flavor?: string | null;
     /** Collector number within the rarity ("#3/12"). */
     edition?: CardEdition | null;
     size?: 'md' | 'lg' | 'xl';
@@ -86,8 +83,6 @@ const SIZE_KM: Record<NonNullable<KartuProps['size']>, string> = {
     xl: 'text-[42px]',
 };
 
-const REDUCED_MOTION_QUERY = '(prefers-reduced-motion: reduce)';
-
 /**
  * The collectible run card — a dark-frame, One-Piece-dense TCG card.
  *
@@ -112,7 +107,6 @@ export default function Kartu({
     zonePct,
     polyline,
     paceShape,
-    flavor,
     edition,
     size = 'md',
     className,
@@ -120,30 +114,6 @@ export default function Kartu({
     const isFull = size !== 'md';
     const slugs = badges ?? [];
     const rarityHex = RARITY_HEX[rarity];
-
-    const cardRef = useRef<HTMLDivElement>(null);
-
-    function handleMouseMove(e: React.MouseEvent<HTMLDivElement>) {
-        const el = cardRef.current;
-        if (!el) return;
-        if (globalThis.matchMedia?.(REDUCED_MOTION_QUERY).matches) return;
-        const r = el.getBoundingClientRect();
-        const x = (e.clientX - r.left) / r.width;
-        const y = (e.clientY - r.top) / r.height;
-        // Promote to its own layer only while actually tilting; cleared on leave
-        // so at-rest cards (and every card on touch) don't each hold a layer.
-        el.style.willChange = 'transform';
-        el.style.setProperty('--tilt-x', `${(y - 0.5) * -10}deg`);
-        el.style.setProperty('--tilt-y', `${(x - 0.5) * 10}deg`);
-    }
-
-    function handleMouseLeave() {
-        const el = cardRef.current;
-        if (!el) return;
-        el.style.removeProperty('--tilt-x');
-        el.style.removeProperty('--tilt-y');
-        el.style.willChange = '';
-    }
 
     const moodColor = moodSigilColor(mood);
     const glowStrength = GLOW_STRENGTH[rarity];
@@ -165,19 +135,16 @@ export default function Kartu({
 
     return (
         <div
-            ref={cardRef}
             role="img"
             aria-label={name}
             style={rootStyle}
             className={cn(
-                'relative flex aspect-[5/7] flex-col overflow-hidden rounded-[16px] bg-sky-deep kartu-tilt',
+                'relative flex aspect-[5/7] flex-col overflow-hidden rounded-[16px] bg-sky-deep',
                 isFull ? 'border-[3px] p-1.5' : 'border-2 p-1',
                 RARITY_BORDER[rarity],
                 glowStrength > 0 && 'kartu-glow',
                 className,
             )}
-            onMouseMove={handleMouseMove}
-            onMouseLeave={handleMouseLeave}
         >
             {/* ── ART WINDOW ── bright, route is hero, bunny corner companion */}
             <div className="relative flex-1 overflow-hidden rounded-[11px]" style={artStyle}>
@@ -259,18 +226,13 @@ export default function Kartu({
                     <ZoneBar zonePct={zonePct} showLegend={isFull} className="mt-1.5" />
                 )}
 
-                {/* Badges + flavor (full tier only) */}
+                {/* Badges (full tier only) */}
                 {isFull && slugs.length > 0 && (
                     <div className="mt-1.5 flex flex-wrap gap-1">
                         {slugs.map((slug) => (
                             <BadgePip key={slug} slug={slug} />
                         ))}
                     </div>
-                )}
-                {isFull && flavor != null && flavor !== '' && (
-                    <p className="mt-1.5 font-display text-base italic leading-relaxed text-ink-on-sky">
-                        &ldquo;{flavor}&rdquo;
-                    </p>
                 )}
             </div>
         </div>

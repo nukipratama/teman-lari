@@ -313,7 +313,7 @@ const CardCell = memo(function CardCell({
             href={kartuUrl(card)}
             whileTap={pressShrink}
             onClick={() => onTap(card.rarity, card.id)}
-            className="mx-auto block w-full max-w-[300px] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md focus-visible:ring-2 focus-visible:ring-horizon focus-visible:ring-offset-2 focus-visible:outline-none"
+            className="mx-auto block w-full max-w-[300px] focus-visible:ring-2 focus-visible:ring-horizon focus-visible:ring-offset-2 focus-visible:outline-none"
         >
             <Kartu
                 name={card.special_move}

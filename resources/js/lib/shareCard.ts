@@ -47,6 +47,8 @@ export interface ShareKartuData {
     /** Badge emoji emblems, parallel to tags, for the hero ability pips. */
     tagEmojis: string[];
     quote: string | null;
+    /** Per-km pace (seconds/km), earliest→latest, for the splits strip. */
+    paceShape?: number[];
     /** Encoded route polyline for the card / route templates (optional). */
     polyline?: string | null;
     /** Run distance (km). Thins the route stroke on longer routes, mirroring RouteGlyph. */
@@ -367,22 +369,6 @@ interface DrawCtx {
     moodBunny: HTMLImageElement | null;
 }
 
-/**
- * Tasteful bottom-right attribution handle so a reshared image still carries
- * the source. Drawn once per export, on top of every template, using the same
- * muted meta tone as the rest of the card chrome.
- */
-function drawWordmark(ctx: CanvasRenderingContext2D, w: number, h: number, pal: Palette): void {
-    ctx.save();
-    ctx.font = '600 24px "JetBrains Mono"';
-    ctx.letterSpacing = '1px';
-    ctx.fillStyle = pal.meta;
-    ctx.textAlign = 'right';
-    ctx.textBaseline = 'alphabetic';
-    ctx.fillText('temanlari.app', w - PAD, h - PAD * 0.55);
-    ctx.restore();
-}
-
 /** Bottom-left mono date stamp, shared by the poster and angka templates. */
 function drawDateFooter(d: DrawCtx): void {
     const { ctx, h, cfg, pal } = d;
@@ -446,21 +432,11 @@ function drawRute(d: DrawCtx): void {
     }
 
     // Fill the space below the KM hero with a stat row (both formats — the square
-    // looked bare without it), then the flavor quote on story where there's room.
-    let sy = y + kmSize * 0.8 + (story ? 64 : 40);
+    // looked bare without it).
+    const sy = y + kmSize * 0.8 + (story ? 64 : 40);
     const cells = story ? heroStatCells(k) : heroStatCells(k).slice(0, 3);
     if (cells.length > 0) {
         drawHeroStatGrid(ctx, cells, PAD, sy, w - PAD * 2, story);
-        sy += Math.ceil(cells.length / 3) * (story ? 70 : 56) + 24;
-    }
-    if (story && k.quote) {
-        ctx.font = 'italic 500 38px "Fraunces"';
-        ctx.fillStyle = pal.quote;
-        ctx.textAlign = 'left';
-        wrapText(ctx, `"${k.quote}"`, w - PAD * 2).slice(0, 3).forEach((ln) => {
-            sy += 50;
-            ctx.fillText(ln, PAD, sy);
-        });
     }
 
     drawDateFooter(d);
@@ -648,12 +624,10 @@ function drawHeroBlock(s: HeroBlock): number {
     let y = s.box.y;
     y = heroRibbonRow(s, y);
     y = heroNameRow(s, y);
-    y = heroSubtitleRow(s, y);
-    y = heroKmRow(s, y);
+    y = heroKmRow(s, y); // badges stack vertically in the empty space right of KM
     y = heroStatGridRow(s, y);
     y = heroZoneBarRow(s, y);
-    y = heroBadgeRow(s, y);
-    y = heroQuoteRow(s, y);
+    y = heroSplitsRow(s, y); // per-km pace strip fills the bottom (story only)
     return y - s.box.y;
 }
 
@@ -706,20 +680,6 @@ function heroNameRow(s: HeroBlock, y: number): number {
     return lastBaseline + nameSize * 0.32;
 }
 
-function heroSubtitleRow(s: HeroBlock, y: number): number {
-    const { ctx, k, box, story, draw } = s;
-    if (!k.subtitle) {
-        return y;
-    }
-    y += story ? 40 : 34;
-    if (draw) {
-        ctx.font = `500 ${story ? 26 : 22}px "JetBrains Mono"`;
-        ctx.fillStyle = C.inkOnSky;
-        ctx.fillText(k.subtitle, box.x, y);
-    }
-    return y;
-}
-
 /** KM hero number + "KM" suffix — the number floods in the rarity hue. */
 function heroKmRow(s: HeroBlock, y: number): number {
     const { ctx, k, box, story, draw } = s;
@@ -739,6 +699,9 @@ function heroKmRow(s: HeroBlock, y: number): number {
         ctx.font = `700 ${story ? 28 : 24}px "JetBrains Mono"`;
         ctx.fillStyle = C.inkOnSky;
         ctx.fillText('KM', box.x + kmW + 16, y);
+        // Badges stack vertically in the empty space to the right of the KM hero,
+        // centred on the number's height.
+        drawBadgesVertical(ctx, k, box.x + box.w, y - kmSize * 0.36, story);
     }
     return y;
 }
@@ -763,46 +726,125 @@ function heroZoneBarRow(s: HeroBlock, y: number): number {
     if (!k.zonePct) {
         return y;
     }
-    const barH = story ? 16 : 12;
-    y += story ? 24 : 18;
+    const barH = story ? 30 : 22;
+    y += story ? 26 : 20;
     if (draw) {
         drawZoneBar(ctx, k.zonePct, box.x, y, box.w, barH);
     }
-    return y + barH + (story ? 30 : 24);
+    return y + barH + (story ? 8 : 6);
 }
 
-function heroBadgeRow(s: HeroBlock, y: number): number {
-    const { ctx, k, box, story, draw } = s;
-    if (k.tags.length === 0) {
-        return y;
+/**
+ * Badge pills stacked vertically and right-aligned to `rightX`, vertically
+ * centred on `centerY` — they live in the empty gutter beside the KM hero
+ * instead of a horizontal row, so the tall share doesn't waste that space.
+ */
+function drawBadgesVertical(
+    ctx: CanvasRenderingContext2D,
+    k: ShareKartuData,
+    rightX: number,
+    centerY: number,
+    story: boolean,
+): void {
+    const tags = k.tags.slice(0, 3);
+    if (tags.length === 0) {
+        return;
     }
-    y += story ? 52 : 44;
-    if (draw) {
-        drawBadgePips(ctx, k, box.x, y, story);
-    }
-    return y;
-}
-
-/** Flavor quote — both formats (anchors the bottom of the feed card). */
-function heroQuoteRow(s: HeroBlock, y: number): number {
-    const { ctx, k, box, draw } = s;
-    if (!k.quote) {
-        return y;
-    }
-    y += 52;
-    ctx.font = 'italic 500 34px "Fraunces"';
-    wrapText(ctx, '"' + k.quote + '"', box.w).slice(0, 2).forEach((ln) => {
-        if (draw) {
-            ctx.fillStyle = C.inkOnSky;
-            ctx.textAlign = 'left';
-            ctx.fillText(ln, box.x, y);
-        }
-        y += 44;
+    ctx.font = `500 ${story ? 26 : 22}px "JetBrains Mono"`;
+    const pillH = story ? 50 : 42;
+    const gap = story ? 12 : 10;
+    let by = centerY - (tags.length * pillH + (tags.length - 1) * gap) / 2;
+    tags.forEach((tag, i) => {
+        const label = (k.tagEmojis[i] ?? '✦') + ' ' + tag;
+        const pillW = ctx.measureText(label).width + 34;
+        const bx = rightX - pillW;
+        roundRectPath(ctx, bx, by, pillW, pillH, pillH / 2);
+        ctx.fillStyle = 'rgba(246,241,232,0.10)';
+        ctx.fill();
+        ctx.fillStyle = 'rgba(246,241,232,0.85)';
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(label, bx + 17, by + pillH / 2 + 1);
+        by += pillH + gap;
     });
-    return y;
+    ctx.textBaseline = 'alphabetic';
 }
 
-/** PACE · HR · CADENCE · DURASI · BEST cells, present-only (mirrors live StatGrid). */
+/**
+ * Per-km pace strip (story only) — one bar per km, taller = faster, so the
+ * bottom of the tall 9:16 carries a real "how the run was paced" read instead of
+ * dead navy. Feed (1:1) stays lean and skips it. The fastest km flags horizon.
+ */
+function heroSplitsRow(s: HeroBlock, y: number): number {
+    const { ctx, k, box, rarityCol, story, draw } = s;
+    const splits = k.paceShape ?? [];
+    if (!story || splits.length < 2) {
+        return y;
+    }
+    const labelGap = 22;
+    const barsH = 96;
+    y += 44;
+    if (draw) {
+        ctx.font = '700 20px "JetBrains Mono"';
+        ctx.letterSpacing = '2px';
+        ctx.fillStyle = C.inkOnSky;
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'alphabetic';
+        ctx.fillText('PACE / KM', box.x, y);
+        ctx.letterSpacing = '0px';
+        drawSplitsStrip(ctx, splits, box.x, y + labelGap, box.w, barsH, rarityCol);
+    }
+    return y + labelGap + barsH;
+}
+
+/** Downsample a long per-km series into at most `maxBars` averaged buckets, so a
+ * marathon doesn't render as 42 hairline slivers. */
+function bucketSplits(splits: number[], maxBars: number): number[] {
+    if (splits.length <= maxBars) {
+        return splits;
+    }
+    const size = splits.length / maxBars;
+    return Array.from({ length: maxBars }, (_, b) => {
+        const slice = splits.slice(Math.floor(b * size), Math.floor((b + 1) * size));
+        return slice.reduce((sum, p) => sum + p, 0) / slice.length;
+    });
+}
+
+/** Vertical per-km pace bars in (left, y, w, h). Faster km = taller; min flags horizon. */
+function drawSplitsStrip(
+    ctx: CanvasRenderingContext2D,
+    splits: number[],
+    left: number,
+    y: number,
+    w: number,
+    h: number,
+    rarityCol: string,
+): void {
+    const bars = bucketSplits(splits, 22);
+    const n = bars.length;
+    const gap = n > 14 ? 5 : 8;
+    const barW = (w - gap * (n - 1)) / n;
+    const min = Math.min(...bars);
+    const max = Math.max(...bars);
+    const range = max - min || 1;
+    bars.forEach((pace, i) => {
+        const fast = 1 - (pace - min) / range; // 0..1, 1 = fastest bucket
+        const barH = h * (0.32 + 0.68 * fast);
+        const bx = left + i * (barW + gap);
+        roundRectPath(ctx, bx, y + (h - barH), barW, barH, Math.min(barW / 2, 6));
+        ctx.fillStyle = pace === min ? C.horizon : rarityCol;
+        ctx.globalAlpha = pace === min ? 1 : 0.6;
+        ctx.fill();
+        ctx.globalAlpha = 1;
+    });
+}
+
+
+/**
+ * PACE · HR · CADENCE · DURASI · BEST · TANGGAL cells, present-only. The date is
+ * the 6th cell so it lands under CADENCE (col 3, row 2), replacing the removed
+ * subtitle line. Only the first line of `date` (the day, not the clock time).
+ */
 function heroStatCells(k: ShareKartuData): Array<{ label: string; value: string }> {
     const raw: Array<{ label: string; value: string | null }> = [
         { label: 'PACE', value: k.pace ? k.pace + '/km' : null },
@@ -810,6 +852,7 @@ function heroStatCells(k: ShareKartuData): Array<{ label: string; value: string 
         { label: 'CADENCE', value: k.cadence },
         { label: 'DURASI', value: k.durasi },
         { label: 'BEST', value: k.fastestKm },
+        { label: 'TANGGAL', value: k.date?.split('\n')[0] ?? null },
     ];
     return raw.filter((c): c is { label: string; value: string } => c.value != null && c.value !== '' && c.value !== '—');
 }
@@ -864,6 +907,11 @@ function drawZoneBar(
     if (total <= 0) {
         return;
     }
+    // Clip to a pill so the segmented bar has rounded ends. No Z1..Z5 legend on
+    // the share — the colour ramp reads on its own.
+    ctx.save();
+    roundRectPath(ctx, left, y, w, barH, barH / 2);
+    ctx.clip();
     let x = left;
     HR_ZONES.forEach((zone) => {
         const pct = zonePct[zone] ?? 0;
@@ -875,45 +923,9 @@ function drawZoneBar(
         ctx.fillRect(x, y, segW, barH);
         x += segW;
     });
-    // Tiny Z labels under the bar.
-    const labelY = y + barH + 22;
-    ctx.font = '700 20px "JetBrains Mono"';
-    ctx.textBaseline = 'alphabetic';
-    ctx.letterSpacing = '1px';
-    HR_ZONES.forEach((zone, i) => {
-        ctx.fillStyle = hrZone[zone];
-        ctx.textAlign = i === HR_ZONES.length - 1 ? 'right' : 'left';
-        const lx = i === HR_ZONES.length - 1 ? left + w : left + (w / HR_ZONES.length) * i;
-        ctx.fillText(zone, lx, labelY);
-    });
-    ctx.letterSpacing = '0px';
-    ctx.textAlign = 'left';
+    ctx.restore();
 }
 
-/** A left-aligned row of badge emblem pips at baseline `y`. */
-function drawBadgePips(
-    ctx: CanvasRenderingContext2D,
-    k: ShareKartuData,
-    left: number,
-    y: number,
-    story: boolean,
-): void {
-    ctx.font = `500 ${story ? 26 : 22}px "JetBrains Mono"`;
-    let bx = left;
-    k.tags.slice(0, 4).forEach((tag, i) => {
-        const label = (k.tagEmojis[i] ?? '✦') + ' ' + tag;
-        const lw = ctx.measureText(label).width + 24;
-        roundRectPath(ctx, bx, y - 30, lw, 40, 20);
-        ctx.fillStyle = 'rgba(246,241,232,0.10)';
-        ctx.fill();
-        ctx.fillStyle = 'rgba(246,241,232,0.85)';
-        ctx.textBaseline = 'middle';
-        ctx.textAlign = 'left';
-        ctx.fillText(label, bx + 12, y - 9);
-        bx += lw + 12;
-    });
-    ctx.textBaseline = 'alphabetic';
-}
 
 /**
  * Dark-frame TCG hero: a dark navy card with a vivid rarity border, an inner
@@ -972,12 +984,17 @@ function drawHero(d: DrawCtx): void {
     });
 
     // Both formats: art window on top (route hero + mascot), stat block below.
-    // Measure the block, then hand the art window all the remaining space so the
-    // route grows to fill it — neither the tall story nor the square feed is left
-    // with a dead navy void. The square keeps a lower art floor so its dense stat
-    // block (which is taller relative to the shorter canvas) always fits.
+    // Measure the block, then size the art window to the remaining space but
+    // CAP it (maxArtFrac) so a short stat block (e.g. after dropping the subtitle
+    // + quote) can't balloon the route to fill the whole card. The stat block
+    // bottom-anchors, so the capped slack becomes breathing room above it, not a
+    // dead navy void. The square keeps a lower art floor so its dense stat block
+    // (taller relative to the shorter canvas) always fits.
     const measuredBlockH = drawHeroBlock(makeBlock(innerTop, false)) + 20;
-    const minArtFrac = story ? 0.46 : 0.22;
+    // The block now carries badges + a splits strip (story), so it's tall enough
+    // to hold the route in check: hand the art window the remaining space (no cap
+    // needed) and the card fills top-to-bottom with no dead navy.
+    const minArtFrac = story ? 0.38 : 0.22;
     const maxBlockH = innerH - Math.round(innerH * minArtFrac) - blockGap;
     const blockH = Math.min(measuredBlockH, maxBlockH);
     const artH = innerH - blockH - blockGap;
@@ -1013,7 +1030,6 @@ export async function drawShareCard(canvas: HTMLCanvasElement, cfg: ShareCardCon
 
     const d: DrawCtx = { ctx, w, h, cfg, pal, bunny, moodBunny };
     TEMPLATES[cfg.layout](d);
-    drawWordmark(ctx, w, h, pal);
 }
 
 /** Render the card and return it as a PNG blob (full internal resolution). */

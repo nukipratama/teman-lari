@@ -1,5 +1,4 @@
 import { AnimatePresence, motion } from 'framer-motion';
-import { usePage } from '@inertiajs/react';
 import { useEffect, useRef, useState } from 'react';
 import { Icon } from '@iconify/react';
 import { cn } from '@/lib/cn';
@@ -7,12 +6,9 @@ import { useDismissable } from '@/hooks/useDismissable';
 import { useFocusTrap } from '@/hooks/useFocusTrap';
 import PillButton from '@/components/ui/PillButton';
 import { iconButtonVariants, toggleButtonVariants } from '@/lib/variants';
-import { RARITY_LABELS } from '@/lib/runcard';
-import { MOOD_TO_POSE } from '@/lib/temariPose';
+import { RARITY_HEADBAND, RARITY_LABELS, RARITY_POSE } from '@/lib/runcard';
 import { drawShareCard, shareCardBlob, type Format, type Layout, type ShareKartuData } from '@/lib/shareCard';
-import TemariProto, { type TemariEquipped } from '@/components/temari/TemariProto';
-import { serverToEquipped } from '@/lib/equippedAccessories';
-import type { SharedProps } from '@/types/inertia';
+import TemariProto from '@/components/temari/TemariProto';
 
 export type { ShareKartuData };
 
@@ -38,18 +34,6 @@ export default function ShareCardModal({ kartu, onClose }: Readonly<ShareCardMod
     const panelRef = useRef<HTMLDivElement>(null);
     const temariContainerRef = useRef<HTMLDivElement>(null);
 
-    // The mascot is dressed exactly as the user has it elsewhere. Read the
-    // shared equip state defensively (mirrors Temari component) so this still renders
-    // a bare bunny when there's no Inertia page context (e.g. unit tests).
-    let equipped: TemariEquipped | null = null;
-    try {
-        const acc = usePage<SharedProps>().props.equippedAccessories;
-        if (acc) {
-            equipped = serverToEquipped(acc);
-        }
-    } catch {
-        equipped = null;
-    }
 
     useDismissable(kartu !== null, panelRef, onClose);
     useFocusTrap(kartu !== null, panelRef);
@@ -77,7 +61,7 @@ export default function ShareCardModal({ kartu, onClose }: Readonly<ShareCardMod
             }
         }, 60);
         return () => globalThis.clearTimeout(id);
-    }, [kartu?.mood, kartu]);
+    }, [kartu?.rarity, kartu]);
 
     // Repaint the fixed-resolution canvas whenever any knob changes. The canvas
     // IS the export, so the on-screen preview can never drift from the shared
@@ -283,12 +267,13 @@ export default function ShareCardModal({ kartu, onClose }: Readonly<ShareCardMod
                     </div>
                 </motion.div>
             </motion.div>
-            {/* Hidden container — TemariProto renders its SVG here with rarity-driven
-                headband/pose so we can serialise it to a canvas image. */}
+            {/* Hidden container — TemariProto renders its SVG here with the SAME
+                rarity-driven pose + headband the live Kartu uses, so the share
+                mascot matches the in-app card instead of the user's full outfit. */}
             <div ref={temariContainerRef} aria-hidden className="sr-only pointer-events-none">
                 <TemariProto
-                    pose={MOOD_TO_POSE[kartu.mood]}
-                    equipped={equipped}
+                    pose={RARITY_POSE[kartu.rarity]}
+                    equipped={{ headband: RARITY_HEADBAND[kartu.rarity], medal: 'none' }}
                     size={120}
                     animate={false}
                 />

@@ -18,7 +18,7 @@ import type { ShareKartuData } from '@/lib/shareCard';
 import { cn } from '@/lib/cn';
 import PageContainer from '@/components/ui/PageContainer';
 import { formatNaiveIdDate, formatNaiveTimeId, formatPace, formatShortDateId, paceSecPerKm } from '@/lib/pace';
-import { BADGE_ABILITY, RARITY_BORDER, RARITY_LABELS, RARITY_POSE, avgCadenceFromDetail, badgeEmblem, badgeName, fastestKmFromDetail, kartuPropsFromDetail } from '@/lib/runcard';
+import { BADGE_ABILITY, RARITY_BORDER, RARITY_LABELS, avgCadenceFromDetail, badgeEmblem, badgeName, fastestKmFromDetail, kartuPropsFromDetail } from '@/lib/runcard';
 import { renderBold } from '@/lib/richText';
 import type { ActivityDetail, AnalysisPayload, CardEdition, Mood, Rarity } from '@/types/inertia';
 
@@ -129,6 +129,7 @@ export default function KartuDetail({
         tags: badges.map((b) => badgeName(b)),
         tagEmojis: badges.map((b) => badgeEmblem(b)),
         quote: card.flavor_analysis.content ?? null,
+        paceShape,
         polyline: detail?.summary_polyline ?? null,
         distanceKm: detail?.distance != null ? detail.distance / 1000 : null,
         edition: card.edition ?? null,
@@ -151,15 +152,6 @@ export default function KartuDetail({
                         style={{ background: 'linear-gradient(165deg, var(--color-sky-deep), var(--color-sky-2))' }}
                     >
                         <div className="relative flex flex-col items-center gap-6">
-                            {/* Corner exit: navigates out to the run detail, kept
-                                distinct from the card actions at the bottom. */}
-                            <Link
-                                href={aktivitasUrl(card)}
-                                className="focus-ring absolute right-0 top-0 z-10 inline-flex items-center gap-1 rounded-full border border-cream/15 bg-cream/[0.06] px-3 py-1.5 font-mono text-[11px] font-bold uppercase tracking-[0.1em] text-cream/90 backdrop-blur transition hover:bg-cream/[0.12]"
-                            >
-                                <Icon icon="mdi:arrow-top-right" width={13} height={13} aria-hidden />
-                                Detail lari
-                            </Link>
                             {/* Glow */}
                             <span
                                 aria-hidden
@@ -171,9 +163,9 @@ export default function KartuDetail({
                                 }}
                             />
 
-                            <Temari pose={RARITY_POSE[card.rarity]} size={140} className="relative" />
-
-                            <div className="relative w-full max-w-xs rotate-[-2deg] drop-shadow-2xl">
+                            {/* Upright, box-shadow (not a drop-shadow filter, which
+                                rasterises the card at 1x and softens it on hi-DPI). */}
+                            <div className="relative w-full max-w-xs rounded-[16px] shadow-2xl">
                                 <KartuComponent
                                     name={card.special_move}
                                     subtitle={subtitle ?? undefined}

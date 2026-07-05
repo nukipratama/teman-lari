@@ -462,10 +462,12 @@ describe('drawShareCard — edge / branch cases', () => {
         expect(Math.max(...longRun.widths)).toBeLessThan(Math.max(...shortRun.widths));
     });
 
-    it('draws the temanlari.app attribution handle on every export', async () => {
+    it('places the run date as a stat cell (under cadence) instead of a subtitle line', async () => {
         const ctx = makeCtx();
         const canvas = { width: 0, height: 0, getContext: () => ctx } as unknown as HTMLCanvasElement;
         await drawShareCard(canvas, { kartu, layout: 'kartu', format: 'story' });
-        expect(ctx.fillText).toHaveBeenCalledWith('temanlari.app', expect.any(Number), expect.any(Number));
+        // The date rides in the stat grid now; the "temanlari.app" wordmark is gone.
+        expect(ctx.fillText).toHaveBeenCalledWith('TANGGAL', expect.any(Number), expect.any(Number));
+        expect(ctx.fillText).not.toHaveBeenCalledWith('temanlari.app', expect.any(Number), expect.any(Number));
     });
 });
