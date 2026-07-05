@@ -476,13 +476,15 @@ describe('drawShareCard — edge / branch cases', () => {
         expect(Math.max(...longRun.widths)).toBeLessThan(Math.max(...shortRun.widths));
     });
 
-    it('puts TRIMP in the stat grid and the date in the bottom context strip', async () => {
+    it('puts elevation in the stat grid and location + date in the bottom context strip', async () => {
         const ctx = makeCtx();
         const canvas = { width: 0, height: 0, getContext: () => ctx } as unknown as HTMLCanvasElement;
-        await drawShareCard(canvas, { kartu, layout: 'kartu', format: 'story' });
-        // TRIMP earns a labeled grid cell (was TANGGAL); the date + location ride
-        // in the muted context strip at the very bottom; no "temanlari.app" wordmark.
-        expect(ctx.fillText).toHaveBeenCalledWith('TRIMP', expect.any(Number), expect.any(Number));
+        await drawShareCard(canvas, { kartu: { ...kartu, ascent: '128 m' }, layout: 'kartu', format: 'story' });
+        // Elevation earns the grid's 6th cell (was TANGGAL, briefly TRIMP); TRIMP
+        // stays as the floating badge; date + location ride the muted context strip;
+        // no "temanlari.app" wordmark.
+        expect(ctx.fillText).toHaveBeenCalledWith('ELEVASI', expect.any(Number), expect.any(Number));
+        expect(ctx.fillText).toHaveBeenCalledWith('128 m', expect.any(Number), expect.any(Number));
         expect(ctx.fillText).not.toHaveBeenCalledWith('TANGGAL', expect.any(Number), expect.any(Number));
         expect(ctx.fillText).toHaveBeenCalledWith(
             expect.stringContaining('Gelora Bung Karno'),

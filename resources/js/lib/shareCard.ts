@@ -39,6 +39,8 @@ export interface ShareKartuData {
     cadence: string | null;
     /** Fastest single km pace, e.g. "5:41/km". */
     fastestKm: string | null;
+    /** Total elevation gain, e.g. "123 m". */
+    ascent?: string | null;
     /** HR zone distribution (Z1..Z5 %) for the effort bar. Null hides it. */
     zonePct: ZonePct | null;
     location: string | null;
@@ -879,9 +881,10 @@ function truncateToWidth(ctx: CanvasRenderingContext2D, text: string, maxWidth: 
 
 
 /**
- * PACE · HR · CADENCE · DURASI · BEST · TRIMP cells, present-only. TRIMP is the
- * 6th cell (under CADENCE, col 3 row 2) — the run's effort number gets a labeled
- * home in the grid. Date moves to the bottom context strip.
+ * PACE · HR · CADENCE · DURASI · BEST · ELEVASI cells, present-only. Elevation
+ * gain is the 6th cell (under CADENCE, col 3 row 2); TRIMP stays as the floating
+ * power badge over the art window, so it isn't shown twice. Date moves to the
+ * bottom context strip.
  */
 function heroStatCells(k: ShareKartuData): Array<{ label: string; value: string }> {
     const raw: Array<{ label: string; value: string | null }> = [
@@ -890,7 +893,7 @@ function heroStatCells(k: ShareKartuData): Array<{ label: string; value: string 
         { label: 'CADENCE', value: k.cadence },
         { label: 'DURASI', value: k.durasi },
         { label: 'BEST', value: k.fastestKm },
-        { label: 'TRIMP', value: k.trimp },
+        { label: 'ELEVASI', value: k.ascent ?? null },
     ];
     return raw.filter((c): c is { label: string; value: string } => c.value != null && c.value !== '' && c.value !== '—');
 }
