@@ -150,7 +150,7 @@ export default function KartuDetail({
                         className="lg:py-14 lg:px-12"
                         style={{ background: 'linear-gradient(165deg, var(--color-sky-deep), var(--color-sky-2))' }}
                     >
-                        <div className="relative flex flex-col items-center gap-6 text-center">
+                        <div className="relative flex flex-col items-center gap-6">
                             {/* Corner exit: navigates out to the run detail, kept
                                 distinct from the card actions at the bottom. */}
                             <Link

@@ -683,11 +683,12 @@ function heroRibbonRow(s: HeroBlock, y: number): number {
 }
 
 /**
- * Special-move name on a nameplate banner (rarity-accented tab on the left).
- * The wrap count is identical in the measure + draw passes so sizing is stable.
+ * Special-move name in condensed Oswald, drawn as plain text over the dark
+ * block (no plate) to mirror the live Kartu. The wrap count is identical in the
+ * measure + draw passes so sizing is stable.
  */
 function heroNameRow(s: HeroBlock, y: number): number {
-    const { ctx, k, box, rarityCol, story, draw } = s;
+    const { ctx, k, box, story, draw } = s;
     const nameSize = story ? box.w * 0.099 : box.w * 0.084;
     ctx.font = `700 ${nameSize}px "Oswald"`;
     ctx.letterSpacing = '-1px'; // condensed + tight = athletic
@@ -695,23 +696,14 @@ function heroNameRow(s: HeroBlock, y: number): number {
     const lines = wrapText(ctx, k.name.toUpperCase(), box.w - 28).slice(0, 2);
     const lineH = nameSize * 1.04;
     y += story ? 14 : 12; // breathing room below the rarity ribbon
-    // Generous, symmetric padding so the plate frames the name rather than
-    // hugging it; it spans the full content width (bleeds to the inner frame).
-    const padTop = nameSize * 0.34;
-    const padBottom = nameSize * 0.32;
     const firstBaseline = y + lineH;
     const lastBaseline = y + lineH * lines.length;
-    const bannerTop = firstBaseline - nameSize * 0.72 - padTop;
-    const bannerBottom = lastBaseline + padBottom;
     if (draw) {
-        roundRectPath(ctx, box.x - 20, bannerTop, box.w + 40, bannerBottom - bannerTop, 18);
-        ctx.fillStyle = rarityCol + '33'; // clearly visible rarity-tinted nameplate
-        ctx.fill();
         ctx.fillStyle = C.cream;
         lines.forEach((ln, i) => ctx.fillText(ln, box.x, firstBaseline + i * lineH));
     }
     ctx.letterSpacing = '0px';
-    return bannerBottom;
+    return lastBaseline + nameSize * 0.32;
 }
 
 function heroSubtitleRow(s: HeroBlock, y: number): number {
@@ -730,13 +722,15 @@ function heroSubtitleRow(s: HeroBlock, y: number): number {
 
 /** KM hero number + "KM" suffix — the number floods in the rarity hue. */
 function heroKmRow(s: HeroBlock, y: number): number {
-    const { ctx, k, box, rarityCol, story, draw } = s;
+    const { ctx, k, box, story, draw } = s;
     const kmSize = story ? box.w * 0.165 : box.w * 0.14;
     y += kmSize * 0.92;
     if (draw) {
         ctx.font = `700 ${kmSize}px "Oswald"`;
         ctx.letterSpacing = '-1px';
-        ctx.fillStyle = rarityCol;
+        // KM always floods in horizon (matches the live Kartu's `text-horizon`),
+        // not the rarity hue — the rarity colour lives on the ribbon + route.
+        ctx.fillStyle = C.horizon;
         ctx.textAlign = 'left';
         ctx.textBaseline = 'alphabetic';
         ctx.fillText(k.km, box.x, y);
@@ -921,34 +915,6 @@ function drawBadgePips(
     ctx.textBaseline = 'alphabetic';
 }
 
-/** Four small rarity diamonds at the corners of the hairline frame. */
-function drawFrameCornerPips(
-    ctx: CanvasRenderingContext2D,
-    x: number, y: number, w: number, h: number,
-    rarityCol: string,
-): void {
-    const r = 9;
-    const inset = 26;
-    const corners: Array<[number, number]> = [
-        [x + inset, y + inset],
-        [x + w - inset, y + inset],
-        [x + inset, y + h - inset],
-        [x + w - inset, y + h - inset],
-    ];
-    ctx.save();
-    ctx.fillStyle = rarityCol;
-    corners.forEach(([px, py]) => {
-        ctx.beginPath();
-        ctx.moveTo(px, py - r);
-        ctx.lineTo(px + r, py);
-        ctx.lineTo(px, py + r);
-        ctx.lineTo(px - r, py);
-        ctx.closePath();
-        ctx.fill();
-    });
-    ctx.restore();
-}
-
 /**
  * Dark-frame TCG hero: a dark navy card with a vivid rarity border, an inner
  * hairline + corner pips, a bright art window up top (big mascot watermark +
@@ -985,13 +951,8 @@ function drawHero(d: DrawCtx): void {
     roundRectPath(ctx, cx + border / 2, cy + border / 2, cw - border, ch - border, radius - border / 2);
     ctx.stroke();
 
-    // Inner hairline for the classic double-frame look + corner pips.
-    const hair = border + 12;
-    ctx.lineWidth = 2;
-    ctx.strokeStyle = rarityCol + '66';
-    roundRectPath(ctx, cx + hair, cy + hair, cw - hair * 2, ch - hair * 2, radius - hair / 2);
-    ctx.stroke();
-    drawFrameCornerPips(ctx, cx + hair, cy + hair, cw - hair * 2, ch - hair * 2, rarityCol);
+    // Single clean rarity border only — the live Kartu has no inner hairline or
+    // corner pips, so neither does the share card.
 
     // Inner content frame.
     const innerX = cx + framePad;
