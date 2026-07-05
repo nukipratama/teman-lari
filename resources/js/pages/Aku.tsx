@@ -461,7 +461,7 @@ function StatCard({
             <div className="mt-2 flex items-baseline gap-1.5">
                 <span
                     className={cn(
-                        'font-sans text-display-sm font-black leading-none tabular-nums',
+                        'font-sans text-display-lg font-black leading-none tabular-nums',
                         tone.value,
                     )}
                 >
