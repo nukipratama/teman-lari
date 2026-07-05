@@ -44,6 +44,9 @@ export default function RecapCard({ recap }: Readonly<{ recap: WeeklyRecap }>) {
     const direction = weeklyDeltaDirection(recap.delta_pct);
     const streak = streakLabel(recap.streak_weeks);
     const range = weekRangeLabel(recap.week_start, recap.week_end);
+    // In-app equivalent of the Telegram streak nudge, for users without Telegram:
+    // a live streak with no run logged yet this week is about to break.
+    const streakAtRisk = recap.streak_weeks >= 1 && !hasRuns;
 
     return (
         <section className="relative overflow-hidden rounded-3xl bg-sky-deep p-6 text-cream">
@@ -132,7 +135,9 @@ export default function RecapCard({ recap }: Readonly<{ recap: WeeklyRecap }>) {
             ) : (
                 <div className="relative mt-5">
                     <p className="font-display text-lg italic leading-relaxed text-cream">
-                        Minggu ini masih kosong. Yuk catat lari pertama biar Temari punya bahan cerita.
+                        {streakAtRisk
+                            ? `Streak ${recap.streak_weeks} minggu-mu belum keisi minggu ini. Lari dikit dulu biar kejaga ya.`
+                            : 'Minggu ini masih kosong. Yuk catat lari pertama biar Temari punya bahan cerita.'}
                     </p>
                     <p className="mt-2 font-sans text-sm leading-relaxed text-ink-on-sky">
                         Satu lari aja udah cukup buat ngisi rekap minggu kamu.
