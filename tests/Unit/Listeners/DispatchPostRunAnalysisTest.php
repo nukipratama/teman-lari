@@ -17,6 +17,7 @@ use App\Models\WeeklySnapshot;
 use App\Services\AI\AnalysisService;
 use App\Services\AI\AnalysisStatus;
 use App\Services\AI\AnalysisType;
+use App\Services\Run\Metrics\WeeklyAggregator;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Bus;
@@ -280,4 +281,35 @@ it('no-ops when the activity was deleted before the queued listener ran', functi
     app(DispatchPostRunAnalysis::class)->handle(new ActivityIngested($id));
 
     Bus::assertNotDispatched(AnalyzeActivityJob::class);
+});
+
+it('skips weekly and monthly staging when the activity has no start_date_local', function (): void {
+    $activity = Activity::factory()->create(['analyzed_at' => Carbon::now()]);
+    ActivityDetail::factory()->for($activity)->create([
+        'start_date_local' => null,
+        'distance' => 5000.0,
+        'moving_time' => 1500,
+    ]);
+
+    fire($activity);
+
+    expect(Analysis::query()->where('analysis_type', AnalysisType::WeeklyRecap)->exists())->toBeFalse()
+        ->and(Analysis::query()->where('analysis_type', AnalysisType::MonthlyRecap)->exists())->toBeFalse();
+    // The rest of the fan-out (activity group + daily set) is unaffected by a
+    // missing start date, since $isToday null-safes to false rather than erroring.
+    Bus::assertDispatched(AnalyzeActivityJob::class);
+});
+
+it('skips weekly recap staging when rebuildForwardFrom finds no in-window history', function (): void {
+    // WeeklyAggregator's own rebuild correctness has its own dedicated suite
+    // (WeeklyAggregatorTest); this only checks the listener's own branch —
+    // a null return means no history to stage a recap against.
+    $activity = analyzedActivity();
+    $weekly = Mockery::mock(WeeklyAggregator::class);
+    $weekly->shouldReceive('rebuildForwardFrom')->once()->andReturnNull();
+    $listener = new DispatchPostRunAnalysis(app(AnalysisService::class), $weekly);
+
+    $listener->handle(new ActivityIngested($activity->id));
+
+    expect(Analysis::query()->where('analysis_type', AnalysisType::WeeklyRecap)->exists())->toBeFalse();
 });

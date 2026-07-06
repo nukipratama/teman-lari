@@ -46,6 +46,20 @@ it('throws naming the redis connection that is unreachable', function (): void {
         ->toThrow(RuntimeException::class, 'health: redis [default] unreachable');
 });
 
+it('throws naming the cache redis connection when default succeeds but cache fails', function (): void {
+    // The loop checks 'default' first and stops at the first failure, so this
+    // is the only way to reach — and prove — the second iteration.
+    $healthy = Mockery::mock();
+    $healthy->shouldReceive('ping')->andReturn('PONG');
+    $dead = Mockery::mock();
+    $dead->shouldReceive('ping')->andThrow(new RuntimeException('boom'));
+    Redis::shouldReceive('connection')->with('default')->andReturn($healthy);
+    Redis::shouldReceive('connection')->with('cache')->andReturn($dead);
+
+    expect(fn () => app(VerifyDependencies::class)->handle(new DiagnosingHealth()))
+        ->toThrow(RuntimeException::class, 'health: redis [cache] unreachable');
+});
+
 it('throws when horizon is inactive', function (): void {
     $this->mock(MasterSupervisorRepository::class, function ($mock): void {
         $mock->shouldReceive('all')->andReturn([]);

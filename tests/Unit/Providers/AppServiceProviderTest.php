@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Models\User;
 use App\Services\AI\AnalysisService;
+use App\Support\Config\AppConfig;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -46,6 +47,47 @@ it('analysis-trigger limiter falls back to IP when unauthenticated', function ()
         ->and($limit->maxAttempts)->toBe(3);
 });
 
+it('strava-sync limiter caps at 2/min, keyed by user id when authenticated', function (): void {
+    $user = User::factory()->make(['id' => 42]);
+    $request = Request::create('/strava/sync', 'POST');
+    $request->setUserResolver(fn () => $user);
+
+    $limit = RateLimiter::limiter('strava-sync')($request);
+
+    expect($limit)->toBeInstanceOf(Limit::class)
+        ->and($limit->key)->toBe('42')
+        ->and($limit->maxAttempts)->toBe(2);
+});
+
+it('strava-sync limiter falls back to IP when unauthenticated', function (): void {
+    $request = Request::create('/strava/sync', 'POST', server: ['REMOTE_ADDR' => '203.0.113.7']);
+
+    $limit = RateLimiter::limiter('strava-sync')($request);
+
+    expect($limit->key)->toBe('203.0.113.7')
+        ->and($limit->maxAttempts)->toBe(2);
+});
+
+it('client-errors limiter caps at 30/min, keyed by IP', function (): void {
+    $request = Request::create('/client-errors', 'POST', server: ['REMOTE_ADDR' => '203.0.113.7']);
+
+    $limit = RateLimiter::limiter('client-errors')($request);
+
+    expect($limit)->toBeInstanceOf(Limit::class)
+        ->and($limit->key)->toBe('203.0.113.7')
+        ->and($limit->maxAttempts)->toBe(30);
+});
+
+it('public-card limiter caps at 60/min, keyed by IP', function (): void {
+    $request = Request::create('/kartu/1', 'GET', server: ['REMOTE_ADDR' => '203.0.113.7']);
+
+    $limit = RateLimiter::limiter('public-card')($request);
+
+    expect($limit)->toBeInstanceOf(Limit::class)
+        ->and($limit->key)->toBe('203.0.113.7')
+        ->and($limit->maxAttempts)->toBe(60);
+});
+
 it('shares one AnalysisService instance within a single request/CLI scope', function (): void {
     expect(app(AnalysisService::class))->toBe(app(AnalysisService::class));
 });
@@ -78,4 +120,13 @@ it('binds AnalysisService as scoped, not a cross-request singleton', function ()
     app()->forgetScopedInstances();
 
     expect(app(AnalysisService::class))->not->toBe($first);
+});
+
+it('binds AppConfig as scoped, not a cross-request singleton', function (): void {
+    $first = app(AppConfig::class);
+
+    app()->forgetScopedInstances();
+
+    expect(app(AppConfig::class))->not->toBe($first)
+        ->and(app(AppConfig::class))->toBe(app(AppConfig::class));
 });
