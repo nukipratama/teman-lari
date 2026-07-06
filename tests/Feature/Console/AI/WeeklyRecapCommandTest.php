@@ -13,25 +13,6 @@ use Illuminate\Support\Carbon;
 
 uses(RefreshDatabase::class);
 
-/**
- * Capture every AnalysisService::request() call as a flat array of the args the
- * command cares about, returning a throwaway Analysis row.
- *
- * @param  array<int, array<string, mixed>>  $captured
- */
-function captureWeeklyRequests(array &$captured): AnalysisService
-{
-    $service = Mockery::mock(AnalysisService::class);
-    $service->shouldReceive('request')
-        ->andReturnUsing(function (string $subjectOrType, int $subjectId, AnalysisType $type, ?string $discriminator = null, ?int $delaySeconds = null, bool $invalidate = false) use (&$captured): Analysis {
-            $captured[] = compact('subjectOrType', 'subjectId', 'type', 'delaySeconds', 'invalidate');
-
-            return new Analysis();
-        });
-
-    return $service;
-}
-
 /** Stage a WeeklyRecap Analysis row at a given status for a snapshot. */
 function stageWeeklyRecap(WeeklySnapshot $snapshot, AnalysisStatus $status): void
 {
@@ -54,7 +35,7 @@ it('narrates every completed week not yet Done, oldest first, with staggered del
     $latest = WeeklySnapshot::factory()->for($user)->create(['week_ending' => '2026-05-17', 'runs' => 4]);
 
     $captured = [];
-    $this->app->instance(AnalysisService::class, captureWeeklyRequests($captured));
+    $this->app->instance(AnalysisService::class, captureAnalysisServiceRequests($captured));
 
     $this->artisan('ai:weekly-recap')
         ->expectsOutputToContain('Dispatched weekly recap for 3 snapshots (through week ending 2026-05-17)')
@@ -80,7 +61,7 @@ it('excludes the demo user so it never auto-bills the weekly LLM', function (): 
     $demoSnap = WeeklySnapshot::factory()->for($demo)->create(['week_ending' => '2026-05-17', 'runs' => 3]);
 
     $captured = [];
-    $this->app->instance(AnalysisService::class, captureWeeklyRequests($captured));
+    $this->app->instance(AnalysisService::class, captureAnalysisServiceRequests($captured));
 
     $this->artisan('ai:weekly-recap')
         ->expectsOutputToContain('Dispatched weekly recap for 1 snapshots')
@@ -109,7 +90,7 @@ it('skips weeks whose recap is already Done and the open (in-progress) week', fu
     WeeklySnapshot::factory()->for($user)->create(['week_ending' => '2026-05-03', 'runs' => 0]);
 
     $captured = [];
-    $this->app->instance(AnalysisService::class, captureWeeklyRequests($captured));
+    $this->app->instance(AnalysisService::class, captureAnalysisServiceRequests($captured));
 
     $this->artisan('ai:weekly-recap')->assertSuccessful();
 
@@ -128,7 +109,7 @@ it('narrates a Failed and a far-back historical week (resume safety net)', funct
     $recent = WeeklySnapshot::factory()->for($user)->create(['week_ending' => '2026-05-17', 'runs' => 4]);
 
     $captured = [];
-    $this->app->instance(AnalysisService::class, captureWeeklyRequests($captured));
+    $this->app->instance(AnalysisService::class, captureAnalysisServiceRequests($captured));
 
     $this->artisan('ai:weekly-recap')->assertSuccessful();
 

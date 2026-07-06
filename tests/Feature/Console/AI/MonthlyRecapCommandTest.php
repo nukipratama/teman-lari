@@ -14,25 +14,6 @@ use Illuminate\Support\Carbon;
 
 uses(RefreshDatabase::class);
 
-/**
- * Capture every AnalysisService::request() call as a flat array of the args the
- * command cares about, returning a throwaway Analysis row.
- *
- * @param  array<int, array<string, mixed>>  $captured
- */
-function captureMonthlyRequests(array &$captured): AnalysisService
-{
-    $service = Mockery::mock(AnalysisService::class);
-    $service->shouldReceive('request')
-        ->andReturnUsing(function (string $subjectOrType, int $subjectId, AnalysisType $type, ?string $discriminator = null, ?int $delaySeconds = null, bool $invalidate = false) use (&$captured): Analysis {
-            $captured[] = compact('subjectOrType', 'subjectId', 'type', 'discriminator', 'delaySeconds', 'invalidate');
-
-            return new Analysis();
-        });
-
-    return $service;
-}
-
 /** A run in $month (Y-m) for the given user. */
 function runInMonth(User $user, string $month): void
 {
@@ -64,7 +45,7 @@ it('narrates every completed month not yet Done, oldest first, with staggered de
     runInMonth($user, '2026-05');
 
     $captured = [];
-    $this->app->instance(AnalysisService::class, captureMonthlyRequests($captured));
+    $this->app->instance(AnalysisService::class, captureAnalysisServiceRequests($captured));
 
     $this->artisan('ai:monthly-recap')
         ->expectsOutputToContain('Dispatched monthly recap for 3 months (through 2026-05).')
@@ -90,7 +71,7 @@ it('excludes the demo user (monthly is real-users-only)', function (): void {
     runInMonth($demo, '2026-05');
 
     $captured = [];
-    $this->app->instance(AnalysisService::class, captureMonthlyRequests($captured));
+    $this->app->instance(AnalysisService::class, captureAnalysisServiceRequests($captured));
 
     $this->artisan('ai:monthly-recap')
         ->expectsOutputToContain('Dispatched monthly recap for 1 months (through 2026-05).')
@@ -115,7 +96,7 @@ it('skips months whose recap is already Done and the open (current) month', func
     runInMonth($user, '2026-06');
 
     $captured = [];
-    $this->app->instance(AnalysisService::class, captureMonthlyRequests($captured));
+    $this->app->instance(AnalysisService::class, captureAnalysisServiceRequests($captured));
 
     $this->artisan('ai:monthly-recap')->assertSuccessful();
 
@@ -134,7 +115,7 @@ it('narrates a Failed and a far-back historical month (resume safety net)', func
     runInMonth($user, '2026-05');
 
     $captured = [];
-    $this->app->instance(AnalysisService::class, captureMonthlyRequests($captured));
+    $this->app->instance(AnalysisService::class, captureAnalysisServiceRequests($captured));
 
     $this->artisan('ai:monthly-recap')->assertSuccessful();
 

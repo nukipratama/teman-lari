@@ -19,14 +19,16 @@ it('emits a string union and value array for each backed enum', function (): voi
         ->toContain('export type PrCategory =');
 });
 
-it('fails the check when the committed file is stale', function (): void {
-    $path = resource_path('js/types/generated.ts');
-    $original = (string) file_get_contents($path);
+it('fails the check when the target file is stale', function (): void {
+    // --path points at a scratch file instead of the real committed
+    // resources/js/types/generated.ts, so this never touches (and can never
+    // corrupt) version-controlled content.
+    $path = tempnam(sys_get_temp_dir(), 'ts-enums-stale-');
+    file_put_contents($path, "stale\n");
 
     try {
-        file_put_contents($path, "stale\n");
-        expect(Artisan::call('typescript:enums', ['--check' => true]))->toBe(1);
+        expect(Artisan::call('typescript:enums', ['--check' => true, '--path' => $path]))->toBe(1);
     } finally {
-        file_put_contents($path, $original);
+        unlink($path);
     }
 });

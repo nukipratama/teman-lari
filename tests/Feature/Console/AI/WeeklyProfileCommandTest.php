@@ -3,7 +3,6 @@
 declare(strict_types=1);
 
 use App\Models\Activity;
-use App\Models\AI\Analysis;
 use App\Models\User;
 use App\Services\AI\AnalysisService;
 use App\Services\AI\AnalysisType;
@@ -11,25 +10,6 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
 
 uses(RefreshDatabase::class);
-
-/**
- * Capture every AnalysisService::request() call as a flat array of the args the
- * command cares about, returning a throwaway Analysis row.
- *
- * @param  array<int, array<string, mixed>>  $captured
- */
-function captureWeeklyProfileRequests(array &$captured): AnalysisService
-{
-    $service = Mockery::mock(AnalysisService::class);
-    $service->shouldReceive('request')
-        ->andReturnUsing(function (string $subjectOrType, int $subjectId, AnalysisType $type, ?string $discriminator = null, ?int $delaySeconds = null, bool $invalidate = false) use (&$captured): Analysis {
-            $captured[] = compact('subjectOrType', 'subjectId', 'type', 'discriminator', 'invalidate');
-
-            return new Analysis();
-        });
-
-    return $service;
-}
 
 it('refreshes persona (week-keyed, invalidate:false) and Kata Temari (invalidate:true) for an active user', function (): void {
     // Monday 2026-05-18, ISO week 2026-W21.
@@ -39,7 +19,7 @@ it('refreshes persona (week-keyed, invalidate:false) and Kata Temari (invalidate
     Activity::factory()->for($user)->create(['analyzed_at' => Carbon::now()]);
 
     $captured = [];
-    $this->app->instance(AnalysisService::class, captureWeeklyProfileRequests($captured));
+    $this->app->instance(AnalysisService::class, captureAnalysisServiceRequests($captured));
 
     $this->artisan('ai:weekly-profile')
         ->expectsOutputToContain('Dispatched weekly profile refresh for 1 active users')
@@ -71,7 +51,7 @@ it('excludes the demo user so it never auto-bills the weekly profile LLM', funct
     Activity::factory()->for($demo)->create(['analyzed_at' => Carbon::now()]);
 
     $captured = [];
-    $this->app->instance(AnalysisService::class, captureWeeklyProfileRequests($captured));
+    $this->app->instance(AnalysisService::class, captureAnalysisServiceRequests($captured));
 
     $this->artisan('ai:weekly-profile')
         ->expectsOutputToContain('Dispatched weekly profile refresh for 1 active users')
