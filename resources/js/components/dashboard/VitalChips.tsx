@@ -11,26 +11,35 @@ import type { BriefingResult, RecoveryTone, TrainingLoad } from '@/types/inertia
 // overreaching within roughly ±40 at typical CTL, so that's the rail's clamp range.
 const FORM_RANGE = 40;
 
+// A one-line gloss per vibe, keyed by its Indonesian label (mirrors Vibe::LABELS).
+// Sits on the sub-line now that the label rides up next to the emoji, so the tile
+// says something ("badan lagi enteng") instead of just restating the word.
+const VIBE_SUB: Record<string, string> = {
+    Lincah: 'badan lagi enteng',
+    Stabil: 'ritme kejaga',
+    Loyo: 'tenaga lagi turun',
+    Gosong: 'kelewat capek, rehat',
+    Segar: 'fresh, siap gas',
+    Tipis: 'lagi mepet batas',
+    Membara: 'lagi on fire',
+    Hibernasi: 'lama nggak lari',
+};
+
 export default function VitalChips({ briefing, load }: Readonly<{ briefing: BriefingResult; load: TrainingLoad | null }>) {
-    // Vibe leads with the qualitative emoji + its label side by side: there's no
-    // numeric vibe score, and the old absolute-form proxy duplicated Kesiapan's
-    // number whenever form was positive (|form| == form). The horizon gauge still
-    // shows form intensity; the sub-line becomes an invisible spacer (like
-    // RecoveryRail below) so its gauge still aligns with its two siblings'.
-    const vibeValue = (
-        <span className="inline-flex items-baseline gap-2">
-            <span className="text-[1.6rem] leading-none">{briefing.vibeEmoji}</span>
-            <span className="font-display text-xl font-semibold not-italic text-horizon-deep">{briefing.vibeLabel}</span>
-        </span>
-    );
+    // Vibe leads with the emoji + its label together (a lone emoji read too
+    // sparse next to the numeric siblings). There's no numeric vibe score, so the
+    // horizon gauge shows form intensity and the sub-line glosses what the vibe means.
+    const vibeValue = `${briefing.vibeEmoji} ${briefing.vibeLabel}`;
+    const vibeSub = VIBE_SUB[briefing.vibeLabel] ?? '';
 
     return (
         <div className="grid h-full grid-cols-3 gap-3">
             <VitalChip
                 label="Vibe"
                 value={vibeValue}
-                sub={' '}
+                sub={vibeSub}
                 tone="horizon"
+                wordValue
                 explainerKey="vibe_vs_mood"
                 gauge={load?.form != null ? { label: 'Vibe', value: Math.abs(load.form), min: 0, max: FORM_RANGE, tone: 'horizon', anchors: ['0', String(FORM_RANGE)] } : undefined}
             />
@@ -120,7 +129,8 @@ function VitalChip({
     explainerKey,
     gauge,
     recoveryTone,
-}: Readonly<{ label: string; value: ReactNode; sub: string; tone: 'horizon' | 'leaf' | 'ink'; explainerKey?: MetricKey; gauge?: GaugeConfig; recoveryTone?: RecoveryTone }>) {
+    wordValue = false,
+}: Readonly<{ label: string; value: string; sub: string; tone: 'horizon' | 'leaf' | 'ink'; explainerKey?: MetricKey; gauge?: GaugeConfig; recoveryTone?: RecoveryTone; wordValue?: boolean }>) {
     // Color the tiny label dot, not the number — keeps the page from feeling
     // like a paint-store sample card while still tagging the metric's family.
     const dotClass = {
@@ -148,7 +158,17 @@ function VitalChip({
                 </span>
             </SectionLabel>
             <div className="mt-auto">
-                <div className={cn('min-w-0 font-sans text-stat-fluid font-bold tabular-nums tracking-[-0.02em]', valueClass)}>
+                <div
+                    className={cn(
+                        'min-w-0 font-sans font-bold tracking-[-0.02em]',
+                        // A vibe is a word (e.g. "Hibernasi"), not a number: the big
+                        // numeric stat size overflows the narrow 3-up mobile tile, so
+                        // it gets a word-friendly fluid size and is allowed to wrap
+                        // (emoji then word) instead of truncating, scaling up on desktop.
+                        wordValue ? 'text-[clamp(16px,4vw,30px)] leading-tight break-words' : 'truncate text-stat-fluid tabular-nums',
+                        valueClass,
+                    )}
+                >
                     {value}
                 </div>
                 {middleBand}
