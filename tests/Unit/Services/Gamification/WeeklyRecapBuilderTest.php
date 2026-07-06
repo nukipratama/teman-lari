@@ -56,7 +56,7 @@ it('reports the current-week range as Monday through Sunday', function (): void 
 });
 
 it('returns a zeroed recap when there are no runs this week', function (): void {
-    $user = User::factory()->create();
+    $user = User::factory()->make(['id' => 1]);
 
     $recap = $this->builder->forUser($user);
 
@@ -220,9 +220,9 @@ it('carries the run mood onto the best card when a post-run story line exists', 
 });
 
 it('surfaces the nearest incomplete goal with a remainder label', function (): void {
-    $user = User::factory()->create();
     // A brand-new user: the "catat lari pertama" goal sits at 0/1, so it is the
     // nearest incomplete goal and needs 1 more.
+    $user = User::factory()->make(['id' => 1]);
     $recap = $this->builder->forUser($user);
 
     expect($recap->nearestGoal)->not->toBeNull()
