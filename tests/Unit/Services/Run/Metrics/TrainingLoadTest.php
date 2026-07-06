@@ -83,7 +83,7 @@ it('uses moderate thresholds exactly at the high-CTL boundary (ctl=50), not wide
 });
 
 it('returns null when the user has no TRIMP-bearing activities', function (): void {
-    $user = User::factory()->create();
+    $user = User::factory()->make(['id' => 1]);
     expect($this->load->summary($user))->toBeNull();
 });
 

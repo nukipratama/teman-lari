@@ -5,22 +5,25 @@ declare(strict_types=1);
 use App\Models\Activity;
 use App\Models\ActivityDetail;
 use App\Models\PersonalRecord;
-use App\Models\User;
 use App\Services\Run\PrScoreboardBuilder;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Collection;
-
-uses(RefreshDatabase::class);
 
 beforeEach(function (): void {
     $this->builder = new PrScoreboardBuilder();
 });
 
-/** A lightweight (un-persisted) PR carrying just category + value_sec. */
+/**
+ * A lightweight (un-persisted) PR carrying just category + value_sec.
+ *
+ * user_id is pinned to a literal so the factory doesn't fall through to its
+ * `User::factory()` default, which persists a real User row even under
+ * ->make() (nested belongsTo factory attributes are always create()'d).
+ */
 function makePr(string $category, int|float $valueSec = 0, ?int $id = null): PersonalRecord
 {
     return PersonalRecord::factory()->make([
         'id' => $id,
+        'user_id' => 1,
         'category' => $category,
         'value_sec' => $valueSec,
     ]);
@@ -137,9 +140,8 @@ describe('featuredExtras', function (): void {
     });
 
     it('assembles splits, location, weather, and milestone for a distance PR', function (): void {
-        $user = User::factory()->create();
-        $activity = Activity::factory()->for($user)->analyzed()->create();
-        ActivityDetail::factory()->for($activity)->create([
+        $detail = ActivityDetail::factory()->make([
+            'activity_id' => 1,
             'location_name' => 'Senayan',
             'weather_temp_c' => 28,
             'weather_humidity_pct' => 75,
@@ -148,11 +150,17 @@ describe('featuredExtras', function (): void {
                 ['distance' => 1000, 'moving_time' => 350],
             ],
         ]);
-        $pr = PersonalRecord::factory()->forActivity($activity)->create([
+        $activity = Activity::factory()->make(['id' => 1, 'user_id' => 1]);
+        $activity->setRelation('detail', $detail);
+
+        $pr = PersonalRecord::factory()->make([
+            'id' => 1,
+            'user_id' => 1,
+            'activity_id' => 1,
             'category' => '5km',
             'value_sec' => 1751,
         ]);
-        $pr->load('activity.detail');
+        $pr->setRelation('activity', $activity);
 
         expect($this->builder->featuredExtras($pr))->toBe([
             'pr_id' => $pr->id,
