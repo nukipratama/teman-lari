@@ -7,6 +7,9 @@ use App\Models\Activity;
 use App\Models\StravaConnection;
 use App\Models\User;
 use App\Services\Run\Ingest\SyncOrchestrator;
+use App\Services\Strava\Exceptions\StravaCircuitOpenException;
+use App\Services\Strava\Exceptions\StravaConnectionRevokedException;
+use App\Services\Strava\Exceptions\StravaRateLimitedException;
 use App\Services\Strava\Exceptions\StravaTokenRefreshFailedException;
 use App\Services\Strava\Exceptions\StravaTokenRefreshTransientException;
 use Illuminate\Contracts\Queue\Job;
@@ -95,6 +98,56 @@ it('releases with backoff instead of revoking on a transient refresh failure', f
     expect($connection->fresh()->isRevoked())->toBeFalse()
         ->and(Activity::withStubs()->whereKey($stub->id)->exists())->toBeTrue()
         ->and($queueJob->releasedWith)->toBe(60);
+});
+
+it('releases with a 60s backoff on a rate-limit exception', function (): void {
+    $user = User::factory()->create();
+
+    $orchestrator = Mockery::mock(SyncOrchestrator::class);
+    $orchestrator->shouldReceive('syncUser')
+        ->once()
+        ->andThrow(new StravaRateLimitedException('rate limited', availableIn: 120));
+
+    $job = new SyncActivitiesJob($user->id);
+    $queueJob = fakeQueueJob();
+    $job->setJob($queueJob);
+
+    $job->handle($orchestrator);
+
+    expect($queueJob->releasedWith)->toBe(60);
+});
+
+it('drops the run without releasing when the circuit breaker is open', function (): void {
+    $user = User::factory()->create();
+
+    $orchestrator = Mockery::mock(SyncOrchestrator::class);
+    $orchestrator->shouldReceive('syncUser')
+        ->once()
+        ->andThrow(new StravaCircuitOpenException('breaker open'));
+
+    $job = new SyncActivitiesJob($user->id);
+    $queueJob = fakeQueueJob();
+    $job->setJob($queueJob);
+
+    $job->handle($orchestrator);
+
+    // No retry scheduled — the hourly scheduled sync recovers once the breaker
+    // half-opens, so this run is simply dropped rather than released.
+    expect($queueJob->releasedWith)->toBeNull();
+});
+
+it('revokes the connection when the API rejects the token with a 401', function (): void {
+    $user = User::factory()->create();
+    $connection = StravaConnection::factory()->for($user)->create();
+
+    $orchestrator = Mockery::mock(SyncOrchestrator::class);
+    $orchestrator->shouldReceive('syncUser')
+        ->once()
+        ->andThrow(new StravaConnectionRevokedException('401 unauthorized'));
+
+    (new SyncActivitiesJob($user->id))->handle($orchestrator);
+
+    expect($connection->fresh()->isRevoked())->toBeTrue();
 });
 
 it('no-ops on a deleted user', function (): void {

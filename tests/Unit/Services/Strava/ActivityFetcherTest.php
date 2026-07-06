@@ -84,6 +84,22 @@ it('filters non-run sport types out', function (): void {
     expect($ids)->toBe([2, 4, 5]);
 });
 
+it('falls back to the legacy type field when sport_type is absent', function (): void {
+    $connection = makeConnection();
+    Http::fake([
+        'strava.com/api/v3/athlete/activities*' => Http::sequence()
+            ->push([
+                ['id' => 1, 'type' => 'Ride'],
+                ['id' => 2, 'type' => 'Run'],
+            ])
+            ->push([]),
+    ]);
+
+    $ids = (new ActivityFetcher(new StravaClient()))->fetchNewExternalIds($connection);
+
+    expect($ids)->toBe([2]);
+});
+
 it('respects per-user scoping (other users\' activities do not act as stop markers)', function (): void {
     $userA = User::factory()->create();
     StravaConnection::factory()->for($userA)->create([
