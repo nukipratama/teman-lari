@@ -22,7 +22,9 @@ beforeEach(function (): void {
 });
 
 it('returns empty when nothing has been earned yet', function (): void {
-    $user = User::factory()->create();
+    // A fresh user's context is all-zero, so grantEligible() returns before
+    // ever reaching its UserUnlock::insert() write.
+    $user = User::factory()->make(['id' => 1]);
 
     expect($this->engine->grantEligible($user))->toBe([]);
 });

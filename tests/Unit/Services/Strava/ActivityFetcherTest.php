@@ -28,8 +28,24 @@ function makeConnection(): StravaConnection
     ]);
 }
 
+/**
+ * fetchNewExternalIds() never persists anything, and a token 2 hours out never
+ * triggers StravaClient's refresh() path (which would need a real row), so
+ * tests that don't rely on the connection as a real per-user stop-marker
+ * scope can skip persisting it entirely.
+ */
+function makeUnpersistedConnection(): StravaConnection
+{
+    return StravaConnection::factory()->make([
+        'id' => 1,
+        'user_id' => 1,
+        'access_token' => 'tok',
+        'token_expires_at' => Carbon::now()->addHours(2),
+    ]);
+}
+
 it('returns new run ids sorted ascending', function (): void {
-    $connection = makeConnection();
+    $connection = makeUnpersistedConnection();
     Http::fake([
         'strava.com/api/v3/athlete/activities*' => Http::sequence()
             ->push([
@@ -66,7 +82,7 @@ it('stops paginating as soon as it hits an existing activity', function (): void
 });
 
 it('filters non-run sport types out', function (): void {
-    $connection = makeConnection();
+    $connection = makeUnpersistedConnection();
     Http::fake([
         'strava.com/api/v3/athlete/activities*' => Http::sequence()
             ->push([
@@ -85,7 +101,7 @@ it('filters non-run sport types out', function (): void {
 });
 
 it('falls back to the legacy type field when sport_type is absent', function (): void {
-    $connection = makeConnection();
+    $connection = makeUnpersistedConnection();
     Http::fake([
         'strava.com/api/v3/athlete/activities*' => Http::sequence()
             ->push([
@@ -129,7 +145,7 @@ it('respects per-user scoping (other users\' activities do not act as stop marke
 });
 
 it('returns empty list when athlete has no activities', function (): void {
-    $connection = makeConnection();
+    $connection = makeUnpersistedConnection();
     Http::fake([
         'strava.com/api/v3/athlete/activities*' => Http::response([]),
     ]);
@@ -140,7 +156,7 @@ it('returns empty list when athlete has no activities', function (): void {
 });
 
 it('skips items with missing or zero ids', function (): void {
-    $connection = makeConnection();
+    $connection = makeUnpersistedConnection();
     Http::fake([
         'strava.com/api/v3/athlete/activities*' => Http::sequence()
             ->push([
@@ -155,7 +171,7 @@ it('skips items with missing or zero ids', function (): void {
 });
 
 it('stops at the first activity started on or before the --since bound', function (): void {
-    $connection = makeConnection();
+    $connection = makeUnpersistedConnection();
     Http::fake([
         'strava.com/api/v3/athlete/activities*' => Http::sequence()
             ->push([
@@ -174,7 +190,7 @@ it('stops at the first activity started on or before the --since bound', functio
 });
 
 it('paginates beyond page 1 when a full page returns', function (): void {
-    $connection = makeConnection();
+    $connection = makeUnpersistedConnection();
     // 200 items == PER_PAGE → forces page 2.
     $firstPage = array_map(
         fn (int $i): array => ['id' => 1000 + $i, 'sport_type' => 'Run'],

@@ -58,7 +58,7 @@ function goalsById(GoalResolver $resolver, User $user): array
 }
 
 it('returns the full goal catalog at zero progress for a fresh user', function (): void {
-    $user = User::factory()->create();
+    $user = User::factory()->make(['id' => 999]);
 
     $goals = $this->resolver->forUser($user);
 
