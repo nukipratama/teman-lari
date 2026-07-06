@@ -18,7 +18,7 @@ use Illuminate\Console\Command;
  */
 final class GenerateTypeScriptEnumsCommand extends Command
 {
-    protected $signature = 'typescript:enums {--check : Fail if the generated file is stale instead of rewriting it}';
+    protected $signature = 'typescript:enums {--check : Fail if the generated file is stale instead of rewriting it} {--path= : Override the output path (for tests only)}';
 
     protected $description = 'Generate TypeScript unions from backed PHP enums into resources/js/types/generated.ts';
 
@@ -35,7 +35,7 @@ final class GenerateTypeScriptEnumsCommand extends Command
     public function handle(): int
     {
         $expected = $this->build();
-        $path = resource_path('js/types/generated.ts');
+        $path = $this->option('path') ?? resource_path('js/types/generated.ts');
 
         if ($this->option('check')) {
             $current = is_file($path) ? (string) file_get_contents($path) : '';

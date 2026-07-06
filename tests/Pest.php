@@ -1,5 +1,8 @@
 <?php
 
+use App\Models\AI\Analysis;
+use App\Services\AI\AnalysisService;
+use App\Services\AI\AnalysisType;
 use App\Services\AI\AzureOpenAIClient;
 use App\Services\AI\StructuredChatCaller;
 use App\Services\AI\TokenUsageRecorder;
@@ -86,6 +89,27 @@ function fakeStructuredCaller(ClientFake $client, string $deployment = 'gpt-test
     $azure->shouldReceive('deploymentFor')->andReturn($deployment);
 
     return new StructuredChatCaller($azure, app(TokenUsageRecorder::class));
+}
+
+/**
+ * Mocks AnalysisService::request() to capture every call's arguments instead
+ * of hitting the real narration pipeline. Shared by the AI backfill/resume
+ * command tests, which assert on the request() call shape (subject, type,
+ * discriminator, delay, invalidate) rather than the pipeline's own behavior.
+ *
+ * @param  array<int, array<string, mixed>>  $captured
+ */
+function captureAnalysisServiceRequests(array &$captured): AnalysisService
+{
+    $service = Mockery::mock(AnalysisService::class);
+    $service->shouldReceive('request')
+        ->andReturnUsing(function (string $subjectOrType, int $subjectId, AnalysisType $type, ?string $discriminator = null, ?int $delaySeconds = null, bool $invalidate = false) use (&$captured): Analysis {
+            $captured[] = compact('subjectOrType', 'subjectId', 'type', 'discriminator', 'delaySeconds', 'invalidate');
+
+            return new Analysis();
+        });
+
+    return $service;
 }
 
 /*
