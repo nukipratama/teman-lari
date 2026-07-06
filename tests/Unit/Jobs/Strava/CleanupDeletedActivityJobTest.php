@@ -80,16 +80,21 @@ it('deletes the run, recomputes the week, rebuilds PRs, and purges orphaned narr
 });
 
 it('prunes a now-empty weekly snapshot when the deleted run was the last one', function (): void {
+    // WeeklyAggregator/PersonalRecords are mocked here — the job's own contract
+    // under test is "when rebuildForwardFrom reports an empty lookback (null),
+    // prune the now-stale forward snapshots"; the aggregator's own rebuild
+    // correctness has its own dedicated suite (WeeklyAggregatorTest).
     $user = User::factory()->create();
     $sole = makeCleanupRun($user, 7_003, 5_000, now()->startOfWeek()->addDay());
+    $weekEnding = now()->endOfWeek(Carbon\CarbonInterface::SUNDAY)->startOfDay()->toDateString();
+    WeeklySnapshot::factory()->for($user)->create(['week_ending' => $weekEnding, 'runs' => 1]);
 
-    app(WeeklyAggregator::class)->rebuildFor($user);
-    expect(WeeklySnapshot::query()->where('user_id', $user->id)->count())->toBeGreaterThan(0);
+    $weekly = Mockery::mock(WeeklyAggregator::class);
+    $weekly->shouldReceive('rebuildForwardFrom')->once()->andReturnNull();
+    $personalRecords = Mockery::mock(\App\Services\Run\Metrics\PersonalRecords::class);
+    $personalRecords->shouldReceive('rebuildForUser')->once();
 
-    (new CleanupDeletedActivityJob($user->id, 7_003))->handle(
-        app(WeeklyAggregator::class),
-        app(\App\Services\Run\Metrics\PersonalRecords::class),
-    );
+    (new CleanupDeletedActivityJob($user->id, 7_003))->handle($weekly, $personalRecords);
 
     expect(Activity::query()->withStubs()->whereKey($sole->id)->exists())->toBeFalse()
         ->and(WeeklySnapshot::query()->where('user_id', $user->id)->count())->toBe(0);

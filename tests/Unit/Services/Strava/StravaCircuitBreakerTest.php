@@ -38,6 +38,17 @@ it('opens after the failure threshold and then blocks requests', function (): vo
         ->and($breaker->allowsRequest())->toBeFalse();
 });
 
+it('fails open when the state is open but opened_at is missing (corrupt/partial config)', function (): void {
+    $config = new AppConfig();
+    $config->set(AppConfigKey::StravaBreakerState, StravaCircuitBreaker::STATE_OPEN);
+    // Deliberately not setting StravaBreakerOpenedAt, simulating a state write
+    // that landed without its paired timestamp.
+    $breaker = new StravaCircuitBreaker($config);
+
+    expect($breaker->state())->toBe(StravaCircuitBreaker::STATE_OPEN)
+        ->and($breaker->allowsRequest())->toBeTrue();
+});
+
 it('does not open before the threshold is reached', function (): void {
     $breaker = breaker();
 
