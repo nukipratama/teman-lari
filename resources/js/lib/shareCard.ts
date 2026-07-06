@@ -66,12 +66,6 @@ export interface ShareCardConfig {
     kartu: ShareKartuData;
     layout: Layout;
     format: Format;
-    /**
-     * The full Temari mascot (with user accessories) pre-rendered to an image
-     * from the live DOM. When provided, `drawHero` draws this instead of the
-     * fallback flat bunny glyph.
-     */
-    temariImg?: HTMLImageElement | null;
 }
 
 const DIMS: Record<Format, { w: number; h: number }> = {
@@ -410,7 +404,105 @@ function drawDateFooter(d: DrawCtx): void {
     ctx.letterSpacing = '0px';
 }
 
-/** Route-map hero: the run's route as big poster art with name + KM + edition. */
+/** Sections in the rute text block that share the even `gapBonus` distribution. */
+function ruteBlockSectionCount(k: ShareKartuData, story: boolean): number {
+    const cells = story ? heroStatCells(k) : heroStatCells(k).slice(0, 3);
+    return (
+        2 // name + KM always render
+        + (cells.length > 0 ? 1 : 0)
+        + (story && k.tags.length > 0 ? 1 : 0)
+    );
+}
+
+/** Name in italic Fraunces, up to 2 lines. Returns the block's new bottom edge. */
+function ruteNameRow(ctx: CanvasRenderingContext2D, k: ShareKartuData, pal: Palette, w: number, story: boolean, draw: boolean, y: number): number {
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'alphabetic';
+    ctx.font = `italic 600 ${story ? 88 : 64}px "Fraunces"`;
+    const lines = wrapText(ctx, `${k.name}.`, w - PAD * 2).slice(0, 2);
+    const lineH = story ? 92 : 72;
+    if (draw) {
+        ctx.fillStyle = pal.name;
+        let ly = y;
+        lines.forEach((ln) => {
+            ctx.fillText(ln, PAD, ly);
+            ly += lineH;
+        });
+    }
+    return y + lineH * lines.length;
+}
+
+/** KM hero + "KM" suffix + edition, left-aligned. Returns the row's bottom edge. */
+function ruteKmRow(ctx: CanvasRenderingContext2D, k: ShareKartuData, pal: Palette, w: number, rarityCol: string, story: boolean, draw: boolean, y: number, gapBonus: number): number {
+    y += (story ? 24 : 12) + gapBonus;
+    const kmSize = story ? 190 : 128;
+    if (draw) {
+        ctx.font = `700 ${kmSize}px "Oswald"`;
+        ctx.fillStyle = rarityCol;
+        ctx.textAlign = 'left';
+        ctx.fillText(k.km, PAD, y + kmSize * 0.8);
+        const kmW = ctx.measureText(k.km).width;
+        ctx.font = '700 40px "JetBrains Mono"';
+        ctx.letterSpacing = '3px';
+        ctx.fillStyle = pal.meta;
+        ctx.fillText('KM', PAD + kmW + 20, y + kmSize * 0.5);
+        ctx.letterSpacing = '0px';
+        if (k.edition) {
+            ctx.font = '600 48px "Oswald"';
+            ctx.fillStyle = pal.meta;
+            ctx.textAlign = 'right';
+            ctx.fillText(`#${k.edition.index}/${k.edition.total}`, w - PAD, y + kmSize * 0.5);
+        }
+    }
+    return y + kmSize * 0.8;
+}
+
+/** Stat row (single row for feed, up to 2 for story). Returns the row's bottom edge. */
+function ruteStatGridRow(ctx: CanvasRenderingContext2D, k: ShareKartuData, w: number, story: boolean, draw: boolean, y: number, gapBonus: number): number {
+    const cells = story ? heroStatCells(k) : heroStatCells(k).slice(0, 3);
+    if (cells.length === 0) {
+        return y;
+    }
+    y += (story ? 64 : 40) + gapBonus;
+    if (draw) {
+        drawHeroStatGrid(ctx, cells, PAD, y, w - PAD * 2, story);
+    }
+    return y + Math.ceil(cells.length / 3) * (story ? HERO_STAT_ROW_H.story : HERO_STAT_ROW_H.feed);
+}
+
+/** Badges row — story only, so the tall 9:16's lower third carries the run's tags. */
+function ruteBadgesRow(ctx: CanvasRenderingContext2D, k: ShareKartuData, w: number, story: boolean, draw: boolean, y: number, gapBonus: number): number {
+    const tags = k.tags.slice(0, 4);
+    if (!story || tags.length === 0) {
+        return y;
+    }
+    y += 44 + gapBonus;
+    const pillH = 56;
+    const gap = 14;
+    const padX = 20;
+    ctx.font = `500 30px "JetBrains Mono"`;
+    const rows = packPillRows(measurePillSpecs(ctx, tags, k.tagEmojis, padX), w - PAD * 2, gap);
+    if (draw) {
+        drawBadgesRow(ctx, k, PAD, y, w - PAD * 2, story);
+    }
+    return y + rows.length * pillH + (rows.length - 1) * gap;
+}
+
+/** Measures or draws the whole rute text block (name → KM → stats → badges). */
+function drawRuteBlock(ctx: CanvasRenderingContext2D, k: ShareKartuData, pal: Palette, w: number, rarityCol: string, story: boolean, draw: boolean, y: number, gapBonus: number): number {
+    y = ruteNameRow(ctx, k, pal, w, story, draw, y);
+    y = ruteKmRow(ctx, k, pal, w, rarityCol, story, draw, y, gapBonus);
+    y = ruteStatGridRow(ctx, k, w, story, draw, y, gapBonus);
+    y = ruteBadgesRow(ctx, k, w, story, draw, y, gapBonus);
+    return y;
+}
+
+/** Route-map hero: the run's route as big poster art with name + KM + edition.
+ *  Measures the text block's natural height, caps the map at a max fraction of
+ *  the available space, then spreads any leftover slack evenly across the
+ *  block's sections — mirrors `drawHero`'s art-window/stat-block split so a
+ *  sparse card (no badges, no edition) fills the canvas instead of leaving a
+ *  dead gap at the bottom. */
 function drawRute(d: DrawCtx): void {
     const { ctx, w, h, cfg, pal, bunny } = d;
     const k = cfg.kartu;
@@ -421,52 +513,22 @@ function drawRute(d: DrawCtx): void {
     drawBrand(ctx, w - PAD, PAD, pal.isDark, bunny);
     drawRarityFlag(ctx, PAD, PAD, k.rarity);
 
+    const topOffset = PAD + (story ? 110 : 88);
+    const bottomReserve = 70; // room for the date footer above `h - PAD`
+    const availableH = h - topOffset - bottomReserve;
+    const routeGap = story ? 84 : 56; // fixed gap between the map and the text block
+
+    const measuredBlockH = drawRuteBlock(ctx, k, pal, w, rarityCol, story, false, 0, 0);
+    const maxRouteFrac = story ? 0.4 : 0.36;
+    const routeH = Math.min(Math.round(availableH * maxRouteFrac), availableH - routeGap - measuredBlockH);
+    const slack = Math.max(0, availableH - routeH - routeGap - measuredBlockH);
+    const gapBonus = slack / ruteBlockSectionCount(k, story);
+
     // The route is the hero: bolder and rarity-glowing so it lifts off the navy.
-    const box = { x: PAD, y: PAD + (story ? 110 : 88), w: w - PAD * 2, h: h * (story ? 0.4 : 0.36) };
+    const box = { x: PAD, y: topOffset, w: w - PAD * 2, h: routeH };
     drawRoute(ctx, k.polyline, box, rarityCol, story ? 14 : 12, true, k.distanceKm);
 
-    let y = box.y + box.h + (story ? 84 : 56);
-    ctx.textAlign = 'left';
-    ctx.textBaseline = 'alphabetic';
-    ctx.font = `italic 600 ${story ? 88 : 64}px "Fraunces"`;
-    ctx.fillStyle = pal.name;
-    wrapText(ctx, `${k.name}.`, w - PAD * 2)
-        .slice(0, 2)
-        .forEach((ln) => {
-            ctx.fillText(ln, PAD, y);
-            y += story ? 92 : 72;
-        });
-
-    y += story ? 24 : 12;
-    const kmSize = story ? 190 : 128;
-    ctx.font = `700 ${kmSize}px "Oswald"`;
-    ctx.fillStyle = rarityCol;
-    ctx.fillText(k.km, PAD, y + kmSize * 0.8);
-    const kmW = ctx.measureText(k.km).width;
-    ctx.font = '700 40px "JetBrains Mono"';
-    ctx.letterSpacing = '3px';
-    ctx.fillStyle = pal.meta;
-    ctx.fillText('KM', PAD + kmW + 20, y + kmSize * 0.5);
-    ctx.letterSpacing = '0px';
-    if (k.edition) {
-        ctx.font = '600 48px "Oswald"';
-        ctx.fillStyle = pal.meta;
-        ctx.textAlign = 'right';
-        ctx.fillText(`#${k.edition.index}/${k.edition.total}`, w - PAD, y + kmSize * 0.5);
-    }
-
-    // Fill the space below the KM hero with a stat row (both formats — the square
-    // looked bare without it), then a badges row (story only) so the tall 9:16's
-    // lower third carries the run's tags instead of dead navy.
-    const sy = y + kmSize * 0.8 + (story ? 64 : 40);
-    const cells = story ? heroStatCells(k) : heroStatCells(k).slice(0, 3);
-    if (cells.length > 0) {
-        drawHeroStatGrid(ctx, cells, PAD, sy, w - PAD * 2, story);
-        if (story) {
-            const statH = Math.ceil(cells.length / 3) * HERO_STAT_ROW_H.story;
-            drawBadgesRow(ctx, k, PAD, sy + statH + 44, w - PAD * 2, story);
-        }
-    }
+    drawRuteBlock(ctx, k, pal, w, rarityCol, story, true, box.y + box.h + routeGap, gapBonus);
 
     drawDateFooter(d);
 }
@@ -568,11 +630,11 @@ function drawHeroArtBadges(
     ctx.textBaseline = 'alphabetic';
 }
 
-/** The bright art window: cream wash, route hero, corner bunny, floating badges. */
+/** The bright art window: cream wash, route hero, corner brand mark, floating badges. */
 function drawHeroArtWindow(
     ctx: CanvasRenderingContext2D,
     k: ShareKartuData,
-    mascot: HTMLImageElement | null,
+    bunny: HTMLImageElement | null,
     box: { x: number; y: number; w: number; h: number },
     rarityCol: string,
     moodCol: string,
@@ -614,33 +676,22 @@ function drawHeroArtWindow(
     ctx.fillRect(box.x, box.y, box.w, box.h);
 
     // Route hero — bold + rarity-glow so it lifts off the pearl. Inset a touch so
-    // it never crowds the corner companion or the floating badges.
+    // it never crowds the brand mark or the floating badges.
     const routeBox = {
         x: box.x + box.w * 0.07,
         y: box.y + box.h * 0.12,
         w: box.w * 0.86,
         h: box.h * 0.78,
     };
-    const hasRoute = drawRoute(ctx, k.polyline, routeBox, rarityCol, story ? 18 : 15, true, k.distanceKm);
+    drawRoute(ctx, k.polyline, routeBox, rarityCol, story ? 18 : 15, true, k.distanceKm);
     drawHeroShimmer(ctx, box.x, box.y, box.w, box.h, k.rarity, rarityCol);
 
-    // Temari, drawn on top as a crisp character (mirrors the live Kartu's corner
-    // companion) rather than a faint watermark. With a route present it hugs the
-    // bottom-right corner; with no GPS it grows into the empty space as the hero.
-    if (mascot) {
-        const natW = mascot.naturalWidth || mascot.width || 1;
-        const natH = mascot.naturalHeight || mascot.height || 1;
-        const target = Math.round(box.h * (hasRoute ? 0.34 : 0.62));
-        const mw = natW >= natH ? target : Math.round(target * (natW / natH));
-        const mh = natW >= natH ? Math.round(target * (natH / natW)) : target;
-        ctx.globalAlpha = hasRoute ? 0.92 : 0.6;
-        if (hasRoute) {
-            ctx.drawImage(mascot, box.x + box.w - mw * 0.86, box.y + box.h - mh * 0.98, mw, mh);
-        } else {
-            ctx.drawImage(mascot, box.x + (box.w - mw) / 2, box.y + (box.h - mh) / 2, mw, mh);
-        }
-        ctx.globalAlpha = 1;
-    }
+    // Brand mark (bunny + wordmark), tucked into the map's bottom-right corner
+    // instead of a big Temari mascot watermark — a quiet signature rather than
+    // a character floating over the route.
+    const brandPad = 20;
+    drawBrand(ctx, box.x + box.w - brandPad, box.y + box.h - 52 - brandPad, false, bunny);
+
     // Draw the corner chips INSIDE the clip so their square outer corners are
     // clipped to the window radius (fills the corner, no pearl sliver).
     drawHeroArtBadges(ctx, k, box, moodCol, rarityCol);
@@ -1088,7 +1139,7 @@ function drawHero(d: DrawCtx): void {
     const artH = Math.min(Math.round(innerH * maxArtFrac), innerH - measuredBlockH - blockGap);
     const slack = Math.max(0, innerH - artH - blockGap - measuredBlockH);
     const gapBonus = slack / heroBlockSectionCount(k, story);
-    drawHeroArtWindow(ctx, k, cfg.temariImg ?? moodBunny, { x: innerX, y: innerTop, w: innerW, h: artH }, rarityCol, moodCol, story);
+    drawHeroArtWindow(ctx, k, moodBunny, { x: innerX, y: innerTop, w: innerW, h: artH }, rarityCol, moodCol, story);
     drawHeroBlock(makeBlock(innerTop + artH + blockGap, true, gapBonus));
 }
 

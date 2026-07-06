@@ -49,9 +49,8 @@ describe('Kartu', () => {
     });
 
     it('renders the art zone at all sizes including compact', () => {
-        // Art zone is always present (mascot background + route glyph fallback).
+        // RouteGlyph always renders an SVG in the art zone (route path or its glyph fallback).
         const { container } = render(<Kartu name="x" km="1" durasi="1:00" trimp={1} size="md" />);
-        // TemariProto always renders an SVG in the art zone.
         expect(container.querySelector('svg')).not.toBeNull();
     });
 

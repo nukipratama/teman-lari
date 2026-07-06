@@ -4,7 +4,6 @@ import {
     RARITY_BORDER,
     RARITY_HEX,
     RARITY_LABELS,
-    RARITY_POSE,
     RARITY_SYMBOL,
     RARITY_TEXT,
     badgeEmblem,
@@ -13,7 +12,6 @@ import {
 import { MOOD_FILL, MOOD_LABEL, moodSigilColor } from '@/lib/mood';
 import RouteGlyph from '@/components/card/RouteGlyph';
 import ZoneBar from '@/components/card/ZoneBar';
-import Temari from '@/components/temari/Temari';
 import type { CardEdition, Mood, Rarity, ZonePct } from '@/types/inertia';
 import type { CSSProperties } from 'react';
 
@@ -57,12 +55,6 @@ interface KartuProps {
 // as brightly as a legendary glows in gold — consistency over escalation).
 const GLOW_STRENGTH = 2;
 
-const MASCOT_SIZE: Record<NonNullable<KartuProps['size']>, number> = {
-    md: 36,
-    lg: 48,
-    xl: 56,
-};
-
 const SIZE_NAME: Record<NonNullable<KartuProps['size']>, string> = {
     md: 'text-[14px]',
     lg: 'text-[19px]',
@@ -79,8 +71,8 @@ const SIZE_KM: Record<NonNullable<KartuProps['size']>, string> = {
  * The collectible run card — a dark-frame, One-Piece-dense TCG card.
  *
  * A dark navy frame holds a bright art window where the **route is the hero**
- * (bold, filled) with Temari as a small corner companion, plus floating rarity
- * and TRIMP chips in its top corners. Below sits a dark stat block:
+ * (bold, filled), plus floating rarity and TRIMP chips in its top corners.
+ * Below sits a dark stat block:
  * special-move name, the run's numbers (KM big; a labeled
  * PACE · HR · CADENCE · DURASI · BEST grid), badges, and a Z1..Z5 HR-zone
  * effort bar. Rarity drives a vivid loot-ladder color (gray → green → blue →
@@ -135,24 +127,12 @@ export default function Kartu({
                 className,
             )}
         >
-            {/* ── ART WINDOW ── bright, route is hero, bunny corner companion */}
+            {/* ── ART WINDOW ── bright, route is hero */}
             <div className="relative flex-1 overflow-hidden rounded-[11px]" style={artStyle}>
                 {/* Route hero */}
                 <div className="absolute inset-0">
                     <RouteGlyph rarity={rarity} color={rarityHex} polyline={polyline} paceShape={paceShape} distanceKm={Number.parseFloat(km)} />
                 </div>
-
-                {/* Bunny corner companion — dressed in the user's equipped
-                    accessories (not a rarity headband), so it matches the mascot
-                    everywhere else Temari appears. */}
-                <span aria-hidden className="pointer-events-none absolute bottom-1 right-1">
-                    <Temari
-                        pose={RARITY_POSE[rarity]}
-                        size={MASCOT_SIZE[size]}
-                        animate={isFull}
-                        dropShadow={false}
-                    />
-                </span>
 
                 {/* Edition mark hugs the art window's own bottom-left corner
                     (the window's bottom edge sits mid-card, above the stat

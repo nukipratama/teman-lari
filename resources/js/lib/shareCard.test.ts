@@ -328,14 +328,6 @@ describe('drawShareCard — edge / branch cases', () => {
         },
     );
 
-    it('prefers an explicit temariImg over the fallback bunny', async () => {
-        const ctx = makeCtx();
-        const canvas = { width: 0, height: 0, getContext: () => ctx } as unknown as HTMLCanvasElement;
-        const temariImg = { naturalWidth: 120, naturalHeight: 200, width: 120, height: 200 } as HTMLImageElement;
-        await drawShareCard(canvas, { kartu, layout: 'kartu', format: 'story', temariImg });
-        expect(ctx.drawImage).toHaveBeenCalled();
-    });
-
     it('renders the kartu hero with no edition (no floating edition pill)', async () => {
         const ctx = makeCtx();
         const canvas = { width: 0, height: 0, getContext: () => ctx } as unknown as HTMLCanvasElement;
