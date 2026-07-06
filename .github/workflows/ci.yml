@@ -484,6 +484,72 @@ jobs:
             echo ""
           } >> "$GITHUB_STEP_SUMMARY"
 
+  # ─── PR-child: Unit — lightweight (no MySQL needed) ──────────────────
+  # Enums, Exceptions, Providers, Seeders, Architecture — 0 RefreshDatabase
+  # users, so no MySQL/Redis required. Just checkout + PHP + pest.
+  backend-unit-others:
+    name: Unit · Others
+    if: github.ref != 'refs/heads/main' && needs.changes.outputs.backend == 'true'
+    needs: changes
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - name: Show runner resources
+        run: |
+          {
+            echo "### Runner: $(nproc) vCPU ($(uname -m))"
+            echo ""
+            echo "| | |"
+            echo "| --- | --- |"
+            echo "| nproc (= test workers) | $(nproc) |"
+            echo "| Model | $(lscpu | sed -n 's/^Model name:[[:space:]]*//p') |"
+            echo "| Memory | $(free -h | awk '/^Mem:/{print $2}') |"
+            echo ""
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # v2
+        with:
+          php-version: ${{ env.PHP_VERSION }}
+
+      - name: Cache composer vendor
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v5
+        with:
+          path: vendor
+          key: composer-${{ runner.os }}-php${{ env.PHP_VERSION }}-${{ hashFiles('composer.lock') }}
+          restore-keys: composer-${{ runner.os }}-php${{ env.PHP_VERSION }}-
+
+      - name: Install composer deps
+        run: composer install --prefer-dist --no-interaction --no-progress --classmap-authoritative
+
+      - name: Stub .env
+        run: cp .env.example .env
+
+      - name: Unit tests — Others
+        run: |
+          ./vendor/bin/pest --testsuite=Unit-Others --parallel --processes="$(nproc)" \
+            --fail-on-warning --fail-on-notice \
+            --fail-on-deprecation --fail-on-risky \
+            --fail-on-phpunit-warning --fail-on-phpunit-notice \
+            --fail-on-phpunit-deprecation 2>&1 | tee /tmp/pest-output.txt
+          exit ${PIPESTATUS[0]}
+
+      - name: Pest summary
+        if: always()
+        run: |
+          {
+            echo "### Backend — Unit · Others"
+            echo ""
+            echo "| | |"
+            echo "| --- | --- |"
+            sed -E 's/\x1b\[[0-9;]*[a-zA-Z]//g' /tmp/pest-output.txt \
+              | grep -E "^[[:space:]]*(Tests|Duration|Parallel):" \
+              | sed -E 's/^[[:space:]]*([A-Za-z]+):[[:space:]]*/| \1 | /; s/$/ |/'
+            echo ""
+          } >> "$GITHUB_STEP_SUMMARY"
+
   backend-feature:
     name: Feature
     if: github.ref != 'refs/heads/main' && needs.changes.outputs.backend == 'true'
@@ -702,7 +768,7 @@ jobs:
   # Actual testing happened in the 4 PR child jobs above.
   backend-tests-pr:
     name: Backend
-    needs: [backend-unit-run, backend-unit-ai, backend-unit-other-a, backend-unit-other-b, backend-feature]
+    needs: [backend-unit-run, backend-unit-ai, backend-unit-other-a, backend-unit-other-b, backend-unit-others, backend-feature]
     if: github.ref != 'refs/heads/main' && !cancelled() && needs.changes.outputs.backend == 'true'
     runs-on: ubuntu-latest
     steps:

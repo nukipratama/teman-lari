@@ -29,12 +29,14 @@
             <directory>tests/Unit/Services/Geo</directory>
             <directory>tests/Unit/Services/Weather</directory>
             <directory>tests/Unit/Console</directory>
-            <directory>tests/Unit/Enums</directory>
-            <directory>tests/Unit/Exceptions</directory>
+            <directory>tests/Unit/Support</directory>
             <directory>tests/Unit/Http</directory>
             <directory>tests/Unit/Policies</directory>
+        </testsuite>
+        <testsuite name="Unit-Others">
+            <directory>tests/Unit/Enums</directory>
+            <directory>tests/Unit/Exceptions</directory>
             <directory>tests/Unit/Providers</directory>
-            <directory>tests/Unit/Support</directory>
             <directory>tests/Unit/Seeders</directory>
             <directory>tests/Unit/Architecture</directory>
         </testsuite>
