@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 use App\Jobs\Telegram\SendTelegramNotificationJob;
 use App\Models\Activity;
-use App\Models\AI\Analysis;
 use App\Models\User;
 use App\Services\AI\AnalysisType;
 use App\Support\Cooldown;
@@ -13,19 +12,6 @@ use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\RateLimiter;
 
 uses(RefreshDatabase::class);
-
-function doneActivitySpeechFor(Activity $activity, bool $done = true): Analysis
-{
-    $factory = Analysis::factory();
-    $factory = $done ? $factory->done('Mantap!') : $factory;
-
-    return $factory->create([
-        'analysis_type' => AnalysisType::PostRunSpeech,
-        'subject_type' => Activity::class,
-        'subject_id' => $activity->id,
-        'discriminator' => null,
-    ]);
-}
 
 it('requires authentication', function (): void {
     $activity = Activity::factory()->create();
@@ -37,7 +23,7 @@ it('force-dispatches the push when the post-run speech is done', function (): vo
     Bus::fake();
     $user = User::factory()->create();
     $activity = Activity::factory()->for($user)->create();
-    $analysis = doneActivitySpeechFor($activity);
+    $analysis = doneAnalysisFor(Activity::class, $activity->id, AnalysisType::PostRunSpeech, content: 'Mantap!');
 
     $this->actingAs($user)
         ->post(route('aktivitas.telegram', $activity))
@@ -54,7 +40,7 @@ it('does not re-dispatch and flashes info while the send cooldown is active', fu
     Bus::fake();
     $user = User::factory()->create();
     $activity = Activity::factory()->for($user)->create();
-    $analysis = doneActivitySpeechFor($activity);
+    $analysis = doneAnalysisFor(Activity::class, $activity->id, AnalysisType::PostRunSpeech, content: 'Mantap!');
     RateLimiter::hit(Cooldown::telegramKey($analysis->id), Cooldown::WINDOW_SECONDS);
 
     $this->actingAs($user)
@@ -69,7 +55,7 @@ it('does not dispatch and flashes info when the narration is not ready', functio
     Bus::fake();
     $user = User::factory()->create();
     $activity = Activity::factory()->for($user)->create();
-    doneActivitySpeechFor($activity, done: false);
+    doneAnalysisFor(Activity::class, $activity->id, AnalysisType::PostRunSpeech, done: false);
 
     $this->actingAs($user)
         ->post(route('aktivitas.telegram', $activity))
