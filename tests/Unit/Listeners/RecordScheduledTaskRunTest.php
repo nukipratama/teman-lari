@@ -35,3 +35,12 @@ it('records a failed command with its exception message', function (): void {
         ->and($row->failure_message)->toBe('kaboom')
         ->and($row->runtime_ms)->toBeNull();
 });
+
+it('falls back to getSummaryForDisplay for a closure-based scheduled event (no artisan command to regex-match)', function (): void {
+    $task = app(Schedule::class)->call(fn () => null)->hourly();
+
+    (new RecordScheduledTaskRun())->finished(new ScheduledTaskFinished($task, 1.0));
+
+    $row = ScheduledTaskRun::query()->sole();
+    expect($row->command)->toBe($task->getSummaryForDisplay());
+});
