@@ -112,6 +112,33 @@ function captureAnalysisServiceRequests(array &$captured): AnalysisService
     return $service;
 }
 
+/**
+ * Stages an Analysis row for a Telegram push-notification test: Done (with
+ * $content) by default, or still-pending when $done is false. Shared by the
+ * SendActivityNotificationControllerTest/SendMonthlyRecapNotificationControllerTest/
+ * SendWeeklyRecapNotificationControllerTest push tests, which all stage the
+ * same shape (analysis_type/subject_type/subject_id/discriminator) and only
+ * differ in which subject/type/discriminator they use.
+ */
+function doneAnalysisFor(
+    string $subjectType,
+    int $subjectId,
+    AnalysisType $type,
+    ?string $discriminator = null,
+    bool $done = true,
+    string $content = 'Done.',
+): Analysis {
+    $factory = Analysis::factory();
+    $factory = $done ? $factory->done($content) : $factory;
+
+    return $factory->create([
+        'analysis_type' => $type,
+        'subject_type' => $subjectType,
+        'subject_id' => $subjectId,
+        'discriminator' => $discriminator,
+    ]);
+}
+
 /*
 |--------------------------------------------------------------------------
 | Expectations

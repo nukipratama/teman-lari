@@ -38,6 +38,19 @@ it('does not dispatch a test notification without an active connection', functio
     Bus::assertNotDispatched(SendTelegramTestJob::class);
 });
 
+it('does not dispatch a test notification for a revoked connection', function (): void {
+    Bus::fake();
+    $user = User::factory()->create();
+    TelegramConnection::factory()->for($user)->revoked()->create();
+
+    $this->actingAs($user)
+        ->post('/profil/telegram/test')
+        ->assertRedirect()
+        ->assertSessionHas('info');
+
+    Bus::assertNotDispatched(SendTelegramTestJob::class);
+});
+
 it('requires authentication to send a test notification', function (): void {
     $this->post('/profil/telegram/test')->assertRedirect(route('login'));
 });

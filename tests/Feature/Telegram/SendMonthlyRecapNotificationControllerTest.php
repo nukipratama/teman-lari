@@ -3,7 +3,6 @@
 declare(strict_types=1);
 
 use App\Jobs\Telegram\SendTelegramNotificationJob;
-use App\Models\AI\Analysis;
 use App\Models\User;
 use App\Services\AI\AnalysisType;
 use App\Support\Cooldown;
@@ -13,19 +12,6 @@ use Illuminate\Support\Facades\RateLimiter;
 
 uses(RefreshDatabase::class);
 
-function doneMonthlyRecapFor(User $user, string $month = '2026-06', bool $done = true): Analysis
-{
-    $factory = Analysis::factory();
-    $factory = $done ? $factory->done('Bulan ini 120 km.') : $factory;
-
-    return $factory->create([
-        'analysis_type' => AnalysisType::MonthlyRecap,
-        'subject_type' => AnalysisType::MONTHLY_RECAP_SUBJECT_TYPE,
-        'subject_id' => $user->id,
-        'discriminator' => $month,
-    ]);
-}
-
 it('requires authentication', function (): void {
     $this->post(route('rekap.bulanan.telegram', ['month' => '2026-06']))->assertRedirect(route('login'));
 });
@@ -33,7 +19,7 @@ it('requires authentication', function (): void {
 it('force-dispatches the push when the monthly recap is done', function (): void {
     Bus::fake();
     $user = User::factory()->create();
-    $analysis = doneMonthlyRecapFor($user);
+    $analysis = doneAnalysisFor(AnalysisType::MONTHLY_RECAP_SUBJECT_TYPE, $user->id, AnalysisType::MonthlyRecap, '2026-06', content: 'Bulan ini 120 km.');
 
     $this->actingAs($user)
         ->post(route('rekap.bulanan.telegram', ['month' => '2026-06']))
@@ -49,7 +35,7 @@ it('force-dispatches the push when the monthly recap is done', function (): void
 it('does not re-dispatch and flashes info while the send cooldown is active', function (): void {
     Bus::fake();
     $user = User::factory()->create();
-    $analysis = doneMonthlyRecapFor($user);
+    $analysis = doneAnalysisFor(AnalysisType::MONTHLY_RECAP_SUBJECT_TYPE, $user->id, AnalysisType::MonthlyRecap, '2026-06', content: 'Bulan ini 120 km.');
     RateLimiter::hit(Cooldown::telegramKey($analysis->id), Cooldown::WINDOW_SECONDS);
 
     $this->actingAs($user)
@@ -63,7 +49,7 @@ it('does not re-dispatch and flashes info while the send cooldown is active', fu
 it('does not dispatch and flashes info when the recap is not ready', function (): void {
     Bus::fake();
     $user = User::factory()->create();
-    doneMonthlyRecapFor($user, done: false);
+    doneAnalysisFor(AnalysisType::MONTHLY_RECAP_SUBJECT_TYPE, $user->id, AnalysisType::MonthlyRecap, '2026-06', done: false, content: 'Bulan ini 120 km.');
 
     $this->actingAs($user)
         ->post(route('rekap.bulanan.telegram', ['month' => '2026-06']))
@@ -76,7 +62,7 @@ it('does not dispatch and flashes info when the recap is not ready', function ()
 it('does not dispatch for a month the user has no recap for', function (): void {
     Bus::fake();
     $user = User::factory()->create();
-    doneMonthlyRecapFor($user, month: '2026-06');
+    doneAnalysisFor(AnalysisType::MONTHLY_RECAP_SUBJECT_TYPE, $user->id, AnalysisType::MonthlyRecap, '2026-06', content: 'Bulan ini 120 km.');
 
     $this->actingAs($user)
         ->post(route('rekap.bulanan.telegram', ['month' => '2026-05']))
