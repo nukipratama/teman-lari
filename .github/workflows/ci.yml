@@ -276,8 +276,8 @@ jobs:
             echo ""
           } >> "$GITHUB_STEP_SUMMARY"
 
-  backend-unit-other:
-    name: Unit · Other
+  backend-unit-other-a:
+    name: Unit · Other A
     if: github.ref != 'refs/heads/main' && needs.changes.outputs.backend == 'true'
     needs: changes
     runs-on: ubuntu-latest
@@ -347,7 +347,7 @@ jobs:
       - name: Stub .env
         run: cp .env.example .env
 
-      - name: Unit tests — Other
+      - name: Unit tests — Other A
         env:
           APP_ENV: testing
           DB_CONNECTION: mysql
@@ -359,7 +359,7 @@ jobs:
           REDIS_HOST: 127.0.0.1
           REDIS_PORT: ${{ job.services.redis.ports['6379'] }}
         run: |
-          ./vendor/bin/pest --testsuite=Unit-Other --parallel --processes="$(nproc)" \
+          ./vendor/bin/pest --testsuite=Unit-Other-A --parallel --processes="$(nproc)" \
             --fail-on-warning --fail-on-notice \
             --fail-on-deprecation --fail-on-risky \
             --fail-on-phpunit-warning --fail-on-phpunit-notice \
@@ -370,7 +370,111 @@ jobs:
         if: always()
         run: |
           {
-            echo "### Backend — Unit · Other"
+            echo "### Backend — Unit · Other A"
+            echo ""
+            echo "| | |"
+            echo "| --- | --- |"
+            sed -E 's/\x1b\[[0-9;]*[a-zA-Z]//g' /tmp/pest-output.txt \
+              | grep -E "^[[:space:]]*(Tests|Duration|Parallel):" \
+              | sed -E 's/^[[:space:]]*([A-Za-z]+):[[:space:]]*/| \1 | /; s/$/ |/'
+            echo ""
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  backend-unit-other-b:
+    name: Unit · Other B
+    if: github.ref != 'refs/heads/main' && needs.changes.outputs.backend == 'true'
+    needs: changes
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: password
+          MYSQL_DATABASE: teman_lari_testing
+          MYSQL_USER: sail
+          MYSQL_PASSWORD: password
+        ports: ['0:3306']
+        options: >-
+          --health-cmd="mysqladmin ping -ppassword"
+          --health-interval=5s --health-timeout=2s --health-retries=10
+          --tmpfs /var/lib/mysql:rw
+      redis:
+        image: redis:8-alpine
+        ports: ['0:6379']
+        options: >-
+          --health-cmd="redis-cli ping"
+          --health-interval=5s --health-timeout=2s --health-retries=10
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - name: Show runner resources
+        run: |
+          {
+            echo "### Runner: $(nproc) vCPU ($(uname -m))"
+            echo ""
+            echo "| | |"
+            echo "| --- | --- |"
+            echo "| nproc (= test workers) | $(nproc) |"
+            echo "| Model | $(lscpu | sed -n 's/^Model name:[[:space:]]*//p') |"
+            echo "| Memory | $(free -h | awk '/^Mem:/{print $2}') |"
+            echo ""
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # v2
+        with:
+          php-version: ${{ env.PHP_VERSION }}
+          coverage: pcov
+          ini-values: >-
+            opcache.enable=1,
+            opcache.enable_cli=1,
+            opcache.memory_consumption=256,
+            opcache.max_accelerated_files=20000,
+            opcache.validate_timestamps=0,
+            opcache.jit=disable,
+            opcache.jit_buffer_size=0
+
+      - name: Cache composer vendor
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v5
+        with:
+          path: vendor
+          key: composer-${{ runner.os }}-php${{ env.PHP_VERSION }}-${{ hashFiles('composer.lock') }}
+          restore-keys: composer-${{ runner.os }}-php${{ env.PHP_VERSION }}-
+
+      - name: Install composer deps
+        run: composer install --prefer-dist --no-interaction --no-progress --classmap-authoritative
+
+      - name: Audit composer dependencies
+        run: composer audit --no-interaction
+
+      - name: Stub .env
+        run: cp .env.example .env
+
+      - name: Unit tests — Other B
+        env:
+          APP_ENV: testing
+          DB_CONNECTION: mysql
+          DB_HOST: 127.0.0.1
+          DB_PORT: ${{ job.services.mysql.ports['3306'] }}
+          DB_DATABASE: teman_lari_testing
+          DB_USERNAME: root
+          DB_PASSWORD: password
+          REDIS_HOST: 127.0.0.1
+          REDIS_PORT: ${{ job.services.redis.ports['6379'] }}
+        run: |
+          ./vendor/bin/pest --testsuite=Unit-Other-B --parallel --processes="$(nproc)" \
+            --fail-on-warning --fail-on-notice \
+            --fail-on-deprecation --fail-on-risky \
+            --fail-on-phpunit-warning --fail-on-phpunit-notice \
+            --fail-on-phpunit-deprecation 2>&1 | tee /tmp/pest-output.txt
+          exit ${PIPESTATUS[0]}
+
+      - name: Pest summary
+        if: always()
+        run: |
+          {
+            echo "### Backend — Unit · Other B"
             echo ""
             echo "| | |"
             echo "| --- | --- |"
@@ -598,7 +702,7 @@ jobs:
   # Actual testing happened in the 4 PR child jobs above.
   backend-tests-pr:
     name: Backend
-    needs: [backend-unit-run, backend-unit-ai, backend-unit-other, backend-feature]
+    needs: [backend-unit-run, backend-unit-ai, backend-unit-other-a, backend-unit-other-b, backend-feature]
     if: github.ref != 'refs/heads/main' && !cancelled() && needs.changes.outputs.backend == 'true'
     runs-on: ubuntu-latest
     steps:
