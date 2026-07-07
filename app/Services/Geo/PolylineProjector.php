@@ -12,7 +12,9 @@ namespace App\Services\Geo;
  */
 class PolylineProjector
 {
-    public function __construct(private readonly PolylineDecoder $decoder) {}
+    public function __construct(private readonly PolylineDecoder $decoder)
+    {
+    }
 
     /**
      * The fitted `points` string, or null when there's nothing drawable (no

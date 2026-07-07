@@ -4,40 +4,19 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
-use App\Enums\PrCategory;
 use App\Models\AI\Analysis;
 use App\Models\PersonalRecord;
 use App\Models\User;
 use App\Services\AI\AnalysisType;
-use App\Services\Run\Metrics\ThresholdEstimator;
-use App\Services\Run\Metrics\VdotEstimator;
-use App\Services\Run\ProgressionSeriesBuilder;
 use App\Services\Run\PrScoreboardBuilder;
-use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class RekorController extends Controller
 {
-    /**
-     * Distances offered in the /rekor progression selector, longest last so the
-     * client's last-tab default lands on the headline distance.
-     *
-     * @var list<PrCategory>
-     */
-    private const array PROGRESSION_CATEGORIES = [
-        PrCategory::Km5,
-        PrCategory::Km10,
-        PrCategory::HalfMarathon,
-        PrCategory::Marathon,
-    ];
-
     public function __construct(
-        private readonly ProgressionSeriesBuilder $progressionSeriesBuilder,
         private readonly PrScoreboardBuilder $scoreboardBuilder,
-        private readonly VdotEstimator $vdotEstimator,
-        private readonly ThresholdEstimator $thresholdEstimator,
     ) {
     }
 
@@ -73,61 +52,11 @@ class RekorController extends Controller
         ])->all();
 
         $featured = $this->scoreboardBuilder->pickFeaturedPr($personalRecords);
-        $progressionByCategory = $this->buildProgressionByCategory($user, $personalRecords);
 
         return Inertia::render('Koleksi/Rekor', [
             'personalRecords' => $payload,
             'featuredExtras' => $this->scoreboardBuilder->featuredExtras($featured),
-            'progressionByCategory' => $progressionByCategory,
-            'fitness' => $this->fitness($user),
         ]);
     }
 
-    /**
-     * Daniels VDOT (fitness score) + estimated lactate-threshold pace, both
-     * derived from the runner's PRs. Null when there aren't enough PRs to
-     * estimate either, so the panel hides rather than showing an empty shell.
-     *
-     * @return array{vdot: float|null, threshold_pace_sec: float|null, threshold_confidence: string|null}|null
-     */
-    private function fitness(User $user): ?array
-    {
-        $vdot = $this->vdotEstimator->estimate($user);
-        $threshold = $this->thresholdEstimator->estimate($user);
-
-        if ($vdot === null && $threshold === null) {
-            return null;
-        }
-
-        return [
-            'vdot' => $vdot['vdot'] ?? null,
-            'threshold_pace_sec' => $threshold['pace_sec'] ?? null,
-            'threshold_confidence' => $threshold['confidence'] ?? null,
-        ];
-    }
-
-    /**
-     * Build a weekly-best progression series for each distance the runner has a
-     * PR in, so /rekor can offer a 5K / 10K / HM / FM selector. Keyed by the
-     * PrCategory value; a category with too few in-window runs is omitted.
-     *
-     * @param  Collection<int, PersonalRecord>  $records
-     * @return array<string, array{category:string, weeks:array<int,string>, times_sec:array<int,int>, goal_sec:int|null}>
-     */
-    private function buildProgressionByCategory(User $user, Collection $records): array
-    {
-        $prs = [];
-        foreach (self::PROGRESSION_CATEGORIES as $category) {
-            $pr = $records->first(fn (PersonalRecord $record): bool => $record->category === $category);
-            if ($pr !== null) {
-                $prs[] = $pr;
-            }
-        }
-
-        return $this->progressionSeriesBuilder->buildMany(
-            $user,
-            $prs,
-            fn (PersonalRecord $pr): ?int => $this->scoreboardBuilder->milestoneFor($pr)['target_sec'],
-        );
-    }
 }

@@ -3,7 +3,6 @@ import HeroPanel from '@/components/ui/HeroPanel';
 import PillLink from '@/components/ui/PillLink';
 import { type KartuStats } from '@/components/card/Kartu';
 import { RARITY_LABELS, RARITY_SYMBOL, badgeEmblem, badgeName } from '@/lib/runcard';
-import { emberGlowStyle } from '@/lib/styles';
 import type { Rarity } from '@/types/inertia';
 
 interface FeaturedCardHeroProps {
@@ -54,11 +53,6 @@ export default function FeaturedCardHero({
     return (
         <div className="relative my-8">
             <HeroPanel className="min-h-[300px] lg:px-14 lg:py-12">
-                <span
-                    aria-hidden
-                    className="pointer-events-none absolute -right-16 -top-16 h-72 w-72 rounded-full"
-                    style={emberGlowStyle()}
-                />
                 {/* Left copy — kept clear of the bleeding card on desktop. */}
                 <div className="relative lg:max-w-[58%]">
                     <div className="mb-3 font-mono text-[11px] font-bold uppercase tracking-[0.2em] text-horizon">
