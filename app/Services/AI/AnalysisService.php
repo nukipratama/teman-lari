@@ -340,35 +340,26 @@ class AnalysisService
             'queued_at' => $canDispatch ? Carbon::now() : null,
         ];
 
-        $missingTypes = array_values(array_filter(
+        $missingValues = array_values(array_filter(
             $groupTypes,
             fn (AnalysisType $type): bool => ! $existing->has($type->value),
         ));
 
-        if ($missingTypes !== []) {
-            $now = Carbon::now();
-            $insert = array_map(fn (AnalysisType $type): array => [
-                'subject_type' => $subjectType,
-                'subject_id' => $subjectId,
-                'analysis_type' => $type->value,
-                'discriminator' => $discriminator,
-                'status' => $defaults['status']->value,
-                'queued_at' => $defaults['queued_at'],
-                'created_at' => $now,
-                'updated_at' => $now,
-            ], $missingTypes);
-
-            Analysis::query()->insert($insert);
-
-            $fresh = Analysis::query()
-                ->where('subject_type', $subjectType)
-                ->where('subject_id', $subjectId)
-                ->where('discriminator', $discriminator)
-                ->whereIn('analysis_type', $typeValues)
-                ->get()
-                ->keyBy(fn (Analysis $row): string => $row->analysis_type->value);
-
-            $existing = $fresh;
+        $insertedKeys = [];
+        foreach ($missingValues as $type) {
+            $row = Analysis::query()->firstOrCreate(
+                [
+                    'subject_type' => $subjectType,
+                    'subject_id' => $subjectId,
+                    'analysis_type' => $type,
+                    'discriminator' => $discriminator,
+                ],
+                $defaults,
+            );
+            $existing->put($type->value, $row);
+            if ($row->wasRecentlyCreated) {
+                $insertedKeys[] = $type->value;
+            }
         }
 
         $rows = new Collection();

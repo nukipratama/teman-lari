@@ -353,6 +353,7 @@ function TelegramPanel({ telegram }: Readonly<{ telegram: TelegramPayload }>) {
                     onChange={(value) =>
                         guard(() => {
                             setPostRun(value);
+                            latest.current.postRun = value;
                             savePrefs();
                         })
                     }
@@ -363,6 +364,7 @@ function TelegramPanel({ telegram }: Readonly<{ telegram: TelegramPayload }>) {
                     onChange={(value) =>
                         guard(() => {
                             setWeeklyRecap(value);
+                            latest.current.weeklyRecap = value;
                             savePrefs();
                         })
                     }
@@ -373,6 +375,7 @@ function TelegramPanel({ telegram }: Readonly<{ telegram: TelegramPayload }>) {
                     onChange={(value) =>
                         guard(() => {
                             setMonthlyRecap(value);
+                            latest.current.monthlyRecap = value;
                             savePrefs();
                         })
                     }
@@ -383,6 +386,7 @@ function TelegramPanel({ telegram }: Readonly<{ telegram: TelegramPayload }>) {
                     onChange={(value) =>
                         guard(() => {
                             setDailyBriefing(value);
+                            latest.current.dailyBriefing = value;
                             savePrefs();
                         })
                     }

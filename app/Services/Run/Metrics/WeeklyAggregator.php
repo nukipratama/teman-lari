@@ -104,7 +104,7 @@ class WeeklyAggregator
             ->where('activity_details.start_date_local', '<=', $weekEnding->copy()->endOfDay())
             ->orderBy('activity_details.start_date_local')
             ->select('activity_details.*')
-            ->get();
+            ->lazy();
     }
 
     public function rebuildFor(User $user): int

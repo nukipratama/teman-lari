@@ -50,12 +50,11 @@ class RunCard extends Model
 
         $rows = self::query()
             ->whereHas('activity', fn ($q) => $q->where('user_id', $userId))
-            ->selectRaw('JSON_EXTRACT(badges, "$[*]") as badge_list')
+            ->select('badges')
             ->lazy();
 
         foreach ($rows as $row) {
-            $badgeList = json_decode($row->getRawOriginal('badges') ?? '[]', true) ?? [];
-            foreach ($badgeList as $badge) {
+            foreach ($row->badges ?? [] as $badge) {
                 if (isset($counts[$badge])) {
                     $counts[$badge]++;
                 }
