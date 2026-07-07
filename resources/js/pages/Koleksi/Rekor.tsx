@@ -1,7 +1,6 @@
-import { type ReactNode, useState } from 'react';
+import { type ReactNode } from 'react';
 import { Head, Link } from '@inertiajs/react';
 import { aktivitasUrl } from '@/lib/routes';
-import { toggleButtonVariants } from '@/lib/variants';
 import AppShell from '@/layouts/AppShell';
 import Card from '@/components/ui/Card';
 import Chip from '@/components/ui/Chip';
@@ -9,16 +8,14 @@ import CollectionHeader from '@/components/koleksi/CollectionHeader';
 import HeroPanel from '@/components/ui/HeroPanel';
 import MilestoneStrip from '@/components/koleksi/MilestoneStrip';
 import PrCard from '@/components/card/PrCard';
-import ProgressionChart from '@/components/koleksi/ProgressionChart';
 import SectionLabel from '@/components/ui/SectionLabel';
 import SplitsSparkline from '@/components/run/SplitsSparkline';
 import Temari from '@/components/temari/Temari';
 import AnalysisStatus from '@/components/temari/AnalysisStatus';
 import PageContainer from '@/components/ui/PageContainer';
-import { formatDurationHMS, formatNaiveIdDate, formatPace } from '@/lib/pace';
+import { formatNaiveIdDate } from '@/lib/pace';
 import { renderBold } from '@/lib/richText';
 import { PR_CATEGORY_LABELS, formatPrValue } from '@/lib/pr';
-import { emberGlowStyle } from '@/lib/styles';
 import GradientText from '@/components/ui/GradientText';
 import type { AnalysisPayload, PersonalRecord } from '@/types/inertia';
 
@@ -39,34 +36,10 @@ interface FeaturedExtras {
     delta_sec: number | null;
 }
 
-interface ProgressionSeries {
-    category: string;
-    weeks: string[];
-    times_sec: Array<number | null>;
-    goal_sec: number | null;
-}
-
-interface FitnessPayload {
-    vdot: number | null;
-    threshold_pace_sec: number | null;
-    threshold_confidence: string | null;
-}
-
 interface RekorProps {
     personalRecords: ExtendedPR[];
     featuredExtras?: FeaturedExtras | null;
-    progressionByCategory?: Record<string, ProgressionSeries> | null;
-    fitness?: FitnessPayload | null;
 }
-
-// Order + short labels for the progression distance selector.
-const PROGRESSION_TABS = ['5km', '10km', 'half_marathon', 'marathon'] as const;
-const PROGRESSION_TAB_LABEL: Record<(typeof PROGRESSION_TABS)[number], string> = {
-    '5km': '5K',
-    '10km': '10K',
-    half_marathon: 'HM',
-    marathon: 'FM',
-};
 
 const DISTANCE_CATEGORIES = ['1km', '5km', '10km', '15km', 'half_marathon', 'marathon'] as const;
 
@@ -82,8 +55,6 @@ const DISTANCE_ORDER: Record<(typeof DISTANCE_CATEGORIES)[number], number> = {
 export default function KoleksiRekor({
     personalRecords,
     featuredExtras = null,
-    progressionByCategory = null,
-    fitness = null,
 }: Readonly<RekorProps>) {
     const distancePRs = personalRecords
         .filter((p) => DISTANCE_CATEGORIES.includes(p.category as (typeof DISTANCE_CATEGORIES)[number]))
@@ -117,50 +88,8 @@ export default function KoleksiRekor({
 
                 {pacePRs.length > 0 && <PaceTicker records={pacePRs} />}
 
-                {progressionByCategory && Object.keys(progressionByCategory).length > 0 && (
-                    <ProgressionSection byCategory={progressionByCategory} />
-                )}
-
-                {fitness && (fitness.vdot != null || fitness.threshold_pace_sec != null) && (
-                    <FitnessPanel fitness={fitness} />
-                )}
             </PageContainer>
         </AppShell>
-    );
-}
-
-function FitnessPanel({ fitness }: Readonly<{ fitness: FitnessPayload }>) {
-    return (
-        <section className="mt-10">
-            <SectionLabel>Estimasi kebugaran</SectionLabel>
-            <div className="mt-3 grid gap-3.5 sm:grid-cols-2">
-                {fitness.vdot != null && (
-                    <Card padding="lg">
-                        <div className="font-mono text-[11px] font-bold uppercase tracking-[0.14em] text-ink-3">VDOT</div>
-                        <div className="mt-1 font-sans text-display-sm font-black tabular-nums text-ink">
-                            {fitness.vdot.toFixed(1)}
-                        </div>
-                        <p className="mt-1 font-display text-sm italic leading-relaxed text-ink-3">
-                            Skor kebugaran lari dari PR terbaikmu, makin tinggi makin bugar.
-                        </p>
-                    </Card>
-                )}
-                {fitness.threshold_pace_sec != null && (
-                    <Card padding="lg">
-                        <div className="font-mono text-[11px] font-bold uppercase tracking-[0.14em] text-ink-3">
-                            Pace ambang
-                        </div>
-                        <div className="mt-1 font-sans text-display-sm font-black tabular-nums text-ink">
-                            {formatPace(fitness.threshold_pace_sec)}
-                            <span className="ml-1 text-base font-bold text-ink-3">/km</span>
-                        </div>
-                        <p className="mt-1 font-display text-sm italic leading-relaxed text-ink-3">
-                            Perkiraan pace threshold, patokan buat sesi tempo.
-                        </p>
-                    </Card>
-                )}
-            </div>
-        </section>
     );
 }
 
@@ -180,11 +109,6 @@ function HeroScoreboard({
 
     return (
         <HeroPanel className="mt-8 lg:px-14 lg:py-12">
-            <span
-                aria-hidden
-                className="pointer-events-none absolute left-1/2 top-1/2 h-[520px] w-[520px] -translate-x-1/2 -translate-y-1/2 rounded-full opacity-60"
-                style={emberGlowStyle(0.45, '60%')}
-            />
             {/* Two-row layout:
                 Row 1 — oversized time + Temari quote, balanced side-by-side.
                 Row 2 — captions (Tipe / Hari / Tempat / Cuaca), full width.
@@ -260,75 +184,6 @@ function HeroScoreboard({
                 />
             )}
         </HeroPanel>
-    );
-}
-
-function ProgressionSection({
-    byCategory,
-}: Readonly<{ byCategory: Record<string, ProgressionSeries> }>) {
-    // Tabs are longest-last, so the last one is the headline distance default.
-    const tabs = PROGRESSION_TABS.filter((c) => byCategory[c]);
-    const [selected, setSelected] = useState<string>(tabs.at(-1) ?? tabs[0]);
-    const series = byCategory[selected] ?? byCategory[tabs[0]];
-
-    const times = series.times_sec.filter((t): t is number => t != null);
-    const worst = times.length > 0 ? Math.max(...times) : 0;
-    const best = times.length > 0 ? Math.min(...times) : 0;
-    const delta = Math.max(0, worst - best);
-    const label = PR_CATEGORY_LABELS[series.category] ?? series.category;
-
-    return (
-        <Card as="section" padding="lg" className="mt-8">
-            {tabs.length > 1 && (
-                <div className="mb-6 flex flex-wrap items-center gap-2" role="tablist" aria-label="Pilih jarak">
-                    <span className="mr-1 font-mono font-bold text-[11px] uppercase tracking-[0.14em] text-ink-2">Jarak</span>
-                    {tabs.map((c) => (
-                        <button
-                            key={c}
-                            type="button"
-                            role="tab"
-                            aria-selected={c === selected}
-                            onClick={() => setSelected(c)}
-                            className={toggleButtonVariants({ selected: c === selected, size: 'sm' })}
-                        >
-                            {PROGRESSION_TAB_LABEL[c]}
-                        </button>
-                    ))}
-                </div>
-            )}
-            <div className="grid items-center gap-7 lg:grid-cols-[1fr_1.4fr]">
-                <div>
-                    <SectionLabel>Progres · {label} terbaikmu</SectionLabel>
-                    <p className="font-display text-headline-sm text-ink">
-                        Dari <em className="italic">{formatDurationHMS(worst)}</em> ke{' '}
-                        <em className="italic text-horizon-deep">{formatDurationHMS(best)}</em>
-                    </p>
-                    {delta > 0 && (
-                        <p className="mt-3 font-display text-sm italic leading-relaxed text-ink-2">
-                            “Dalam {series.weeks.length} minggu, kamu motong {formatDurationHMS(delta)}.”
-                        </p>
-                    )}
-                    <div className="mt-3 flex flex-wrap gap-1.5">
-                        <Chip>−{formatDurationHMS(delta)} total</Chip>
-                        {series.goal_sec != null && (
-                            <Chip tone="horizon">Goal: Sub-{formatDurationHMS(series.goal_sec)}</Chip>
-                        )}
-                    </div>
-                </div>
-                <div>
-                    <p className="mb-1.5 text-label-micro text-ink-3">
-                        Sumbu Y dibalik: makin ke atas, makin cepat.
-                    </p>
-                    <ProgressionChart
-                        key={selected}
-                        weeks={series.weeks}
-                        timesSec={series.times_sec}
-                        goalSec={series.goal_sec}
-                        category={label}
-                    />
-                </div>
-            </div>
-        </Card>
     );
 }
 

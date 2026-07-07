@@ -39,7 +39,6 @@ import {
 import { districtFromLocation } from '@/pages/HariIni/helpers';
 import { BADGE_ABILITY, RARITY_LABELS, avgCadenceFromDetail, badgeEmblem, badgeName, fastestKmFromDetail, kartuPropsFromDetail } from '@/lib/runcard';
 import { renderBold } from '@/lib/richText';
-import { emberGlowStyle } from '@/lib/styles';
 import { MOOD_TO_POSE } from '@/lib/temariPose';
 import type {
     Activity,
@@ -254,11 +253,6 @@ export default function RunsShow({
                 {/* HERO — one panel, stats left + route map right */}
                 <section>
                     <HeroPanel className="lg:px-9 lg:py-8">
-                        <span
-                            aria-hidden
-                            className="pointer-events-none absolute -right-10 -top-10 h-52 w-52 rounded-full"
-                            style={emberGlowStyle()}
-                        />
                         <div className="relative grid gap-6 lg:grid-cols-[1.4fr_1fr] lg:items-stretch">
                             <div className="flex h-full flex-col justify-center">
                                 <div className="mb-5 flex items-start gap-4">
@@ -275,12 +269,12 @@ export default function RunsShow({
                                         </h1>
                                     </div>
                                 </div>
-                                <div className="grid grid-cols-2 gap-5 sm:grid-cols-5">
-                                    <StatTile tone="plainSky" size="md" label="JARAK" value={km} unit="km" />
-                                    <StatTile tone="plainSky" size="md" label="DURASI" value={kartuProps.durasi} />
-                                    <StatTile tone="plainSky" size="md" label="PACE" value={pace} unit="/km" />
-                                    <StatTile tone="plainSky" size="md" label="HR" value={hr != null ? `${hr}` : '—'} unit="bpm" />
-                                    <StatTile tone="plainSky" size="md" label="TRIMP" value={trimp != null ? `${trimp}` : '—'} unit="Edwards" explainerKey="trimp" className="col-span-2 sm:col-span-1" />
+                                <div className="grid grid-cols-2 gap-5 sm:grid-cols-5 justify-items-center">
+                                    <StatTile tone="plainSky" size="md" align="center" label="JARAK" value={km} unit="km" />
+                                    <StatTile tone="plainSky" size="md" align="center" label="DURASI" value={kartuProps.durasi} />
+                                    <StatTile tone="plainSky" size="md" align="center" label="PACE" value={pace} unit="/km" />
+                                    <StatTile tone="plainSky" size="md" align="center" label="HR" value={hr != null ? `${hr}` : '—'} unit="bpm" />
+                                    <StatTile tone="plainSky" size="md" align="center" label="TRIMP" value={trimp != null ? `${trimp}` : '—'} unit="Edwards" explainerKey="trimp" className="col-span-2 sm:col-span-1" />
                                 </div>
 
                                 {/* KAMU VS KAMU DULU — inline in hero */}

@@ -1,22 +1,23 @@
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import { Icon } from '@iconify/react';
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import AppShell from '@/layouts/AppShell';
 import Card from '@/components/ui/Card';
 import Chip from '@/components/ui/Chip';
 import HeroPanel from '@/components/ui/HeroPanel';
 import PersonaBar, { type PersonaSlice } from '@/components/PersonaBar';
-import PrCard from '@/components/card/PrCard';
 import SectionLabel from '@/components/ui/SectionLabel';
+import StatTile from '@/components/ui/StatTile';
 import Temari from '@/components/temari/Temari';
 import AnalysisStatus from '@/components/temari/AnalysisStatus';
 import DemoBlockedModal from '@/components/DemoBlockedModal';
 import { useDemoGuard } from '@/hooks/useDemoGuard';
 import { cn } from '@/lib/cn';
 import PageContainer from '@/components/ui/PageContainer';
-import { formatIdDate, formatNaiveIdDate, formatShortDateId, monthsSinceId } from '@/lib/pace';
+import ProgressionChart from '@/components/koleksi/ProgressionChart';
+import { formatDurationHMS, formatIdDate, formatPace, formatShortDateId, monthsSinceId } from '@/lib/pace';
 import { renderBold } from '@/lib/richText';
-import { PR_CATEGORY_LABELS, formatPrValue } from '@/lib/pr';
+import { PR_CATEGORY_LABELS } from '@/lib/pr';
 import type { AnalysisPayload, SharedProps } from '@/types/inertia';
 
 interface IdentityPayload {
@@ -33,27 +34,6 @@ interface StatsPayload {
     longest_run_km: number;
 }
 
-interface TopPrEntry {
-    id: number;
-    category: string;
-    value_sec: number;
-    set_at: string;
-    activity_id: number | null;
-    activity_name: string | null;
-}
-
-interface UnlockEntry {
-    unlock_key: string;
-    unlocked_at: string;
-}
-
-interface UnlockCatalogEntry {
-    name: string;
-    icon: string;
-    description: string;
-    criteria: string;
-}
-
 interface TelegramPayload {
     connected: boolean;
     username: string | null;
@@ -64,16 +44,28 @@ interface TelegramPayload {
     notify_daily_briefing: boolean;
 }
 
+interface ProgressionSeries {
+    category: string;
+    weeks: string[];
+    times_sec: Array<number | null>;
+    goal_sec: number | null;
+}
+
+interface FitnessPayload {
+    vdot: number | null;
+    threshold_pace_sec: number | null;
+    threshold_confidence: string | null;
+}
+
 interface AkuProps {
     identity: IdentityPayload;
     stats: StatsPayload;
-    topPrs?: TopPrEntry[];
-    unlocks?: UnlockEntry[];
-    unlockCatalog?: Record<string, UnlockCatalogEntry>;
     personaMix?: PersonaSlice[];
     personaSummary?: AnalysisPayload;
     profileVoice?: AnalysisPayload;
     telegram?: TelegramPayload;
+    progressionByCategory?: Record<string, ProgressionSeries> | null;
+    fitness?: FitnessPayload | null;
 }
 
 const TELEGRAM_DEFAULT: TelegramPayload = {
@@ -89,13 +81,12 @@ const TELEGRAM_DEFAULT: TelegramPayload = {
 export default function Aku({
     identity,
     stats,
-    topPrs = [],
-    unlocks = [],
-    unlockCatalog = {},
     personaMix = [],
     personaSummary,
     profileVoice,
     telegram = TELEGRAM_DEFAULT,
+    progressionByCategory = null,
+    fitness = null,
 }: Readonly<AkuProps>) {
     const { auth, stravaSync } = usePage<SharedProps>().props;
     const sharedUser = auth.user;
@@ -123,12 +114,12 @@ export default function Aku({
                     </h1>
                 </header>
 
-                <HeroPanel className="lg:px-12 lg:py-10">
-                    <div className="grid items-center gap-6 lg:grid-cols-[160px_1fr]">
-                        <div className="flex justify-center lg:justify-start">
-                            <Temari pose="proud" size={160} />
+                <HeroPanel className="lg:px-9 lg:py-8">
+                    <div className="mb-5 flex items-start gap-6">
+                        <div className="shrink-0">
+                            <Temari pose="proud" size={100} animate={false} />
                         </div>
-                        <div>
+                        <div className="min-w-0 flex-1 self-center">
                             <div className="mb-3 font-mono text-[11px] font-bold uppercase tracking-[0.2em] text-horizon">
                                 ★ Kata Temari tentang kamu
                             </div>
@@ -161,31 +152,18 @@ export default function Aku({
                             </div>
                         </div>
                     </div>
+                    <div className="grid grid-cols-2 gap-5 sm:grid-cols-5 justify-items-center">
+                        <StatTile tone="plainSky" size="md" align="center" label="Total km" value={stats.total_km.toFixed(1)} unit="km" />
+                        <StatTile tone="plainSky" size="md" align="center" label="Total lari" value={stats.total_runs.toString()} unit="lari" />
+                        <StatTile tone="plainSky" size="md" align="center" label="Lari terjauh" value={stats.longest_run_km.toFixed(2)} unit="km" />
+                        {fitness?.vdot != null && (
+                            <StatTile tone="plainSky" size="md" align="center" label="VDOT" value={fitness.vdot.toFixed(1)} explainerKey="vdot" />
+                        )}
+                        {fitness?.threshold_pace_sec != null && (
+                            <StatTile tone="plainSky" size="md" align="center" label="Threshold pace" value={formatPace(fitness.threshold_pace_sec)} unit="/km" explainerKey="threshold_pace" />
+                        )}
+                    </div>
                 </HeroPanel>
-
-                <section className="mt-8 grid gap-3.5 sm:grid-cols-3">
-                    <StatCard
-                        accent="leaf"
-                        label="Total km"
-                        value={stats.total_km.toFixed(1)}
-                        unit="km"
-                        hint="sejauh ini"
-                    />
-                    <StatCard
-                        accent="horizon"
-                        label="Total lari"
-                        value={stats.total_runs.toString()}
-                        unit="lari"
-                        hint="bareng Temari"
-                    />
-                    <StatCard
-                        accent="nyala"
-                        label="Lari terjauh"
-                        value={stats.longest_run_km.toFixed(2)}
-                        unit="km"
-                        hint={firstRunShort ? `sejak ${firstRunShort}` : undefined}
-                    />
-                </section>
 
                 <section className="mt-10">
                     <SectionLabel>Persona · 12 minggu terakhir</SectionLabel>
@@ -205,62 +183,117 @@ export default function Aku({
                     </Card>
                 </section>
 
-                {topPrs.length > 0 && (
-                    <section className="mt-10">
-                        <SectionLabel>Rekor terbaru</SectionLabel>
-                        <div className="grid gap-3.5 sm:grid-cols-3">
-                            {topPrs.map((pr) => (
-                                <RekorMini key={pr.id} pr={pr} />
-                            ))}
-                        </div>
-                        <div className="mt-4 text-right">
-                            <Link
-                                href="/rekor"
-                                className="focus-ring rounded font-mono text-[12px] font-semibold uppercase tracking-[0.14em] text-horizon-deep hover:text-ember-deep"
-                            >
-                                Semua rekor →
-                            </Link>
-                        </div>
-                    </section>
+                {progressionByCategory && Object.keys(progressionByCategory).length > 0 && (
+                    <ProgressionSection byCategory={progressionByCategory} />
                 )}
 
                 <section className="mt-10">
-                    <SectionLabel>Notifikasi Telegram</SectionLabel>
-                    <Card padding="lg">
-                        <TelegramPanel telegram={telegram} />
-                    </Card>
-                </section>
-
-                <section className="mt-10">
-                    <SectionLabel>Aksesori</SectionLabel>
-                    <AksesoriStrip
-                        unlocks={unlocks}
-                        catalog={unlockCatalog}
-                    />
-                </section>
-
-                <section className="mt-10">
                     <SectionLabel>Pengaturan</SectionLabel>
-                    <Card padding="lg">
-                        <Link
-                            href="/pengaturan/zona"
-                            className="focus-ring -m-2 flex items-center justify-between gap-3 rounded-xl p-2 transition hover:bg-cream-deep/40"
-                        >
-                            <span className="flex items-center gap-3">
-                                <Icon icon="mdi:heart-pulse" width={20} height={20} className="text-ink-3" aria-hidden />
-                                <span className="flex flex-col">
-                                    <span className="font-sans text-sm font-semibold text-ink">Zona HR</span>
-                                    <span className="font-sans text-[12px] text-ink-3">
-                                        Atur sendiri batas Z1-Z5 biar Temari baca larimu lebih pas.
+                    <div className="mt-3">
+                        <Card padding="lg">
+                            <TelegramPanel telegram={telegram} />
+                        </Card>
+                    </div>
+                    <div className="mt-4">
+                        <Card padding="lg">
+                            <Link
+                                href="/pengaturan/zona"
+                                className="focus-ring -m-2 flex items-center justify-between gap-3 rounded-xl p-2 transition hover:bg-cream-deep/40"
+                            >
+                                <span className="flex items-center gap-3">
+                                    <Icon icon="mdi:heart-pulse" width={20} height={20} className="text-ink-3" aria-hidden />
+                                    <span className="flex flex-col">
+                                        <span className="font-sans text-sm font-semibold text-ink">Zona HR</span>
+                                        <span className="font-sans text-[12px] text-ink-3">
+                                            Atur sendiri batas Z1-Z5 biar Temari baca larimu lebih pas.
+                                        </span>
                                     </span>
                                 </span>
-                            </span>
-                            <Icon icon="mdi:chevron-right" width={18} height={18} className="text-ink-3" aria-hidden />
-                        </Link>
-                    </Card>
+                                <Icon icon="mdi:chevron-right" width={18} height={18} className="text-ink-3" aria-hidden />
+                            </Link>
+                        </Card>
+                    </div>
                 </section>
             </PageContainer>
         </AppShell>
+    );
+}
+
+const PROGRESSION_TABS = ['5km', '10km', 'half_marathon', 'marathon'] as const;
+const PROGRESSION_TAB_LABEL: Record<(typeof PROGRESSION_TABS)[number], string> = {
+    '5km': '5K',
+    '10km': '10K',
+    half_marathon: 'HM',
+    marathon: 'FM',
+};
+
+function ProgressionSection({
+    byCategory,
+}: Readonly<{ byCategory: Record<string, ProgressionSeries> }>) {
+    const tabs = PROGRESSION_TABS.filter((c) => byCategory[c]);
+    const [selected, setSelected] = useState<string>(tabs.at(-1) ?? tabs[0]);
+    const series = byCategory[selected] ?? byCategory[tabs[0]];
+
+    const times = series.times_sec.filter((t): t is number => t != null);
+    const worst = times.length > 0 ? Math.max(...times) : 0;
+    const best = times.length > 0 ? Math.min(...times) : 0;
+    const delta = Math.max(0, worst - best);
+    const label = PR_CATEGORY_LABELS[series.category] ?? series.category;
+
+    return (
+        <Card as="section" padding="lg" className="mt-4">
+            {tabs.length > 1 && (
+                <div className="mb-6 flex flex-wrap items-center gap-2" role="tablist" aria-label="Pilih jarak">
+                    <span className="mr-1 font-mono font-bold text-[11px] uppercase tracking-[0.14em] text-ink-2">Jarak</span>
+                    {tabs.map((c) => (
+                        <button
+                            key={c}
+                            type="button"
+                            role="tab"
+                            aria-selected={c === selected}
+                            onClick={() => setSelected(c)}
+                            className={cn(
+                                'focus-ring inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 font-mono text-[11px] font-semibold uppercase tracking-[0.1em] transition',
+                                c === selected
+                                    ? 'border-horizon bg-horizon/10 text-horizon-deep'
+                                    : 'border-line text-ink-3 hover:border-horizon/60 hover:text-ink',
+                            )}
+                        >
+                            {PROGRESSION_TAB_LABEL[c]}
+                        </button>
+                    ))}
+                </div>
+            )}
+            <div className="grid items-center gap-7 lg:grid-cols-[1fr_1.4fr]">
+                <div>
+                    <SectionLabel>Perjalanan · {label}</SectionLabel>
+                    <p className="font-display text-headline-sm text-ink">
+                        Dulu <em className="italic">{formatDurationHMS(worst)}</em>, sekarang{' '}
+                        <em className="italic text-horizon-deep">{formatDurationHMS(best)}</em>
+                    </p>
+                    {delta > 0 && (
+                        <p className="mt-3 font-display text-sm italic leading-relaxed text-ink-2">
+                            &ldquo;{formatDurationHMS(delta)} lebih kencang dalam {series.weeks.length} minggu.&rdquo;
+                        </p>
+                    )}
+                    <div className="mt-3 flex flex-wrap gap-1.5">
+                        <Chip>&minus;{formatDurationHMS(delta)} total</Chip>
+                        {series.goal_sec != null && (
+                            <Chip tone="horizon">Goal: Sub-{formatDurationHMS(series.goal_sec)}</Chip>
+                        )}
+                    </div>
+                </div>
+                <div>
+                    <ProgressionChart
+                        key={selected}
+                        weeks={series.weeks}
+                        timesSec={series.times_sec}
+                        goalSec={series.goal_sec}
+                        category={label}
+                    />
+                </div>
+            </div>
+        </Card>
     );
 }
 
@@ -435,54 +468,6 @@ function NotifyToggle({
     );
 }
 
-type StatAccent = 'leaf' | 'horizon' | 'nyala';
-
-const STAT_ACCENT: Record<StatAccent, { border: string; value: string }> = {
-    leaf: { border: 'before:bg-leaf', value: 'text-leaf-deep' },
-    horizon: { border: 'before:bg-horizon', value: 'text-horizon-deep' },
-    nyala: { border: 'before:bg-mood-nyala', value: 'text-mood-nyala' },
-};
-
-function StatCard({
-    accent,
-    label,
-    value,
-    unit,
-    hint,
-}: Readonly<{ accent: StatAccent; label: string; value: string; unit?: string; hint?: string }>) {
-    const tone = STAT_ACCENT[accent];
-    return (
-        <Card
-            padding="lg"
-            className={cn(
-                'relative overflow-hidden',
-                'before:absolute before:inset-x-0 before:top-0 before:h-1',
-                tone.border,
-            )}
-        >
-            <div className="font-mono text-[11px] font-bold uppercase tracking-[0.14em] text-ink-2">
-                {label}
-            </div>
-            <div className="mt-2 flex items-baseline gap-1.5">
-                <span
-                    className={cn(
-                        'font-sans text-display-lg font-black leading-none tabular-nums',
-                        tone.value,
-                    )}
-                >
-                    {value}
-                </span>
-                {unit && (
-                    <span className="font-mono font-bold text-[11px] uppercase tracking-[0.14em] text-ink-2">
-                        {unit}
-                    </span>
-                )}
-            </div>
-            {hint && <div className="mt-2 font-display text-sm italic text-ink-3">{hint}</div>}
-        </Card>
-    );
-}
-
 function RekorMini({ pr }: Readonly<{ pr: TopPrEntry }>) {
     return (
         <PrCard
@@ -494,83 +479,4 @@ function RekorMini({ pr }: Readonly<{ pr: TopPrEntry }>) {
     );
 }
 
-/** How many accessory tiles to preview on the profile before deferring to the full /aksesori page. */
-const ACCESSORY_PREVIEW = 5;
 
-function AksesoriStrip({
-    unlocks,
-    catalog,
-}: Readonly<{
-    unlocks: UnlockEntry[];
-    catalog: Record<string, UnlockCatalogEntry>;
-}>) {
-    const { entries, unlockedKeys, unlockedCount } = useMemo(() => {
-        const keys = new Set(unlocks.map((u) => u.unlock_key));
-        const list = Object.entries(catalog);
-        return {
-            entries: list,
-            unlockedKeys: keys,
-            unlockedCount: list.filter(([key]) => keys.has(key)).length,
-        };
-    }, [unlocks, catalog]);
-
-    if (entries.length === 0) return null;
-
-    return (
-        <Card padding="lg">
-            <div className="mb-4 flex items-center justify-between">
-                <Chip tone="horizon">{unlockedCount} / {entries.length} kebuka</Chip>
-                <Link
-                    href="/aksesori"
-                    className="font-mono text-[12px] font-semibold uppercase tracking-[0.14em] text-horizon-deep hover:text-ember-deep"
-                >
-                    Dandanin →
-                </Link>
-            </div>
-            <div className="grid gap-3 grid-cols-2 sm:grid-cols-3 lg:grid-cols-5">
-                {entries.slice(0, ACCESSORY_PREVIEW).map(([key, meta]) => {
-                    const unlocked = unlockedKeys.has(key);
-                    return (
-                        <article
-                            key={key}
-                            className={
-                                unlocked
-                                    ? 'flex flex-col gap-2 rounded-2xl bg-horizon/[0.08] px-4 py-4 text-ink'
-                                    : 'flex flex-col gap-2 rounded-2xl border border-dashed border-cream-deep bg-cream/40 px-4 py-4 text-ink-3'
-                            }
-                        >
-                            <span
-                                className={
-                                    unlocked
-                                        ? 'flex h-9 w-9 items-center justify-center rounded-xl bg-horizon text-cream'
-                                        : 'flex h-9 w-9 items-center justify-center rounded-xl bg-ink-3/20 text-ink-3'
-                                }
-                            >
-                                <Icon
-                                    icon={unlocked ? meta.icon : 'mdi:lock-outline'}
-                                    width={18}
-                                    height={18}
-                                    aria-hidden
-                                />
-                            </span>
-                            <h4 className="font-display text-base leading-tight tracking-[-0.005em] text-ink">
-                                {meta.name}
-                            </h4>
-                            <p className="font-sans text-[11px] leading-snug text-ink-3">
-                                {unlocked ? meta.description : meta.criteria}
-                            </p>
-                        </article>
-                    );
-                })}
-            </div>
-            {entries.length > ACCESSORY_PREVIEW && (
-                <Link
-                    href="/aksesori"
-                    className="focus-ring mt-3 block rounded text-center font-display text-sm italic text-ink-3 transition hover:text-horizon-deep"
-                >
-                    +{entries.length - ACCESSORY_PREVIEW} aksesori lagi di koleksi →
-                </Link>
-            )}
-        </Card>
-    );
-}

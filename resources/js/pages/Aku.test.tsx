@@ -4,6 +4,10 @@ import { router } from '@inertiajs/react';
 import Aku from './Aku';
 import { makeUser, setMockPage } from '@/test/setup';
 
+vi.mock('@/components/koleksi/ProgressionChart', () => ({
+    default: () => <div data-testid="progression-chart" />,
+}));
+
 const identity = {
     name: 'Ada Lovelace',
     avatar_url: null,
@@ -62,14 +66,36 @@ describe('Aku', () => {
         expect(screen.getByText(/konsisten dan pintar/)).toBeInTheDocument();
     });
 
-    it('renders top PR cards + the Semua rekor link when topPrs is non-empty', () => {
-        const topPrs = [
-            { id: 10, category: '5km', value_sec: 1751, set_at: '2026-05-16', activity_id: 99, activity_name: 'Sub-30 5K' },
-            { id: 11, category: 'best_20min', value_sec: 349, set_at: '2026-05-16', activity_id: null, activity_name: null },
-        ];
-        render(<Aku identity={identity} stats={stats} topPrs={topPrs} />);
-        expect(screen.getByText(/Rekor terbaru/)).toBeInTheDocument();
-        expect(screen.getByText(/Semua rekor/)).toBeInTheDocument();
+    it('renders the progression section when progressionByCategory is provided', () => {
+        render(
+            <Aku
+                identity={identity}
+                stats={stats}
+                progressionByCategory={{
+                    '5km': {
+                        category: '5km',
+                        weeks: ['2026-04-13', '2026-04-20', '2026-04-27'],
+                        times_sec: [1800, 1770, 1751],
+                        goal_sec: 1740,
+                    },
+                }}
+            />,
+        );
+        expect(screen.getByText(/Perjalanan/)).toBeInTheDocument();
+        expect(screen.getByTestId('progression-chart')).toBeInTheDocument();
+    });
+
+    it('renders VDOT and threshold pace in the hero when fitness data is provided', () => {
+        render(
+            <Aku
+                identity={identity}
+                stats={stats}
+                fitness={{ vdot: 42.1, threshold_pace_sec: 300, threshold_confidence: 'high' }}
+            />,
+        );
+        expect(screen.getByText('VDOT')).toBeInTheDocument();
+        expect(screen.getByText('42.1')).toBeInTheDocument();
+        expect(screen.getByText('Threshold pace')).toBeInTheDocument();
     });
 
     it('shows the connect button when Telegram is not connected', () => {
@@ -326,28 +352,6 @@ describe('Aku', () => {
         render(<Aku identity={identity} stats={stats} />);
         const link = screen.getByText('Sambungin lagi').closest('a');
         expect(link).toHaveAttribute('href', '/auth/strava/redirect');
-    });
-
-    it('renders the AksesoriStrip when unlock catalog has entries', () => {
-        const unlockCatalog = {
-            'accessory.ikat_kepala_epik': {
-                name: 'Ikat Kepala Istimewa',
-                icon: 'mdi:bandana',
-                description: '3 epic cards',
-                criteria: 'Earn 3 epic',
-            },
-            'accessory.medal_emas': {
-                name: 'Medali Emas',
-                icon: 'mdi:medal',
-                description: '5 PRs',
-                criteria: 'Five PRs',
-            },
-        };
-        const unlocks = [{ unlock_key: 'accessory.ikat_kepala_epik', unlocked_at: '2026-05-10' }];
-        render(<Aku identity={identity} stats={stats} unlocks={unlocks} unlockCatalog={unlockCatalog} />);
-        expect(screen.getByText(/Ikat Kepala Istimewa/)).toBeInTheDocument();
-        expect(screen.getByText(/Medali Emas/)).toBeInTheDocument();
-        expect(screen.getByText(/kebuka/)).toBeInTheDocument();
     });
 
     it('renders the profile voice quote when profileVoice is provided', () => {

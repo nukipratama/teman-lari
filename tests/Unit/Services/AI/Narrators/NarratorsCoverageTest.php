@@ -26,6 +26,8 @@ use App\Services\AI\Narrators\TrendCaptionNarrator;
 use App\Services\AI\Narrators\WeeklyRecapNarrator;
 use App\Services\Run\Metrics\RunBaseline;
 use App\Services\Run\Metrics\TrainingLoad;
+use App\Services\Run\Metrics\VdotEstimator;
+use App\Services\Run\ProgressionSeriesBuilder;
 use App\Services\Run\Story\Contracts\VerdictNarrator;
 use App\Services\Run\Story\Vibe;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -779,7 +781,7 @@ it('MonthlyRecapNarrator leaves prev_narrative null on the first month', functio
 it('AkuProfileVoiceNarrator returns profile voice on valid JSON', function (): void {
     $user = User::factory()->create();
     $caller = fakeCaller(json_encode(['profile_voice' => 'Kamu udah lari 50 km, keren.'], JSON_THROW_ON_ERROR));
-    $narrator = new AkuProfileVoiceNarrator($caller);
+    $narrator = new AkuProfileVoiceNarrator($caller, app(VdotEstimator::class), app(ProgressionSeriesBuilder::class));
     expect($narrator->generate($user))->toBe('Kamu udah lari 50 km, keren.');
 });
 
@@ -792,7 +794,7 @@ it('AkuProfileVoiceNarrator builds context from user stats', function (): void {
     ]);
 
     $caller = fakeCaller(json_encode(['profile_voice' => 'x'], JSON_THROW_ON_ERROR));
-    $narrator = new AkuProfileVoiceNarrator($caller);
+    $narrator = new AkuProfileVoiceNarrator($caller, app(VdotEstimator::class), app(ProgressionSeriesBuilder::class));
 
     $context = $narrator->context($user->fresh());
     expect($context['total_runs'])->toBe(1)
@@ -821,7 +823,7 @@ it('AkuProfileVoiceNarrator reads the weekly streak and the most common run time
         ]);
     }
 
-    $context = (new AkuProfileVoiceNarrator(fakeCaller('{"profile_voice":"x"}')))->context($user->fresh());
+    $context = (new AkuProfileVoiceNarrator(fakeCaller('{"profile_voice":"x"}'), app(VdotEstimator::class), app(ProgressionSeriesBuilder::class)))->context($user->fresh());
 
     expect($context['weekly_streak'])->toBe(2)
         ->and($context['favorite_time'])->toBe('malam');
@@ -830,14 +832,14 @@ it('AkuProfileVoiceNarrator reads the weekly streak and the most common run time
 it('AkuProfileVoiceNarrator throws on missing profile_voice key', function (): void {
     $user = User::factory()->create();
     $caller = fakeCaller(json_encode(['other' => 'x'], JSON_THROW_ON_ERROR));
-    $narrator = new AkuProfileVoiceNarrator($caller);
+    $narrator = new AkuProfileVoiceNarrator($caller, app(VdotEstimator::class), app(ProgressionSeriesBuilder::class));
     $narrator->generate($user);
 })->throws(UnavailableException::class);
 
 it('AkuProfileVoiceNarrator throws on non-JSON', function (): void {
     $user = User::factory()->create();
     $caller = fakeCaller('not json');
-    $narrator = new AkuProfileVoiceNarrator($caller);
+    $narrator = new AkuProfileVoiceNarrator($caller, app(VdotEstimator::class), app(ProgressionSeriesBuilder::class));
     $narrator->generate($user);
 })->throws(UnavailableException::class, 'non-JSON');
 

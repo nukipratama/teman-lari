@@ -9,7 +9,6 @@ use App\Models\ActivityDetail;
 use App\Models\User;
 use App\Models\WeeklySnapshot;
 use App\Services\Gamification\UnlockEngine;
-use App\Services\Run\Metrics\TrainingLoad;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Enumerable;
 use Illuminate\Support\LazyCollection;

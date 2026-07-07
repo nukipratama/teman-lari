@@ -116,6 +116,15 @@ export const METRIC_GLOSSARY = {
         label: 'Ascent',
         body: 'Total tanjakan yang kamu lewatin selama lari, dalam meter. Makin tinggi, makin berat usahanya walau jaraknya sama.',
     },
+    vdot: {
+        acronym: 'VDOT',
+        label: 'VDOT',
+        body: 'Skor kebugaran lari dari PR terbaikmu, pakai rumus Jack Daniels. Makin tinggi, makin efisien threshold pace kamu.',
+    },
+    threshold_pace: {
+        label: 'Threshold pace',
+        body: 'Perkiraan pace di ambang laktat, turunan dari skor VDOT. Pace ideal buat sesi tempo lari.',
+    },
 } as const satisfies Record<string, MetricGlossaryEntry>;
 
 export type MetricKey = keyof typeof METRIC_GLOSSARY;

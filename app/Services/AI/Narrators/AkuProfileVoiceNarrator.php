@@ -11,6 +11,8 @@ use App\Models\UserUnlock;
 use App\Models\WeeklySnapshot;
 use App\Services\AI\ChatCallOptions;
 use App\Services\AI\StructuredChatCaller;
+use App\Services\Run\Metrics\VdotEstimator;
+use App\Services\Run\ProgressionSeriesBuilder;
 use Illuminate\Support\Carbon;
 
 class AkuProfileVoiceNarrator
@@ -18,8 +20,8 @@ class AkuProfileVoiceNarrator
     private const string SYSTEM_PROMPT = <<<'PROMPT'
         Tugas: 2-3 kalimat (maksimal 70 kata) Temari menyapa pengguna di halaman
         profil. Temari ngebaca ringkasan perjalanan lari pengguna: total km, total
-        lari, lari terjauh, rekor, aksesori yang udah kebuka, streak mingguan, dan
-        jam lari favorit.
+        lari, lari terjauh, rekor, aksesori yang udah kebuka, streak mingguan,
+        jam lari favorit, skor VDOT, dan tren progres jarak tertentu.
 
         Tone: hangat, personal, gak generik. Sebutkan angka spesifik
         (total km, jumlah lari). Kalau ada rekor, akui. Kalau aksesori baru
@@ -29,12 +31,20 @@ class AkuProfileVoiceNarrator
         beruntun"). Kalau favorite_time ada, selipkan karakternya secara natural
         (pagi = anak pagi, malam = pelari malam), jangan dipaksa kalau null.
 
+        Kalau vdot tersedia, sebutkan skornya sebagai gambaran level kebugaran
+        (mis. "VDOT 45, lumayan buat intermediate runner"). Kalau ada
+        progression_signal dengan delta_sec > 0, akui improvement-nya (mis.
+        "5K kamu makin pedes, turun 2 menit dalam 3 bulan").
+
         Bahasa: Indonesia, istilah running tetap bahasa Inggris (pace, cadence,
         HR, split, easy, tempo).
         PROMPT;
 
-    public function __construct(private readonly StructuredChatCaller $caller)
-    {
+    public function __construct(
+        private readonly StructuredChatCaller $caller,
+        private readonly VdotEstimator $vdotEstimator,
+        private readonly ProgressionSeriesBuilder $progressionSeriesBuilder,
+    ) {
     }
 
     public function generate(User $user): string
@@ -76,6 +86,11 @@ class AkuProfileVoiceNarrator
         $unlockCount = UserUnlock::query()->where('user_id', $user->id)->count();
         $totalAccessories = count(config('temari_unlocks', []));
 
+        $vdot = $this->vdotEstimator->estimate($user);
+        $vdotScore = $vdot['vdot'] ?? null;
+
+        $progressionSignal = $this->buildProgressionSignal($user);
+
         return [
             'name' => $user->first_name ?? $user->name,
             'total_runs' => $totalRuns,
@@ -88,6 +103,8 @@ class AkuProfileVoiceNarrator
             'weekly_streak' => WeeklySnapshot::consecutiveWeekStreak($user->id),
             'favorite_time' => $this->favoriteTimeBucket($user),
             'strava_connected' => $user->stravaConnection !== null,
+            'vdot' => $vdotScore,
+            'progression_signal' => $progressionSignal,
         ];
     }
 
@@ -124,5 +141,67 @@ class AkuProfileVoiceNarrator
             $hour >= 15 && $hour < 19 => 'sore',
             default => 'malam',
         };
+    }
+
+    /**
+     * Pick the distance category with the biggest absolute improvement
+     * and return its label + delta, so Temari can mention it.
+     *
+     * @return array{label: string, delta_sec: int}|null
+     */
+    private function buildProgressionSignal(User $user): ?array
+    {
+        $categories = [
+            \App\Enums\PrCategory::Km5,
+            \App\Enums\PrCategory::Km10,
+            \App\Enums\PrCategory::HalfMarathon,
+            \App\Enums\PrCategory::Marathon,
+        ];
+
+        $records = PersonalRecord::query()
+            ->where('user_id', $user->id)
+            ->whereIn('category', $categories)
+            ->orderBy('category')
+            ->get();
+
+        if ($records->isEmpty()) {
+            return null;
+        }
+
+        $best = null;
+        $bestDelta = 0;
+
+        foreach ($categories as $category) {
+            $pr = $records->first(fn (PersonalRecord $r): bool => $r->category === $category);
+            if ($pr === null) {
+                continue;
+            }
+
+            $series = $this->progressionSeriesBuilder->buildMany($user, [$pr], fn () => null);
+            $key = $category->value;
+            $data = $series[$key] ?? null;
+
+            if ($data === null) {
+                continue;
+            }
+
+            if (count($data['times_sec']) < 2) {
+                continue;
+            }
+
+            $worst = max($data['times_sec']);
+            $bestTime = min($data['times_sec']);
+            $delta = (int) ($worst - $bestTime);
+
+            if ($delta > $bestDelta) {
+                $bestDelta = $delta;
+                $best = [
+                    'label' => $pr->category->label(),
+                    'delta_sec' => $delta,
+                ];
+            }
+        }
+
+        return $best;
     }
 }

@@ -9,11 +9,16 @@ use App\Models\AI\Analysis;
 use App\Models\PersonalRecord;
 use App\Models\User;
 use App\Models\UserUnlock;
+use App\Services\Run\Metrics\ThresholdEstimator;
+use App\Services\Run\Metrics\VdotEstimator;
+use App\Services\Run\ProgressionSeriesBuilder;
 use App\Services\AI\AnalysisType;
 use App\Services\AI\Narrators\PersonaSummaryNarrator;
 use App\Services\Telegram\TelegramLinkToken;
 use Illuminate\Http\Request;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Carbon;
+use App\Enums\PrCategory;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -21,10 +26,23 @@ class ProfileController extends Controller
 {
     private const int TOP_PR_COUNT = 3;
 
+    /**
+     * @var list<PrCategory>
+     */
+    private const array PROGRESSION_CATEGORIES = [
+        PrCategory::Km5,
+        PrCategory::Km10,
+        PrCategory::HalfMarathon,
+        PrCategory::Marathon,
+    ];
+
     public function __invoke(
         Request $request,
         PersonaSummaryNarrator $personaNarrator,
         TelegramLinkToken $telegramLinkToken,
+        ProgressionSeriesBuilder $progressionSeriesBuilder,
+        VdotEstimator $vdotEstimator,
+        ThresholdEstimator $thresholdEstimator,
     ): Response {
         /** @var User $user */
         $user = $request->user();
@@ -53,6 +71,14 @@ class ProfileController extends Controller
             ])
             ->all();
 
+        $personalRecords = PersonalRecord::query()
+            ->where('user_id', $user->id)
+            ->orderBy('category')
+            ->get();
+
+        $fitness = $this->fitness($vdotEstimator, $thresholdEstimator, $user);
+        $progressionByCategory = $this->buildProgressionByCategory($progressionSeriesBuilder, $user, $personalRecords);
+
         return Inertia::render('Aku', [
             'identity' => [
                 'name' => $user->name,
@@ -72,6 +98,8 @@ class ProfileController extends Controller
             'personaMix' => $personaNarrator->personaMix($user),
             'personaSummary' => $this->resolvePersonaSummary($user),
             'profileVoice' => $this->resolveProfileVoice($user),
+            'progressionByCategory' => $progressionByCategory,
+            'fitness' => $fitness,
             'telegram' => $this->resolveTelegram($user, $telegramLinkToken),
         ]);
     }
@@ -170,5 +198,41 @@ class ProfileController extends Controller
         }
 
         return $out;
+    }
+
+    /**
+     * @param  Collection<int, PersonalRecord>  $records
+     * @return array<string, array{category:string, weeks:array<int,string>, times_sec:array<int,int>, goal_sec:int|null}>
+     */
+    private function buildProgressionByCategory(ProgressionSeriesBuilder $builder, User $user, Collection $records): array
+    {
+        $prs = [];
+        foreach (self::PROGRESSION_CATEGORIES as $category) {
+            $pr = $records->first(fn (PersonalRecord $record): bool => $record->category === $category);
+            if ($pr !== null) {
+                $prs[] = $pr;
+            }
+        }
+
+        return $builder->buildMany($user, $prs, fn (PersonalRecord $pr): ?int => null);
+    }
+
+    /**
+     * @return array{vdot: float|null, threshold_pace_sec: float|null, threshold_confidence: string|null}|null
+     */
+    private function fitness(VdotEstimator $vdotEstimator, ThresholdEstimator $thresholdEstimator, User $user): ?array
+    {
+        $vdot = $vdotEstimator->estimate($user);
+        $threshold = $thresholdEstimator->estimate($user);
+
+        if ($vdot === null && $threshold === null) {
+            return null;
+        }
+
+        return [
+            'vdot' => $vdot['vdot'] ?? null,
+            'threshold_pace_sec' => $threshold['pace_sec'] ?? null,
+            'threshold_confidence' => $threshold['confidence'] ?? null,
+        ];
     }
 }

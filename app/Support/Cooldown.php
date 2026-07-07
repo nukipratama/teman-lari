@@ -17,7 +17,9 @@ final readonly class Cooldown
 {
     public const int WINDOW_SECONDS = 900;
 
-    public function __construct(private string $key) {}
+    public function __construct(private string $key)
+    {
+    }
 
     public function isActive(): bool
     {

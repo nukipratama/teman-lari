@@ -1,11 +1,7 @@
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import KoleksiRekor from './Rekor';
 import { makeUser, setMockPage } from '@/test/setup';
-
-vi.mock('@/components/koleksi/ProgressionChart', () => ({
-    default: () => <div data-testid="progression-chart" />,
-}));
 
 vi.mock('@/components/koleksi/MilestoneStrip', () => ({
     default: () => <div data-testid="milestone-strip" />,
@@ -62,46 +58,6 @@ describe('Koleksi/Rekor', () => {
         expect(screen.getByText(/Senayan/)).toBeInTheDocument();
     });
 
-    it('renders progression chart when a category series has weeks', () => {
-        const series = {
-            category: '5km',
-            weeks: ['2026-04-13', '2026-04-20', '2026-04-27'],
-            times_sec: [1800, 1770, 1751],
-            goal_sec: 1740,
-        };
-        render(
-            <KoleksiRekor
-                personalRecords={[pr('5km', 1751)]}
-                featuredExtras={featuredExtras}
-                progressionByCategory={{ '5km': series }}
-            />,
-        );
-        expect(screen.getByTestId('progression-chart')).toBeInTheDocument();
-    });
-
-    it('renders a distance selector when multiple category series exist', () => {
-        const mk = (category: string) => ({
-            category,
-            weeks: ['2026-04-13', '2026-04-20'],
-            times_sec: [1800, 1751],
-            goal_sec: 1740,
-        });
-        render(
-            <KoleksiRekor
-                personalRecords={[pr('5km', 1751, 1), pr('marathon', 12000, 2)]}
-                featuredExtras={featuredExtras}
-                progressionByCategory={{ '5km': mk('5km'), marathon: mk('marathon') }}
-            />,
-        );
-        expect(screen.getByRole('tab', { name: 'FM' })).toBeInTheDocument();
-        const fiveK = screen.getByRole('tab', { name: '5K' });
-        expect(fiveK).toBeInTheDocument();
-
-        // Selecting a progression category swaps the active tab.
-        fireEvent.click(fiveK);
-        expect(fiveK).toHaveAttribute('aria-selected', 'true');
-    });
-
     it('renders the trophy wall for distance PRs', () => {
         render(
             <KoleksiRekor
@@ -138,17 +94,5 @@ describe('Koleksi/Rekor', () => {
         expect(screen.getByText(/Tempo terbaru kamu konsisten/)).toBeInTheDocument();
     });
 
-    it('renders the fitness panel with VDOT and threshold pace', () => {
-        render(
-            <KoleksiRekor
-                personalRecords={[pr('5km', 1751)]}
-                featuredExtras={featuredExtras}
-                fitness={{ vdot: 42.1, threshold_pace_sec: 300, threshold_confidence: 'high' }}
-            />,
-        );
-        expect(screen.getByText('Estimasi kebugaran')).toBeInTheDocument();
-        expect(screen.getByText('VDOT')).toBeInTheDocument();
-        expect(screen.getByText('42.1')).toBeInTheDocument();
-        expect(screen.getByText('Pace ambang')).toBeInTheDocument();
-    });
+
 });
