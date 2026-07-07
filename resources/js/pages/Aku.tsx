@@ -363,9 +363,11 @@ function TelegramPanel({ telegram }: Readonly<{ telegram: TelegramPayload }>) {
     return (
         <div className="flex flex-col gap-5">
             <div className="flex items-center justify-between gap-3">
-                <Chip tone="horizon">
-                    Telegram aktif{telegram.username ? ` · @${telegram.username}` : ''}
-                </Chip>
+                <span className="min-w-0 overflow-hidden">
+                    <Chip tone="horizon" className="truncate">
+                        Telegram aktif{telegram.username ? ` · @${telegram.username}` : ''}
+                    </Chip>
+                </span>
                 <button
                     type="button"
                     onClick={() => guard(() => router.delete('/profil/telegram', { preserveScroll: true }))}
