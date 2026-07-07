@@ -11,6 +11,7 @@ use App\Services\Strava\Exceptions\StravaRateLimitedException;
 use App\Services\Strava\Exceptions\StravaTokenRefreshFailedException;
 use App\Services\Strava\Exceptions\StravaTokenRefreshTransientException;
 use Illuminate\Http\Client\ConnectionException;
+use Illuminate\Http\Client\RequestException;
 use Illuminate\Http\Client\Response;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
@@ -201,10 +202,20 @@ class StravaClient
             );
         }
 
+        $accessToken = $response->json('access_token');
+        $refreshToken = $response->json('refresh_token');
+        $expiresAt = $response->json('expires_at');
+
+        if (! is_string($accessToken) || ! is_string($refreshToken) || ! is_int($expiresAt)) {
+            throw new StravaTokenRefreshTransientException(
+                'Strava token refresh returned an unexpected response shape: missing or invalid token fields.',
+            );
+        }
+
         $connection->update([
-            'access_token' => $response->json('access_token'),
-            'refresh_token' => $response->json('refresh_token'),
-            'token_expires_at' => (new Carbon('@' . $response->json('expires_at')))->setTimezone(config('app.timezone')),
+            'access_token' => $accessToken,
+            'refresh_token' => $refreshToken,
+            'token_expires_at' => (new Carbon('@' . $expiresAt))->setTimezone(config('app.timezone')),
         ]);
 
         return $connection;
