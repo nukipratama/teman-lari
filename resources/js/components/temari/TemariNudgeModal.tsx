@@ -2,10 +2,11 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { usePage } from '@inertiajs/react';
 import { useRef, type ReactNode } from 'react';
 import { Icon } from '@iconify/react';
+import { cn } from '@/lib/cn';
 import { useDismissable } from '@/hooks/useDismissable';
 import { useFocusTrap } from '@/hooks/useFocusTrap';
 import PillButton from '@/components/ui/PillButton';
-import TemariProto, { type TemariEquipped, type TemariPose } from '@/components/temari/TemariProto';
+import TemariProto, { type TemariPose } from '@/components/temari/TemariProto';
 import { serverToEquipped } from '@/lib/equippedAccessories';
 import { iconButtonVariants } from '@/lib/variants';
 import type { SharedProps } from '@/types/inertia';
@@ -17,6 +18,10 @@ interface TemariNudgeModalProps {
     body: ReactNode;
     /** Primary CTA. */
     primaryLabel: string;
+    /** Iconify icon name shown before the primary label. */
+    primaryIcon: string;
+    /** Extra classes merged onto the primary CTA (e.g. a brand color override). */
+    primaryClassName?: string;
     onPrimary: () => void;
     /** Secondary dismiss label; defaults to a soft "Nanti aja". */
     secondaryLabel?: string;
@@ -35,22 +40,16 @@ export default function TemariNudgeModal({
     title,
     body,
     primaryLabel,
+    primaryIcon,
+    primaryClassName,
     onPrimary,
     secondaryLabel = 'Nanti aja',
     pose = 'observational',
 }: Readonly<TemariNudgeModalProps>) {
     const panelRef = useRef<HTMLDivElement>(null);
 
-    // Read the shared equip state defensively (mirrors ShareCardModal) so this
-    // still renders a bare bunny when there's no Inertia page context (e.g. unit tests).
-    let equipped: TemariEquipped | null = null;
-    const pageProps = (globalThis as unknown as Record<string, unknown>).__inertia;
-    if (pageProps) {
-        const acc = usePage<SharedProps>().props.equippedAccessories;
-        if (acc) {
-            equipped = serverToEquipped(acc);
-        }
-    }
+    const equippedAccessories = usePage<SharedProps>().props.equippedAccessories;
+    const equipped = equippedAccessories ? serverToEquipped(equippedAccessories) : null;
 
     useDismissable(open, panelRef, onClose);
     useFocusTrap(open, panelRef);
@@ -102,13 +101,15 @@ export default function TemariNudgeModal({
 
                         <div className="flex flex-col gap-2 border-t border-cream-deep bg-cream px-5 py-4">
                             <PillButton
-                                tone="horizon"
+                                tone="sky"
                                 onClick={onPrimary}
-                                className="w-full justify-center py-3.5 font-semibold"
+                                className={cn('w-full justify-center py-3.5 font-semibold', primaryClassName)}
                             >
+                                <Icon icon={primaryIcon} width={16} height={16} aria-hidden />
                                 {primaryLabel}
                             </PillButton>
                             <PillButton tone="ghost" onClick={onClose} className="w-full justify-center">
+                                <Icon icon="mdi:close" width={16} height={16} aria-hidden />
                                 {secondaryLabel}
                             </PillButton>
                         </div>
