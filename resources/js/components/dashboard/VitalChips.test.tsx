@@ -66,9 +66,9 @@ describe('VitalChips', () => {
 
     it('scales the value with a fluid clamp so it fits the narrow mobile column', () => {
         render(<VitalChips briefing={briefing} load={load} />);
-        // A fixed-floor fluid size (e.g. text-stat-fluid's 24px min) still truncates
-        // real values in a 1/3-width tile, so this uses its own tighter clamp.
-        expect(screen.getByText('-2.5').className).toContain('clamp(19px,6vw,40px)');
+        // text-stat-fluid's floor was lowered (app.css) to 19px so signed values
+        // still fit the 1/3-width tile at 320px.
+        expect(screen.getByText('-2.5').className).toContain('text-stat-fluid');
     });
 
     it('still shows the vibe emoji + label and an em-dash Kesiapan when load is null', () => {

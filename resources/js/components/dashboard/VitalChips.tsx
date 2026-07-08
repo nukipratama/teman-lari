@@ -178,10 +178,11 @@ function VitalChip({
                         // `break-words` stays as a safety net for any future longer label.
                         wordValue
                             ? 'text-[clamp(11px,3.5vw,30px)] leading-tight whitespace-pre-line break-words'
-                            // Same idea for the numeric siblings: `text-stat-fluid`'s floor (24px)
-                            // was tuned for a full-width single stat, not a 1/3-column tile — its
-                            // ceiling (40px) was never the problem, so only the floor moves here.
-                            : 'truncate text-[clamp(19px,6vw,40px)] tabular-nums',
+                            // Same idea for the numeric siblings: `text-stat-fluid`'s floor was
+                            // tuned for a full-width single stat, not a 1/3-column tile, so its
+                            // floor was lowered in app.css (its one call site) rather than
+                            // duplicating the clamp here as a second arbitrary value.
+                            : 'truncate text-stat-fluid tabular-nums',
                         valueClass,
                     )}
                 >

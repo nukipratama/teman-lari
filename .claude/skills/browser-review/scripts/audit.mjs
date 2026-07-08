@@ -40,7 +40,7 @@ for (const vp of selected) {
           // Leaflet's internal tile buffer (it always renders past the visible map edge
           // for smooth panning, clipped by the map's own overflow-hidden — never visible).
           const inScroller = el.closest('[class*="overflow-x-auto"],[class*="overflow-auto"],[class*="overflow-scroll"]');
-          const decorative = (el.getAttribute('class') || '').includes('pointer-events-none');
+          const decorative = el.closest('[class*="pointer-events-none"]');
           const leafletTile = el.closest('.leaflet-tile-pane');
           if ((inScroller && inScroller !== el) || decorative || leafletTile) continue;
           real.push({ tag: el.tagName.toLowerCase(), cls: (el.getAttribute('class') || '').slice(0, 70), right: Math.round(rect.right) });
