@@ -98,3 +98,17 @@ it('returns zero streak when no week has runs', function (): void {
 
     expect(WeeklySnapshot::consecutiveWeekStreak($user->id))->toBe(0);
 });
+
+it('reads the form_status of the most recent snapshot as the shared spine', function (): void {
+    $user = User::factory()->create();
+    WeeklySnapshot::factory()->for($user)->create(['week_ending' => '2026-05-10', 'form_status' => 'optimal']);
+    WeeklySnapshot::factory()->for($user)->create(['week_ending' => '2026-05-17', 'form_status' => 'overreaching']);
+
+    expect(WeeklySnapshot::latestFormStatus($user->id))->toBe('overreaching');
+});
+
+it('returns null form_status when the user has no snapshots', function (): void {
+    $user = User::factory()->create();
+
+    expect(WeeklySnapshot::latestFormStatus($user->id))->toBeNull();
+});

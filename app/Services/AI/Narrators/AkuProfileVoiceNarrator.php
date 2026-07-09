@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services\AI\Narrators;
 
+use App\Enums\PrCategory;
 use App\Models\ActivityDetail;
 use App\Models\PersonalRecord;
 use App\Models\User;
@@ -35,6 +36,11 @@ class AkuProfileVoiceNarrator
         (mis. "VDOT 45, lumayan buat intermediate runner"). Kalau ada
         progression_signal dengan delta_sec > 0, akui improvement-nya (mis.
         "5K kamu makin pedes, turun 2 menit dalam 3 bulan").
+
+        form_status (kondisi beban terkini: fresh/optimal/fatigued/overreaching)
+        cuma buat nyelarasin nada, bukan subjek utama. Jangan dorong "gas terus"
+        kalau lagi fatigued/overreaching, dan jangan kontradiksi sama recap.
+        Fokus tetap ke identitas dan progres jangka panjang. Kalau null, abaikan.
 
         Bahasa: Indonesia, istilah running tetap bahasa Inggris (pace, cadence,
         HR, split, easy, tempo).
@@ -105,6 +111,7 @@ class AkuProfileVoiceNarrator
             'strava_connected' => $user->stravaConnection !== null,
             'vdot' => $vdotScore,
             'progression_signal' => $progressionSignal,
+            'form_status' => WeeklySnapshot::latestFormStatus($user->id),
         ];
     }
 
@@ -152,10 +159,10 @@ class AkuProfileVoiceNarrator
     private function buildProgressionSignal(User $user): ?array
     {
         $categories = [
-            \App\Enums\PrCategory::Km5,
-            \App\Enums\PrCategory::Km10,
-            \App\Enums\PrCategory::HalfMarathon,
-            \App\Enums\PrCategory::Marathon,
+            PrCategory::Km5,
+            PrCategory::Km10,
+            PrCategory::HalfMarathon,
+            PrCategory::Marathon,
         ];
 
         $records = PersonalRecord::query()

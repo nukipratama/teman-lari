@@ -6,6 +6,7 @@ namespace App\Services\AI\Narrators;
 
 use App\Models\StoryLine;
 use App\Models\User;
+use App\Models\WeeklySnapshot;
 use App\Services\AI\ChatCallOptions;
 use App\Services\AI\StructuredChatCaller;
 use App\Services\AI\TemariPersona;
@@ -40,6 +41,11 @@ class PersonaSummaryNarrator
           kebablasan. Satu easy run di antara quality session bisa jadi
           keseimbangan."
 
+        form_status (kondisi beban terkini: fresh/optimal/fatigued/overreaching)
+        cuma buat nyelarasin nada dorongan, jangan kontradiksi sama recap. Kalau
+        overreaching/fatigued, dorongan condong ke recovery, bukan nambah quality.
+        Kalau null, abaikan.
+
         ANTI-PATTERN:
         - "Pola lari kamu cenderung easy-dominan" tanpa penjelasan lanjutan.
         - Formula yang sama tiap refresh.
@@ -70,7 +76,7 @@ class PersonaSummaryNarrator
     }
 
     /**
-     * @return array{lookback_weeks: int, total_runs: int, persona_mix: list<array{mood: string, count: int, percent: float}>, persona_mix_recent: list<array{mood: string, count: int, percent: float}>, persona_mix_earlier: list<array{mood: string, count: int, percent: float}>}
+     * @return array{lookback_weeks: int, total_runs: int, persona_mix: list<array{mood: string, count: int, percent: float}>, persona_mix_recent: list<array{mood: string, count: int, percent: float}>, persona_mix_earlier: list<array{mood: string, count: int, percent: float}>, form_status: string|null}
      */
     public function context(User $user): array
     {
@@ -84,6 +90,7 @@ class PersonaSummaryNarrator
             'persona_mix' => $mix,
             'persona_mix_recent' => $this->moodMixBetween($user, $halfAgo, null),
             'persona_mix_earlier' => $this->moodMixBetween($user, Carbon::now()->subWeeks(self::LOOKBACK_WEEKS), $halfAgo),
+            'form_status' => WeeklySnapshot::latestFormStatus($user->id),
         ];
     }
 
