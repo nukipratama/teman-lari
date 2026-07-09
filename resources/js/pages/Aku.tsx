@@ -176,42 +176,25 @@ export default function Aku({
                         <SectionLabel>Latihan · pace target</SectionLabel>
                         <Card className="mt-3">
                             <div className="grid grid-cols-2 gap-5 sm:grid-cols-4 justify-items-center">
-                                <StatTile
-                                    tone="cream"
-                                    size="sm"
-                                    align="center"
-                                    label="Easy"
-                                    value={formatPace(fitness.training_paces.easy)}
-                                    unit="/km"
-                                    explainerKey="pace_easy"
-                                />
-                                <StatTile
-                                    tone="cream"
-                                    size="sm"
-                                    align="center"
-                                    label="Marathon"
-                                    value={formatPace(fitness.training_paces.marathon)}
-                                    unit="/km"
-                                    explainerKey="pace_marathon"
-                                />
-                                <StatTile
-                                    tone="cream"
-                                    size="sm"
-                                    align="center"
-                                    label="Threshold"
-                                    value={formatPace(fitness.training_paces.threshold)}
-                                    unit="/km"
-                                    explainerKey="threshold_pace"
-                                />
-                                <StatTile
-                                    tone="cream"
-                                    size="sm"
-                                    align="center"
-                                    label="Interval"
-                                    value={formatPace(fitness.training_paces.interval)}
-                                    unit="/km"
-                                    explainerKey="pace_interval"
-                                />
+                                {(
+                                    [
+                                        ['Easy', fitness.training_paces.easy, 'pace_easy'],
+                                        ['Marathon', fitness.training_paces.marathon, 'pace_marathon'],
+                                        ['Threshold', fitness.training_paces.threshold, 'threshold_pace'],
+                                        ['Interval', fitness.training_paces.interval, 'pace_interval'],
+                                    ] as const
+                                ).map(([label, paceSec, explainerKey]) => (
+                                    <StatTile
+                                        key={explainerKey}
+                                        tone="cream"
+                                        size="sm"
+                                        align="center"
+                                        label={label}
+                                        value={formatPace(paceSec)}
+                                        unit="/km"
+                                        explainerKey={explainerKey}
+                                    />
+                                ))}
                             </div>
                         </Card>
                     </section>

@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Jobs\Strava\SyncActivitiesJob;
+use App\Jobs\Strava\SyncZonesJob;
 use App\Models\StravaConnection;
 use App\Models\User;
 use GuzzleHttp\Psr7\Response as Psr7Response;
@@ -219,6 +220,58 @@ it('updates an existing user on subsequent strava callbacks', function (): void 
 
     // Re-login on an existing connection must NOT re-trigger a backfill.
     Bus::assertNotDispatched(SyncActivitiesJob::class);
+});
+
+it('dispatches SyncZonesJob when a reconnect newly grants profile:read_all', function (): void {
+    // Simulates the StravaZoneReconnectBanner flow: an already-connected user
+    // whose original grant predates the profile:read_all scope reconnects to add it.
+    $existingUser = User::factory()->create();
+    StravaConnection::factory()->for($existingUser)->create([
+        'strava_athlete_id' => 987654,
+        'scopes' => 'read,activity:read_all',
+    ]);
+
+    $stravaUser = Mockery::mock(SocialiteUser::class);
+    $stravaUser->token = 'new-access';
+    $stravaUser->refreshToken = 'new-refresh';
+    $stravaUser->expiresIn = 21600;
+    $stravaUser->shouldReceive('getId')->andReturn('987654');
+    $stravaUser->shouldReceive('getName')->andReturn('Existing Runner');
+    $stravaUser->shouldReceive('getEmail')->andReturn('athlete@example.test');
+    $stravaUser->shouldReceive('getAvatar')->andReturn('https://strava.test/new.png');
+
+    mockStravaDriver(fn ($driver) => $driver->shouldReceive('user')->once()->andReturn($stravaUser));
+
+    $this->get(route('auth.strava.callback', ['scope' => 'read,activity:read_all,profile:read_all']))
+        ->assertRedirect(route('dashboard'));
+
+    Bus::assertDispatched(SyncZonesJob::class, fn (SyncZonesJob $job): bool => $job->userId === $existingUser->id);
+    // Not a fresh connection, so no redundant history backfill.
+    Bus::assertNotDispatched(SyncActivitiesJob::class);
+});
+
+it('does not re-dispatch SyncZonesJob on a reconnect that grants no new scopes', function (): void {
+    $existingUser = User::factory()->create();
+    StravaConnection::factory()->for($existingUser)->create([
+        'strava_athlete_id' => 987654,
+        'scopes' => 'read,activity:read_all,profile:read_all',
+    ]);
+
+    $stravaUser = Mockery::mock(SocialiteUser::class);
+    $stravaUser->token = 'new-access';
+    $stravaUser->refreshToken = 'new-refresh';
+    $stravaUser->expiresIn = 21600;
+    $stravaUser->shouldReceive('getId')->andReturn('987654');
+    $stravaUser->shouldReceive('getName')->andReturn('Existing Runner');
+    $stravaUser->shouldReceive('getEmail')->andReturn('athlete@example.test');
+    $stravaUser->shouldReceive('getAvatar')->andReturn('https://strava.test/new.png');
+
+    mockStravaDriver(fn ($driver) => $driver->shouldReceive('user')->once()->andReturn($stravaUser));
+
+    $this->get(route('auth.strava.callback', ['scope' => 'read,activity:read_all,profile:read_all']))
+        ->assertRedirect(route('dashboard'));
+
+    Bus::assertNotDispatched(SyncZonesJob::class);
 });
 
 it('redirects back to login when strava returns an error', function (): void {

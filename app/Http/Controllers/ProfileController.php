@@ -235,7 +235,7 @@ class ProfileController extends Controller
             'vdot' => $vdot['vdot'] ?? null,
             'threshold_pace_sec' => $threshold['pace_sec'] ?? null,
             'threshold_confidence' => $threshold['confidence'] ?? null,
-            'training_paces' => $vdot !== null ? $trainingPaceCalculator->fromVdot($vdot['vdot']) : null,
+            'training_paces' => $trainingPaceCalculator->fromVdotResult($vdot),
         ];
     }
 }

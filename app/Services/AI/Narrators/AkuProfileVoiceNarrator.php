@@ -99,7 +99,7 @@ class AkuProfileVoiceNarrator
 
         $vdot = $this->vdotEstimator->estimate($user);
         $vdotScore = $vdot['vdot'] ?? null;
-        $paces = $vdot !== null ? $this->trainingPaceCalculator->fromVdot($vdot['vdot']) : null;
+        $paces = $this->trainingPaceCalculator->fromVdotResult($vdot);
 
         $progressionSignal = $this->buildProgressionSignal($user);
 

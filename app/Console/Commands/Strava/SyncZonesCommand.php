@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Console\Commands\Strava;
 
 use App\Models\User;
+use App\Services\Strava\Exceptions\StravaConnectionRevokedException;
+use App\Services\Strava\Exceptions\StravaTokenRefreshFailedException;
 use App\Services\Strava\ZoneFetcher;
 use Illuminate\Console\Attributes\Description;
 use Illuminate\Console\Attributes\Signature;
@@ -30,6 +32,13 @@ class SyncZonesCommand extends Command
         foreach ($users as $user) {
             try {
                 $this->syncOne($user, $fetcher);
+            } catch (StravaConnectionRevokedException|StravaTokenRefreshFailedException $e) {
+                // Same as SyncZonesJob: a 401 or a rejected refresh means the athlete
+                // deauthorized us. Revoke so this stops being retried every month and
+                // the UI stops showing a stale "connected" state.
+                $user->stravaConnection?->markRevoked();
+
+                $this->warn("user {$user->id}: connection revoked — {$e->getMessage()}");
             } catch (Throwable $e) {
                 // One bad connection must not abort the scheduled run for the
                 // other users — mirrors strava:sync.

@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Models\RunnerProfile;
 use App\Models\StravaConnection;
 use App\Models\User;
+use App\Services\Strava\Exceptions\StravaConnectionRevokedException;
 use App\Services\Strava\ZoneFetcher;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
@@ -95,6 +96,19 @@ it('warns when no eligible users exist', function (): void {
     $this->artisan('strava:sync-zones')
         ->expectsOutputToContain('No eligible users with a Strava connection found.')
         ->assertSuccessful();
+});
+
+it('marks the connection revoked when the fetcher reports a 401, unlike a generic failure', function (): void {
+    $user = User::factory()->create();
+    StravaConnection::factory()->for($user)->create(['scopes' => 'read,activity:read_all,profile:read_all']);
+
+    $fetcher = Mockery::mock(ZoneFetcher::class);
+    $fetcher->shouldReceive('fetch')->once()->andThrow(new StravaConnectionRevokedException('401'));
+    $this->app->instance(ZoneFetcher::class, $fetcher);
+
+    $this->artisan('strava:sync-zones')->assertSuccessful();
+
+    expect($user->stravaConnection()->first()->isRevoked())->toBeTrue();
 });
 
 it('keeps syncing other users and still succeeds when one connection throws', function (): void {

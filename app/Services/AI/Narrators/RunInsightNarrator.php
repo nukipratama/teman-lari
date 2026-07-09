@@ -211,12 +211,7 @@ class RunInsightNarrator
      */
     private function trainingPaces(Activity $activity): ?array
     {
-        $vdot = $this->vdotEstimator->estimate($activity->user);
-        if ($vdot === null) {
-            return null;
-        }
-
-        return $this->trainingPaceCalculator->fromVdot($vdot['vdot']);
+        return $this->trainingPaceCalculator->fromVdotResult($this->vdotEstimator->estimate($activity->user));
     }
 
     /**

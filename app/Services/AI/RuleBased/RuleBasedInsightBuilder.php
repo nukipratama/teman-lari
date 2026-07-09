@@ -25,8 +25,14 @@ use Illuminate\Support\Carbon;
  * - RunInsightZones
  * - TrendCaption
  */
-final class RuleBasedInsightBuilder
+final readonly class RuleBasedInsightBuilder
 {
+    public function __construct(
+        private VdotEstimator $vdotEstimator = new VdotEstimator(),
+        private TrainingPaceCalculator $trainingPaceCalculator = new TrainingPaceCalculator(),
+    ) {
+    }
+
     // Cadence thresholds (spm, already doubled)
     private const int CADENCE_IDEAL = 180;
     private const int CADENCE_MODERATE = 170;
@@ -544,11 +550,11 @@ final class RuleBasedInsightBuilder
         /** @var Activity|null $activity */
         $activity = $detail->activity;
         $vdotResult = $activity !== null
-            ? (new VdotEstimator())->estimate($activity->user)
+            ? $this->vdotEstimator->estimate($activity->user)
             : null;
 
         if ($vdotResult !== null) {
-            $paces = (new TrainingPaceCalculator())->fromVdot($vdotResult['vdot']);
+            $paces = $this->trainingPaceCalculator->fromVdot($vdotResult['vdot']);
             if ($currentPace - $paces['threshold'] < self::GREY_ZONE_PACE_MARGIN_SEC) {
                 return false;
             }
