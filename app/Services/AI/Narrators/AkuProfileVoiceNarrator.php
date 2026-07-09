@@ -12,6 +12,7 @@ use App\Models\UserUnlock;
 use App\Models\WeeklySnapshot;
 use App\Services\AI\ChatCallOptions;
 use App\Services\AI\StructuredChatCaller;
+use App\Services\Run\LifetimeStats;
 use App\Services\Run\Metrics\VdotEstimator;
 use App\Services\Run\ProgressionSeriesBuilder;
 use Illuminate\Support\Carbon;
@@ -50,6 +51,7 @@ class AkuProfileVoiceNarrator
         private readonly StructuredChatCaller $caller,
         private readonly VdotEstimator $vdotEstimator,
         private readonly ProgressionSeriesBuilder $progressionSeriesBuilder,
+        private readonly LifetimeStats $lifetimeStats,
     ) {
     }
 
@@ -74,18 +76,13 @@ class AkuProfileVoiceNarrator
      */
     public function context(User $user): array
     {
-        $detailAggregates = ActivityDetail::query()
-            ->whereHas(
-                'activity',
-                fn ($q) => $q->where('user_id', $user->id),
-            )
-            ->selectRaw('SUM(distance) AS total_distance, MAX(distance) AS longest_distance, MIN(start_date_local) AS first_run_at')
-            ->first();
-
-        $totalRuns = $user->activities()->count();
-        $totalKm = round((float) ($detailAggregates?->getAttribute('total_distance') ?? 0) / 1000, 1);
-        $longestKm = round((float) ($detailAggregates?->getAttribute('longest_distance') ?? 0) / 1000, 2);
-        $firstRunAt = $detailAggregates?->getAttribute('first_run_at');
+        // Reuse the cached lifetime aggregate shared with /kalender so the two
+        // surfaces never drift, instead of recomputing SUM/MAX/MIN here.
+        $lifetime = $this->lifetimeStats->forUser($user);
+        $totalRuns = $lifetime['total_runs'];
+        $totalKm = $lifetime['total_km'];
+        $longestKm = $lifetime['longest_km'];
+        $firstRunAt = $lifetime['first_run_at'];
         $monthsSince = $firstRunAt !== null ? (int) Carbon::parse($firstRunAt)->diffInMonths(now()) : null;
 
         $prCount = PersonalRecord::query()->where('user_id', $user->id)->count();

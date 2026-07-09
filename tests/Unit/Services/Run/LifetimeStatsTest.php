@@ -27,6 +27,7 @@ it('aggregates run count, total km and the first-run timestamp', function (): vo
 
     expect($stats['total_runs'])->toBe(2)
         ->and($stats['total_km'])->toBe(13.0)
+        ->and($stats['longest_km'])->toBe(8.0)
         ->and($stats['first_run_at'])->not->toBeNull();
 });
 

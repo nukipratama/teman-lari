@@ -22,7 +22,7 @@ class LifetimeStats
     private const int CACHE_TTL_SECONDS = 300;
 
     /**
-     * @return array{total_runs: int, total_km: float, first_run_at: string|null}
+     * @return array{total_runs: int, total_km: float, longest_km: float, first_run_at: string|null}
      */
     public function forUser(User $user): array
     {
@@ -39,7 +39,7 @@ class LifetimeStats
     }
 
     /**
-     * @return array{total_runs: int, total_km: float, first_run_at: string|null}
+     * @return array{total_runs: int, total_km: float, longest_km: float, first_run_at: string|null}
      */
     private function compute(User $user): array
     {
@@ -50,15 +50,17 @@ class LifetimeStats
                 'activity',
                 fn ($q) => $q->where('user_id', $user->id),
             )
-            ->selectRaw('SUM(distance) AS total_distance, MIN(start_date_local) AS first_run_at')
+            ->selectRaw('SUM(distance) AS total_distance, MAX(distance) AS longest_distance, MIN(start_date_local) AS first_run_at')
             ->first();
 
         $totalDistanceMeters = (float) ($aggregates?->getAttribute('total_distance') ?? 0);
+        $longestMeters = (float) ($aggregates?->getAttribute('longest_distance') ?? 0);
         $firstRunAt = $aggregates?->getAttribute('first_run_at');
 
         return [
             'total_runs' => $totalRuns,
             'total_km' => round($totalDistanceMeters / 1000, 1),
+            'longest_km' => round($longestMeters / 1000, 2),
             'first_run_at' => is_string($firstRunAt) ? $firstRunAt : $firstRunAt?->toIso8601String(),
         ];
     }
