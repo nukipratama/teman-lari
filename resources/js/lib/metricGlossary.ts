@@ -125,6 +125,18 @@ export const METRIC_GLOSSARY = {
         label: 'Threshold pace',
         body: 'Perkiraan pace di ambang laktat, turunan dari skor VDOT. Pace ideal buat sesi tempo lari.',
     },
+    pace_easy: {
+        label: 'Easy pace',
+        body: 'Pace santai buat base building, turunan dari skor VDOT kamu. Masih bisa ngobrol sambil lari di pace ini.',
+    },
+    pace_marathon: {
+        label: 'Marathon pace',
+        body: 'Pace target buat lari jarak jauh yang stabil, di antara easy dan threshold.',
+    },
+    pace_interval: {
+        label: 'Interval pace',
+        body: 'Pace tercepat buat repetisi pendek, di atas threshold. Dipakai buat sesi interval, bukan sesi panjang.',
+    },
 } as const satisfies Record<string, MetricGlossaryEntry>;
 
 export type MetricKey = keyof typeof METRIC_GLOSSARY;

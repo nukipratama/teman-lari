@@ -94,7 +94,7 @@ class HandleInertiaRequests extends Middleware
             return false;
         }
 
-        return ! str_contains($connection->scopes, 'profile:read_all');
+        return ! str_contains((string) $connection->scopes, 'profile:read_all');
     }
 
     /**

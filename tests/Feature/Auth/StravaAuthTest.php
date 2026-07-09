@@ -47,7 +47,7 @@ it('renders dashboard for authenticated visitors at root', function (): void {
 
 it('redirects to strava on the redirect endpoint', function (): void {
     mockStravaDriver(function ($driver): void {
-        $driver->shouldReceive('scopes')->once()->with(['read', 'activity:read_all'])->andReturnSelf();
+        $driver->shouldReceive('scopes')->once()->with(['read', 'activity:read_all', 'profile:read_all'])->andReturnSelf();
         $driver->shouldReceive('redirect')->once()->andReturn(redirect('https://www.strava.com/oauth/authorize?fake'));
     });
 
@@ -153,7 +153,7 @@ it('creates a new user from the strava callback and logs them in', function (): 
         ->and($user->avatar_url)->toBe('https://strava.test/avatar.png')
         ->and($connection->access_token)->toBe('access-token-xyz')
         ->and($connection->refresh_token)->toBe('refresh-token-xyz')
-        ->and($connection->scopes)->toBe('read,activity:read_all');
+        ->and($connection->scopes)->toBe('read,activity:read_all,profile:read_all');
 
     // First connect kicks off a full-history backfill (no single-activity scope).
     Bus::assertDispatched(
@@ -176,7 +176,7 @@ it('stores only the granted scopes and logs when a required scope is declined', 
 
     mockStravaDriver(fn ($driver) => $driver->shouldReceive('user')->once()->andReturn($stravaUser));
 
-    // Strava reports only `read` was granted; activity:read_all was declined.
+    // Strava reports only `read` was granted; activity:read_all + profile:read_all declined.
     $this->get(route('auth.strava.callback', ['scope' => 'read']))
         ->assertRedirect(route('dashboard'));
 
@@ -184,7 +184,7 @@ it('stores only the granted scopes and logs when a required scope is declined', 
     expect($connection->scopes)->toBe('read');
 
     Log::shouldHaveReceived('warning')->once()->with('strava.scopes.partial', Mockery::on(
-        fn (array $ctx): bool => $ctx['missing'] === ['activity:read_all'] && $ctx['granted'] === 'read',
+        fn (array $ctx): bool => $ctx['missing'] === ['activity:read_all', 'profile:read_all'] && $ctx['granted'] === 'read',
     ));
 });
 

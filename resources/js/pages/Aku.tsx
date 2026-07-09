@@ -53,10 +53,18 @@ interface ProgressionSeries {
     goal_sec: number | null;
 }
 
+interface TrainingPaces {
+    easy: number;
+    marathon: number;
+    threshold: number;
+    interval: number;
+}
+
 interface FitnessPayload {
     vdot: number | null;
     threshold_pace_sec: number | null;
     threshold_confidence: string | null;
+    training_paces?: TrainingPaces | null;
 }
 
 interface AkuProps {
@@ -162,6 +170,52 @@ export default function Aku({
                         )}
                     </div>
                 </HeroPanel>
+
+                {fitness?.training_paces && (
+                    <section className="mt-10">
+                        <SectionLabel>Latihan · pace target</SectionLabel>
+                        <Card className="mt-3">
+                            <div className="grid grid-cols-2 gap-5 sm:grid-cols-4 justify-items-center">
+                                <StatTile
+                                    tone="cream"
+                                    size="sm"
+                                    align="center"
+                                    label="Easy"
+                                    value={formatPace(fitness.training_paces.easy)}
+                                    unit="/km"
+                                    explainerKey="pace_easy"
+                                />
+                                <StatTile
+                                    tone="cream"
+                                    size="sm"
+                                    align="center"
+                                    label="Marathon"
+                                    value={formatPace(fitness.training_paces.marathon)}
+                                    unit="/km"
+                                    explainerKey="pace_marathon"
+                                />
+                                <StatTile
+                                    tone="cream"
+                                    size="sm"
+                                    align="center"
+                                    label="Threshold"
+                                    value={formatPace(fitness.training_paces.threshold)}
+                                    unit="/km"
+                                    explainerKey="threshold_pace"
+                                />
+                                <StatTile
+                                    tone="cream"
+                                    size="sm"
+                                    align="center"
+                                    label="Interval"
+                                    value={formatPace(fitness.training_paces.interval)}
+                                    unit="/km"
+                                    explainerKey="pace_interval"
+                                />
+                            </div>
+                        </Card>
+                    </section>
+                )}
 
                 <section className="mt-10">
                     <SectionLabel>Persona · 12 minggu terakhir</SectionLabel>

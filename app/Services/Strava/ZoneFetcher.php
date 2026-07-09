@@ -61,8 +61,8 @@ class ZoneFetcher
 
         $zones = [];
         foreach (self::KEYS as $index => $key) {
-            $min = (int) ($ranges[$index]['min'] ?? -1);
-            $max = (int) ($ranges[$index]['max'] ?? -1);
+            $min = (int) $ranges[$index]['min'];
+            $max = (int) $ranges[$index]['max'];
 
             // Strava's top zone has an open-ended max (-1); mirror the app's
             // gapless-band convention (config/runner.php) with a high cap.
