@@ -44,6 +44,9 @@ class WeeklyRecapNarrator
         - form (CTL - ATL): positif = segar, negatif = lelah.
         - monotony: > 2 = terlalu seragam, ajak variasi.
         - strain: > 500 = berat.
+        - avg_decoupling: cardiac drift rata-rata (%). Rendah = efisiensi aerobik
+          bagus (jantung stabil sepanjang lari); tinggi (di atas 8-10%) = daya
+          tahan masih perlu kerja. Sebut cuma kalau menonjol, jangan wajib.
 
         ANTI-PATTERN:
         - Mengulang angka mentah tanpa konteks.
@@ -70,7 +73,7 @@ class WeeklyRecapNarrator
     }
 
     /**
-     * @return array{week_ending: string, runs: int|null, distance_km: float|null, pace_sec_per_km: float|null, weekly_trimp: float|null, ctl_42d: float|null, atl_7d: float|null, form: float|null, form_status: string|null, monotony: float|null, strain: float|null, prev_runs: int|null, prev_distance_km: float|null, prev_pace_sec_per_km: float|null, prev_narrative: string|null, prev_opener: string|null}
+     * @return array{week_ending: string, runs: int|null, distance_km: float|null, pace_sec_per_km: float|null, weekly_trimp: float|null, ctl_42d: float|null, atl_7d: float|null, form: float|null, form_status: string|null, monotony: float|null, strain: float|null, avg_decoupling: float|null, prev_runs: int|null, prev_distance_km: float|null, prev_pace_sec_per_km: float|null, prev_narrative: string|null, prev_opener: string|null}
      */
     public function context(WeeklySnapshot $snapshot): array
     {
@@ -89,6 +92,7 @@ class WeeklyRecapNarrator
             'form_status' => $snapshot->form_status,
             'monotony' => $snapshot->monotony,
             'strain' => $snapshot->strain,
+            'avg_decoupling' => $snapshot->avg_decoupling,
             'prev_runs' => $previous?->runs,
             'prev_distance_km' => $previous?->distance_km,
             'prev_pace_sec_per_km' => $previous === null ? null : $this->paceFor($previous),

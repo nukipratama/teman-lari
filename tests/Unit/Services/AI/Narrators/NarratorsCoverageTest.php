@@ -512,6 +512,17 @@ it('WeeklyRecapNarrator omits prev_narrative when the prior week recap is not ye
     expect($context['prev_narrative'])->toBeNull();
 });
 
+it('WeeklyRecapNarrator feeds avg_decoupling into the context', function (): void {
+    $user = User::factory()->create();
+    $snap = WeeklySnapshot::factory()->for($user)->create([
+        'week_ending' => '2026-05-17', 'avg_decoupling' => 6.4,
+    ]);
+
+    $context = (new WeeklyRecapNarrator(fakeCaller('{"narrative":"x"}')))->context($snap);
+
+    expect($context['avg_decoupling'])->toBe(6.4);
+});
+
 // ── PrContextNarrator ─────────────────────────────────────────────────
 
 it('PrContextNarrator returns flavor on valid JSON', function (): void {
@@ -740,6 +751,15 @@ it('PersonaSummaryNarrator builds a mood-mix percent breakdown from story lines'
     expect($narrator->generate($user->fresh()))->toBe('Larimu lebih sering nyala.');
 });
 
+it('PersonaSummaryNarrator feeds the latest form_status as the consistency spine', function (): void {
+    $user = User::factory()->create();
+    WeeklySnapshot::factory()->for($user)->create(['week_ending' => '2026-05-17', 'form_status' => 'fatigued']);
+
+    $context = (new PersonaSummaryNarrator(fakeCaller('{"narrative":"x"}')))->context($user->fresh());
+
+    expect($context['form_status'])->toBe('fatigued');
+});
+
 it('PersonaSummaryNarrator returns an empty mix for a user with no story lines', function (): void {
     $user = User::factory()->create();
     $caller = fakeCaller(json_encode(['narrative' => 'x'], JSON_THROW_ON_ERROR));
@@ -821,6 +841,32 @@ it('MonthlyRecapNarrator counts PRs and buckets distance by week within the mont
     expect($context['pr_count'])->toBe(1)
         ->and($context['weekly_distance_km'][0])->toBe(6.0)
         ->and($context['weekly_distance_km'][2])->toBe(10.0);
+});
+
+it('MonthlyRecapNarrator reads the CTL fitness arc from the month snapshots', function (): void {
+    $user = User::factory()->create();
+    WeeklySnapshot::factory()->for($user)->create([
+        'week_ending' => '2026-05-03', 'ctl_42d' => 30.0, 'form_status' => 'optimal',
+    ]);
+    WeeklySnapshot::factory()->for($user)->create([
+        'week_ending' => '2026-05-31', 'ctl_42d' => 38.0, 'form_status' => 'fresh',
+    ]);
+
+    $context = (new MonthlyRecapNarrator(fakeCaller('{"narrative":"x"}')))->context($user, '2026-05');
+
+    expect($context['fitness'])->toMatchArray([
+        'ctl_start' => 30.0,
+        'ctl_end' => 38.0,
+        'form_status_end' => 'fresh',
+    ]);
+});
+
+it('MonthlyRecapNarrator leaves fitness null when the month has no snapshots', function (): void {
+    $user = User::factory()->create();
+
+    $context = (new MonthlyRecapNarrator(fakeCaller('{"narrative":"x"}')))->context($user, '2026-05');
+
+    expect($context['fitness'])->toBeNull();
 });
 
 it('MonthlyRecapNarrator feeds prev_narrative when the prior month recap is Done', function (): void {
@@ -911,6 +957,19 @@ it('AkuProfileVoiceNarrator reads the weekly streak and the most common run time
 
     expect($context['weekly_streak'])->toBe(2)
         ->and($context['favorite_time'])->toBe('malam');
+});
+
+it('AkuProfileVoiceNarrator feeds the latest form_status as the consistency spine', function (): void {
+    $user = User::factory()->create();
+    WeeklySnapshot::factory()->for($user)->create([
+        'week_ending' => Carbon::today()->endOfWeek(Carbon::SUNDAY)->toDateString(),
+        'runs' => 3, 'form_status' => 'overreaching',
+    ]);
+
+    $context = (new AkuProfileVoiceNarrator(fakeCaller('{"profile_voice":"x"}'), app(VdotEstimator::class), app(ProgressionSeriesBuilder::class)))
+        ->context($user->fresh());
+
+    expect($context['form_status'])->toBe('overreaching');
 });
 
 it('AkuProfileVoiceNarrator throws on missing profile_voice key', function (): void {

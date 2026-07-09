@@ -9,6 +9,7 @@ use App\Models\AI\Analysis;
 use App\Models\PersonalRecord;
 use App\Models\StoryLine;
 use App\Models\User;
+use App\Models\WeeklySnapshot;
 use App\Services\AI\AnalysisStatus;
 use App\Services\AI\AnalysisType;
 use App\Services\AI\ChatCallOptions;
@@ -32,10 +33,14 @@ class MonthlyRecapNarrator
            menonjol (mis. "60% sesi kamu adem, cuma 2 kali nyala"). Kalau
            mood_mix kosong atau null, LEWATI langkah ini diam-diam, langsung ke
            highlight, jangan sebut bahwa data mood belum ada.
-        3. Highlight: lari terjauh, jumlah PR (pr_count) kalau ada, atau
-           progres mingguan dari weekly_distance_km (mis. "naik tiap minggu"
-           atau "konsisten di kisaran 10 km"). Pakai 1 yang paling menonjol.
-        4. Tutup: 1 refleksi singkat atau dorongan untuk bulan depan.
+        3. Highlight: lari terjauh, jumlah PR (pr_count) kalau ada, progres
+           mingguan dari weekly_distance_km (mis. "naik tiap minggu" atau
+           "konsisten di kisaran 10 km"), atau arah fitness dari `fitness`
+           (ctl_end vs ctl_start: naik = base kebangun, turun = fitness luntur).
+           Pakai 1 yang paling menonjol.
+        4. Tutup: 1 refleksi singkat atau dorongan untuk bulan depan. Kalau
+           `fitness.form_status_end` overreaching/fatigued, condong ke recovery,
+           jangan dorong nambah beban. Kalau null, lewati.
 
         Sesuaikan tone:
         - Mayoritas nyala/enteng: rayakan konsistensi.
@@ -70,7 +75,7 @@ class MonthlyRecapNarrator
     }
 
     /**
-     * @return array{month: string, total_runs: int, total_distance_km: float, longest_run_km: float, pr_count: int, weekly_distance_km: list<float>, mood_mix: list<array{mood: string, count: int, percent: float}>, prev_narrative: string|null, prev_opener: string|null}
+     * @return array{month: string, total_runs: int, total_distance_km: float, longest_run_km: float, pr_count: int, weekly_distance_km: list<float>, mood_mix: list<array{mood: string, count: int, percent: float}>, fitness: array{ctl_start: float|null, ctl_end: float|null, form_status_end: string|null}|null, prev_narrative: string|null, prev_opener: string|null}
      */
     public function context(User $user, string $month): array
     {
@@ -121,7 +126,34 @@ class MonthlyRecapNarrator
             'pr_count' => $prCount,
             'weekly_distance_km' => $weeklyKm,
             'mood_mix' => $moodMix,
+            'fitness' => $this->fitnessArc($user, $start, $end),
             ...NarratorContinuity::fields($prevNarrative),
+        ];
+    }
+
+    /**
+     * The month's fitness arc from the weekly snapshots ending within it: CTL at
+     * the start vs end (is the month building or shedding fitness) and the
+     * closing form_status. Null when the month has no snapshots to read.
+     *
+     * @return array{ctl_start: float|null, ctl_end: float|null, form_status_end: string|null}|null
+     */
+    private function fitnessArc(User $user, Carbon $start, Carbon $end): ?array
+    {
+        $snapshots = WeeklySnapshot::query()
+            ->where('user_id', $user->id)
+            ->whereBetween('week_ending', [$start, $end])
+            ->orderBy('week_ending')
+            ->get(['ctl_42d', 'form_status']);
+
+        if ($snapshots->isEmpty()) {
+            return null;
+        }
+
+        return [
+            'ctl_start' => $snapshots->first()->ctl_42d,
+            'ctl_end' => $snapshots->last()->ctl_42d,
+            'form_status_end' => $snapshots->last()->form_status,
         ];
     }
 
