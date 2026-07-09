@@ -24,6 +24,7 @@ use App\Services\AI\Narrators\PrContextNarrator;
 use App\Services\AI\Narrators\RunInsightNarrator;
 use App\Services\AI\Narrators\TrendCaptionNarrator;
 use App\Services\AI\Narrators\WeeklyRecapNarrator;
+use App\Services\Run\LifetimeStats;
 use App\Services\Run\Metrics\RunBaseline;
 use App\Services\Run\Metrics\TrainingLoad;
 use App\Services\Run\Metrics\VdotEstimator;
@@ -532,7 +533,7 @@ it('PrContextNarrator returns flavor on valid JSON', function (): void {
         'value_sec' => 1500,
     ]);
     $caller = fakeCaller(json_encode(['flavor' => 'PR baru!'], JSON_THROW_ON_ERROR));
-    $narrator = new PrContextNarrator($caller);
+    $narrator = new PrContextNarrator($caller, app(VdotEstimator::class));
     expect($narrator->generate($pr))->toBe('PR baru!');
 });
 
@@ -540,7 +541,7 @@ it('PrContextNarrator throws on missing flavor key', function (): void {
     $user = User::factory()->create();
     $pr = PersonalRecord::factory()->for($user)->create();
     $caller = fakeCaller(json_encode(['other' => 'x'], JSON_THROW_ON_ERROR));
-    $narrator = new PrContextNarrator($caller);
+    $narrator = new PrContextNarrator($caller, app(VdotEstimator::class));
     $narrator->generate($pr);
 })->throws(UnavailableException::class);
 
@@ -548,11 +549,22 @@ it('PrContextNarrator throws on non-JSON', function (): void {
     $user = User::factory()->create();
     $pr = PersonalRecord::factory()->for($user)->create();
     $caller = fakeCaller('not json');
-    $narrator = new PrContextNarrator($caller);
+    $narrator = new PrContextNarrator($caller, app(VdotEstimator::class));
     $narrator->generate($pr);
 })->throws(UnavailableException::class, 'non-JSON');
 
-it('PrContextNarrator feeds the PR run conditions into the payload', function (): void {
+it('PrContextNarrator flags the PR category as the strongest event when it drives the best VDOT', function (): void {
+    $user = User::factory()->create();
+    // A single 5km PR is, by construction, the user's best-VDOT source category.
+    $pr = PersonalRecord::factory()->for($user)->create(['category' => '5km', 'value_sec' => 1200]);
+
+    $context = (new PrContextNarrator(fakeCaller('{"flavor":"x"}'), app(VdotEstimator::class)))->context($pr);
+
+    expect($context['is_strongest_event'])->toBeTrue()
+        ->and($context['vdot'])->not->toBeNull();
+});
+
+it('PrContextNarrator feeds the PR run conditions into the context', function (): void {
     $user = User::factory()->create();
     $activity = Activity::factory()->for($user)->analyzed()->create();
     ActivityDetail::factory()->for($activity)->create(['weather_temp_c' => 33]);
@@ -560,14 +572,9 @@ it('PrContextNarrator feeds the PR run conditions into the payload', function ()
         'category' => '5km', 'value_sec' => 1500, 'activity_id' => $activity->id,
     ]);
 
-    [$caller, $client] = capturingCaller(json_encode(['flavor' => 'ok'], JSON_THROW_ON_ERROR));
-    (new PrContextNarrator($caller))->generate($pr);
+    $context = (new PrContextNarrator(fakeCaller('{"flavor":"x"}'), app(VdotEstimator::class)))->context($pr);
 
-    $client->assertSent(OpenAI\Resources\Responses::class, function (string $method, array $params): bool {
-        $payload = json_encode($params, JSON_THROW_ON_ERROR);
-
-        return str_contains($payload, 'weather_temp_c') && str_contains($payload, '33');
-    });
+    expect($context['weather_temp_c'])->toBe(33);
 });
 
 // ── TrendCaptionNarrator ──────────────────────────────────────────────
@@ -911,7 +918,7 @@ it('MonthlyRecapNarrator leaves prev_narrative null on the first month', functio
 it('AkuProfileVoiceNarrator returns profile voice on valid JSON', function (): void {
     $user = User::factory()->create();
     $caller = fakeCaller(json_encode(['profile_voice' => 'Kamu udah lari 50 km, keren.'], JSON_THROW_ON_ERROR));
-    $narrator = new AkuProfileVoiceNarrator($caller, app(VdotEstimator::class), app(ProgressionSeriesBuilder::class));
+    $narrator = new AkuProfileVoiceNarrator($caller, app(VdotEstimator::class), app(ProgressionSeriesBuilder::class), app(LifetimeStats::class));
     expect($narrator->generate($user))->toBe('Kamu udah lari 50 km, keren.');
 });
 
@@ -924,7 +931,7 @@ it('AkuProfileVoiceNarrator builds context from user stats', function (): void {
     ]);
 
     $caller = fakeCaller(json_encode(['profile_voice' => 'x'], JSON_THROW_ON_ERROR));
-    $narrator = new AkuProfileVoiceNarrator($caller, app(VdotEstimator::class), app(ProgressionSeriesBuilder::class));
+    $narrator = new AkuProfileVoiceNarrator($caller, app(VdotEstimator::class), app(ProgressionSeriesBuilder::class), app(LifetimeStats::class));
 
     $context = $narrator->context($user->fresh());
     expect($context['total_runs'])->toBe(1)
@@ -953,7 +960,7 @@ it('AkuProfileVoiceNarrator reads the weekly streak and the most common run time
         ]);
     }
 
-    $context = (new AkuProfileVoiceNarrator(fakeCaller('{"profile_voice":"x"}'), app(VdotEstimator::class), app(ProgressionSeriesBuilder::class)))->context($user->fresh());
+    $context = (new AkuProfileVoiceNarrator(fakeCaller('{"profile_voice":"x"}'), app(VdotEstimator::class), app(ProgressionSeriesBuilder::class), app(LifetimeStats::class)))->context($user->fresh());
 
     expect($context['weekly_streak'])->toBe(2)
         ->and($context['favorite_time'])->toBe('malam');
@@ -966,7 +973,7 @@ it('AkuProfileVoiceNarrator feeds the latest form_status as the consistency spin
         'runs' => 3, 'form_status' => 'overreaching',
     ]);
 
-    $context = (new AkuProfileVoiceNarrator(fakeCaller('{"profile_voice":"x"}'), app(VdotEstimator::class), app(ProgressionSeriesBuilder::class)))
+    $context = (new AkuProfileVoiceNarrator(fakeCaller('{"profile_voice":"x"}'), app(VdotEstimator::class), app(ProgressionSeriesBuilder::class), app(LifetimeStats::class)))
         ->context($user->fresh());
 
     expect($context['form_status'])->toBe('overreaching');
@@ -975,14 +982,14 @@ it('AkuProfileVoiceNarrator feeds the latest form_status as the consistency spin
 it('AkuProfileVoiceNarrator throws on missing profile_voice key', function (): void {
     $user = User::factory()->create();
     $caller = fakeCaller(json_encode(['other' => 'x'], JSON_THROW_ON_ERROR));
-    $narrator = new AkuProfileVoiceNarrator($caller, app(VdotEstimator::class), app(ProgressionSeriesBuilder::class));
+    $narrator = new AkuProfileVoiceNarrator($caller, app(VdotEstimator::class), app(ProgressionSeriesBuilder::class), app(LifetimeStats::class));
     $narrator->generate($user);
 })->throws(UnavailableException::class);
 
 it('AkuProfileVoiceNarrator throws on non-JSON', function (): void {
     $user = User::factory()->create();
     $caller = fakeCaller('not json');
-    $narrator = new AkuProfileVoiceNarrator($caller, app(VdotEstimator::class), app(ProgressionSeriesBuilder::class));
+    $narrator = new AkuProfileVoiceNarrator($caller, app(VdotEstimator::class), app(ProgressionSeriesBuilder::class), app(LifetimeStats::class));
     $narrator->generate($user);
 })->throws(UnavailableException::class, 'non-JSON');
 
