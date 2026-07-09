@@ -6,6 +6,7 @@ use App\Models\Activity;
 use App\Models\ActivityDetail;
 use App\Models\User;
 use App\Exceptions\AI\UnavailableException;
+use App\Services\Run\Metrics\RunBaseline;
 use App\Services\Run\Metrics\TrainingLoad;
 use App\Services\Run\Story\Contracts\VerdictNarrator;
 use App\Services\AI\Narrators\BriefingNarrator;
@@ -41,6 +42,7 @@ function bootNarrator(string $jsonContent): array
         app(TrainingLoad::class),
         app(VerdictNarrator::class),
         fakeStructuredCaller($client),
+        app(RunBaseline::class),
     );
 
     return ['user' => $user, 'narrator' => $narrator, 'client' => $client];
@@ -70,6 +72,39 @@ it('throws UnavailableException when required fields are missing', function (): 
     $narrator->generate($user, Carbon::today());
 })->throws(UnavailableException::class, 'missing required fields');
 
+it('feeds the 28-day pace/HR baseline into the prompt payload', function (): void {
+    $user = User::factory()->create(['name' => 'Ada Lovelace']);
+    // A prior run inside the 28-day window seeds the rolling baseline.
+    $prior = Activity::factory()->for($user)->analyzed()->create();
+    ActivityDetail::factory()->for($prior)->create([
+        'start_date_local' => Carbon::today()->subDays(5),
+        'distance' => 10000.0,
+        'moving_time' => 3600, // 6:00/km
+        'average_heartrate' => 150.0,
+        'trimp_edwards' => 60.0,
+    ]);
+
+    $client = new ClientFake([fakeAzureResponse(json_encode([
+        'headline' => 'h', 'suggestion' => 's',
+    ], JSON_THROW_ON_ERROR))]);
+    $narrator = new BriefingNarrator(
+        app(Vibe::class),
+        app(TrainingLoad::class),
+        app(VerdictNarrator::class),
+        fakeStructuredCaller($client),
+        app(RunBaseline::class),
+    );
+
+    $narrator->generate($user, Carbon::today());
+
+    $client->assertSent(OpenAI\Resources\Responses::class, function (string $method, array $params): bool {
+        $payload = json_encode($params, JSON_THROW_ON_ERROR);
+
+        return str_contains($payload, 'recent_baseline_28d')
+            && str_contains($payload, 'avg_pace_sec_per_km');
+    });
+});
+
 it('throws UnavailableException when the Azure HTTP call itself throws', function (): void {
     $user = User::factory()->create();
     $client = new ClientFake([new RuntimeException('Azure 500')]);
@@ -79,6 +114,7 @@ it('throws UnavailableException when the Azure HTTP call itself throws', functio
         app(TrainingLoad::class),
         app(VerdictNarrator::class),
         fakeStructuredCaller($client),
+        app(RunBaseline::class),
     );
     $narrator->generate($user, Carbon::today());
 })->throws(UnavailableException::class, 'Azure OpenAI call failed');

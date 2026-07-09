@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services\AI\Narrators;
 
+use App\Models\PersonalRecord;
 use App\Models\User;
 use App\Models\WeeklySnapshot;
 use App\Services\AI\ChatCallOptions;
@@ -81,6 +82,7 @@ class TrendCaptionNarrator
             ->values();
 
         [$ctlDelta4w, $volumeRecent, $volumePrev] = $this->fourWeekDeltas($weeks);
+        $prWeekEndings = $this->prWeekEndings($user, $weeks);
 
         return [
             'as_of' => $asOf->toDateString(),
@@ -96,8 +98,38 @@ class TrendCaptionNarrator
                 'atl_7d' => $w->atl_7d,
                 'form' => $w->form,
                 'status' => $w->form_status,
+                'pr' => in_array($w->week_ending->toDateString(), $prWeekEndings, true),
             ])->all(),
         ];
+    }
+
+    /**
+     * Week-ending dates (Sunday) in which the user set a personal record, so the
+     * caption can honestly cite a "PR week" as its prompt asks. A PR is bucketed
+     * into the week its `set_at` falls in.
+     *
+     * @param  Collection<int, WeeklySnapshot>  $weeks  oldest-first
+     * @return list<string>
+     */
+    private function prWeekEndings(User $user, Collection $weeks): array
+    {
+        if ($weeks->isEmpty()) {
+            return [];
+        }
+
+        $endings = PersonalRecord::query()
+            ->where('user_id', $user->id)
+            ->whereNotNull('set_at')
+            ->whereBetween('set_at', [
+                $weeks->first()->week_ending->copy()->subDays(6)->startOfDay(),
+                $weeks->last()->week_ending->copy()->endOfDay(),
+            ])
+            ->get()
+            ->map(fn (PersonalRecord $pr): string => $pr->set_at->copy()->endOfWeek(Carbon::SUNDAY)->toDateString())
+            ->unique()
+            ->all();
+
+        return array_values($endings);
     }
 
     /**

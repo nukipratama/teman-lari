@@ -28,8 +28,8 @@ class BriefingFeaturedKartuVoiceNarrator
 
         VARIASI:
         - Observasi tentang special_move: kenapa nama itu cocok buat sesi ini.
-        - Bandingkan dengan kartu sebelumnya kalau rarity naik.
         - Sebut badge atau km spesifik.
+        - Kaitkan rarity dengan effort sesi (mis. jarak jauh atau pace stabil).
 
         Contoh oke: "Aku kasih kartu ini karena 12 km tadi beneran solid.
         'Langkah Sunyi' cocok buat pace kamu yang stabil dari awal sampe akhir."

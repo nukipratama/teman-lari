@@ -6,6 +6,7 @@ namespace App\Services\AI\Narrators;
 
 use App\Models\PersonalRecord;
 use App\Services\AI\ChatCallOptions;
+use App\Services\AI\Context\ActivityNarrationContext;
 use App\Services\AI\StructuredChatCaller;
 
 class PrContextNarrator
@@ -26,6 +27,11 @@ class PrContextNarrator
 
         Tone: bangga, hangat, gak lebay.
 
+        CUACA: kalau kondisi pas PR ekstrem (weather_temp_c tinggi di atas 30,
+        atau weather_rain true), boleh sebut buat nambah bobot ("PR di tengah
+        panas 32 derajat, respect"). weather_rain_source "forecast" cuma
+        prakiraan, jadi hedge. Kalau adem, lewati, jangan dipaksa.
+
         ANTI-PATTERN:
         - "PR-nya hasil dari konsistensi minggu-minggu sebelumnya, bukan
           kebetulan." -- formula yang muncul terus.
@@ -45,6 +51,9 @@ class PrContextNarrator
             ->orderByDesc('set_at')
             ->first();
 
+        $pr->loadMissing('activity.detail');
+        $conditions = ActivityNarrationContext::fromDetail($pr->activity?->detail);
+
         $decoded = $this->caller->call(
             kind: 'pr_context',
             systemPrompt: self::SYSTEM_PROMPT,
@@ -55,6 +64,11 @@ class PrContextNarrator
                 'previous_value_sec' => $previous?->value_sec,
                 'previous_set_at' => $previous?->set_at?->toDateString(),
                 'delta_sec' => $previous !== null ? ($previous->value_sec - $pr->value_sec) : null,
+                'weather_temp_c' => $conditions->weatherTempC,
+                'weather_rain' => $conditions->weatherRain,
+                'weather_rain_source' => $conditions->weatherRainSource,
+                'weather_wind_speed_kmh' => $conditions->weatherWindSpeedKmh,
+                'weather_wind_gust_kmh' => $conditions->weatherWindGustKmh,
             ],
             schemaName: 'TemariPrContext',
             requiredKeys: ['flavor'],

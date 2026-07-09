@@ -33,6 +33,11 @@ class CardFlavorNarrator
         "forecast" cuma prakiraan, jadi hedge ("kayaknya sempat gerimis"), jangan
         klaim "hujan deras".
 
+        PACING: negative_split true = paruh kedua makin cepat, boleh dipuji.
+        decoupling_pct rendah = efisiensi aerobik bagus. Tapi kalau kedua field
+        ini null (gak ada data stream), JANGAN klaim soal pacing atau negative
+        split sama sekali, fokus ke badge, cuaca, atau special move aja.
+
         ANTI-PATTERN:
         - Kalimat generik yang bisa berlaku untuk kartu mana pun.
         - Mengulang formula yang sama untuk rarity yang sama.
@@ -62,6 +67,8 @@ class CardFlavorNarrator
             'badges' => Badge::promptLabelsFor((array) ($card->badges ?? [])),
             'distance_km' => $shared->distanceKmOrNull(2),
             'pace_sec_per_km' => $paceSecPerKm !== null ? round($paceSecPerKm, 1) : null,
+            'decoupling_pct' => $shared->decouplingPct,
+            'negative_split' => $shared->negativeSplit,
             'weather_temp_c' => $shared->weatherTempC,
             'weather_rain' => $shared->weatherRain,
             'weather_rain_source' => $shared->weatherRainSource,
