@@ -7,6 +7,7 @@ namespace App\Services\AI\Narrators;
 use App\Models\User;
 use App\Services\AI\ChatCallOptions;
 use App\Services\AI\StructuredChatCaller;
+use App\Services\Run\Metrics\RunBaseline;
 use App\Services\Run\Metrics\TrainingLoad;
 use App\Services\Run\Story\BriefingContext;
 use App\Services\Run\Story\Contracts\VerdictNarrator;
@@ -121,6 +122,12 @@ class BriefingNarrator
           easy/moderate/hard): refer ke pola spesifik. Beberapa `hard` berturut
           = arahkan ke easy. Semua `easy` berminggu tapi ceiling mengizinkan =
           boleh ajak satu sesi sedikit lebih naik.
+        - `recent_baseline_28d` (runs, avg_pace_sec_per_km, avg_hr,
+          avg_decoupling_pct): pace/HR normal user 28 hari terakhir. WAJIB anchor
+          cue eksekusi ke sini kalau ada, biar relatif dan personal (mis. "easy
+          di sekitar pace normalmu", "tempo sedikit lebih cepat dari pace
+          rata-rata"). Kalau null (data kurang), JANGAN ngarang angka pace/HR
+          absolut, kasih cue by-feel aja (napas, effort, cadence).
 
         Suarakan kondisi user secara umum hari ini, seperti teman yang nemenin
         training. Boleh spesifik dan data-aware, asal tetap conversational.
@@ -144,6 +151,7 @@ class BriefingNarrator
         private readonly TrainingLoad $trainingLoad,
         private readonly VerdictNarrator $verdictNarrator,
         private readonly StructuredChatCaller $caller,
+        private readonly RunBaseline $runBaseline,
     ) {
     }
 
@@ -156,13 +164,14 @@ class BriefingNarrator
         $vibeState = $this->vibe->current($user, $asOf);
         $load = $this->trainingLoad->summary($user, $asOf) ?? [];
         $verdicts = $this->verdictNarrator->recent($user, 5);
+        $baseline = $this->runBaseline->forUserAsOf($user->id, $asOf);
 
         $ctx = new MetricsContext($user, $vibeState, $load, $verdicts, $asOf);
 
         $decoded = $this->caller->call(
             kind: 'briefing',
             systemPrompt: self::SYSTEM_PROMPT,
-            context: $this->buildContext($ctx),
+            context: $this->buildContext($ctx, $baseline),
             schemaName: 'TemariBriefing',
             requiredKeys: ['headline', 'suggestion'],
             options: new ChatCallOptions(userId: $user->id, maxTokens: 1200),
@@ -175,9 +184,10 @@ class BriefingNarrator
     }
 
     /**
+     * @param  array{runs:int, avg_pace_sec_per_km:int|null, avg_hr:int|null, avg_decoupling_pct:float|null}|null  $baseline
      * @return array<string, mixed>
      */
-    private function buildContext(MetricsContext $ctx): array
+    private function buildContext(MetricsContext $ctx, ?array $baseline): array
     {
         $verdictSummary = array_map(
             fn ($v): array => ['mood' => $v->mood, 'km' => $v->distanceKm, 'intensity' => $v->intensity, 'oneline' => $v->oneline],
@@ -189,6 +199,7 @@ class BriefingNarrator
             'vibe' => $ctx->vibeState,
             'load' => $ctx->load,
             'recent_runs' => $verdictSummary,
+            'recent_baseline_28d' => $baseline,
             'date' => $ctx->asOf->toDateString(),
             'context' => BriefingContext::forUser($ctx->user, $ctx->asOf, $ctx->load)->toArray(),
         ];

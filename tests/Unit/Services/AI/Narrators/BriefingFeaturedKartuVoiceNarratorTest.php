@@ -106,3 +106,12 @@ it('throws UnavailableException when required keys are missing', function (): vo
 
     $narrator->generate($user, $card);
 })->throws(UnavailableException::class);
+
+it('prompt does not ask the model to compare against an unavailable previous card', function (): void {
+    // The context never carries a previous-card signal, so the prompt must not
+    // instruct the LLM to compare rarity against one (it would fabricate).
+    $prompt = (string) (new ReflectionClass(BriefingFeaturedKartuVoiceNarrator::class))->getConstant('SYSTEM_PROMPT');
+
+    expect($prompt)->not->toContain('kartu sebelumnya')
+        ->and($prompt)->not->toContain('—');
+});

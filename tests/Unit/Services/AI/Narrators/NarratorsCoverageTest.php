@@ -509,6 +509,24 @@ it('PrContextNarrator throws on non-JSON', function (): void {
     $narrator->generate($pr);
 })->throws(UnavailableException::class, 'non-JSON');
 
+it('PrContextNarrator feeds the PR run conditions into the payload', function (): void {
+    $user = User::factory()->create();
+    $activity = Activity::factory()->for($user)->analyzed()->create();
+    ActivityDetail::factory()->for($activity)->create(['weather_temp_c' => 33]);
+    $pr = PersonalRecord::factory()->for($user)->create([
+        'category' => '5km', 'value_sec' => 1500, 'activity_id' => $activity->id,
+    ]);
+
+    [$caller, $client] = capturingCaller(json_encode(['flavor' => 'ok'], JSON_THROW_ON_ERROR));
+    (new PrContextNarrator($caller))->generate($pr);
+
+    $client->assertSent(OpenAI\Resources\Responses::class, function (string $method, array $params): bool {
+        $payload = json_encode($params, JSON_THROW_ON_ERROR);
+
+        return str_contains($payload, 'weather_temp_c') && str_contains($payload, '33');
+    });
+});
+
 // ── TrendCaptionNarrator ──────────────────────────────────────────────
 
 it('TrendCaptionNarrator returns caption on valid JSON', function (): void {
@@ -557,6 +575,21 @@ it('TrendCaptionNarrator derives the 4-week CTL + volume deltas', function (): v
     expect($context['ctl_delta_4w'])->toBe(8.0)
         ->and($context['volume_recent_4w_km'])->toBe(48.0)  // 12*4
         ->and($context['volume_prev_4w_km'])->toBe(40.0);   // 10*4
+});
+
+it('TrendCaptionNarrator flags weeks that contain a personal record', function (): void {
+    $user = User::factory()->create();
+    WeeklySnapshot::factory()->for($user)->create(['week_ending' => '2026-05-10', 'distance_km' => 20, 'ctl_42d' => 30]);
+    WeeklySnapshot::factory()->for($user)->create(['week_ending' => '2026-05-17', 'distance_km' => 25, 'ctl_42d' => 33]);
+    // A PR set on Thu 2026-05-14 falls in the week ending Sun 2026-05-17.
+    PersonalRecord::factory()->for($user)->create(['set_at' => Carbon::parse('2026-05-14T06:00')]);
+
+    $context = (new TrendCaptionNarrator(fakeCaller('{"caption":"x"}'), app(TrainingLoad::class)))
+        ->context($user, Carbon::parse('2026-05-18'));
+
+    $weeks = collect($context['weeks']);
+    expect($weeks->firstWhere('ending', '2026-05-17')['pr'])->toBeTrue()
+        ->and($weeks->firstWhere('ending', '2026-05-10')['pr'])->toBeFalse();
 });
 
 it('TrendCaptionNarrator leaves the 4-week deltas null without enough history', function (): void {
@@ -614,7 +647,9 @@ it('CardFlavorNarrator throws on non-JSON', function (): void {
 
 it('CardFlavorNarrator humanizes badge slugs so no raw code reaches the prompt', function (): void {
     $card = cardFixture();
-    $card->update(['badges' => ['negative_split', 'pejuang_hujan', 'not_a_real_badge']]);
+    // long_slow_distance (not negative_split) as the example slug: negative_split
+    // is now a legitimate pacing context key, so it appears in the payload by design.
+    $card->update(['badges' => ['long_slow_distance', 'pejuang_hujan', 'not_a_real_badge']]);
 
     [$caller, $client] = capturingCaller(json_encode(['flavor' => 'ok'], JSON_THROW_ON_ERROR));
     (new CardFlavorNarrator($caller))->generate($card->fresh());
@@ -622,11 +657,28 @@ it('CardFlavorNarrator humanizes badge slugs so no raw code reaches the prompt',
     $client->assertSent(OpenAI\Resources\Responses::class, function (string $method, array $params): bool {
         $payload = json_encode($params, JSON_THROW_ON_ERROR);
 
-        return str_contains($payload, 'Negative Split')
+        return str_contains($payload, 'Long Slow Distance')
             && str_contains($payload, 'Pejuang Hujan')
-            && ! str_contains($payload, 'negative_split')
+            && ! str_contains($payload, 'long_slow_distance')
             && ! str_contains($payload, 'pejuang_hujan')
             && ! str_contains($payload, 'not_a_real_badge');
+    });
+});
+
+it('CardFlavorNarrator feeds decoupling + negative split pacing into the payload', function (): void {
+    $card = cardFixture();
+    $card->loadMissing('activity.detail');
+    $card->activity->detail->update(['stream_summary' => ['decoupling_pct' => 4.5, 'negative_split' => true]]);
+
+    [$caller, $client] = capturingCaller(json_encode(['flavor' => 'ok'], JSON_THROW_ON_ERROR));
+    (new CardFlavorNarrator($caller))->generate($card->fresh());
+
+    $client->assertSent(OpenAI\Resources\Responses::class, function (string $method, array $params): bool {
+        $payload = json_encode($params, JSON_THROW_ON_ERROR);
+
+        return str_contains($payload, 'decoupling_pct')
+            && str_contains($payload, '4.5')
+            && str_contains($payload, 'negative_split');
     });
 });
 
