@@ -1002,6 +1002,7 @@ function bootMascotNarrator(string $content): BriefingMascotVoiceNarrator
         app(TrainingLoad::class),
         app(VerdictNarrator::class),
         fakeCaller($content),
+        app(PastYouMatcher::class),
     );
 }
 
@@ -1061,6 +1062,40 @@ it('BriefingMascotVoiceNarrator leaves prev_narrative null on the first day', fu
     $context = bootMascotNarrator('{"mascot_voice":"x"}')->context($user, Carbon::parse('2026-05-18'));
 
     expect($context['prev_narrative'])->toBeNull();
+});
+
+it('BriefingMascotVoiceNarrator feeds a past-you comparison for the latest run', function (): void {
+    $user = User::factory()->create();
+    // Latest run: 5km in 1500s (5:00/km, threshold band), today.
+    $recent = Activity::factory()->for($user)->analyzed()->create();
+    ActivityDetail::factory()->for($recent)->create([
+        'start_date_local' => Carbon::today(),
+        'distance' => 5000.0, 'moving_time' => 1500, 'weather_temp_c' => null,
+    ]);
+    // A comparable run 30 days earlier, slower.
+    $past = Activity::factory()->for($user)->analyzed()->create();
+    ActivityDetail::factory()->for($past)->create([
+        'start_date_local' => Carbon::today()->subDays(30),
+        'distance' => 5000.0, 'moving_time' => 1560, 'weather_temp_c' => null,
+    ]);
+
+    $context = bootMascotNarrator('{"mascot_voice":"x"}')->context($user, Carbon::today());
+
+    expect($context['past_you'])->not->toBeNull()
+        ->and($context['past_you']['days_ago'])->toBe(30)
+        ->and($context['past_you']['pace_diff_sec'])->toBeGreaterThan(0.0);
+});
+
+it('BriefingMascotVoiceNarrator leaves past_you null without a comparable past run', function (): void {
+    $user = User::factory()->create();
+    $only = Activity::factory()->for($user)->analyzed()->create();
+    ActivityDetail::factory()->for($only)->create([
+        'start_date_local' => Carbon::today(), 'distance' => 5000.0, 'moving_time' => 1500,
+    ]);
+
+    $context = bootMascotNarrator('{"mascot_voice":"x"}')->context($user, Carbon::today());
+
+    expect($context['past_you'])->toBeNull();
 });
 
 // ── Prompt wording guards (slice 8 polish) ────────────────────────────

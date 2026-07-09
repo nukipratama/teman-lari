@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services\AI\Narrators;
 
+use App\Models\ActivityDetail;
 use App\Models\User;
 use App\Services\AI\AnalysisType;
 use App\Services\AI\ChatCallOptions;
@@ -13,6 +14,7 @@ use App\Services\Run\Metrics\TrainingLoad;
 use App\Services\Run\Story\BriefingContext;
 use App\Services\Run\Story\Contracts\VerdictNarrator;
 use App\Services\Run\Story\MetricsContext;
+use App\Services\Run\Story\PastYouMatcher;
 use App\Services\Run\Story\Vibe;
 use Illuminate\Support\Carbon;
 
@@ -58,6 +60,12 @@ class BriefingMascotVoiceNarrator
           udah nentuin batas intensitas hari ini. JANGAN dorong sesi lebih berat
           dari batas ini. Kalau `rest`/`easy_only`, jangan ajak ngoyo walau user
           lagi segar. Kamu observasi kondisi, bukan kasih resep sesi.
+        - `past_you`: kalau terisi, lari terakhir user mirip sama sesi lampau.
+          Boleh jadiin beat progres personal ("lari terakhirmu {pace_diff_sec}
+          detik lebih cepat dari sesi serupa {days_ago} hari lalu"). pace_diff_sec
+          dan time_diff_sec positif = sekarang lebih cepat, negatif = lebih pelan
+          (jujur, jangan dipoles jadi selalu menang). Kalau null, JANGAN ngarang
+          perbandingan masa lalu.
 
         VARIASI MOOD:
         - fresh: antusias, ajak manfaatkan. "Kamu lagi segar nih, dua hari
@@ -86,6 +94,7 @@ class BriefingMascotVoiceNarrator
         private readonly TrainingLoad $trainingLoad,
         private readonly VerdictNarrator $verdictNarrator,
         private readonly StructuredChatCaller $caller,
+        private readonly PastYouMatcher $pastYou,
     ) {
     }
 
@@ -138,9 +147,35 @@ class BriefingMascotVoiceNarrator
             'vibe' => $ctx->vibeState,
             'load' => $ctx->load,
             'recent_runs' => $verdictSummary,
+            'past_you' => $this->latestPastYou($ctx->user, $ctx->asOf),
             'date' => $ctx->asOf->toDateString(),
             'context' => BriefingContext::forUser($ctx->user, $ctx->asOf, $ctx->load)->toArray(),
             ...NarratorContinuity::fields($prevNarrative),
         ];
+    }
+
+    /**
+     * A "diri kamu dulu vs sekarang" comparison for the user's most recent run
+     * as of $asOf, or null when there is no comparable past run. Bounded by
+     * $asOf so a backdated recompute reads the run that was latest that day, not
+     * a later one.
+     *
+     * @return array{days_ago: int, pace_diff_sec: float, time_diff_sec: float, hr_diff_bpm: float|null, past_km: float, past_date: string|null}|null
+     */
+    private function latestPastYou(User $user, Carbon $asOf): ?array
+    {
+        $detail = ActivityDetail::query()
+            ->whereHas('activity', fn ($q) => $q->where('user_id', $user->id))
+            ->whereNotNull('start_date_local')
+            ->where('start_date_local', '<=', $asOf->copy()->endOfDay())
+            ->orderByDesc('start_date_local')
+            ->with('activity')
+            ->first();
+
+        if ($detail === null) {
+            return null;
+        }
+
+        return $this->pastYou->findMatchContext($detail->activity, $detail);
     }
 }
