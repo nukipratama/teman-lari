@@ -62,6 +62,23 @@ it('reframes recovery from the prior run day when the last run was today', funct
         ->and($w->recoveryHours)->toBe(53);            // from the 05-16 run, not the 05-18 one
 });
 
+it('ignores runs after asOf so a backdated recompute stays historical', function (): void {
+    // Self-heal / dead-letter retry recomputes a past-dated briefing. A run
+    // logged after that date must not leak into it.
+    Carbon::setTestNow(Carbon::parse('2026-05-25 09:00'));
+    $asOf = Carbon::parse('2026-05-18 00:00'); // a past briefing date
+    $user = User::factory()->create();
+    seedRecoveryRun($user, '2026-05-17 06:00'); // real prior run, as of 05-18
+    seedRecoveryRun($user, '2026-05-24 07:00'); // happened AFTER the briefing date
+
+    $w = RecoveryWindow::forUser($user, $asOf);
+
+    // Measured from the 05-17 run against end of 05-18, not the 05-24 run.
+    expect($w->ranToday)->toBeFalse()
+        ->and($w->recoveryHours)->toBe(41) // 05-17 06:00 -> 05-18 23:59:59
+        ->and($w->daysSinceLastRun)->toBe(1);
+});
+
 it('reports unknown recovery when today is the only run on record', function (): void {
     // A first-ever run, viewed the same day it was logged: there is no prior
     // session to measure recovery from, so recovery is null (unknown), never

@@ -33,7 +33,11 @@ final readonly class RecoveryWindow
 
     public static function forUser(User $user, Carbon $asOf): self
     {
-        $lastStart = self::lastStartBefore($user, null);
+        // Runs after $asOf must not count: a self-heal / dead-letter retry
+        // recomputes a past-dated briefing, and leaking a later run into it
+        // would misreport recovery (and weaken the readiness cap) for that day.
+        $ceiling = $asOf->copy()->endOfDay();
+        $lastStart = self::lastStartBefore($user, $ceiling);
 
         if ($lastStart === null) {
             return new self(null, false, null, null);
@@ -56,7 +60,7 @@ final readonly class RecoveryWindow
         // would read as "no recovery" the moment a first-ever run is ingested.
         $recoveryHours = $hoursSinceLastRun;
         if ($ranToday) {
-            $priorStart = self::lastStartBefore($user, $asOf->copy()->startOfDay());
+            $priorStart = self::lastStartBefore($user, $ceiling, $asOf->copy()->startOfDay());
             $recoveryHours = $priorStart !== null
                 ? max(0, (int) $priorStart->diffInHours($now, absolute: true))
                 : null;
@@ -66,15 +70,18 @@ final readonly class RecoveryWindow
     }
 
     /**
-     * The most recent activity start, optionally restricted to runs that
-     * started strictly before $before (used to find the prior distinct day).
+     * The most recent activity start at or before $ceiling, optionally further
+     * restricted to runs that started strictly before $strictlyBefore (used to
+     * find the prior distinct day). $ceiling keeps the window as-of the briefing
+     * date so a backdated recompute never sees a later run.
      */
-    private static function lastStartBefore(User $user, ?Carbon $before): ?Carbon
+    private static function lastStartBefore(User $user, Carbon $ceiling, ?Carbon $strictlyBefore = null): ?Carbon
     {
         $value = ActivityDetail::query()
             ->whereHas('activity', fn ($q) => $q->where('user_id', $user->id))
             ->whereNotNull('start_date_local')
-            ->when($before !== null, fn ($q) => $q->where('start_date_local', '<', $before))
+            ->where('start_date_local', '<=', $ceiling)
+            ->when($strictlyBefore !== null, fn ($q) => $q->where('start_date_local', '<', $strictlyBefore))
             ->orderByDesc('start_date_local')
             ->value('start_date_local');
 

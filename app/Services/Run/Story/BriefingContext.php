@@ -59,9 +59,13 @@ final readonly class BriefingContext
         $thisWeekEnd = $asOf->copy()->endOfWeek(Carbon::SUNDAY);
         $lastWeekEnd = $thisWeekEnd->copy()->subWeek();
 
+        // Bound to weeks at or before the briefing week so a backdated recompute
+        // (self-heal / dead-letter retry) reads fitness_trend from the state as
+        // of $asOf, not from weeks that came after it.
         /** @var array<string, WeeklySnapshot> $byDate */
         $byDate = WeeklySnapshot::query()
             ->where('user_id', $user->id)
+            ->where('week_ending', '<=', $thisWeekEnd->toDateString())
             ->orderByDesc('week_ending')
             ->limit(12)
             ->get()
