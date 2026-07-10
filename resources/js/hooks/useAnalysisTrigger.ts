@@ -140,6 +140,7 @@ export function useAnalysisTrigger(
     inertiaReloadProps: string[],
     options: TriggerOptions = {},
 ): TriggerResult {
+    const { onUpdate } = options;
     const [status, setStatus] = useState<AnalysisStatus>(payload.status);
     const [pending, setPending] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -182,7 +183,7 @@ export function useAnalysisTrigger(
             const next = body;
             setStatus(next.status);
             setRetryAfterSeconds(next.retry_after_seconds ?? null);
-            options.onUpdate?.(next);
+            onUpdate?.(next);
 
             if (inertiaReloadProps.length > 0) {
                 router.reload({ only: inertiaReloadProps });
@@ -193,7 +194,7 @@ export function useAnalysisTrigger(
         } finally {
             setPending(false);
         }
-    }, [pending, payload.type, payload.subject_id, payload.discriminator, inertiaReloadProps, options.onUpdate]);
+    }, [pending, payload.type, payload.subject_id, payload.discriminator, inertiaReloadProps, onUpdate]);
 
     useEffect(() => {
         setStatus(payload.status);
