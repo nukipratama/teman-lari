@@ -102,7 +102,10 @@ describe('ZonaHR', () => {
 
         fireEvent.click(screen.getByRole('button', { name: /Balik ke zona standar/i }));
 
-        expect(router.delete).toHaveBeenCalledWith('/pengaturan/zona', expect.objectContaining({ preserveScroll: true }));
+        expect(router.delete).toHaveBeenCalledWith(
+            '/pengaturan/zona',
+            expect.objectContaining({ onSuccess: expect.any(Function) }),
+        );
     });
 
     it('offers a Strava re-sync only on a manual source with the scope', () => {
@@ -113,7 +116,7 @@ describe('ZonaHR', () => {
         expect(router.post).toHaveBeenCalledWith(
             '/pengaturan/zona/sinkron-strava',
             {},
-            expect.objectContaining({ preserveScroll: true }),
+            expect.objectContaining({ onSuccess: expect.any(Function) }),
         );
 
         // No scope → no re-sync affordance (reset still shows).

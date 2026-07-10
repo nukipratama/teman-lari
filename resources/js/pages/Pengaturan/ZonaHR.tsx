@@ -121,12 +121,15 @@ export default function ZonaHR({
         setZones((prev) => ({ ...prev, [key]: { ...prev[key], [field]: value } }));
     };
 
+    // Reset and resync change the zones server-side, so hard-refresh afterwards
+    // to re-seed the whole form from the new profile — simpler and more robust
+    // than reconciling this page's local state against the incoming props.
     const resetToDefault = () => {
-        router.delete('/pengaturan/zona', { preserveScroll: true });
+        router.delete('/pengaturan/zona', { onSuccess: () => window.location.reload() });
     };
 
     const [resyncing, resyncFromStrava] = usePendingPost('/pengaturan/zona/sinkron-strava', {
-        preserveScroll: true,
+        onSuccess: () => window.location.reload(),
     });
 
     const canShowResync = canSyncFromStrava && source === 'manual';
