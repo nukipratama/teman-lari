@@ -64,6 +64,15 @@ class StravaConnection extends Model
         return $this->revoked_at !== null;
     }
 
+    /**
+     * Whether the granted scopes include `profile:read_all`, which the Strava
+     * HR-zone endpoint requires (see {@link ZoneFetcher}).
+     */
+    public function hasZoneScope(): bool
+    {
+        return str_contains((string) $this->scopes, 'profile:read_all');
+    }
+
     public function markRevoked(): void
     {
         if ($this->revoked_at !== null) {

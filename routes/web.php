@@ -111,6 +111,8 @@ Route::middleware(['auth'])->group(function (): void {
 
     Route::get('/pengaturan/zona', [RunnerZonesController::class, 'index'])->name('pengaturan.zona');
     Route::patch('/pengaturan/zona', [RunnerZonesController::class, 'update'])->name('pengaturan.zona.update');
+    Route::delete('/pengaturan/zona', [RunnerZonesController::class, 'resetToDefault'])->name('pengaturan.zona.reset');
+    Route::post('/pengaturan/zona/sinkron-strava', [RunnerZonesController::class, 'resyncFromStrava'])->name('pengaturan.zona.resync');
 
     Route::post('/strava/sync', SyncController::class)
         ->middleware('throttle:strava-sync')
