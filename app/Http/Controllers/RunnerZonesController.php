@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers;
 
 use App\Http\Requests\UpdateHrZonesRequest;
+use App\Models\RunnerProfile;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -17,10 +18,13 @@ class RunnerZonesController extends Controller
     {
         /** @var User $user */
         $user = $request->user();
+        $profile = RunnerProfile::query()->where('user_id', $user->id)->first();
 
         return Inertia::render('Pengaturan/ZonaHR', [
             'profile' => $user->hrProfile(),
-            'hasCustomProfile' => $user->runnerProfile !== null,
+            'hasCustomProfile' => $profile !== null,
+            'source' => $profile !== null ? $profile->source : 'default',
+            'stravaSyncedLabel' => $profile !== null ? $profile->strava_zones_synced_at?->format('j M Y, H:i') : null,
         ]);
     }
 
