@@ -99,7 +99,7 @@ class HandleInertiaRequests extends Middleware
             return false;
         }
 
-        return ! str_contains((string) $connection->scopes, 'profile:read_all');
+        return ! $connection->hasZoneScope();
     }
 
     /**

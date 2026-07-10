@@ -96,6 +96,14 @@ it('reports revoked state via isRevoked', function (): void {
         ->and($revoked->isRevoked())->toBeTrue();
 });
 
+it('reports the zone scope via hasZoneScope', function (): void {
+    $scoped = StravaConnection::factory()->make(['user_id' => 1, 'scopes' => 'read,activity:read_all,profile:read_all']);
+    $unscoped = StravaConnection::factory()->make(['user_id' => 1, 'scopes' => 'read,activity:read_all']);
+
+    expect($scoped->hasZoneScope())->toBeTrue()
+        ->and($unscoped->hasZoneScope())->toBeFalse();
+});
+
 it('stamps revoked_at via markRevoked and is a no-op when already revoked', function (): void {
     $connection = StravaConnection::factory()->create();
 

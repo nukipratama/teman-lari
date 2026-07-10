@@ -28,7 +28,7 @@ class ZoneFetcher
      */
     public function fetch(StravaConnection $connection): ?array
     {
-        if (! str_contains($connection->scopes, 'profile:read_all')) {
+        if (! $connection->hasZoneScope()) {
             return null;
         }
 

@@ -2,7 +2,9 @@
 
 declare(strict_types=1);
 
+use App\Jobs\Strava\SyncZonesJob;
 use App\Models\RunnerProfile;
+use App\Models\StravaConnection;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
@@ -133,6 +135,67 @@ it('does not dispatch any recompute job on update (forward-only design)', functi
     $this->actingAs($user)
         ->patch('/pengaturan/zona', validZonesPayload())
         ->assertRedirect();
+
+    Queue::assertNothingPushed();
+});
+
+it('exposes canSyncFromStrava true only with a live profile:read_all connection', function (): void {
+    $scoped = User::factory()->create();
+    StravaConnection::factory()->for($scoped)->create(['scopes' => 'read,activity:read_all,profile:read_all']);
+
+    $this->actingAs($scoped)->get('/pengaturan/zona')
+        ->assertInertia(fn (Assert $page) => $page->where('canSyncFromStrava', true));
+
+    $unscoped = User::factory()->create();
+    StravaConnection::factory()->for($unscoped)->create(['scopes' => 'read,activity:read_all']);
+
+    $this->actingAs($unscoped)->get('/pengaturan/zona')
+        ->assertInertia(fn (Assert $page) => $page->where('canSyncFromStrava', false));
+
+    $none = User::factory()->create();
+    $this->actingAs($none)->get('/pengaturan/zona')
+        ->assertInertia(fn (Assert $page) => $page->where('canSyncFromStrava', false));
+});
+
+it('resets to default by deleting the runner profile', function (): void {
+    $user = User::factory()->create();
+    RunnerProfile::factory()->for($user)->create(['source' => 'manual']);
+
+    $this->actingAs($user)
+        ->delete('/pengaturan/zona')
+        ->assertRedirect()
+        ->assertSessionHas('success');
+
+    expect(RunnerProfile::query()->where('user_id', $user->id)->exists())->toBeFalse();
+
+    $this->actingAs($user)->get('/pengaturan/zona')
+        ->assertInertia(fn (Assert $page) => $page->where('source', 'default'));
+});
+
+it('dispatches a forced SyncZonesJob when re-syncing a scoped user', function (): void {
+    Queue::fake();
+
+    $user = User::factory()->create();
+    StravaConnection::factory()->for($user)->create(['scopes' => 'read,activity:read_all,profile:read_all']);
+    RunnerProfile::factory()->for($user)->create(['source' => 'manual']);
+
+    $this->actingAs($user)
+        ->post('/pengaturan/zona/sinkron-strava')
+        ->assertRedirect()
+        ->assertSessionHas('info');
+
+    Queue::assertPushed(SyncZonesJob::class, fn (SyncZonesJob $job): bool => $job->userId === $user->id && $job->force === true);
+});
+
+it('forbids re-syncing without the profile:read_all scope', function (): void {
+    Queue::fake();
+
+    $user = User::factory()->create();
+    StravaConnection::factory()->for($user)->create(['scopes' => 'read,activity:read_all']);
+
+    $this->actingAs($user)
+        ->post('/pengaturan/zona/sinkron-strava')
+        ->assertForbidden();
 
     Queue::assertNothingPushed();
 });

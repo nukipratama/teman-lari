@@ -69,6 +69,7 @@ interface ZonaHRProps {
     hasCustomProfile: boolean;
     source?: ZoneSource;
     stravaSyncedLabel?: string | null;
+    canSyncFromStrava?: boolean;
 }
 
 /**
@@ -92,7 +93,12 @@ export function deriveZones(maxHr: number, restingHr: number): HrZones {
     return zones;
 }
 
-export default function ZonaHR({ profile, source = 'default', stravaSyncedLabel = null }: Readonly<ZonaHRProps>) {
+export default function ZonaHR({
+    profile,
+    source = 'default',
+    stravaSyncedLabel = null,
+    canSyncFromStrava = false,
+}: Readonly<ZonaHRProps>) {
     const [maxHr, setMaxHr] = useState<number>(profile.max_hr);
     const [restingHr, setRestingHr] = useState<number>(profile.resting_hr);
     const [zones, setZones] = useState<HrZones>(profile.hr_zones);
@@ -110,6 +116,16 @@ export default function ZonaHR({ profile, source = 'default', stravaSyncedLabel 
     const editBoundary = (key: ZoneKey, field: keyof Zone, value: number) => {
         setZones((prev) => ({ ...prev, [key]: { ...prev[key], [field]: value } }));
     };
+
+    const resetToDefault = () => {
+        router.delete('/pengaturan/zona', { preserveScroll: true });
+    };
+
+    const resyncFromStrava = () => {
+        router.post('/pengaturan/zona/sinkron-strava', {}, { preserveScroll: true });
+    };
+
+    const canShowResync = canSyncFromStrava && source === 'manual';
 
     const submit = () => {
         router.patch(
@@ -156,6 +172,20 @@ export default function ZonaHR({ profile, source = 'default', stravaSyncedLabel 
                             <span className="text-meta">· terakhir sinkron {stravaSyncedLabel}</span>
                         )}
                     </div>
+                    {source !== 'default' && (
+                        <div className="mt-4 flex flex-wrap items-center gap-3">
+                            {canShowResync && (
+                                <PillButton tone="outline" size="sm" onClick={resyncFromStrava}>
+                                    <Icon icon="mdi:sync" width={14} height={14} aria-hidden />
+                                    Sinkron ulang dari Strava
+                                </PillButton>
+                            )}
+                            <PillButton tone="outline" size="sm" onClick={resetToDefault}>
+                                <Icon icon="mdi:backup-restore" width={14} height={14} aria-hidden />
+                                Balik ke zona standar
+                            </PillButton>
+                        </div>
+                    )}
                 </header>
 
                 <Card as="section" padding="lg" className="mt-8">
