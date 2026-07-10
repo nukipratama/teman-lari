@@ -26,6 +26,26 @@ const ZONE_LABEL: Record<ZoneKey, string> = {
     Z5: 'Z5 · Maksimal',
 };
 
+type ZoneSource = 'default' | 'strava' | 'manual';
+
+const SOURCE_INFO: Record<ZoneSource, { icon: string; label: string; description: string }> = {
+    default: {
+        icon: 'mdi:tune-variant',
+        label: 'Zona standar',
+        description: 'Sekarang masih pakai zona standar. Bikin punyamu sendiri di bawah.',
+    },
+    strava: {
+        icon: 'mdi:sync',
+        label: 'Disinkron dari Strava',
+        description: 'Zona ini disinkron otomatis dari Strava. Ubah manual di bawah kalau mau atur sendiri.',
+    },
+    manual: {
+        icon: 'mdi:pencil-outline',
+        label: 'Diatur manual',
+        description: 'Kamu udah atur zona sendiri. Ubah kapan aja di bawah.',
+    },
+};
+
 interface Zone {
     lo: number;
     hi: number;
@@ -43,6 +63,8 @@ interface HrProfile {
 interface ZonaHRProps {
     profile: HrProfile;
     hasCustomProfile: boolean;
+    source?: ZoneSource;
+    stravaSyncedLabel?: string | null;
 }
 
 /**
@@ -66,7 +88,7 @@ export function deriveZones(maxHr: number, restingHr: number): HrZones {
     return zones;
 }
 
-export default function ZonaHR({ profile, hasCustomProfile }: Readonly<ZonaHRProps>) {
+export default function ZonaHR({ profile, source = 'default', stravaSyncedLabel = null }: Readonly<ZonaHRProps>) {
     const [maxHr, setMaxHr] = useState<number>(profile.max_hr);
     const [restingHr, setRestingHr] = useState<number>(profile.resting_hr);
     const [zones, setZones] = useState<HrZones>(profile.hr_zones);
@@ -116,10 +138,19 @@ export default function ZonaHR({ profile, hasCustomProfile }: Readonly<ZonaHRPro
                         Zona Heart Rate kamu.
                     </h1>
                     <p className="mt-2 max-w-xl font-sans text-sm leading-relaxed text-ink-2">
-                        {hasCustomProfile
-                            ? 'Kamu udah punya zona custom. Ubah kapan aja di bawah.'
-                            : 'Sekarang masih pakai zona standar. Bikin punyamu sendiri di bawah.'}
+                        {SOURCE_INFO[source].description}
                     </p>
+                    <div className="mt-3 inline-flex flex-wrap items-center gap-x-1.5 gap-y-1 rounded-full border border-line bg-surface-sunken px-3 py-1 text-ink-2">
+                        <Icon icon={SOURCE_INFO[source].icon} width={12} height={12} aria-hidden />
+                        <span className="font-mono text-[11px] uppercase tracking-[0.1em]">
+                            {SOURCE_INFO[source].label}
+                        </span>
+                        {source === 'strava' && stravaSyncedLabel && (
+                            <span className="font-sans text-[11px] text-ink-3">
+                                · terakhir sinkron {stravaSyncedLabel}
+                            </span>
+                        )}
+                    </div>
                 </header>
 
                 <Card as="section" padding="lg" className="mt-8">

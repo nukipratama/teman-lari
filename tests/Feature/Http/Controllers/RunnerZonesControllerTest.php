@@ -45,9 +45,25 @@ it('renders the page with the config-fallback profile for a fresh user', functio
         ->assertInertia(fn (Assert $page) => $page
             ->component('Pengaturan/ZonaHR')
             ->where('hasCustomProfile', false)
+            ->where('source', 'default')
+            ->where('stravaSyncedLabel', null)
             ->where('profile.max_hr', 180)
             ->where('profile.resting_hr', 55)
             ->where('profile.hr_zones.Z1.lo', 116));
+});
+
+it('exposes the strava source and a last-synced label for a synced profile', function (): void {
+    $user = User::factory()->create();
+    RunnerProfile::factory()->for($user)->create([
+        'source' => 'strava',
+        'strava_zones_synced_at' => now(),
+    ]);
+
+    $this->actingAs($user)->get('/pengaturan/zona')
+        ->assertSuccessful()
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('source', 'strava')
+            ->whereType('stravaSyncedLabel', 'string'));
 });
 
 it('renders the page with the stored custom profile', function (): void {

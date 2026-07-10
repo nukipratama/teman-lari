@@ -62,9 +62,24 @@ describe('ZonaHR', () => {
         expect((screen.getByTestId('zone-Z2-lo') as HTMLInputElement).value).toBe('142');
     });
 
-    it('shows the custom-profile copy when one exists', () => {
-        render(<ZonaHR profile={DEFAULT_PROFILE} hasCustomProfile />);
-        expect(screen.getByText(/udah punya zona custom/i)).toBeInTheDocument();
+    it('shows the default-zone status when no profile is stored', () => {
+        render(<ZonaHR profile={DEFAULT_PROFILE} hasCustomProfile={false} source="default" stravaSyncedLabel={null} />);
+        expect(screen.getByText('Zona standar')).toBeInTheDocument();
+        expect(screen.getByText(/masih pakai zona standar/i)).toBeInTheDocument();
+    });
+
+    it('shows the manual status when the user set zones themselves', () => {
+        render(<ZonaHR profile={DEFAULT_PROFILE} hasCustomProfile source="manual" stravaSyncedLabel={null} />);
+        expect(screen.getByText('Diatur manual')).toBeInTheDocument();
+        expect(screen.getByText(/atur zona sendiri/i)).toBeInTheDocument();
+    });
+
+    it('shows the strava source with its last-synced label', () => {
+        render(
+            <ZonaHR profile={DEFAULT_PROFILE} hasCustomProfile source="strava" stravaSyncedLabel="10 Jul 2026, 10:18" />,
+        );
+        expect(screen.getByText('Disinkron dari Strava')).toBeInTheDocument();
+        expect(screen.getByText(/terakhir sinkron 10 Jul 2026, 10:18/i)).toBeInTheDocument();
     });
 
     it('surfaces a server field error under the input', () => {
