@@ -27,7 +27,12 @@ class SyncZonesJob implements ShouldQueue
      */
     public array $backoff = [30, 120];
 
-    public function __construct(public readonly int $userId)
+    /**
+     * @param  bool  $force  Bypass the manual-source guard. Set only for an
+     *                       explicit user re-sync request, never for scheduled
+     *                       or on-connect syncs.
+     */
+    public function __construct(public readonly int $userId, public readonly bool $force = false)
     {
     }
 
@@ -44,9 +49,10 @@ class SyncZonesJob implements ShouldQueue
         }
 
         // The manual editor is the source of truth once a user has set it; a
-        // Strava sync must never overwrite that choice.
+        // Strava sync must never overwrite that choice unless the user asked
+        // for it explicitly ($force).
         $profile = $user->runnerProfile;
-        if ($profile !== null && $profile->source === 'manual') {
+        if (! $this->force && $profile !== null && $profile->source === 'manual') {
             return;
         }
 

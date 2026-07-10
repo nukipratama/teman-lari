@@ -82,6 +82,37 @@ describe('ZonaHR', () => {
         expect(screen.getByText(/terakhir sinkron 10 Jul 2026, 10:18/i)).toBeInTheDocument();
     });
 
+    it('shows neither escape action on the default source', () => {
+        render(<ZonaHR profile={DEFAULT_PROFILE} hasCustomProfile={false} source="default" />);
+        expect(screen.queryByRole('button', { name: /Balik ke zona standar/i })).not.toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: /Sinkron ulang dari Strava/i })).not.toBeInTheDocument();
+    });
+
+    it('resets to default when the reset button is clicked', () => {
+        render(<ZonaHR profile={DEFAULT_PROFILE} hasCustomProfile source="manual" />);
+
+        fireEvent.click(screen.getByRole('button', { name: /Balik ke zona standar/i }));
+
+        expect(router.delete).toHaveBeenCalledWith('/pengaturan/zona', expect.objectContaining({ preserveScroll: true }));
+    });
+
+    it('offers a Strava re-sync only on a manual source with the scope', () => {
+        const { rerender } = render(
+            <ZonaHR profile={DEFAULT_PROFILE} hasCustomProfile source="manual" canSyncFromStrava />,
+        );
+        fireEvent.click(screen.getByRole('button', { name: /Sinkron ulang dari Strava/i }));
+        expect(router.post).toHaveBeenCalledWith(
+            '/pengaturan/zona/sinkron-strava',
+            {},
+            expect.objectContaining({ preserveScroll: true }),
+        );
+
+        // No scope → no re-sync affordance (reset still shows).
+        rerender(<ZonaHR profile={DEFAULT_PROFILE} hasCustomProfile source="manual" canSyncFromStrava={false} />);
+        expect(screen.queryByRole('button', { name: /Sinkron ulang dari Strava/i })).not.toBeInTheDocument();
+        expect(screen.getByRole('button', { name: /Balik ke zona standar/i })).toBeInTheDocument();
+    });
+
     it('surfaces a server field error under the input', () => {
         setMockPage({
             auth: { user: makeUser() },

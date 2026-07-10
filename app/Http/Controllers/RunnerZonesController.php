@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers;
 
 use App\Http\Requests\UpdateHrZonesRequest;
+use App\Jobs\Strava\SyncZonesJob;
 use App\Models\RunnerProfile;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
@@ -25,6 +26,7 @@ class RunnerZonesController extends Controller
             'hasCustomProfile' => $profile !== null,
             'source' => $profile !== null ? $profile->source : 'default',
             'stravaSyncedLabel' => $profile !== null ? $profile->strava_zones_synced_at?->format('j M Y, H:i') : null,
+            'canSyncFromStrava' => $this->canSyncFromStrava($user),
         ]);
     }
 
@@ -55,5 +57,44 @@ class RunnerZonesController extends Controller
         );
 
         return back()->with('success', 'Zona HR kamu udah kesimpen. Dipakai ke semua lari berikutnya.');
+    }
+
+    /**
+     * Drop the caller's runner profile so their zones fall back to the standard
+     * config-derived defaults. This is the only path back out of a `manual`
+     * (or `strava`) source, since `index()` reports `default` when no row exists.
+     */
+    public function resetToDefault(Request $request): RedirectResponse
+    {
+        /** @var User $user */
+        $user = $request->user();
+
+        $user->runnerProfile()->delete();
+
+        return back()->with('success', 'Zona HR kamu balik ke standar.');
+    }
+
+    /**
+     * Explicit user request to re-pull zones from Strava, overriding a `manual`
+     * source. Guarded on the `profile:read_all` scope the zone endpoint needs;
+     * the job runs async and flips the source back to `strava` on success.
+     */
+    public function resyncFromStrava(Request $request): RedirectResponse
+    {
+        /** @var User $user */
+        $user = $request->user();
+
+        abort_unless($this->canSyncFromStrava($user), 403);
+
+        SyncZonesJob::dispatch($user->id, force: true);
+
+        return back()->with('info', 'Lagi narik zona dari Strava. Bentar ya, nanti kesinkron sendiri.');
+    }
+
+    private function canSyncFromStrava(User $user): bool
+    {
+        $connection = $user->stravaConnection;
+
+        return $connection !== null && ! $connection->isRevoked() && $connection->hasZoneScope();
     }
 }
