@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-use App\Jobs\Strava\SyncZonesJob;
 use App\Models\RunnerProfile;
 use App\Models\StravaConnection;
 use App\Models\User;
+use App\Services\Strava\ZoneFetcher;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
 use Inertia\Testing\AssertableInertia as Assert;
@@ -172,30 +172,39 @@ it('resets to default by deleting the runner profile', function (): void {
         ->assertInertia(fn (Assert $page) => $page->where('source', 'default'));
 });
 
-it('dispatches a forced SyncZonesJob when re-syncing a scoped user', function (): void {
-    Queue::fake();
-
+it('re-syncs from Strava inline and flips the source to strava for a scoped user', function (): void {
     $user = User::factory()->create();
     StravaConnection::factory()->for($user)->create(['scopes' => 'read,activity:read_all,profile:read_all']);
-    RunnerProfile::factory()->for($user)->create(['source' => 'manual']);
+    RunnerProfile::factory()->for($user)->create(['source' => 'manual', 'max_hr' => 200]);
+
+    $zones = [
+        'Z1' => ['lo' => 100, 'hi' => 125],
+        'Z2' => ['lo' => 125, 'hi' => 145],
+        'Z3' => ['lo' => 145, 'hi' => 165],
+        'Z4' => ['lo' => 165, 'hi' => 180],
+        'Z5' => ['lo' => 180, 'hi' => 999],
+    ];
+    $fetcher = Mockery::mock(ZoneFetcher::class);
+    $fetcher->shouldReceive('fetch')->once()->andReturn($zones);
+    app()->instance(ZoneFetcher::class, $fetcher);
 
     $this->actingAs($user)
         ->post('/pengaturan/zona/sinkron-strava')
         ->assertRedirect()
-        ->assertSessionHas('info');
+        ->assertSessionHas('success');
 
-    Queue::assertPushed(SyncZonesJob::class, fn (SyncZonesJob $job): bool => $job->userId === $user->id && $job->force === true);
+    expect(RunnerProfile::query()->where('user_id', $user->id)->value('source'))->toBe('strava');
 });
 
-it('forbids re-syncing without the profile:read_all scope', function (): void {
-    Queue::fake();
-
+it('forbids re-syncing without the profile:read_all scope, without touching Strava', function (): void {
     $user = User::factory()->create();
     StravaConnection::factory()->for($user)->create(['scopes' => 'read,activity:read_all']);
+
+    $fetcher = Mockery::mock(ZoneFetcher::class);
+    $fetcher->shouldNotReceive('fetch');
+    app()->instance(ZoneFetcher::class, $fetcher);
 
     $this->actingAs($user)
         ->post('/pengaturan/zona/sinkron-strava')
         ->assertForbidden();
-
-    Queue::assertNothingPushed();
 });

@@ -76,8 +76,10 @@ class RunnerZonesController extends Controller
 
     /**
      * Explicit user request to re-pull zones from Strava, overriding a `manual`
-     * source. Guarded on the `profile:read_all` scope the zone endpoint needs;
-     * the job runs async and flips the source back to `strava` on success.
+     * source. Guarded on the `profile:read_all` scope the zone endpoint needs.
+     * Runs the sync inline (not queued) so the redirected page immediately
+     * reflects the refreshed zones + `strava` source; the job swallows every
+     * Strava error, so a slow/failed pull just leaves the profile untouched.
      */
     public function resyncFromStrava(Request $request): RedirectResponse
     {
@@ -86,9 +88,9 @@ class RunnerZonesController extends Controller
 
         abort_unless($this->canSyncFromStrava($user), 403);
 
-        SyncZonesJob::dispatch($user->id, force: true);
+        SyncZonesJob::dispatchSync($user->id, force: true);
 
-        return back()->with('info', 'Lagi narik zona dari Strava. Bentar ya, nanti kesinkron sendiri.');
+        return back()->with('success', 'Zona kamu udah disinkron ulang dari Strava.');
     }
 
     private function canSyncFromStrava(User $user): bool

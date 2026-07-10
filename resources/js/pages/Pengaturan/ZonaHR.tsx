@@ -3,6 +3,7 @@ import { Icon } from '@iconify/react';
 import { useState } from 'react';
 import AppShell from '@/layouts/AppShell';
 import { cn } from '@/lib/cn';
+import { usePendingPost } from '@/hooks/usePendingPost';
 import BackLink from '@/components/ui/BackLink';
 import Card from '@/components/ui/Card';
 import PageContainer from '@/components/ui/PageContainer';
@@ -124,9 +125,9 @@ export default function ZonaHR({
         router.delete('/pengaturan/zona', { preserveScroll: true });
     };
 
-    const resyncFromStrava = () => {
-        router.post('/pengaturan/zona/sinkron-strava', {}, { preserveScroll: true });
-    };
+    const [resyncing, resyncFromStrava] = usePendingPost('/pengaturan/zona/sinkron-strava', {
+        preserveScroll: true,
+    });
 
     const canShowResync = canSyncFromStrava && source === 'manual';
 
@@ -178,9 +179,15 @@ export default function ZonaHR({
                     {source !== 'default' && (
                         <div className="mt-4 flex flex-wrap items-center gap-3">
                             {canShowResync && (
-                                <PillButton tone="outline" size="sm" onClick={resyncFromStrava}>
-                                    <Icon icon="mdi:sync" width={14} height={14} aria-hidden />
-                                    Sinkron ulang dari Strava
+                                <PillButton tone="outline" size="sm" onClick={resyncFromStrava} disabled={resyncing}>
+                                    <Icon
+                                        icon={resyncing ? 'mdi:loading' : 'mdi:sync'}
+                                        width={14}
+                                        height={14}
+                                        className={resyncing ? 'animate-spin' : undefined}
+                                        aria-hidden
+                                    />
+                                    {resyncing ? 'Lagi narik…' : 'Sinkron ulang dari Strava'}
                                 </PillButton>
                             )}
                             <PillButton tone="outline" size="sm" onClick={resetToDefault}>
