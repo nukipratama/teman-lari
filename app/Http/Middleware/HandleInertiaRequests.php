@@ -7,6 +7,7 @@ namespace App\Http\Middleware;
 use App\Models\Activity;
 use App\Models\RunCard;
 use App\Models\User;
+use App\Services\AI\AnalysisService;
 use App\Services\Gamification\EquippedAccessories;
 use App\Services\Gamification\GoalResolver;
 use App\Services\Run\Story\Temari;
@@ -41,6 +42,15 @@ class HandleInertiaRequests extends Middleware
      * page load for the common case of no custom profile.
      */
     private const int HR_ZONES_CHANGED_CACHE_SECONDS = 300;
+
+    /**
+     * TTL for the global AI-pause signal. `generationPaused()` can run a handful
+     * of queries (app_config lookup, the config circuit breaker, and the daily
+     * cost tally when a ceiling is set), so caching it briefly keeps it off the
+     * per-request hot path. It is a single global signal, so the cache key is not
+     * per-user, and a 60s staleness window is fine for a soft reassurance banner.
+     */
+    private const int AI_PAUSED_CACHE_SECONDS = 60;
 
     /**
      * @return array<string, mixed>
@@ -78,7 +88,30 @@ class HandleInertiaRequests extends Middleware
             'hrZonesChangedAt' => fn () => $this->hrZonesChangedAtFor($user),
             'telegramConnected' => fn (): bool => $this->telegramConnectedFor($user),
             'stravaZoneScopeMissing' => fn (): bool => $this->stravaZoneScopeMissingFor($user),
+            'aiPaused' => fn (): bool => $this->aiPausedFor($user),
         ];
+    }
+
+    /**
+     * Whether LLM narration is globally paused right now (cost ceiling, kill
+     * switch, unconfigured Azure, or a tripped config circuit), so the UI can show
+     * a soft "Temari lagi istirahat" banner instead of scattered silent empty
+     * states. Only the pause *fact* is shared, never the operator-facing reason
+     * (that stays maintainer-only via the Telegram alert + /ai-usage). Cached
+     * globally for a short window since it fires on every page load; guests never
+     * see it, so the check is skipped for them.
+     */
+    private function aiPausedFor(?User $user): bool
+    {
+        if ($user === null) {
+            return false;
+        }
+
+        return Cache::remember(
+            'ai-paused',
+            self::AI_PAUSED_CACHE_SECONDS,
+            fn (): bool => app(AnalysisService::class)->generationPaused(),
+        );
     }
 
     /**
