@@ -9,6 +9,7 @@ import MobileTopBar from '@/components/MobileTopBar';
 import MobileBottomNav from '@/components/MobileBottomNav';
 import ErrorBanner from '@/components/ErrorBanner';
 import StravaZoneReconnectBanner from '@/components/StravaZoneReconnectBanner';
+import AiOutageBanner from '@/components/AiOutageBanner';
 import { useDawnShift } from '@/hooks/useDawnShift';
 import type { SharedProps, UnlockFlash } from '@/types/inertia';
 
@@ -37,6 +38,7 @@ export default function AppShell({ children, withNav = true }: Readonly<AppShell
                 <div className="min-h-screen bg-cream-deep text-ink">
                     <ErrorBanner />
                     <StravaZoneReconnectBanner />
+                    <AiOutageBanner />
                     {children}
                 </div>
             </MotionConfig>
@@ -58,6 +60,7 @@ export default function AppShell({ children, withNav = true }: Readonly<AppShell
 
             <ErrorBanner />
             <StravaZoneReconnectBanner />
+            <AiOutageBanner />
 
             <main id="main-content" className="pb-28 lg:pb-0">
                 {children}
