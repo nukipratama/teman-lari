@@ -103,7 +103,7 @@ class RunCardImageRenderer
 
   {$panel}
 
-  <text x="1150" y="575" font-size="24" font-weight="700" letter-spacing="1" fill="{$inkOnSky}" text-anchor="end">temanlari.app</text>
+  <text x="1150" y="575" font-size="24" font-weight="700" letter-spacing="1" fill="{$inkOnSky}" text-anchor="end">temari.app</text>
 </svg>
 SVG;
     }

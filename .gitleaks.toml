@@ -1,6 +1,6 @@
-# gitleaks config for teman-lari.
+# gitleaks config for temari.
 # Used by the pre-commit hook (.githooks/pre-commit) and any CI gitleaks job.
-title = "teman-lari gitleaks"
+title = "temari gitleaks"
 
 # Start from gitleaks' built-in ruleset, then layer our allowlist on top.
 [extend]

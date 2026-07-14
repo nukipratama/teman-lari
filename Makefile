@@ -1,10 +1,10 @@
 # Container interaction helpers. COMPOSE auto-detects the stack so the same
 # `make <target>` works in both places: prod compose on the host (where the
-# host secrets file /opt/teman-lari/.env exists), dev compose otherwise.
+# host secrets file /opt/temari/.env exists), dev compose otherwise.
 # Override with: make COMPOSE="docker compose -f compose.yaml" <target>
 #   Prod-only helpers. For dev use ./vendor/bin/sail directly.
 
-COMPOSE ?= docker compose -f $(if $(wildcard /opt/teman-lari/.env),compose.prod.yaml,compose.yaml)
+COMPOSE ?= docker compose -f $(if $(wildcard /opt/temari/.env),compose.prod.yaml,compose.yaml)
 
 .DEFAULT_GOAL := help
 .PHONY: help ps logs logs-app logs-horizon logs-pulse tail shell tinker \

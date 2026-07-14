@@ -18,7 +18,7 @@ export default function BrandMark({ tone = 'ink', className, wordmarkClassName }
                 className={cn('font-mono font-bold leading-none tracking-[-0.02em]', wordColor, wordmarkClassName)}
                 style={{ fontSize: 20 }}
             >
-                TemanLari
+                Temari
             </span>
         </div>
     );

@@ -23,7 +23,7 @@ Metering rows — LLM token/cost history and the Strava sync audit log — accum
 
 ## Decision
 
-We decided to keep metering tables in a **separate schema on the same MySQL server**, reached through a second Eloquent connection named `analytics` (`DB_ANALYTICS_DATABASE`, default `teman_lari_analytics`). It shares the `mysql` host and credentials but a distinct database name — see the [`analytics` connection in config/database.php](../../config/database.php).
+We decided to keep metering tables in a **separate schema on the same MySQL server**, reached through a second Eloquent connection named `analytics` (`DB_ANALYTICS_DATABASE`, default `temari_analytics`). It shares the `mysql` host and credentials but a distinct database name — see the [`analytics` connection in config/database.php](../../config/database.php).
 
 The metering models pin themselves to it: [`TokenUsage` (`$connection = 'analytics'`)](../../app/Models/AI/TokenUsage.php) and [`StravaSyncLog`](../../app/Models/Analytics/StravaSyncLog.php). Their schema lives outside the default migration path under `database/migrations/analytics/` (e.g. [the `ai_token_usages` migration](../../database/migrations/analytics/2026_05_19_132139_create_ai_token_usages_table.php)) and runs in dev/prod via `--database=analytics --path=...`.
 

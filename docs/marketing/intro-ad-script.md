@@ -57,5 +57,5 @@ Temari**) · 8. Telegram push · 9. CTA.
 
 [curious] Sibuk, gak sempet buka app? [warmly] Tenang. Cerita lari sama rekap mingguan langsung aku kirim ke Telegram kamu...
 
-[cheerfully] Jadi, yuk mulai lari. [softly] Karena larimu... gak harus sendirian, dan gak harus tanpa arti. [happy] Teman Lari. Bareng aku, Temari!
+[cheerfully] Jadi, yuk mulai lari. [softly] Karena larimu... gak harus sendirian, dan gak harus tanpa arti. [happy] Lari bareng aku. Aku Temari!
 ```

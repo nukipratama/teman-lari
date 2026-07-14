@@ -31,7 +31,7 @@ There is no client-side router and no REST/JSON API for pages. Every screen is a
 
 - **Resolves page names to files** by glob over [`./pages/**/*.tsx`](resources/js/app.tsx#L13) (test files excluded), so a render name maps directly to a file path: `'HariIni'` → `pages/HariIni.tsx`, `'Riwayat/Jejak'` → `pages/Riwayat/Jejak.tsx`, `'Auth/Login'` → `pages/Auth/Login.tsx`. **A render name with no matching file throws** ([app.tsx:19](resources/js/app.tsx#L19)). This is the page-naming convention: nested names are real subdirectories under `resources/js/pages/`.
 - **Mounts under a shared [ErrorBoundary](resources/js/app.tsx#L27)** and installs the global client-error reporter ([app.tsx:9](resources/js/app.tsx#L9)) that POSTs to the CSRF-exempt `/client-errors` sink. The Inertia progress bar uses the Daybreak leaf green ([app.tsx:32](resources/js/app.tsx#L32)); tokens live in [[design-tokens]].
-- **Sets the document title** template `"{title} · TemanLari"` ([app.tsx:12](resources/js/app.tsx#L12)); pages set their own title via `<Head>` (see [Login.tsx](resources/js/pages/Auth/Login.tsx#L49)).
+- **Sets the document title** template `"{title} · Temari"` ([app.tsx:12](resources/js/app.tsx#L12)); pages set their own title via `<Head>` (see [Login.tsx](resources/js/pages/Auth/Login.tsx#L49)).
 
 ## Shared props vs page props
 
@@ -64,11 +64,11 @@ There is one layout, [AppShell](resources/js/layouts/AppShell.tsx#L19), and page
 - **`resources/js/hooks/`** — reusable hooks (`useAnalysisTrigger`, `useDawnShift`, `useFocusTrap`, …).
 - **`resources/js/types/`** — `inertia.ts` is the hand-written shared contract; [`generated.ts`](resources/js/types/generated.ts#L1) is auto-generated from the backend PHP enums by `php artisan typescript:enums` (CI fails if stale), re-exported through `inertia.ts`.
 
-The 1:1 `*.test.tsx` convention (every component/lib file has a sibling test) is a project rule — see the `teman-lari` skill.
+The 1:1 `*.test.tsx` convention (every component/lib file has a sibling test) is a project rule — see the `temari` skill.
 
 ## Conventions worth knowing
 
 - **Light-mode only, Tailwind v4.** `.dark` is never applied; there are no `*-dark` tokens. The theme is defined in `resources/css/app.css`'s `@theme` block; see [[design-tokens]].
-- **Indonesian voice, English running terms** — applies to all UI copy; details in the `teman-lari` skill and [[voice-and-tone]].
+- **Indonesian voice, English running terms** — applies to all UI copy; details in the `temari` skill and [[voice-and-tone]].
 - **Two POST channels.** Inertia's `router`/`<Form>` for anything that returns a page or redirect; plain `fetch` via [`postJson`](resources/js/lib/http.ts#L12) for fire-and-forget JSON endpoints (Inertia's router rejects non-Inertia responses).
 - The data shapes these pages render (`Analysis`, `WeeklySnapshot`, `RunCard`, `StoryLine`, …) are documented in [[data-model]]; the AI voice blocks flow through the [[ai-pipeline]].

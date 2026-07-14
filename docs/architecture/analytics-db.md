@@ -26,7 +26,7 @@ writes there.
 
 The `analytics` connection block in [config/database.php](config/database.php) is a
 clone of the `mysql` block with one difference: its `database` reads
-`env('DB_ANALYTICS_DATABASE', 'teman_lari_analytics')` instead of `DB_DATABASE`.
+`env('DB_ANALYTICS_DATABASE', 'temari_analytics')` instead of `DB_DATABASE`.
 Host, port, `DB_USERNAME`, `DB_PASSWORD`, charset and SSL options are all shared, so
 it points at a sibling schema on the same server. It is **not** the default — every
 read/write must name it explicitly.

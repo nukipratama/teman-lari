@@ -193,7 +193,7 @@ for (const vp of viewports) {
   if (flagged.length) {
     calls.push(() => agent(
       `Confirm layout bugs on audit-flagged pages of the "${vp}" viewport (${NAV[vp]?.size}, ${NAV[vp]?.nav}) of ` +
-      `the teman-lari app. Read only the *-full.png files in ${dir}/${vp}/ whose filename contains one of these ` +
+      `the temari app. Read only the *-full.png files in ${dir}/${vp}/ whose filename contains one of these ` +
       `page names (match by "-<name>-full.png"): ${flagged.join(', ')}. audit.mjs already found horizontal ` +
       `overflow here — describe what's actually broken so it's fixable. Ignore by design: width-capped content ` +
       `(PageContainer / max-w-page-2xl), the fixed bottom-nav mid-page artifact, sparse demo-data grids, and ` +
@@ -204,7 +204,7 @@ for (const vp of viewports) {
   if (sample.length) {
     calls.push(() => agent(
       `You are a senior product designer and frontend engineer doing a visual QA pass on the "${vp}" viewport ` +
-      `(${NAV[vp]?.size}, ${NAV[vp]?.nav}) of the teman-lari app. Read only the *-full.png files in ${dir}/${vp}/ ` +
+      `(${NAV[vp]?.size}, ${NAV[vp]?.nav}) of the temari app. Read only the *-full.png files in ${dir}/${vp}/ ` +
       `whose filename contains one of these page names (match by "-<name>-full.png"): ${sample.join(', ')}. These ` +
       `pages passed the automated overflow check, so hunt for issues code can't detect: overlapping/clipped/` +
       `truncated text, wrong nav chrome for this viewport, off-screen elements, awkward spacing or hierarchy. ` +
@@ -236,7 +236,7 @@ return results
 
 ## Notes
 
-- Defaults to the **local** app. Driving production (`teman-lari.caffeinecommit.my.id`) needs real
+- Defaults to the **local** app. Driving production (`temari.caffeinecommit.my.id`) needs real
   Strava auth — out of scope here.
 - This sweeps **pages**. Interactive states (the avatar logout menu, the card-reveal CTAs, equipping
   an accessory) aren't auto-driven — spot-check those with a short one-off Playwright script that

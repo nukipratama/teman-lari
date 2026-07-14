@@ -80,7 +80,7 @@ jobs:
         image: mysql:8.4
         env:
           MYSQL_ROOT_PASSWORD: password
-          MYSQL_DATABASE: teman_lari_testing
+          MYSQL_DATABASE: temari_testing
           MYSQL_USER: sail
           MYSQL_PASSWORD: password
         ports: ['0:3306']
@@ -143,7 +143,7 @@ jobs:
           DB_CONNECTION: mysql
           DB_HOST: 127.0.0.1
           DB_PORT: ${{ job.services.mysql.ports['3306'] }}
-          DB_DATABASE: teman_lari_testing
+          DB_DATABASE: temari_testing
           DB_USERNAME: root
           DB_PASSWORD: password
           CACHE_STORE: array
@@ -301,14 +301,14 @@ jobs:
     timeout-minutes: 15
     env:
       COMPOSE: docker compose -f compose.prod.yaml
-      BACKUP_DIR: /var/lib/teman-lari-backups
+      BACKUP_DIR: /var/lib/temari-backups
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
 
       - name: Tag current :latest as :previous (rollback target)
         run: |
-          if docker image inspect teman-lari/app:latest >/dev/null 2>&1; then
-            docker tag teman-lari/app:latest teman-lari/app:previous
+          if docker image inspect temari/app:latest >/dev/null 2>&1; then
+            docker tag temari/app:latest temari/app:previous
           fi
 
       - name: Build new image
@@ -318,7 +318,7 @@ jobs:
         run: $COMPOSE up -d --remove-orphans --wait --wait-timeout 300 mysql redis
 
       - name: Tag new image with git SHA
-        run: docker tag teman-lari/app:latest teman-lari/app:${{ github.sha }}
+        run: docker tag temari/app:latest temari/app:${{ github.sha }}
 
       - name: Backup DB before migrate
         run: |
@@ -342,9 +342,9 @@ jobs:
       - name: Backup analytics schema
         run: |
           out="$BACKUP_DIR/analytics-pre-deploy-${{ github.sha }}.sql.gz"
-          if $COMPOSE exec -T mysql sh -c 'adb="${DB_ANALYTICS_DATABASE:-teman_lari_analytics}"; mysql -h 127.0.0.1 -u"$DB_USERNAME" -p"$DB_PASSWORD" -e "USE $adb"' 2>/dev/null; then
+          if $COMPOSE exec -T mysql sh -c 'adb="${DB_ANALYTICS_DATABASE:-temari_analytics}"; mysql -h 127.0.0.1 -u"$DB_USERNAME" -p"$DB_PASSWORD" -e "USE $adb"' 2>/dev/null; then
             set -o pipefail
-            $COMPOSE exec -T mysql sh -c 'adb="${DB_ANALYTICS_DATABASE:-teman_lari_analytics}"; mysqldump -h 127.0.0.1 --single-transaction --quick --no-tablespaces -u"$DB_USERNAME" -p"$DB_PASSWORD" --databases "$adb"' \
+            $COMPOSE exec -T mysql sh -c 'adb="${DB_ANALYTICS_DATABASE:-temari_analytics}"; mysqldump -h 127.0.0.1 --single-transaction --quick --no-tablespaces -u"$DB_USERNAME" -p"$DB_PASSWORD" --databases "$adb"' \
               | gzip > "$out"
             echo "Analytics backup OK: $out ($(stat -c%s "$out") bytes)"
             ls -1t "$BACKUP_DIR"/analytics-pre-deploy-*.sql.gz | tail -n +11 | xargs -r rm
@@ -392,7 +392,7 @@ jobs:
         if: failure()
         run: $COMPOSE start scheduler horizon || true
 
-      - name: Prune old teman-lari images
+      - name: Prune old temari images
         # Prune by TAG reference, never by image id: after a deploy the old image
         # carries both :previous (the rollback target) and its old :<sha>. Deleting
         # by id would drop the shared image and destroy the rollback target. Removing
@@ -400,7 +400,7 @@ jobs:
         if: always()
         continue-on-error: true
         run: |
-          docker images "teman-lari/app" --format "{{.Repository}}:{{.Tag}}" \
+          docker images "temari/app" --format "{{.Repository}}:{{.Tag}}" \
             | grep -vE ":(latest|previous|${{ github.sha }})$" \
             | xargs --no-run-if-empty -n1 docker rmi 2>/dev/null || true
 

@@ -13,29 +13,29 @@ class TelegramReplies
 {
     /**
      * Sent on a successful link. Names the account ($name, the Strava display
-     * name) so the user confirms which TemanLari account this Telegram is tied
+     * name) so the user confirms which Temari account this Telegram is tied
      * to.
      */
     public static function welcome(string $name): string
     {
-        return "Halo {$name}! Aku Temari. Telegram ini sekarang nyambung ke akun TemanLari kamu. "
+        return "Halo {$name}! Aku Temari. Telegram ini sekarang nyambung ke akun Temari kamu. "
             . 'Mulai sekarang, tiap abis lari sama pas rekap mingguan, aku kabarin ke sini ya. 🎉';
     }
 
     public static function expired(): string
     {
         return 'Yah, link-nya udah gak berlaku (kedaluwarsa atau udah kepakai). Buka lagi halaman profil '
-            . 'di TemanLari terus tap "Hubungkan Telegram" ya, nanti aku kasih link baru.';
+            . 'di Temari terus tap "Hubungkan Telegram" ya, nanti aku kasih link baru.';
     }
 
     public static function generic(): string
     {
-        return 'Halo! Aku Temari. Buka TemanLari terus tap "Hubungkan Telegram" biar kita nyambung ya.';
+        return 'Halo! Aku Temari. Buka Temari terus tap "Hubungkan Telegram" biar kita nyambung ya.';
     }
 
     public static function disconnected(): string
     {
-        return 'Oke, Telegram kamu udah aku lepas dari akun TemanLari. Kapanpun mau nyambung lagi, aku tetap di sini.';
+        return 'Oke, Telegram kamu udah aku lepas dari akun Temari. Kapanpun mau nyambung lagi, aku tetap di sini.';
     }
 
     /** Sent by the "Kirim notifikasi tes" button on the Aku page. */

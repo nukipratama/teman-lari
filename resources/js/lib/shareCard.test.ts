@@ -460,7 +460,7 @@ describe('drawShareCard — edge / branch cases', () => {
         await drawShareCard(canvas, { kartu: { ...kartu, ascent: '128 m' }, layout: 'kartu', format: 'story' });
         // Elevation earns the grid's 6th cell (was TANGGAL, briefly TRIMP); TRIMP
         // stays as the floating badge; date + location ride the muted context strip;
-        // no "temanlari.app" wordmark.
+        // no "temari.app" wordmark.
         expect(ctx.fillText).toHaveBeenCalledWith('ELEVASI', expect.any(Number), expect.any(Number));
         expect(ctx.fillText).toHaveBeenCalledWith('128 m', expect.any(Number), expect.any(Number));
         expect(ctx.fillText).not.toHaveBeenCalledWith('TANGGAL', expect.any(Number), expect.any(Number));
@@ -470,7 +470,7 @@ describe('drawShareCard — edge / branch cases', () => {
             expect.any(Number),
         );
         expect(ctx.fillText).toHaveBeenCalledWith(expect.stringContaining('30 Mei 2026'), expect.any(Number), expect.any(Number));
-        expect(ctx.fillText).not.toHaveBeenCalledWith('temanlari.app', expect.any(Number), expect.any(Number));
+        expect(ctx.fillText).not.toHaveBeenCalledWith('temari.app', expect.any(Number), expect.any(Number));
     });
 
     it('shows wind in the context strip when present', async () => {

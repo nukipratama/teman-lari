@@ -28,6 +28,8 @@ We decided to **pin the cookie name and the Redis/cache prefixes to fixed litera
 
 These values equal the *current* `APP_NAME`-derived slugs, so adopting them was a no-op for existing sessions and cache keys. The config defaults stay `APP_NAME`-derived for local/dev where no override is set; prod simply overrides them. Sessions live on Redis DB 0, cache on DB 1, so the two prefixes also keep those keyspaces namespaced apart.
 
+> **Update (2026-07-14, temari rename):** The deliberate rebrand this ADR's *Costs* anticipated happened — the project was renamed `teman-lari` → `temari`. The three literals above were changed to `temari-setiap-langkah-berarti-*` and prod was rebuilt on fresh volumes, so the one-time logout was absorbed by a clean start. The `temanlari-…` values above are kept as the historical record; [compose.prod.yaml](compose.prod.yaml) now carries the `temari-…` literals. The pinning mechanism itself is unchanged.
+
 ## Consequences
 
 - **Enables:** `APP_NAME` / tagline becomes a free-to-edit cosmetic string — changing it no longer rotates the cookie or shifts Redis key prefixes, so no deploy logs users out over a copy change.

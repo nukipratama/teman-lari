@@ -4,7 +4,7 @@ import type { ComponentType } from 'react';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import { installGlobalErrorReporting } from '@/lib/clientErrorReporter';
 
-const APP_NAME = import.meta.env.VITE_APP_NAME ?? 'TemanLari';
+const APP_NAME = import.meta.env.VITE_APP_NAME ?? 'Temari';
 
 installGlobalErrorReporting();
 

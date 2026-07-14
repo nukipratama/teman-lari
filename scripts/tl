@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-container="teman-lari-prod-app-1"
+container="temari-prod-app-1"
 
 if ! docker ps --format '{{.Names}}' | grep -q "^${container}$"; then
     echo "Error: container ${container} is not running" >&2

@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>@yield('title') · teman-lari</title>
+    <title>@yield('title') · Temari</title>
     <link rel="icon" type="image/svg+xml" href="{{ asset('favicon.svg') }}">
     <link rel="alternate icon" type="image/x-icon" href="{{ asset('favicon.ico') }}">
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -85,7 +85,7 @@
         <h1 class="title">@yield('title')</h1>
         <p class="message">@yield('message')</p>
         <a class="cta" href="{{ url('/') }}">@yield('cta', 'Kembali ke Hari Ini')</a>
-        <p class="foot">teman-lari · teman lari kamu di setiap langkah.</p>
+        <p class="foot">Temari · teman lari kamu di setiap langkah.</p>
     </div>
 </body>
 </html>

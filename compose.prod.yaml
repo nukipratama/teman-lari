@@ -1,16 +1,16 @@
-name: teman-lari-prod
+name: temari-prod
 
-x-app-image: &app-image teman-lari/app:latest
+x-app-image: &app-image temari/app:latest
 
 # Secrets and per-host config (APP_KEY, DB creds, STRAVA creds, feature flags)
-# live in /opt/teman-lari/.env on the host — root-owned, 640, runner-readable.
+# live in /opt/temari/.env on the host — root-owned, 640, runner-readable.
 # Compose loads them via env_file: on each service. Nothing flows through GitHub
 # Actions secrets anymore.
 x-app-env-file: &app-env-file
-  - /opt/teman-lari/.env
+  - /opt/temari/.env
 
 x-app-env: &app-env
-  APP_NAME: "TemanLari - Setiap Langkah Berarti"
+  APP_NAME: "Temari - Setiap Langkah Berarti"
   APP_ENV: production
   APP_DEBUG: "false"
   # stack fans out to both: daily = persisted rotated history (survives deploys
@@ -43,13 +43,13 @@ x-app-env: &app-env
   # everyone out on that deploy (PR #21's rename did exactly this). The values
   # below equal the current APP_NAME-derived slugs, so adopting them is a no-op
   # for existing sessions.
-  SESSION_COOKIE: temanlari-setiap-langkah-berarti-session
-  REDIS_PREFIX: temanlari-setiap-langkah-berarti-database-
-  CACHE_PREFIX: temanlari-setiap-langkah-berarti-cache-
+  SESSION_COOKIE: temari-setiap-langkah-berarti-session
+  REDIS_PREFIX: temari-setiap-langkah-berarti-database-
+  CACHE_PREFIX: temari-setiap-langkah-berarti-cache-
   PULSE_ENABLED: "true"
   # Stable name so the Servers card isn't a random per-container hash. Ingest is
   # buffered in Redis DB 2 (drained by the pulse service).
-  PULSE_SERVER_NAME: teman-lari-prod
+  PULSE_SERVER_NAME: temari-prod
   PULSE_INGEST_DRIVER: redis
   PULSE_REDIS_CONNECTION: pulse
   PULSE_REDIS_HOST: redis
@@ -198,7 +198,7 @@ services:
     # Custom image = stock mysql + the bootstrap baked into initdb (see docker/mysql/
     # Dockerfile), so a fresh volume self-initializes on any machine. compose builds it
     # on `up` if missing; existing volumes are unaffected (initdb only runs once).
-    image: teman-lari/mysql:8.4
+    image: temari/mysql:8.4
     build:
       context: ./docker/mysql
     restart: unless-stopped

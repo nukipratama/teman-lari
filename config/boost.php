@@ -37,7 +37,7 @@ return [
     |
     | `exclude` keeps the generated CLAUDE.md guidelines block lean across
     | `boost:update` runs by dropping framework guideline families we cover
-    | elsewhere (the `teman-lari` skill, docs/, and the strict 1:1 test
+    | elsewhere (the `temari` skill, docs/, and the strict 1:1 test
     | convention). These reproduce on every regenerate, so the exclusion must
     | live here rather than as a manual edit. Drop a key to re-include it
     | (e.g. remove 'octane/core' to surface the Octane singleton/static-state

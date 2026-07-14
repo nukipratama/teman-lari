@@ -31,7 +31,7 @@ describe('Login', () => {
 
     it('renders the brand hero + 3 onboarding pillars in Temari first-person voice', () => {
         render(<Login authStravaUrl="/x" />);
-        expect(screen.getByText('TemanLari')).toBeInTheDocument();
+        expect(screen.getByText('Temari')).toBeInTheDocument();
         // Mascot intro headline includes the value-prop CTA.
         expect(screen.getByText(/Gak Sendirian/)).toBeInTheDocument();
         expect(screen.getByText(/Halo, aku Temari/)).toBeInTheDocument();
