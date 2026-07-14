@@ -1,5 +1,75 @@
 {
   "enabledPlugins": {
     "laravel/claude-code": true
+  },
+  "permissions": {
+    "allow": [
+      "Bash(./vendor/bin/sail bin pest)",
+      "Bash(./vendor/bin/sail bin pest *)",
+      "Bash(./vendor/bin/sail bin phpstan)",
+      "Bash(./vendor/bin/sail bin phpstan *)",
+      "Bash(./vendor/bin/sail npm run test)",
+      "Bash(./vendor/bin/sail npm run typecheck)",
+      "Bash(./vendor/bin/sail npm run lint)",
+      "Bash(./vendor/bin/sail npm run types)",
+      "Bash(./vendor/bin/sail npx tsc *)",
+      "Bash(./vendor/bin/sail artisan route:list)",
+      "Bash(./vendor/bin/sail artisan route:list *)",
+      "Bash(./vendor/bin/sail artisan list)"
+    ],
+    "deny": [
+      "Bash(gh pr merge)",
+      "Bash(gh pr merge *)",
+      "Bash(git push --force *)",
+      "Bash(git push -f *)",
+      "Bash(docker volume rm *)"
+    ]
+  },
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/check-gate-wired.sh"
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/prod-git-guard.sh"
+          },
+          {
+            "type": "command",
+            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/phpstan-debug.sh"
+          }
+        ]
+      },
+      {
+        "matcher": "Read|Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/secret-read-guard.sh"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/pr-desc-reminder.sh"
+          }
+        ]
+      }
+    ]
   }
 }
