@@ -9,11 +9,12 @@ set -uo pipefail
 input=$(cat)
 tool=$(printf '%s' "$input" | jq -r '.tool_name // ""' 2>/dev/null)
 
-deny() {
-  jq -cn --arg r "$1" \
-    '{hookSpecificOutput:{hookEventName:"PreToolUse",permissionDecision:"deny",permissionDecisionReason:$r}}'
+decide() { # $1=deny|ask  $2=reason
+  jq -cn --arg d "$1" --arg r "$2" \
+    '{hookSpecificOutput:{hookEventName:"PreToolUse",permissionDecision:$d,permissionDecisionReason:$r}}'
   exit 0
 }
+deny() { decide deny "$1"; }
 
 is_secret() { # $1=path
   case "$1" in
@@ -23,8 +24,7 @@ is_secret() { # $1=path
 }
 
 REASON="Refusing to read a raw secret file - its values would leak into the session context. For a secret value, ask the user; env key NAMES are listed in .env.example."
-CFG_REASON="config:show/get on a secret key prints the resolved value into context. Only inspect non-secret config this way; for a secret, ask the user (key names are in .env.example)."
-SECRET_KEY='(password|passwd|secret|token|api[_-]?key|\bkey\b|credential|private|client_secret|\bdsn\b|app\.key)'
+CFG_REASON="config:show/config:get resolves env values and can surface a real secret. Every config read needs the user's explicit approval - no key is auto-classified as safe."
 
 if [ "$tool" = "Read" ]; then
   path=$(printf '%s' "$input" | jq -r '.tool_input.file_path // ""' 2>/dev/null)
@@ -41,10 +41,10 @@ if [ "$tool" = "Bash" ]; then
      && ! printf '%s' "$scan" | grep -qiE '\.(example|sample|dist)\b'; then
     deny "$REASON"
   fi
-  # config:show/get on a secret key resolves and prints the real value.
-  if printf '%s' "$scan" | grep -qiE 'config:(show|get)\b' \
-     && printf '%s' "$scan" | grep -qiE "$SECRET_KEY"; then
-    deny "$CFG_REASON"
+  # Any config:show/config:get can resolve a real secret value - never
+  # auto-classify a "safe" key; require the user's approval on every config read.
+  if printf '%s' "$scan" | grep -qiE 'config:(show|get)\b'; then
+    decide ask "$CFG_REASON"
   fi
   exit 0
 fi

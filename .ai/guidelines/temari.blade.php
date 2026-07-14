@@ -51,7 +51,7 @@ Briefing and analysis narration is LLM-backed via Azure OpenAI through openai-ph
 
 ## Secrets
 
-- **Never read `.env` or other secret files directly** (`.env`, `*.pem`, `*.key`, `id_rsa`, `credentials.json`, `*.p12`, ...). Their values would leak into the session context, which persists. A `PreToolUse` hook ([.claude/hooks/secret-read-guard.sh](.claude/hooks/secret-read-guard.sh)) hard-denies it. **`config:show`/`config:get` on a secret key** (`app.key`, `*.password`, `*.secret`, `*_client_secret`, ...) resolves and prints the real value, so it is denied too. Use `./vendor/bin/sail artisan config:show <key>` only for **non-secret** config; for a secret value, find the key NAME in `.env.example` and ask the user. **This overrides the Boost Artisan note about reading `.env` directly.**
+- **Never read `.env` or other secret files directly** (`.env`, `*.pem`, `*.key`, `id_rsa`, `credentials.json`, `*.p12`, ...). Their values would leak into the session context, which persists. A `PreToolUse` hook ([.claude/hooks/secret-read-guard.sh](.claude/hooks/secret-read-guard.sh)) hard-denies it. **Every `config:show`/`config:get` needs the user's explicit approval** (the hook asks) - config reads resolve env values, so no key is auto-classified as "safe" to read. For a secret value, find the key NAME in `.env.example` and ask the user. **This overrides the Boost Artisan note about reading `.env` directly.**
 
 ## Debugging
 

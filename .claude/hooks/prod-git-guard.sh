@@ -26,8 +26,16 @@ decide() { # $1=deny|ask  $2=reason
 if has '\bgh +pr +merge\b'; then
   decide deny "Never self-merge. Open the PR and let a human review + merge via the GitHub UI."
 fi
-if has '\bgit +push\b' && { has '(--force|(^| )-f( |$))' || has '( main( |$)|origin +main|head:main|:main)'; }; then
-  decide deny "No pushing to main and no force-push. Push a feature branch, then open a PR."
+# Scope the check to the `git push` invocation's own args (up to the next
+# segment separator), so a chained `git commit -F ...` or an echo mentioning
+# "main" elsewhere on the line cannot trip it. Force is matched case-sensitively:
+# `-f`/`--force` is force, `-F` (commit message file flag) is not.
+push_seg=$(printf '%s' "$scan" | grep -oiE 'git +push[^|&;]*' | head -1)
+if [ -n "$push_seg" ]; then
+  if printf '%s' "$push_seg" | grep -qE '(--force|(^| )-f( |$))' \
+     || printf '%s' "$push_seg" | grep -qiE '( main( |$)|origin +main|head:main|:main)'; then
+    decide deny "No pushing to main and no force-push. Push a feature branch, then open a PR."
+  fi
 fi
 if has '\bdocker +volume +rm\b'; then
   decide deny "Refusing to remove a Docker volume - prod data lives here."
