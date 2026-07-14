@@ -1,6 +1,6 @@
 ---
 title: Telegram account linking via signed deep-link token
-description: Linking a teman-lari account to Telegram uses a signed, TTL-bounded deep-link token (not a pairing code); prod receives via webhook, dev via long-poll.
+description: Linking a temari account to Telegram uses a signed, TTL-bounded deep-link token (not a pairing code); prod receives via webhook, dev via long-poll.
 tags: [decision, telegram]
 status: accepted
 reviewed: 2026-06-25
@@ -18,7 +18,7 @@ code_refs:
 
 ## Context
 
-Telegram notifications ([[telegram-notifications]]) need each teman-lari account bound to a Telegram `chat_id`. Telegram has no OAuth: when a message reaches our bot, Telegram tells us the sender's `chat_id` but nothing about who they are on teman-lari. We have to carry the web identity through Telegram and verify it on return, without standing pending-link state to maintain, and without a leaked link silently linking the wrong account.
+Telegram notifications ([[telegram-notifications]]) need each temari account bound to a Telegram `chat_id`. Telegram has no OAuth: when a message reaches our bot, Telegram tells us the sender's `chat_id` but nothing about who they are on temari. We have to carry the web identity through Telegram and verify it on return, without standing pending-link state to maintain, and without a leaked link silently linking the wrong account.
 
 ## Decision
 

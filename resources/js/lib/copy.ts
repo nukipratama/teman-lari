@@ -1,5 +1,5 @@
 /**
- * Canonical UI verbs and microcopy for teman-lari.
+ * Canonical UI verbs and microcopy for temari.
  *
  * Voice rules (see CLAUDE.md and memory feedback_no_em_dash, language_convention):
  *  - Native casual Indonesian. No "translatese": prefer "lagi" over "sedang",

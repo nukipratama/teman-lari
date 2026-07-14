@@ -1,4 +1,4 @@
-# Voice & Tone — Teman Lari
+# Voice & Tone — Temari
 
 How copy should sound across the whole product: UI chrome, Temari's narration, and the LLM prompts. Sibling to [design-tokens.md](design-tokens.md). When in doubt, read this before writing user-facing strings.
 

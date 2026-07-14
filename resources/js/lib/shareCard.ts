@@ -364,7 +364,7 @@ function drawBrand(ctx: CanvasRenderingContext2D, rightX: number, y: number, isD
     ctx.font = '700 38px "JetBrains Mono"';
     ctx.textBaseline = 'middle';
     ctx.textAlign = 'left';
-    const word = 'TemanLari';
+    const word = 'Temari';
     const wordW = ctx.measureText(word).width;
     const totalW = size + gap + wordW;
     const startX = rightX - totalW;

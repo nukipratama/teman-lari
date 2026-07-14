@@ -16,7 +16,7 @@ code_refs:
 
 # Deployment & runtime
 
-How TemanLari is built into an image, run as a compose stack, and continuously deployed to **one self-hosted homelab host** on every push to `main`. The host sits behind an existing Cloudflare Tunnel; nothing in this repo provisions the tunnel itself. Start here before touching the [Dockerfile](Dockerfile), [compose.prod.yaml](compose.prod.yaml), or the deploy job in [.github/workflows/ci.yml](.github/workflows/ci.yml).
+How Temari is built into an image, run as a compose stack, and continuously deployed to **one self-hosted homelab host** on every push to `main`. The host sits behind an existing Cloudflare Tunnel; nothing in this repo provisions the tunnel itself. Start here before touching the [Dockerfile](Dockerfile), [compose.prod.yaml](compose.prod.yaml), or the deploy job in [.github/workflows/ci.yml](.github/workflows/ci.yml).
 
 ## The image (multi-stage)
 
@@ -39,13 +39,13 @@ The runtime stage serves on **`:7001`** plain HTTP — TLS terminates at Cloudfl
 
 ## The prod stack
 
-[compose.prod.yaml](compose.prod.yaml) (project `teman-lari-prod`) runs six services, all sharing the `*app-image` and the `*app-env` anchor; secrets load from `/opt/teman-lari/.env` on the host via `env_file:` (nothing flows through GitHub Actions secrets):
+[compose.prod.yaml](compose.prod.yaml) (project `temari-prod`) runs six services, all sharing the `*app-image` and the `*app-env` anchor; secrets load from `/opt/temari/.env` on the host via `env_file:` (nothing flows through GitHub Actions secrets):
 
 - **`app`** — the FrankenPHP server. The **only** service with a host port, and it's **loopback-only** `127.0.0.1:7001:7001`; cloudflared on the host reaches it there. HTTP `/up` healthcheck: [VerifyDependencies](app/Listeners/VerifyDependencies.php) hooks Laravel's `DiagnosingHealth` event to also ping the default MySQL connection, the `analytics` connection, both `default`/`cache` Redis connections, and Horizon's master-supervisor status, so `/up` reflects the whole stack rather than just "PHP booted."
 - **`horizon`** — `php artisan horizon` queue worker, `stop_grace_period: 60s` for graceful drain.
 - **`scheduler`** — `php artisan schedule:work`.
 - **`pulse`** — combined daemon: `pulse:check` (Servers recorder, host root bind-mounted read-only at `/host`) + `pulse:work` (ingest drain), where either child dying exits the wrapper so Docker restarts it.
-- **`mysql`** — custom `teman-lari/mysql:8.4` (stock + initdb bootstrap) on a persistent `mysql_data` volume, tuned via command flags (`innodb-buffer-pool-size=1536M`, `max-connections=40`, `skip-name-resolve`). Stays on the internal network only.
+- **`mysql`** — custom `temari/mysql:8.4` (stock + initdb bootstrap) on a persistent `mysql_data` volume, tuned via command flags (`innodb-buffer-pool-size=1536M`, `max-connections=40`, `skip-name-resolve`). Stays on the internal network only.
 - **`redis`** — `redis:8-alpine`, AOF `everysec`, `maxmemory 512mb` / `noeviction`, persistent `redis_data` volume. The healthcheck is a **write probe** (`SET`), not `ping`, because Redis answers PONG while still replaying AOF but rejects writes — a ping would let app/horizon connect mid-replay and read empty sessions.
 
 `app`/`horizon`/`scheduler`/`pulse` all `depends_on` mysql + redis `service_healthy`, and carry per-service `deploy.resources` limits with CPU floors that sum well under the shared 4-core host.
@@ -69,13 +69,13 @@ The `deploy` job in [.github/workflows/ci.yml](.github/workflows/ci.yml) runs on
 1. Tag current `:latest` → `:previous` (rollback target).
 2. `compose build app`; bring up mysql + redis with `--wait` (cold-start safe — a fresh box self-bootstraps).
 3. Tag the new image with the git SHA.
-4. **Backup** the app DB and the analytics schema to `/var/lib/teman-lari-backups` (gzip, `pipefail`-guarded, tiny-dump check skipped only when the schema is genuinely empty).
+4. **Backup** the app DB and the analytics schema to `/var/lib/temari-backups` (gzip, `pipefail`-guarded, tiny-dump check skipped only when the schema is genuinely empty).
 5. **Quiesce** scheduler + horizon (SIGTERM, kept down) so no scheduled command/job is mid-run during the roll.
 6. `migrate --force`, then `migrate --database=analytics --path=database/migrations/analytics --force` (one-shot `compose run --rm app`).
 7. Roll `app horizon pulse` onto the new image (`up -d --no-deps`) — the recreate gives Horizon fresh workers, so no separate `horizon:terminate`.
 8. `artisan optimize` (caches config inside the running container, where the real env is loaded).
 9. Healthcheck `/up` (20× retry), smoke-test `/login`, then resume `scheduler`.
-10. Prune SHA-tagged `teman-lari/app` images that aren't `:latest`/`:previous`.
+10. Prune SHA-tagged `temari/app` images that aren't `:latest`/`:previous`.
 
 ### Migrations must be expand/contract
 
@@ -90,4 +90,4 @@ The heavier alternative is wrapping the migrate step in `artisan down` (a mainte
 
 ## Rollback
 
-Every successful deploy leaves `teman-lari/app:previous` and `teman-lari/app:<git-sha>` on the host. To roll back the most recent deploy, re-tag `:previous` → `:latest`, `up -d --no-deps app horizon scheduler`, and `horizon:terminate`. For an older commit, re-tag the SHA you want (within retention). The full commands and the `/opt/teman-lari/.env` setup table live in the Deployment section of [README.md](README.md).
+Every successful deploy leaves `temari/app:previous` and `temari/app:<git-sha>` on the host. To roll back the most recent deploy, re-tag `:previous` → `:latest`, `up -d --no-deps app horizon scheduler`, and `horizon:terminate`. For an older commit, re-tag the SHA you want (within retention). The full commands and the `/opt/temari/.env` setup table live in the Deployment section of [README.md](README.md).

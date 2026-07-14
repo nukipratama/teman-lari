@@ -73,7 +73,7 @@ export default function ShareCardModal({ kartu, onClose }: Readonly<ShareCardMod
                 const blob = await captureImage();
                 const file = new File([blob], `${kartu.name}.png`, { type: 'image/png' });
                 if (navigator.canShare?.({ files: [file] })) {
-                    await navigator.share({ files: [file], title: `${kartu.name} · TemanLari` });
+                    await navigator.share({ files: [file], title: `${kartu.name} · Temari` });
                     return;
                 }
             } catch {
@@ -84,7 +84,7 @@ export default function ShareCardModal({ kartu, onClose }: Readonly<ShareCardMod
         if (typeof navigator.share === 'function') {
             try {
                 await navigator.share({
-                    title: `${kartu.name} · TemanLari`,
+                    title: `${kartu.name} · Temari`,
                     text: kartu.quote ?? `Kartu ${RARITY_LABELS[kartu.rarity]}: ${kartu.name}`,
                     url,
                 });

@@ -11,14 +11,14 @@
 #       docker compose -f compose.prod.yaml exec -T mysql sh < docker/mysql/init/01-databases.sh
 #
 # To reinitialize prod from scratch (data is disposable): stop + remove the mysql
-# container, `docker volume rm teman-lari-prod_mysql_data`, `up -d mysql`, then run
+# container, `docker volume rm temari-prod_mysql_data`, `up -d mysql`, then run
 # the one-liner above.
 set -e
 
 # Prefer the app's (Laravel) DB_* names; fall back to the image's MYSQL_* (dev initdb,
 # where only those are present in the container env).
-MAIN_DB="${DB_DATABASE:-${MYSQL_DATABASE:-teman_lari}}"
-ANALYTICS_DB="${DB_ANALYTICS_DATABASE:-teman_lari_analytics}"
+MAIN_DB="${DB_DATABASE:-${MYSQL_DATABASE:-temari}}"
+ANALYTICS_DB="${DB_ANALYTICS_DATABASE:-temari_analytics}"
 APP_USER="${DB_USERNAME:-${MYSQL_USER:-sail}}"
 APP_PW="${DB_PASSWORD:-${MYSQL_PASSWORD}}"
 

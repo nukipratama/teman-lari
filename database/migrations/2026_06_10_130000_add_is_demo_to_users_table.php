@@ -24,7 +24,7 @@ return new class () extends Migration {
         // getting billed until a full re-seed. Literal mirrors
         // DemoRunSeeder::DEMO_USER_EMAIL (kept inline so this migration is
         // self-contained and frozen in time).
-        DB::table('users')->where('email', 'demo@teman-lari.local')->update(['is_demo' => true]);
+        DB::table('users')->where('email', 'demo@temari.local')->update(['is_demo' => true]);
     }
 
     public function down(): void

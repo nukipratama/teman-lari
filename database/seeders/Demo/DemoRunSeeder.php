@@ -39,7 +39,7 @@ use function is_array;
 
 class DemoRunSeeder
 {
-    public const string DEMO_USER_EMAIL = 'demo@teman-lari.local';
+    public const string DEMO_USER_EMAIL = 'demo@temari.local';
 
     public function __construct(
         private readonly BlueprintLibrary $library,

@@ -1,4 +1,4 @@
-# TemanLari
+# Temari
 
 A self-hosted, Strava-connected personal running dashboard with a built-in companion (**Temari**) that narrates each run. UI in Bahasa Indonesia. Containerized end-to-end — Laravel Sail in dev, FrankenPHP behind a Cloudflare Tunnel in prod — and continuously deployed to a single self-hosted host on every merge to `main`.
 
@@ -6,7 +6,7 @@ A self-hosted, Strava-connected personal running dashboard with a built-in compa
 
 ## What it is
 
-TemanLari ("running buddy") turns your Strava runs into something you look forward to opening. Each run is ingested and scored with proper running metrics — pace, splits, HR zones, training load — then dealt as a collectible **kartu** with a rarity and a vibe, and narrated by **Temari**, a mascot companion who reads your day back to you in a warm, Indonesian-first voice.
+Temari ("running buddy") turns your Strava runs into something you look forward to opening. Each run is ingested and scored with proper running metrics — pace, splits, HR zones, training load — then dealt as a collectible **kartu** with a rarity and a vibe, and narrated by **Temari**, a mascot companion who reads your day back to you in a warm, Indonesian-first voice.
 
 It is deliberately **not** a Strava clone. The run-tracker core is correct and honest, but the point is the companion layer on top: it's built for the solo runner who finds raw dashboards cold and wants their training to feel like a story. Single-tenant and self-hosted by design.
 
@@ -154,16 +154,16 @@ Defined in [compose.prod.yaml](compose.prod.yaml) + [Dockerfile](Dockerfile) + [
 
 ### Setup (one-time, on the host)
 
-Prod secrets and per-host config live in `/opt/teman-lari/.env` on the host (root-owned, `640`, readable by the runner) — not committed, and nothing flows through GitHub Actions secrets. Compose loads the file via `env_file:` on each service.
+Prod secrets and per-host config live in `/opt/temari/.env` on the host (root-owned, `640`, readable by the runner) — not committed, and nothing flows through GitHub Actions secrets. Compose loads the file via `env_file:` on each service.
 
-Create `/opt/teman-lari/.env` with:
+Create `/opt/temari/.env` with:
 
 | Key                   | Value                                                                                                |
 |:----------------------|:-----------------------------------------------------------------------------------------------------|
 | `APP_KEY`             | `base64:...` (generate: `php -r 'echo "base64:".base64_encode(random_bytes(32))."\n";'`)             |
 | `APP_URL`             | The Cloudflare-fronted public URL (`https://<your-domain>`)                                          |
-| `DB_DATABASE`         | e.g. `teman_lari`                                                                                    |
-| `DB_USERNAME`         | e.g. `teman_lari`                                                                                    |
+| `DB_DATABASE`         | e.g. `temari`                                                                                    |
+| `DB_USERNAME`         | e.g. `temari`                                                                                    |
 | `DB_PASSWORD`         | strong random                                                                                        |
 | `MYSQL_ROOT_PASSWORD` | strong random — used on first mysql init only; cannot be changed after the volume exists            |
 | `STRAVA_CLIENT_ID`    | from your Strava developer app                                                                       |
@@ -182,22 +182,22 @@ After both are in place, merging the PR triggers the first deploy: mysql initial
 ### Rollback
 
 Every successful deploy leaves two extra image tags on the host:
-- `teman-lari/app:previous` — the image that was `:latest` before this deploy.
-- `teman-lari/app:<git-sha>` — addressable artifact for any prior commit.
+- `temari/app:previous` — the image that was `:latest` before this deploy.
+- `temari/app:<git-sha>` — addressable artifact for any prior commit.
 
 Non-running images older than 7 days are pruned automatically.
 
 **Roll back the most recent deploy** (most common case):
 ```bash
-docker tag teman-lari/app:previous teman-lari/app:latest
+docker tag temari/app:previous temari/app:latest
 docker compose -f compose.prod.yaml up -d --no-deps app horizon scheduler
 docker compose -f compose.prod.yaml exec -T app php artisan horizon:terminate
 ```
 
 **Roll back to a specific commit** (within the 7-day retention window):
 ```bash
-docker image ls teman-lari/app                      # find the SHA you want
-docker tag teman-lari/app:<sha> teman-lari/app:latest
+docker image ls temari/app                      # find the SHA you want
+docker tag temari/app:<sha> temari/app:latest
 # ... up + horizon:terminate as above ...
 ```
 

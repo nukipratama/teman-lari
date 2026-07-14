@@ -225,7 +225,7 @@ export default function AiUsage({
                         </div>
                     </div>
                     <span className="hidden text-label-micro font-semibold text-ink-3 sm:inline">
-                        TemanLari · Devtools
+                        Temari · Devtools
                     </span>
                 </div>
             </header>

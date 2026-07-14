@@ -129,8 +129,8 @@ class NominatimResolver
 
     private function userAgent(): string
     {
-        $contact = config('app.url') ?? 'https://github.com/anthropics/teman-lari';
+        $contact = config('app.url') ?? 'https://github.com/nukipratama/temari';
 
-        return sprintf('TemanLari/1.0 (%s)', $contact);
+        return sprintf('Temari/1.0 (%s)', $contact);
     }
 }

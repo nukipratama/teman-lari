@@ -1,9 +1,9 @@
 ---
-name: teman-lari
-description: Project conventions and domain map for the teman-lari repo — Daybreak design tokens, Indonesian voice rules, the AI narrator/analysis pipeline, the 1:1 test convention with its aggregate suites, and the sail toolchain. Use when writing UI, AI narration, or tests in this codebase, or when unsure where a change wires in.
+name: temari
+description: Project conventions and domain map for the temari repo — Daybreak design tokens, Indonesian voice rules, the AI narrator/analysis pipeline, the 1:1 test convention with its aggregate suites, and the sail toolchain. Use when writing UI, AI narration, or tests in this codebase, or when unsure where a change wires in.
 ---
 
-# teman-lari conventions
+# temari conventions
 
 The detailed home for project conventions. Source-of-truth docs are generated from code and
 kept honest by `tests/Unit/Architecture/DesignTokenDocsTest.php` (palette/type docs) — link to

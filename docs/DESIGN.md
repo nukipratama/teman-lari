@@ -1,6 +1,6 @@
 ---
-title: teman-lari — System Design
-description: Apex overview of what teman-lari is, its design principles, subsystems, and data lifecycle
+title: temari — System Design
+description: Apex overview of what temari is, its design principles, subsystems, and data lifecycle
 tags: [architecture, moc]
 status: living
 reviewed: 2026-07-07
@@ -13,7 +13,7 @@ code_refs:
   - config/database.php
 ---
 
-# teman-lari — System Design
+# temari — System Design
 
 The home/hub for the knowledge base. README explains how to *operate* the app; this explains how it's *built and why*. For detail, follow the section maps: [[architecture/index|Architecture]] · [[decisions/index|Decisions (ADRs)]] · [[features/index|Features]] · [[marketing/index|Marketing]].
 
@@ -51,4 +51,4 @@ Backend logic is split by domain under `app/Services/`:
 
 ## Where the conventions live
 
-Design tokens, voice & tone, the AI narrator pipeline detail, the 1:1 test convention, and the Sail toolchain live in the `teman-lari` skill (`.claude/skills/teman-lari/`) and in [[design-tokens]] / [[voice-and-tone]]. This knowledge base narrates and links to those — it does not duplicate them.
+Design tokens, voice & tone, the AI narrator pipeline detail, the 1:1 test convention, and the Sail toolchain live in the `temari` skill (`.claude/skills/temari/`) and in [[design-tokens]] / [[voice-and-tone]]. This knowledge base narrates and links to those — it does not duplicate them.
