@@ -55,7 +55,8 @@ frankenphp
 !.claude/settings.json
 !.claude/skills/
 !.claude/commands/
-.claude/settings.local.json
+!.claude/hooks/
+!.claude/workflows/
 graphify-out/
 
 # Obsidian vault config (docs/ opens as a vault; its UI state is per-machine)
