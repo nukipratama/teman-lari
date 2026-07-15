@@ -11,7 +11,7 @@ use Illuminate\Support\Carbon;
 
 uses(RefreshDatabase::class);
 
-function baselineRun(User $user, Carbon $when, float $distance, int $movingTime, ?float $hr, ?float $decoupling): Activity
+function baselineRun(User $user, Carbon $when, float $distance, int $movingTime, ?float $hr, ?float $decoupling, ?float $trimp = null): Activity
 {
     $activity = Activity::factory()->for($user)->analyzed()->create();
     ActivityDetail::factory()->for($activity)->create([
@@ -19,6 +19,7 @@ function baselineRun(User $user, Carbon $when, float $distance, int $movingTime,
         'distance' => $distance,
         'moving_time' => $movingTime,
         'average_heartrate' => $hr,
+        'trimp_edwards' => $trimp,
         'stream_summary' => $decoupling === null ? null : ['decoupling_pct' => $decoupling],
     ]);
 
@@ -44,6 +45,29 @@ it('aggregates distance-weighted pace, mean HR, and mean decoupling over the win
         'avg_hr' => 155,
         'avg_decoupling_pct' => 7.0,
     ]);
+});
+
+it('averages TRIMP over runs that have one and counts them', function () use ($asOf): void {
+    $user = User::factory()->create();
+    baselineRun($user, $asOf()->copy()->subDays(5), 5000.0, 1500, 150.0, 6.0, 120.0);
+    baselineRun($user, $asOf()->copy()->subDays(10), 8000.0, 2400, 155.0, 7.0, 160.0);
+    baselineRun($user, $asOf()->copy()->subDays(15), 3000.0, 900, null, null, null); // no TRIMP
+
+    $result = (new RunBaseline())->forUserAsOf($user->id, $asOf());
+
+    expect($result['runs'])->toBe(3)
+        ->and($result['avg_trimp'])->toBe(140) // (120 + 160) / 2
+        ->and($result['trimp_runs'])->toBe(2);
+});
+
+it('nulls avg_trimp and zeroes trimp_runs when no run carries a TRIMP', function () use ($asOf): void {
+    $user = User::factory()->create();
+    baselineRun($user, $asOf()->copy()->subDays(5), 5000.0, 1500, 150.0, 6.0, null);
+
+    $result = (new RunBaseline())->forUserAsOf($user->id, $asOf());
+
+    expect($result['avg_trimp'])->toBeNull()
+        ->and($result['trimp_runs'])->toBe(0);
 });
 
 it('excludes the current activity and runs outside the 28-day window', function () use ($asOf): void {
