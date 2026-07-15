@@ -39,26 +39,27 @@ The runtime stage serves on **`:7001`** plain HTTP — TLS terminates at Cloudfl
 
 ## The prod stack
 
-[compose.prod.yaml](compose.prod.yaml) (project `temari-prod`) runs six services, all sharing the `*app-image` and the `*app-env` anchor; secrets load from `/opt/temari/.env` on the host via `env_file:` (nothing flows through GitHub Actions secrets):
+[compose.prod.yaml](compose.prod.yaml) (project `temari-prod`) runs seven services; the four app-tier services share the `*app-image` and `*app-env` anchors, while mysql and both redis instances stand on their own images. Secrets load from `/opt/temari/.env` on the host via `env_file:` (nothing flows through GitHub Actions secrets):
 
 - **`app`** — the FrankenPHP server. The **only** service with a host port, and it's **loopback-only** `127.0.0.1:7001:7001`; cloudflared on the host reaches it there. HTTP `/up` healthcheck: [VerifyDependencies](app/Listeners/VerifyDependencies.php) hooks Laravel's `DiagnosingHealth` event to also ping the default MySQL connection, the `analytics` connection, both `default`/`cache` Redis connections, and Horizon's master-supervisor status, so `/up` reflects the whole stack rather than just "PHP booted."
 - **`horizon`** — `php artisan horizon` queue worker, `stop_grace_period: 60s` for graceful drain. Its healthcheck overrides the image's HTTP `/up` probe with `php artisan horizon:status` (exit `0` running / `1` paused / `2` inactive), so a wedged supervisor surfaces as `unhealthy` instead of a live-but-idle container.
 - **`scheduler`** — `php artisan schedule:work`.
 - **`pulse`** — combined daemon: `pulse:check` (Servers recorder, host root bind-mounted read-only at `/host`) + `pulse:work` (ingest drain), where either child dying exits the wrapper so Docker restarts it.
 - **`mysql`** — custom `temari/mysql:8.4` (stock + initdb bootstrap) on a persistent `mysql_data` volume, tuned via command flags (`innodb-buffer-pool-size=1536M`, `max-connections=40`, `skip-name-resolve`). Stays on the internal network only.
-- **`redis`** — `redis:8-alpine`, AOF `everysec`, `maxmemory 512mb` / `noeviction`, persistent `redis_data` volume. The healthcheck is a **write probe** (`SET`), not `ping`, because Redis answers PONG while still replaying AOF but rejects writes — a ping would let app/horizon connect mid-replay and read empty sessions.
+- **`redis`** — durable store: `redis:8-alpine`, AOF `everysec`, `maxmemory 512mb` / `noeviction`, persistent `redis_data` volume. The healthcheck is a **write probe** (`SET`), not `ping`, because Redis answers PONG while still replaying AOF but rejects writes — a ping would let app/horizon connect mid-replay and read empty sessions.
+- **`redis-cache`** — dedicated cache store split off `redis`: `redis:8-alpine`, `maxmemory 256mb` / `allkeys-lru`, `appendonly no` and **no volume** (cache is ephemeral, rebuilds lazily). Split out so cache growth can only ever evict itself, never push the durable queue/session store into `noeviction` and stall enqueues. Reuses the same `SET` write-probe healthcheck.
 
-`app`/`horizon`/`scheduler`/`pulse` all `depends_on` mysql + redis `service_healthy`, and carry per-service `deploy.resources` limits with CPU floors that sum well under the shared 4-core host.
+`app`/`horizon`/`scheduler`/`pulse` all `depends_on` mysql + redis + redis-cache `service_healthy`, and carry per-service `deploy.resources` limits with CPU floors that sum well under the shared 4-core host.
 
 ### Redis DB partitioning
 
-One Redis instance, separated by DB number ([config/database.php](config/database.php) `redis` block + the env in [compose.prod.yaml](compose.prod.yaml)):
+Two Redis instances, each addressed by DB number ([config/database.php](config/database.php) `redis` block + the env in [compose.prod.yaml](compose.prod.yaml)). The durable `redis` holds everything that must survive; the ephemeral `redis-cache` holds only the cache keyspace so it can evict freely under pressure:
 
-| DB | Connection | Holds |
-| --- | --- | --- |
-| 0 | `default` | queue jobs + Horizon state + sessions (`SESSION_CONNECTION=default`) |
-| 1 | `cache` | application cache (`REDIS_CACHE_DB=1`) |
-| 2 | `pulse` | Pulse ingest buffer (`PULSE_REDIS_DB=2`) |
+| Instance | DB | Connection | Holds |
+| --- | --- | --- | --- |
+| `redis` | 0 | `default` | queue jobs + Horizon state + sessions (`SESSION_CONNECTION=default`) |
+| `redis` | 2 | `pulse` | Pulse ingest buffer (`PULSE_REDIS_DB=2`) |
+| `redis-cache` | 1 | `cache` | application cache (`REDIS_CACHE_DB=1`) |
 
 Session cookie name and the Redis/cache key prefixes are pinned to **fixed literals** (`SESSION_COOKIE`, `REDIS_PREFIX`, `CACHE_PREFIX`) instead of being derived from `APP_NAME`, so a cosmetic name/tagline edit can't rename the cookie or shift every key prefix and log everyone out. See [[fixed-session-cookie]].
 
