@@ -167,6 +167,52 @@ it('awards the hari_panas badge when temp >= 31C', function (): void {
     expect($card->badges)->toContain('hari_panas');
 });
 
+it('awards pendaki on a short punchy climb even without big elevation gain', function (): void {
+    $user = User::factory()->create();
+    $prev = Activity::factory()->for($user)->create();
+    ActivityDetail::factory()->for($prev)->create([
+        'distance' => 3_000,
+        'start_date_local' => Carbon::parse('2026-04-20 10:00:00'),
+    ]);
+
+    $activity = Activity::factory()->for($user)->create();
+    $detail = ActivityDetail::factory()->for($activity)->create([
+        'distance' => 5_000,
+        'start_date_local' => Carbon::parse('2026-05-10 10:00:00'),
+        'total_elevation_gain' => 40, // below the 200m gain threshold
+        'stream_summary' => ['max_grade_pct' => 11.0],
+        'average_heartrate' => 150,
+        'max_heartrate' => 190,
+    ]);
+
+    $card = app(RunCardFactory::class)->build($activity, $detail);
+
+    expect($card->badges)->toContain('pendaki');
+});
+
+it('withholds pendaki on a flat run with a gentle grade', function (): void {
+    $user = User::factory()->create();
+    $prev = Activity::factory()->for($user)->create();
+    ActivityDetail::factory()->for($prev)->create([
+        'distance' => 3_000,
+        'start_date_local' => Carbon::parse('2026-04-20 10:00:00'),
+    ]);
+
+    $activity = Activity::factory()->for($user)->create();
+    $detail = ActivityDetail::factory()->for($activity)->create([
+        'distance' => 5_000,
+        'start_date_local' => Carbon::parse('2026-05-10 10:00:00'),
+        'total_elevation_gain' => 40,
+        'stream_summary' => ['max_grade_pct' => 2.0],
+        'average_heartrate' => 150,
+        'max_heartrate' => 190,
+    ]);
+
+    $card = app(RunCardFactory::class)->build($activity, $detail);
+
+    expect($card->badges)->not->toContain('pendaki');
+});
+
 it('awards pejuang_hujan badge on rain detection', function (): void {
     $user = User::factory()->create();
     $prev = Activity::factory()->for($user)->create();
