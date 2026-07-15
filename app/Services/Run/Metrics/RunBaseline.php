@@ -19,7 +19,7 @@ class RunBaseline
     public const int WINDOW_DAYS = 28;
 
     /**
-     * @return array{runs:int, avg_pace_sec_per_km:int|null, avg_hr:int|null, avg_decoupling_pct:float|null}|null
+     * @return array{runs:int, avg_pace_sec_per_km:int|null, avg_hr:int|null, avg_decoupling_pct:float|null, avg_trimp:int|null, trimp_runs:int}|null
      */
     public function forUserAsOf(int $userId, Carbon $asOf, ?int $excludeActivityId = null): ?array
     {
@@ -34,7 +34,7 @@ class RunBaseline
                 $excludeActivityId !== null,
                 fn ($query) => $query->where('activity_id', '!=', $excludeActivityId),
             )
-            ->get(['activity_id', 'distance', 'moving_time', 'average_heartrate', 'stream_summary']);
+            ->get(['activity_id', 'distance', 'moving_time', 'average_heartrate', 'trimp_edwards', 'stream_summary']);
 
         if ($details->isEmpty()) {
             return null;
@@ -44,6 +44,7 @@ class RunBaseline
         $totalTime = 0;
         $hrValues = [];
         $decouplingValues = [];
+        $trimpValues = [];
 
         foreach ($details as $detail) {
             if ($detail->distance !== null && $detail->moving_time !== null && $detail->moving_time > 0) {
@@ -52,6 +53,9 @@ class RunBaseline
             }
             if ($detail->average_heartrate !== null) {
                 $hrValues[] = (float) $detail->average_heartrate;
+            }
+            if ($detail->trimp_edwards !== null) {
+                $trimpValues[] = (float) $detail->trimp_edwards;
             }
             $decoupling = $detail->streamSummary()['decoupling_pct'] ?? null;
             if (is_numeric($decoupling)) {
@@ -68,6 +72,8 @@ class RunBaseline
             'avg_decoupling_pct' => $decouplingValues !== []
                 ? round(array_sum($decouplingValues) / count($decouplingValues), 1)
                 : null,
+            'avg_trimp' => $trimpValues !== [] ? (int) round(array_sum($trimpValues) / count($trimpValues)) : null,
+            'trimp_runs' => count($trimpValues),
         ];
     }
 }
