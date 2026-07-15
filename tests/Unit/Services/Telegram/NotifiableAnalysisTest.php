@@ -11,6 +11,7 @@ use App\Models\WeeklySnapshot;
 use App\Services\AI\AnalysisType;
 use App\Services\Telegram\NotifiableAnalysis;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Carbon;
 
 uses(RefreshDatabase::class);
 
@@ -195,8 +196,68 @@ it('treats a missing activity detail as recent enough (nothing to gate on)', fun
     expect((new NotifiableAnalysis())->isRecentEnoughToAutoNotify($analysis))->toBeTrue();
 });
 
-it('never gates non-post-run types by activity age', function (): void {
-    $analysis = Analysis::factory()->make(['analysis_type' => AnalysisType::WeeklyRecap]);
+it('auto-notifies a weekly recap whose week ended within the max age', function (): void {
+    $snapshot = WeeklySnapshot::factory()->create(['week_ending' => now()->subDays(1)]);
+    $analysis = Analysis::factory()->make([
+        'analysis_type' => AnalysisType::WeeklyRecap,
+        'subject_type' => WeeklySnapshot::class,
+        'subject_id' => $snapshot->id,
+    ]);
+
+    expect((new NotifiableAnalysis())->isRecentEnoughToAutoNotify($analysis))->toBeTrue();
+});
+
+it('does not auto-notify a weekly recap whose week ended before the max age', function (): void {
+    config(['services.telegram.notify_max_age_days' => 3]);
+    $snapshot = WeeklySnapshot::factory()->create(['week_ending' => now()->subDays(30)]);
+    $analysis = Analysis::factory()->make([
+        'analysis_type' => AnalysisType::WeeklyRecap,
+        'subject_type' => WeeklySnapshot::class,
+        'subject_id' => $snapshot->id,
+    ]);
+
+    expect((new NotifiableAnalysis())->isRecentEnoughToAutoNotify($analysis))->toBeFalse();
+});
+
+it('auto-notifies a monthly recap whose month ended within the max age', function (): void {
+    // The recap only fires right after the month closes (ai:monthly-recap runs on
+    // the 1st), so pin "now" to just after a month boundary to assert the fresh case.
+    $this->travelTo(Carbon::parse('2026-07-01 06:00'));
+    $analysis = Analysis::factory()->make([
+        'analysis_type' => AnalysisType::MonthlyRecap,
+        'subject_id' => 1,
+        'discriminator' => '2026-06',
+    ]);
+
+    expect((new NotifiableAnalysis())->isRecentEnoughToAutoNotify($analysis))->toBeTrue();
+});
+
+it('does not auto-notify a monthly recap whose month ended before the max age', function (): void {
+    config(['services.telegram.notify_max_age_days' => 3]);
+    $analysis = Analysis::factory()->make([
+        'analysis_type' => AnalysisType::MonthlyRecap,
+        'subject_id' => 1,
+        'discriminator' => now()->subMonths(6)->format('Y-m'),
+    ]);
+
+    expect((new NotifiableAnalysis())->isRecentEnoughToAutoNotify($analysis))->toBeFalse();
+});
+
+it('treats a missing weekly snapshot as recent enough (nothing to gate on)', function (): void {
+    $analysis = Analysis::factory()->make([
+        'analysis_type' => AnalysisType::WeeklyRecap,
+        'subject_type' => WeeklySnapshot::class,
+        'subject_id' => 999999,
+    ]);
+
+    expect((new NotifiableAnalysis())->isRecentEnoughToAutoNotify($analysis))->toBeTrue();
+});
+
+it('never gates a daily briefing by age (no reference date)', function (): void {
+    $analysis = Analysis::factory()->make([
+        'analysis_type' => AnalysisType::BriefingHeadline,
+        'discriminator' => now()->subYear()->toDateString(),
+    ]);
 
     expect((new NotifiableAnalysis())->isRecentEnoughToAutoNotify($analysis))->toBeTrue();
 });
