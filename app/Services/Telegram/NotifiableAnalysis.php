@@ -8,6 +8,7 @@ use App\Models\ActivityDetail;
 use App\Models\AI\Analysis;
 use App\Models\TelegramConnection;
 use App\Models\User;
+use App\Models\WeeklySnapshot;
 use App\Services\AI\AnalysisType;
 use App\Services\Run\Metrics\PaceCalculator;
 use App\Services\Run\Metrics\PaceFormatter;
@@ -49,27 +50,47 @@ class NotifiableAnalysis
     }
 
     /**
-     * Whether an automatic post-run push is still relevant to send. A big Strava
-     * backfill stages hundreds of old PostRunSpeech narrations that eventually
-     * complete via the deferred chain (see DispatchPostRunAnalysis::isBackfill);
-     * without this, each one would still push to Telegram once done. Only gates
-     * PostRunSpeech, and only the automatic path — the manual "Kirim ke Telegram"
-     * push (force) bypasses it on purpose.
+     * Whether an automatic push is still relevant to send. A big Strava backfill
+     * stages hundreds of old per-run and historical recap narrations that
+     * eventually complete via the deferred chain (see
+     * DispatchPostRunAnalysis::isBackfill); without this, each one would still
+     * push to Telegram once done. Gates by the age of the type's reference date
+     * (the run's start, the week's ending, the recap month's end) against
+     * `notify_max_age_days`, so only the freshest period pings and history stays
+     * quiet. Types with no reference date, or a missing one, are never gated.
+     * Only the automatic path — the manual "Kirim ke Telegram" push (force)
+     * bypasses it on purpose.
      */
     public function isRecentEnoughToAutoNotify(Analysis $analysis): bool
     {
-        if ($analysis->analysis_type !== AnalysisType::PostRunSpeech) {
-            return true;
-        }
-
-        $startedAt = $this->activityDetail($analysis->subject_id)?->start_date_local;
-        if ($startedAt === null) {
+        $reference = $this->autoNotifyReferenceDate($analysis);
+        if ($reference === null) {
             return true;
         }
 
         $maxDays = (int) config('services.telegram.notify_max_age_days');
 
-        return Carbon::parse($startedAt)->diffInDays(Carbon::now(), absolute: true) <= $maxDays;
+        return $reference->diffInDays(Carbon::now(), absolute: true) <= $maxDays;
+    }
+
+    /**
+     * The date an automatic push for this type is measured against, or null when
+     * the type has nothing to gate on (BriefingHeadline) or its reference can't be
+     * resolved (missing activity/snapshot, blank discriminator).
+     */
+    private function autoNotifyReferenceDate(Analysis $analysis): ?Carbon
+    {
+        return match ($analysis->analysis_type) {
+            AnalysisType::PostRunSpeech => $this->carbonOrNull($this->activityDetail($analysis->subject_id)?->start_date_local),
+            AnalysisType::WeeklyRecap => $this->carbonOrNull(WeeklySnapshot::query()->find($analysis->subject_id)?->week_ending),
+            AnalysisType::MonthlyRecap => $this->carbonOrNull($analysis->discriminator)?->endOfMonth(),
+            default => null,
+        };
+    }
+
+    private function carbonOrNull(mixed $date): ?Carbon
+    {
+        return $date === null ? null : Carbon::parse($date);
     }
 
     /** Whether the connection has opted in to notifications for this analysis type. */
