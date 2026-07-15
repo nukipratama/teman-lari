@@ -466,3 +466,73 @@ it('preserves a pre-existing avg_cadence_spm from splits_metric', function (): v
     expect($summary['per_km'][0]['avg_cadence_spm'])->toBe(200)
         ->and($summary['per_km'][1]['avg_cadence_spm'])->toBe(176);
 });
+
+function paceToSec(string $pace): int
+{
+    [$m, $s] = explode(':', $pace);
+
+    return (int) $m * 60 + (int) $s;
+}
+
+it('derives max sustained grade over a rolling window and rejects spikes', function (): void {
+    // 121s @ 1 Hz: flat for the first minute, ~10% climb for the second, with a
+    // single 30% GPS spike that a per-sample max would wrongly surface.
+    $time = range(0, 120);
+    $velocity = array_fill(0, 121, 2.5);
+    $grade = [];
+    for ($t = 0; $t <= 120; $t++) {
+        $grade[] = $t < 60 ? 0.0 : 10.0;
+    }
+    $grade[90] = 30.0; // spike
+
+    $summary = $this->analysis->compute([
+        'time' => ['data' => $time],
+        'velocity_smooth' => ['data' => $velocity],
+        'grade_smooth' => ['data' => $grade],
+    ], defaultZones(), null, 170);
+
+    expect($summary['max_grade_pct'])->toBeGreaterThanOrEqual(9.0)->toBeLessThanOrEqual(13.0)
+        ->and($summary['climb_time_pct'])->toBe(50.0);
+});
+
+it('grade-adjusts pace faster than raw on a sustained climb', function (): void {
+    $time = range(0, 60);
+    $velocity = array_fill(0, 61, 2.5); // raw pace 1000/2.5 = 400s = 6:40 /km
+    $grade = array_fill(0, 61, 10.0);
+
+    $summary = $this->analysis->compute([
+        'time' => ['data' => $time],
+        'velocity_smooth' => ['data' => $velocity],
+        'grade_smooth' => ['data' => $grade],
+    ], defaultZones(), null, 170);
+
+    // Uphill effort is worth a faster flat pace, so GAP < raw 400s.
+    expect(paceToSec($summary['gap_pace']))->toBeLessThan(400)->toBeGreaterThan(180);
+});
+
+it('leaves GAP equal to raw pace and grade zero on flat ground', function (): void {
+    $time = range(0, 60);
+    $velocity = array_fill(0, 61, 2.5);
+    $grade = array_fill(0, 61, 0.0);
+
+    $summary = $this->analysis->compute([
+        'time' => ['data' => $time],
+        'velocity_smooth' => ['data' => $velocity],
+        'grade_smooth' => ['data' => $grade],
+    ], defaultZones(), null, 170);
+
+    expect($summary['gap_pace'])->toBe('6:40')
+        ->and($summary['max_grade_pct'])->toBe(0.0)
+        ->and($summary['climb_time_pct'])->toBe(0.0);
+});
+
+it('omits grade metrics when there is no grade stream', function (): void {
+    $summary = $this->analysis->compute([
+        'time' => ['data' => range(0, 60)],
+        'velocity_smooth' => ['data' => array_fill(0, 61, 2.5)],
+    ], defaultZones(), null, 170);
+
+    expect($summary)->not->toHaveKey('max_grade_pct')
+        ->and($summary)->not->toHaveKey('climb_time_pct')
+        ->and($summary)->not->toHaveKey('gap_pace');
+});

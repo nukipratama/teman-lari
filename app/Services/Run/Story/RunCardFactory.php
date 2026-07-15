@@ -26,6 +26,9 @@ class RunCardFactory
 
     private const int ELEVATION_GAIN_M = 200;
 
+    /** A short punchy climb earns Pendaki even without big total gain. */
+    private const float MAX_GRADE_PENDAKI_PCT = 8.0;
+
     private const int CONSECUTIVE_DAYS_RAJIN = 3;
 
     private const int CONSECUTIVE_DAYS_BERTURUT = 7;
@@ -315,7 +318,8 @@ class RunCardFactory
         if ($hour !== null && ($hour < 5 || $hour >= 21)) {
             $badges[] = Badge::AnakMalam->value;
         }
-        if (($detail->total_elevation_gain ?? 0) >= self::ELEVATION_GAIN_M) {
+        if (($detail->total_elevation_gain ?? 0) >= self::ELEVATION_GAIN_M
+            || (float) ($summary['max_grade_pct'] ?? 0) >= self::MAX_GRADE_PENDAKI_PCT) {
             $badges[] = Badge::Pendaki->value;
         }
         if ($this->isFirstRunEver($activity)) {

@@ -11,6 +11,12 @@ class StreamAnalysis
     /** Activity is "stopped" when velocity drops below this (m/s). */
     private const float STOP_VELOCITY_MS = 0.5;
 
+    /** Grade (%) at or above which a sample counts as climbing. */
+    private const float CLIMB_GRADE_PCT = 3.0;
+
+    /** Rolling window (seconds) for the steepest *sustained* grade. */
+    private const int GRADE_WINDOW_SEC = 20;
+
     /** Best-effort window durations in seconds → label suffix. */
     private const array BEST_EFFORT_WINDOWS = [
         30 => '30s',
@@ -37,6 +43,7 @@ class StreamAnalysis
         $cadence = $this->data($streams, 'cadence');
         $altitude = $this->data($streams, 'altitude');
         $distance = $this->data($streams, 'distance');
+        $grade = $this->data($streams, 'grade_smooth');
 
         $summary = $this->bestEffortPaces($time, $velocity)
             + $this->elevation($altitude)
@@ -44,7 +51,8 @@ class StreamAnalysis
             + $this->paceVariability($velocity)
             + $this->stoppedTime($time, $velocity)
             + $this->decoupling($time, $heartrate, $velocity)
-            + $this->cadenceDistribution($time, $cadence, $optimalCadenceSpm);
+            + $this->cadenceDistribution($time, $cadence, $optimalCadenceSpm)
+            + $this->grade($grade, $time, $velocity);
 
         if (is_array($splitsMetric) && $splitsMetric !== []) {
             $perKm = $this->perKm($splitsMetric);
@@ -171,6 +179,144 @@ class StreamAnalysis
         }
 
         return ['ascent_m' => (int) round($ascent), 'descent_m' => (int) round($descent)];
+    }
+
+    /**
+     * Hill metrics from the grade_smooth stream: steepest sustained climb,
+     * share of time spent climbing, and grade-adjusted pace (GAP).
+     *
+     * @param  list<float|int>  $grade  per-sample gradient in percent
+     * @param  list<float|int>  $time
+     * @param  list<float|int>  $velocity
+     * @return array<string, string|float>
+     */
+    private function grade(array $grade, array $time, array $velocity): array
+    {
+        if (count($grade) < 2 || count($time) < 2) {
+            return [];
+        }
+
+        $result = [];
+        $maxGrade = $this->maxSustainedGrade($grade, $time);
+        if ($maxGrade !== null) {
+            $result['max_grade_pct'] = $maxGrade;
+        }
+        $climbPct = $this->climbTimePct($grade, $time);
+        if ($climbPct !== null) {
+            $result['climb_time_pct'] = $climbPct;
+        }
+        $gap = $this->gradeAdjustedPace($grade, $time, $velocity);
+        if ($gap !== null) {
+            $result['gap_pace'] = $gap;
+        }
+
+        return $result;
+    }
+
+    /**
+     * Steepest grade sustained over a rolling ~20s window, in percent. A raw
+     * per-sample max would just surface GPS spikes, so this is time-weighted
+     * over the window using the same two-pointer idiom as bestEffortPace().
+     *
+     * @param  list<float|int>  $grade
+     * @param  list<float|int>  $time
+     */
+    private function maxSustainedGrade(array $grade, array $time): ?float
+    {
+        $n = min(count($grade), count($time));
+        $best = null;
+        $j = 0;
+        $wSum = 0.0;
+        $tSum = 0.0;
+        for ($i = 0; $i < $n - 1; $i++) {
+            while ($j < $n - 1 && ($time[$j] - $time[$i]) < self::GRADE_WINDOW_SEC) {
+                $dt = (float) ($time[$j + 1] - $time[$j]);
+                $wSum += (float) $grade[$j] * $dt;
+                $tSum += $dt;
+                $j++;
+            }
+            if ($tSum > 0) {
+                $mean = $wSum / $tSum;
+                if ($best === null || $mean > $best) {
+                    $best = $mean;
+                }
+            }
+            $dtI = (float) ($time[$i + 1] - $time[$i]);
+            $wSum -= (float) $grade[$i] * $dtI;
+            $tSum -= $dtI;
+        }
+
+        return $best !== null ? round($best, 1) : null;
+    }
+
+    /**
+     * Share of recorded time spent climbing (grade >= CLIMB_GRADE_PCT), percent.
+     *
+     * @param  list<float|int>  $grade
+     * @param  list<float|int>  $time
+     */
+    private function climbTimePct(array $grade, array $time): ?float
+    {
+        $n = min(count($grade), count($time) - 1);
+        if ($n < 1) {
+            return null;
+        }
+        $climb = 0.0;
+        $total = 0.0;
+        for ($i = 0; $i < $n; $i++) {
+            $dt = (float) ($time[$i + 1] - $time[$i]);
+            $total += $dt;
+            if ((float) $grade[$i] >= self::CLIMB_GRADE_PCT) {
+                $climb += $dt;
+            }
+        }
+
+        return $total > 0 ? round($climb / $total * 100, 1) : null;
+    }
+
+    /**
+     * Grade-adjusted pace (GAP): the flat pace the effort was worth, using
+     * Minetti's cost-of-running curve normalised to flat = 1. Uphill costs more,
+     * so the flat-equivalent distance grows and the pace comes out faster than raw.
+     *
+     * @param  list<float|int>  $grade
+     * @param  list<float|int>  $time
+     * @param  list<float|int>  $velocity
+     */
+    private function gradeAdjustedPace(array $grade, array $time, array $velocity): ?string
+    {
+        $n = min(count($grade), count($time) - 1, count($velocity));
+        if ($n < 1) {
+            return null;
+        }
+        $flatEquivDist = 0.0;
+        $movingTime = 0.0;
+        for ($i = 0; $i < $n; $i++) {
+            $v = (float) $velocity[$i];
+            if ($v < self::STOP_VELOCITY_MS) {
+                continue;
+            }
+            $dt = (float) ($time[$i + 1] - $time[$i]);
+            $flatEquivDist += $v * $dt * $this->gradeCostFactor((float) $grade[$i] / 100);
+            $movingTime += $dt;
+        }
+        if ($flatEquivDist <= 0) {
+            return null;
+        }
+
+        return PaceFormatter::format($movingTime / ($flatEquivDist / 1000));
+    }
+
+    /**
+     * Minetti (2002) metabolic cost of running as a function of gradient
+     * (rise/run fraction), normalised so flat ground = 1. Clamped positive for
+     * steep descents where the polynomial dips below zero outside its fitted range.
+     */
+    private function gradeCostFactor(float $i): float
+    {
+        $cost = 155.4 * $i ** 5 - 30.4 * $i ** 4 - 43.3 * $i ** 3 + 46.3 * $i ** 2 + 19.5 * $i + 3.6;
+
+        return max($cost, 0.36) / 3.6;
     }
 
     /**

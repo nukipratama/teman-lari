@@ -221,7 +221,7 @@ class ActivityPipeline
         try {
             $streams = $this->client
                 ->get($connection, "/activities/{$activity->strava_external_id}/streams", [
-                    'keys' => 'time,distance,heartrate,cadence,velocity_smooth,altitude,latlng',
+                    'keys' => 'time,distance,heartrate,cadence,velocity_smooth,altitude,latlng,grade_smooth',
                     'key_by_type' => 'true',
                 ])
                 ->json();

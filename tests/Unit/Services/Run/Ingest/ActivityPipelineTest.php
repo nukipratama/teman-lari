@@ -152,6 +152,20 @@ it('leaves enrichment fields null when the detail payload omits them', function 
         ->and($detail->max_speed)->toBeNull();
 });
 
+it('requests the grade_smooth stream key', function (): void {
+    $activity = makeActivityWithConnection();
+
+    Http::fake([
+        'strava.com/api/v3/activities/999' => Http::response(['name' => 'R', 'distance' => 5000]),
+        'strava.com/api/v3/activities/999/streams*' => Http::response([]),
+    ]);
+
+    $this->pipeline->ingest($activity);
+
+    Http::assertSent(fn ($request): bool => str_contains((string) $request->url(), '/streams')
+        && str_contains((string) $request->url(), 'grade_smooth'));
+});
+
 it('increments detail_fail_count on detail fetch failure', function (): void {
     $activity = makeActivityWithConnection();
     $activity->update(['detail_fail_count' => 2]);
