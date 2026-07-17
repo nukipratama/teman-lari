@@ -407,6 +407,14 @@ it('RunInsightNarrator prompt carries the quality-session framing so it stops as
         ->and($prompt)->toContain('SESI KUALITAS');
 });
 
+it('RunInsightNarrator prompt gives notes storytelling room (3-4 sentences, no rigid word cap)', function (): void {
+    $prompt = narratorPrompt(RunInsightNarrator::class);
+
+    expect($prompt)->toContain('3-4 kalimat')
+        ->and($prompt)->toContain('jangan bertele-tele')
+        ->and($prompt)->not->toContain('maksimal 55 kata');
+});
+
 it('RunInsightNarrator leaves the new context fields null when no stream summary', function (): void {
     ['activity' => $a, 'detail' => $d] = postRunFixture();
     $d->update(['stream_summary' => null, 'trimp_edwards' => null]);
@@ -1207,6 +1215,18 @@ it('MonthlyRecapNarrator prompt makes the mood step conditional on mood_mix', fu
         ->toContain('LEWATI langkah ini diam-diam')
         ->not->toContain('—');
 });
+
+it('recap prompts give storytelling room (3-4 sentences, no rigid word cap)', function (string $narrator): void {
+    $prompt = narratorPrompt($narrator);
+
+    expect($prompt)->toContain('3-4 kalimat')
+        ->and($prompt)->toContain('jangan bertele-tele')
+        ->and($prompt)->not->toContain('maksimal 90 kata')
+        ->and($prompt)->not->toContain('maksimal 100 kata');
+})->with([
+    'weekly' => [WeeklyRecapNarrator::class],
+    'monthly' => [MonthlyRecapNarrator::class],
+]);
 
 it('TrendCaptionNarrator prompt demands one coherent reading with a concrete number', function (): void {
     $prompt = narratorPrompt(TrendCaptionNarrator::class);
