@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 
 interface Particle {
@@ -30,18 +30,28 @@ interface ConfettiBurstProps {
  * auto-unmounts after `durationMs`. Reduced-motion users get a silent no-op.
  */
 export default function ConfettiBurst({ burstKey, count = 30, durationMs = 2500 }: Readonly<ConfettiBurstProps>) {
-    const [visible, setVisible] = useState(false);
-    const activeKeyRef = useRef<string | number | null>(null);
     const reduced = useReducedMotion();
+    const [activeKey, setActiveKey] = useState<string | number | null>(
+        () => (burstKey !== null && !reduced ? burstKey : null),
+    );
+    const [lastKey, setLastKey] = useState(burstKey);
+
+    // Trigger a burst when burstKey changes — adjusted during render (React-endorsed)
+    // so the sync setState isn't inside an effect. The timer clears it in a callback.
+    if (burstKey !== lastKey) {
+        setLastKey(burstKey);
+        if (burstKey !== null && !reduced) {
+            setActiveKey(burstKey);
+        }
+    }
+
+    const visible = activeKey !== null;
 
     useEffect(() => {
-        if (burstKey === null || burstKey === activeKeyRef.current) return;
-        activeKeyRef.current = burstKey;
-        if (reduced) return;
-        setVisible(true);
-        const t = globalThis.setTimeout(() => setVisible(false), durationMs);
+        if (activeKey === null) return;
+        const t = globalThis.setTimeout(() => setActiveKey(null), durationMs);
         return () => globalThis.clearTimeout(t);
-    }, [burstKey, durationMs, reduced]);
+    }, [activeKey, durationMs]);
 
     const particles = useMemo<Particle[]>(() => {
         if (!visible) return [];

@@ -10,14 +10,25 @@ const DISMISS_MS = 5000;
 export default function UnlockToast() {
     const { props } = usePage<SharedProps>();
     const unlock = props.flash?.unlock ?? null;
-    const [active, setActive] = useState<UnlockFlash | null>(null);
+    const [active, setActive] = useState<UnlockFlash | null>(
+        () => (unlock !== null && !unlock.is_major ? unlock : null),
+    );
+    const [lastUnlock, setLastUnlock] = useState(unlock);
+
+    // Show the toast when a new (non-major) unlock flash arrives — adjusted during
+    // render (React-endorsed) so the sync setState isn't inside an effect.
+    if (unlock !== lastUnlock) {
+        setLastUnlock(unlock);
+        if (unlock !== null && !unlock.is_major) {
+            setActive(unlock);
+        }
+    }
 
     useEffect(() => {
-        if (unlock === null || unlock.is_major) return;
-        setActive(unlock);
+        if (active === null) return;
         const t = window.setTimeout(() => setActive(null), DISMISS_MS);
         return () => window.clearTimeout(t);
-    }, [unlock]);
+    }, [active]);
 
     return (
         <>

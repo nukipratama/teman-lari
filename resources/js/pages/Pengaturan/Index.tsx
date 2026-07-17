@@ -129,11 +129,11 @@ function TelegramPanel({ telegram }: Readonly<{ telegram: TelegramPayload }>) {
     const [dailyBriefing, setDailyBriefing] = useState(telegram.notify_daily_briefing);
     const { isDemo, open, setOpen, guard } = useDemoGuard();
 
-    const latest = useRef({ postRun, weeklyRecap, monthlyRecap, dailyBriefing });
-    latest.current = { postRun, weeklyRecap, monthlyRecap, dailyBriefing };
+    const latestRef = useRef({ postRun, weeklyRecap, monthlyRecap, dailyBriefing });
+    latestRef.current = { postRun, weeklyRecap, monthlyRecap, dailyBriefing };
 
     const savePrefs = useCallback(() => {
-        const { postRun: pr, weeklyRecap: wr, monthlyRecap: mr, dailyBriefing: db } = latest.current;
+        const { postRun: pr, weeklyRecap: wr, monthlyRecap: mr, dailyBriefing: db } = latestRef.current;
         router.patch(
             '/profil/telegram',
             {
@@ -198,7 +198,7 @@ function TelegramPanel({ telegram }: Readonly<{ telegram: TelegramPayload }>) {
                     onChange={(value) =>
                         guard(() => {
                             setPostRun(value);
-                            latest.current.postRun = value;
+                            latestRef.current.postRun = value;
                             savePrefs();
                         })
                     }
@@ -209,7 +209,7 @@ function TelegramPanel({ telegram }: Readonly<{ telegram: TelegramPayload }>) {
                     onChange={(value) =>
                         guard(() => {
                             setWeeklyRecap(value);
-                            latest.current.weeklyRecap = value;
+                            latestRef.current.weeklyRecap = value;
                             savePrefs();
                         })
                     }
@@ -220,7 +220,7 @@ function TelegramPanel({ telegram }: Readonly<{ telegram: TelegramPayload }>) {
                     onChange={(value) =>
                         guard(() => {
                             setMonthlyRecap(value);
-                            latest.current.monthlyRecap = value;
+                            latestRef.current.monthlyRecap = value;
                             savePrefs();
                         })
                     }
@@ -231,7 +231,7 @@ function TelegramPanel({ telegram }: Readonly<{ telegram: TelegramPayload }>) {
                     onChange={(value) =>
                         guard(() => {
                             setDailyBriefing(value);
-                            latest.current.dailyBriefing = value;
+                            latestRef.current.dailyBriefing = value;
                             savePrefs();
                         })
                     }

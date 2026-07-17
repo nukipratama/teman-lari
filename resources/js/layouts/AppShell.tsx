@@ -1,4 +1,4 @@
-import { type ReactNode, useEffect, useState } from 'react';
+import { type ReactNode, useState } from 'react';
 import { MotionConfig } from 'framer-motion';
 import { usePage } from '@inertiajs/react';
 import UnlockToast from '@/components/temari/UnlockToast';
@@ -23,14 +23,20 @@ export default function AppShell({ children, withNav = true }: Readonly<AppShell
     useDawnShift();
     const { pendingReveal, flash } = usePage<SharedProps>().props;
     const pending = pendingReveal ?? null;
-    const [majorUnlock, setMajorUnlock] = useState<UnlockFlash | null>(null);
-
     const unlock = flash?.unlock ?? null;
-    useEffect(() => {
+    const [majorUnlock, setMajorUnlock] = useState<UnlockFlash | null>(
+        () => (unlock?.is_major ? unlock : null),
+    );
+    const [lastUnlock, setLastUnlock] = useState(unlock);
+
+    // Capture a major unlock flash for the reveal — adjusted during render
+    // (React-endorsed) so the sync setState isn't inside an effect.
+    if (unlock !== lastUnlock) {
+        setLastUnlock(unlock);
         if (unlock?.is_major) {
             setMajorUnlock(unlock);
         }
-    }, [unlock]);
+    }
 
     if (!withNav) {
         return (

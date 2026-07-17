@@ -85,7 +85,7 @@ export default function Kalender({
     const weeks = useMemo<WeekRow[]>(() => groupByWeek(cells), [cells]);
     const dominantMood = useMemo(() => dominantMoodOf(cells), [cells]);
     const isCurrentMonth = month === todayMonth;
-    const [moodFilter, setMoodFilter] = useState<ReadonlySet<Mood>>(new Set());
+    const [moodFilter, setMoodFilter] = useState<ReadonlySet<Mood>>(() => new Set());
     const toggleMood = useCallback((mood: Mood) => {
         setMoodFilter((prev) => {
             const next = new Set(prev);

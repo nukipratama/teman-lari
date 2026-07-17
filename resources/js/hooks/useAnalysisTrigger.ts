@@ -225,21 +225,40 @@ export function useAnalysisTrigger(
         }
     }, [pending, payload.type, payload.subject_id, payload.discriminator, inertiaReloadProps, onUpdate]);
 
-    useEffect(() => {
+    // Mirror server-provided status/retry into local state when the props change —
+    // adjusted during render (React-endorsed) rather than in effects. Local
+    // optimistic updates (see trigger) persist until the next server sync.
+    const [lastStatus, setLastStatus] = useState(payload.status);
+    if (payload.status !== lastStatus) {
+        setLastStatus(payload.status);
         setStatus(payload.status);
-    }, [payload.status]);
+    }
 
-    useEffect(() => {
-        setRetryAfterSeconds(payload.retry_after_seconds ?? null);
-    }, [payload.retry_after_seconds]);
+    const nextRetryAfter = payload.retry_after_seconds ?? null;
+    const [lastRetryAfter, setLastRetryAfter] = useState(nextRetryAfter);
+    if (nextRetryAfter !== lastRetryAfter) {
+        setLastRetryAfter(nextRetryAfter);
+        setRetryAfterSeconds(nextRetryAfter);
+    }
 
     const reloadKey = inertiaReloadProps.join('|');
     const isInFlight = payload.status === 'queued' || payload.status === 'processing';
+    const pollActive = isInFlight && reloadKey !== '';
+    const pollKey = pollActive ? reloadKey : null;
+
+    // Reset the retired flag when a fresh subscription (new key) begins — during render.
+    const [lastPollKey, setLastPollKey] = useState(pollKey);
+    if (pollKey !== lastPollKey) {
+        setLastPollKey(pollKey);
+        if (pollKey !== null) {
+            setPollingRetired(false);
+        }
+    }
+
     useEffect(() => {
-        if (!isInFlight || reloadKey === '') return;
-        setPollingRetired(false);
+        if (!pollActive) return;
         return subscribePoll(reloadKey.split('|'), () => setPollingRetired(true));
-    }, [isInFlight, reloadKey]);
+    }, [pollActive, reloadKey]);
 
     return { status, pending, error, retryAfterSeconds, pollingRetired, paused, trigger };
 }
