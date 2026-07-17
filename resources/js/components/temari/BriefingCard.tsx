@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Icon } from '@iconify/react';
 import { cn } from '@/lib/cn';
@@ -33,6 +34,8 @@ export default function BriefingCard({
 }: Readonly<BriefingCardProps>) {
     const ruleClass = vibeLeftRule(briefing.vibeState);
     const recoveryClass = recoveryChipClass(briefing.recoveryTone);
+    // Freeze the greeting date at mount (lazy init) so it isn't recomputed impurely on every render.
+    const [todayLong] = useState(() => formatIdDate(new Date().toISOString(), 'long'));
     const bothDone =
         briefing.headline.status === 'done' &&
         briefing.suggestion.status === 'done' &&
@@ -55,7 +58,7 @@ export default function BriefingCard({
                 {/* LEFT 60% — greeting + narrator */}
                 <div className="min-w-0 sm:basis-3/5">
                     <p className="font-mono text-xs font-bold uppercase tracking-wider text-ink-2">
-                        {formatIdDate(new Date().toISOString(), 'long')}
+                        {todayLong}
                     </p>
                     {firstName !== undefined && firstName !== '' && (
                         <h1 className="mt-1 text-2xl font-semibold tracking-tight text-ink sm:text-3xl">

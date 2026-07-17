@@ -714,7 +714,7 @@ function SplitsTable({
                     const rowFill = splitRowFill(isFast, idx);
                     return (
                         <div
-                            key={row.km ?? `row-${idx}`}
+                            key={row.km ?? 'sisa'}
                             className={cn(
                                 'grid grid-cols-[34px_1fr_56px] items-center gap-2.5 lg:grid-cols-[40px_1fr_70px_70px_70px] lg:gap-3',
                                 // Every row gets the same rounded background box + -mx-3/px-3

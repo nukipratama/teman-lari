@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Head, usePage } from '@inertiajs/react';
 import AppShell from '@/layouts/AppShell';
 import { type TemariPose } from '@/components/temari/TemariProto';
@@ -47,7 +48,8 @@ export default function HariIni({
     const featured = featuredCardFor(recentRuns, briefing.featuredCardId, recentMoods);
     const lastRun = recentRuns[0] ?? null;
 
-    const now = new Date();
+    // Freeze the date/time line at mount (lazy init) so it isn't recomputed impurely on every render.
+    const [now] = useState(() => new Date());
     const dateLine = `${formatWeekdayDateId(now)} · ${formatTimeId(now)} · ${briefing.vibeLabel}`;
     const vibeSubtitle = vibeSubtitleFor(briefing.vibeLabel);
 

@@ -42,10 +42,10 @@ export default function CardReveal({
   const rarityHex = RARITY_HEX[pending.rarity];
   const [confettiKey, setConfettiKey] = useState<string | null>(null);
   const [shareOpen, setShareOpen] = useState(false);
-  const buttonTimer = useRef<ReturnType<typeof setTimeout>>(null);
+  const buttonTimerRef = useRef<ReturnType<typeof setTimeout>>(null);
   // The card starts wrapped in foil; reduced-motion users skip straight to it
   // (and therefore to its action buttons, since openPack never runs for them).
-  const prefersReducedMotion =
+  const prefersReducedMotion = () =>
     globalThis.matchMedia?.("(prefers-reduced-motion: reduce)").matches === true;
   const [opened, setOpened] = useState(prefersReducedMotion);
   const [showButtons, setShowButtons] = useState(prefersReducedMotion);
@@ -96,13 +96,13 @@ export default function CardReveal({
       setConfettiKey(`reveal-${pending.card_id}`);
     }
     // Stagger button appearance after card animation settles (~600ms).
-    buttonTimer.current = setTimeout(() => setShowButtons(true), 600);
+    buttonTimerRef.current = setTimeout(() => setShowButtons(true), 600);
   }, [theatrical, pending.card_id]);
 
   // Clean up button timer on unmount.
   useEffect(() => {
     return () => {
-      if (buttonTimer.current !== null) clearTimeout(buttonTimer.current);
+      if (buttonTimerRef.current !== null) clearTimeout(buttonTimerRef.current);
     };
   }, []);
 

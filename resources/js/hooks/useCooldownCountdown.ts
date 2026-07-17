@@ -10,10 +10,14 @@ import { formatDurationHMS } from '@/lib/pace';
  */
 export function useCooldownCountdown(initialSeconds: number | null | undefined): number {
     const [remaining, setRemaining] = useState(() => Math.max(0, initialSeconds ?? 0));
+    const [lastInitial, setLastInitial] = useState(initialSeconds);
 
-    useEffect(() => {
+    // Restart the countdown when a fresh retry-after value arrives — adjusted
+    // during render (React-endorsed) rather than in an effect.
+    if (initialSeconds !== lastInitial) {
+        setLastInitial(initialSeconds);
         setRemaining(Math.max(0, initialSeconds ?? 0));
-    }, [initialSeconds]);
+    }
 
     const ticking = remaining > 0;
     useEffect(() => {

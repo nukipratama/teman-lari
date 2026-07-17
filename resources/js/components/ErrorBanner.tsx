@@ -1,5 +1,5 @@
 import { usePage } from '@inertiajs/react';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Icon } from '@iconify/react';
 import type { SharedProps } from '@/types/inertia';
 
@@ -13,11 +13,14 @@ export default function ErrorBanner() {
     const errors = usePage<SharedProps>().props.errors ?? {};
     const message = Object.values(errors)[0] ?? null;
     const [dismissed, setDismissed] = useState(false);
+    const [lastMessage, setLastMessage] = useState(message);
 
     // A fresh error (new message) re-shows the banner after a prior dismissal.
-    useEffect(() => {
+    // Adjusted during render (React-endorsed) rather than in an effect.
+    if (message !== lastMessage) {
+        setLastMessage(message);
         setDismissed(false);
-    }, [message]);
+    }
 
     if (message === null || dismissed) {
         return null;

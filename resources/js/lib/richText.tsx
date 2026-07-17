@@ -15,13 +15,18 @@ const BOLD = /\*\*(.+?)\*\*/g;
  * literal `**` asterisks.
  */
 export function renderBold(text: string): ReactNode {
-    return text.split(BOLD).map((segment, i) =>
-        i % 2 === 1 ? (
-            <strong key={i} className="font-bold">
-                {segment}
-            </strong>
-        ) : (
-            <Fragment key={i}>{segment}</Fragment>
-        ),
-    );
+    // Split into positional fragments (odd indices are the bolded captures). The id is
+    // baked once here so the render map keys off a data field, not the array index.
+    return text
+        .split(BOLD)
+        .map((segment, i) => ({ segment, bold: i % 2 === 1, id: i }))
+        .map(({ segment, bold, id }) =>
+            bold ? (
+                <strong key={id} className="font-bold">
+                    {segment}
+                </strong>
+            ) : (
+                <Fragment key={id}>{segment}</Fragment>
+            ),
+        );
 }

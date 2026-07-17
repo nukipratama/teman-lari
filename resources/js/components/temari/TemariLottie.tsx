@@ -23,11 +23,20 @@ export default function TemariLottie({
 }: Readonly<TemariLottieProps>) {
     const [data, setData] = useState<unknown | null>(null);
     const [errored, setErrored] = useState(false);
+    const [lastSrc, setLastSrc] = useState(src);
     const abortRef = useRef<AbortController | null>(null);
+
+    // Clear stale data when the src prop clears — adjusted during render
+    // (React-endorsed) so the sync setState isn't inside the fetch effect.
+    if (src !== lastSrc) {
+        setLastSrc(src);
+        if (src === null || src === undefined || src.length === 0) {
+            setData(null);
+        }
+    }
 
     useEffect(() => {
         if (src === null || src === undefined || src.length === 0) {
-            setData(null);
             return;
         }
         abortRef.current?.abort();

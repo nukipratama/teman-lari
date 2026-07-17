@@ -14,7 +14,7 @@ interface HeroPanelProps {
 
 const GRADIENT = 'bg-[linear-gradient(160deg,var(--color-sky-deep)_0%,var(--color-sky)_60%,var(--color-sky-2)_100%)]';
 
-interface StarDot { x: number; y: number; size: number; opacity: number }
+interface StarDot { x: number; y: number; size: number; opacity: number; id: number }
 
 /** Deterministic star field — scattered dots across the upper sky area. */
 const STARS: StarDot[] = [
@@ -44,7 +44,7 @@ const STARS: StarDot[] = [
     [20, 30, 40, 50, 60, 70, 80].map((x, i) => ({
         x: x + (i % 2), y: 32 + (i % 2) * 0.9, size: 1.5, opacity: 0.06 + (i % 4) * 0.02,
     })),
-].flat();
+].flat().map((s, i) => ({ ...s, id: i }));
 
 export default function HeroPanel({ children, gradient = true, decorative = true, className, style }: Readonly<HeroPanelProps>) {
     return (
@@ -119,9 +119,9 @@ export default function HeroPanel({ children, gradient = true, decorative = true
                     />
 
                     {/* Star field — generated for consistent coverage */}
-                    {STARS.map((s, i) => (
+                    {STARS.map((s) => (
                         <span
-                            key={i}
+                            key={s.id}
                             aria-hidden
                             className="pointer-events-none absolute rounded-full bg-cream"
                             style={{
