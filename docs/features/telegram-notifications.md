@@ -3,14 +3,16 @@ title: Telegram notifications
 description: Linking a Telegram account, the per-type notification toggles, and how post-run / weekly-recap / monthly-recap narration is pushed to the bot.
 tags: [feature, telegram]
 status: living
-reviewed: 2026-07-04
+reviewed: 2026-07-19
 code_refs:
   - app/Services/Telegram/TelegramClient.php
   - app/Services/Telegram/TelegramLinkToken.php
   - app/Services/Telegram/NotifiableAnalysis.php
   - app/Jobs/Telegram/HandleTelegramUpdateJob.php
-  - app/Jobs/Telegram/SendTelegramNotificationJob.php
-  - app/Jobs/Telegram/SendStreakReminderJob.php
+  - app/Notifications/AnalysisReadyNotification.php
+  - app/Notifications/Channels/TelegramChannel.php
+  - app/Notifications/StreakReminderNotification.php
+  - app/Notifications/TestNotification.php
   - app/Http/Controllers/Telegram/Concerns/PushesAnalysisToTelegram.php
   - app/Http/Controllers/Telegram/SendActivityNotificationController.php
   - app/Http/Controllers/Telegram/SendWeeklyRecapNotificationController.php
@@ -49,11 +51,11 @@ When the user taps Start, the update reaches [HandleTelegramUpdateJob](../../app
 
 ## Preferences + disconnect
 
-The Pengaturan page ([Pengaturan/Index.tsx](../../resources/js/pages/Pengaturan/Index.tsx)) shows four switches (`notify_post_run`, `notify_weekly_recap`, `notify_monthly_recap`, `notify_daily_briefing`) and a "Putuskan" button once connected; [TelegramConnectionController](../../app/Http/Controllers/Telegram/TelegramConnectionController.php) persists the toggles and revokes on disconnect. The Telegram connect button keeps Telegram's brand mark and blue (not recolored), the way the Strava button is left as-shipped (see [[strava-connect]]). There is no dedicated streak-reminder toggle: the [[streak-reminders]] Saturday nudge piggybacks `notify_weekly_recap` ([SendStreakReminderJob](../../app/Jobs/Telegram/SendStreakReminderJob.php), [StreakRemindCommand](../../app/Console/Commands/Gamification/StreakRemindCommand.php)), so opting out of weekly recaps also silences streak reminders.
+The Pengaturan page ([Pengaturan/Index.tsx](../../resources/js/pages/Pengaturan/Index.tsx)) shows four switches (`notify_post_run`, `notify_weekly_recap`, `notify_monthly_recap`, `notify_daily_briefing`) and a "Putuskan" button once connected; [TelegramConnectionController](../../app/Http/Controllers/Telegram/TelegramConnectionController.php) persists the toggles and revokes on disconnect. The Telegram connect button keeps Telegram's brand mark and blue (not recolored), the way the Strava button is left as-shipped (see [[strava-connect]]). There is no dedicated streak-reminder toggle: the [[streak-reminders]] Saturday nudge piggybacks `notify_weekly_recap` ([StreakReminderNotification](../../app/Notifications/StreakReminderNotification.php), [StreakRemindCommand](../../app/Console/Commands/Gamification/StreakRemindCommand.php)), so opting out of weekly recaps also silences streak reminders.
 
 ## Sending
 
-`AnalysisService::markDone()` fans out [SendTelegramNotificationJob](../../app/Jobs/Telegram/SendTelegramNotificationJob.php) for the notifiable types. The job resolves the user behind the analysis ([NotifiableAnalysis](../../app/Services/Telegram/NotifiableAnalysis.php)), then enforces: not the demo user, a non-revoked connection, the per-type opt-in on, and a `telegram_deliveries` unique-`analysis_id` claim so a Horizon retry never double-sends. The completion-hook side and its guards live in [[ai-pipeline]]. A manual push (see above) bypasses the opt-in and delivery-claim guards but still requires a non-revoked connection. A send that hits a permanent 4xx (a 403 blocked bot, a gone chat; anything but a 429) is treated like a `/stop`: the three Telegram send jobs share [RevokesConnectionOnPermanentFailure](../../app/Jobs/Telegram/Concerns/RevokesConnectionOnPermanentFailure.php) to `markRevoked()` and stop instead of retrying a non-retryable error forever.
+`AnalysisService::markDone()` fans out [AnalysisReadyNotification](../../app/Notifications/AnalysisReadyNotification.php) — a queued Laravel notification — for the notifiable types. Its `via()` resolves the user behind the analysis ([NotifiableAnalysis](../../app/Services/Telegram/NotifiableAnalysis.php)) and gates the send: not the demo user, a configured bot token, a non-revoked connection, the recency window, and the per-type opt-in — an unwired or opted-out user resolves to no channels and nothing is enqueued. Delivery runs in [TelegramChannel](../../app/Notifications/Channels/TelegramChannel.php), which holds the `telegram_deliveries` unique-`analysis_id` claim so a queued retry never double-sends. The completion-hook side and its guards live in [[ai-pipeline]]. A manual push (see above) sets `force: true`, bypassing the recency + opt-in gates and the once-only claim CHECK (it still records the claim, and still requires a non-revoked connection). A send that hits a permanent 4xx (a 403 blocked bot, a gone chat; anything but a 429) is treated like a `/stop`: the channel uses [RevokesConnectionOnPermanentFailure](../../app/Jobs/Telegram/Concerns/RevokesConnectionOnPermanentFailure.php) to `markRevoked()` and stop instead of retrying a non-retryable error forever. Delivery going through a Laravel notification channel is what lets a second channel (web push) join later as a single `via()` entry.
 
 The message itself ([NotifiableAnalysis::format](../../app/Services/Telegram/NotifiableAnalysis.php)) is an emoji label (🏃 post-run / 📊 weekly / 🗓️ monthly / ☀️ daily briefing), the LLM narration verbatim, a one-line metrics summary (distance · duration · pace · HR, each dropped when null) for post-run, and a tap-through deep link to the activity, run-history, calendar, or dashboard page.
 

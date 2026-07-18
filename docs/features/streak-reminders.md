@@ -3,10 +3,10 @@ title: Streak reminders (Telegram)
 description: Saturday-evening Telegram nudges for users whose weekly running streak is at risk — idempotent, per-week gated, opt-in.
 tags: [feature, notifications]
 status: living
-reviewed: 2026-07-07
+reviewed: 2026-07-19
 code_refs:
   - app/Console/Commands/Gamification/StreakRemindCommand.php
-  - app/Jobs/Telegram/SendStreakReminderJob.php
+  - app/Notifications/StreakReminderNotification.php
   - app/Models/WeeklySnapshot.php
   - app/Models/TelegramConnection.php
   - database/migrations/2026_07_04_000001_create_streak_reminders_table.php
@@ -25,9 +25,9 @@ Every Saturday at 18:00, `streak:remind` checks every user with an active Telegr
    - Skip if `WeeklySnapshot::consecutiveWeekStreak($userId)` returns `< 1` (no live streak).
    - Skip if the current week's `WeeklySnapshot` already has `runs > 0`.
    - Skip if `claim()` fails — `insertOrIgnore` on `streak_reminders` with a unique `(user_id, week_ending)` constraint, so repeated cron runs never double-send.
-3. Dispatches `SendStreakReminderJob($userId, $streakWeeks)`.
+3. Sends `StreakReminderNotification($streakWeeks)` to the user via `$user->notify()`.
 
-The job re-checks all guards at runtime (user exists, Telegram connection active, `notify_weekly_recap` still true), then calls `TelegramClient::sendMessage` with:
+The notification's `via()` re-checks the guards at send time (not demo, Telegram connection active, `notify_weekly_recap` still true); the [TelegramChannel](../../app/Notifications/Channels/TelegramChannel.php) then calls `TelegramClient::sendMessage` with:
 
 > 🔥 Streak lari {n} minggu kamu belum ada progres minggu ini. Sempatkan lari sebelum minggu ini berakhir, biar streak-nya nggak putus.
 
@@ -36,7 +36,7 @@ The link points to the dashboard. See [[telegram-notifications]] for the broader
 ## Idempotency
 
 - `streak_reminders` table has a unique `(user_id, week_ending)` constraint — the same user in the same at-risk week can only receive one reminder, even if the command runs multiple times or the cron host restarts mid-iteration.
-- The job re-checks connection status and opt-in at runtime, so a user who disconnects Telegram between dispatch and execution is never pestered.
+- The notification's `via()` re-checks connection status and opt-in at send time, so a user who disconnects Telegram between dispatch and execution is never pestered.
 
 ## Schedule rationale
 
