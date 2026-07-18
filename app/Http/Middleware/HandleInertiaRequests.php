@@ -89,6 +89,9 @@ class HandleInertiaRequests extends Middleware
                 'unlock' => fn () => $request->session()->get('unlock'),
             ],
             'demoLoginEnabled' => (bool) config('demo.login_enabled'),
+            // Public VAPID key only — the client needs it to subscribe; the private
+            // key never leaves the server.
+            'webPushPublicKey' => (string) config('webpush.vapid.public_key'),
             'equippedAccessories' => fn () => app(EquippedAccessories::class)->forUser($user),
             'pendingReveal' => fn () => $this->pendingRevealFor($user),
             'stravaSync' => fn () => $this->stravaSyncFor($user),

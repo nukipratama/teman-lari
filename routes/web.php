@@ -28,6 +28,7 @@ use App\Http\Controllers\Telegram\SendMonthlyRecapNotificationController;
 use App\Http\Controllers\Telegram\SendWeeklyRecapNotificationController;
 use App\Http\Controllers\Telegram\TelegramConnectionController;
 use App\Http\Controllers\Telegram\TelegramWebhookController;
+use App\Http\Controllers\WebPush\PushSubscriptionController;
 use App\Http\Controllers\TokenUsageController;
 use Illuminate\Support\Facades\Route;
 
@@ -109,7 +110,13 @@ Route::middleware(['auth'])->group(function (): void {
     // write-guard is applied to Telegram routes only, not blanket.
     Route::patch('/profil/telegram', [TelegramConnectionController::class, 'update'])->middleware('block-demo-telegram')->name('telegram.preferences.update');
     Route::delete('/profil/telegram', [TelegramConnectionController::class, 'destroy'])->middleware('block-demo-telegram')->name('telegram.disconnect');
-    Route::post('/profil/telegram/test', [TelegramConnectionController::class, 'test'])->middleware('block-demo-telegram')->name('telegram.test');
+    Route::post('/profil/telegram/test', [TelegramConnectionController::class, 'test'])->middleware(['throttle:6,1', 'block-demo-telegram'])->name('telegram.test');
+
+    // Browser push subscription, managed via fetch from the installed PWA. The
+    // block-demo-telegram guard is behaviourally generic (it blocks any demo
+    // mutation); the throttle caps abuse of the push send path a subscription feeds.
+    Route::post('/profil/push', [PushSubscriptionController::class, 'store'])->middleware(['throttle:6,1', 'block-demo-telegram'])->name('push.subscribe');
+    Route::delete('/profil/push', [PushSubscriptionController::class, 'destroy'])->middleware(['throttle:6,1', 'block-demo-telegram'])->name('push.unsubscribe');
 
     Route::get('/pengaturan', SettingsController::class)->name('pengaturan');
 
