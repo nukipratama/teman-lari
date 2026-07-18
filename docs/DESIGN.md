@@ -46,7 +46,7 @@ Backend logic is split by domain under `app/Services/`:
 2. The ingest pipeline fetches detail, computes metrics (HR zones, pace, training load, PRs), reverse-geocodes, attaches weather, and atomically writes the run card + story layer.
 3. AI narrators generate per-block narratives as Analysis rows; cadence-based scheduled commands fire weekly/monthly/daily recaps once their window closes.
 4. Post-ingest corrections: `weather:correct-forecast` (03:15 daily) replaces transient forecast data with settled archive data for runs ingested in the forecast window overlap. See [[weather-integration]].
-5. Streak monitoring: `streak:remind` (Saturday 18:00) nudges users whose live weekly streak is at risk, dispatching `SendStreakReminderJob` via Telegram. See the streak-reminder feature note.
+5. Streak monitoring: `streak:remind` (Saturday 18:00) nudges users whose live weekly streak is at risk, sending a `StreakReminderNotification` via Telegram. See the streak-reminder feature note.
 6. Inertia controllers render React pages that read the activities, cards, records, and Analysis content.
 
 ## Where the conventions live
