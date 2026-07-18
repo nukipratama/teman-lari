@@ -27,13 +27,13 @@ class NotifiableAnalysis
      * it, the emoji prefixed to the narration content (a glanceable label without
      * a redundant text header), and the tap-through CTA appended before the link.
      *
-     * @var array<string, array{pref: string, emoji: string, cta: string}>
+     * @var array<string, array{pref: string, emoji: string, title: string, cta: string}>
      */
     private const array TYPES = [
-        AnalysisType::PostRunSpeech->value => ['pref' => 'notify_post_run', 'emoji' => '🏃', 'cta' => 'Lihat detail lari'],
-        AnalysisType::WeeklyRecap->value => ['pref' => 'notify_weekly_recap', 'emoji' => '📊', 'cta' => 'Lihat riwayat'],
-        AnalysisType::MonthlyRecap->value => ['pref' => 'notify_monthly_recap', 'emoji' => '🗓️', 'cta' => 'Lihat kalender'],
-        AnalysisType::BriefingHeadline->value => ['pref' => 'notify_daily_briefing', 'emoji' => '☀️', 'cta' => 'Lihat ringkasan hari ini'],
+        AnalysisType::PostRunSpeech->value => ['pref' => 'notify_post_run', 'emoji' => '🏃', 'title' => 'Cerita lari', 'cta' => 'Lihat detail lari'],
+        AnalysisType::WeeklyRecap->value => ['pref' => 'notify_weekly_recap', 'emoji' => '📊', 'title' => 'Rekap mingguan', 'cta' => 'Lihat riwayat'],
+        AnalysisType::MonthlyRecap->value => ['pref' => 'notify_monthly_recap', 'emoji' => '🗓️', 'title' => 'Rekap bulanan', 'cta' => 'Lihat kalender'],
+        AnalysisType::BriefingHeadline->value => ['pref' => 'notify_daily_briefing', 'emoji' => '☀️', 'title' => 'Ringkasan hari ini', 'cta' => 'Lihat ringkasan hari ini'],
     ];
 
     /**
@@ -198,5 +198,13 @@ class NotifiableAnalysis
             AnalysisType::BriefingHeadline => route('dashboard'),
             default => null,
         };
+    }
+
+    /** The web-push notification title: emoji + a short type label. */
+    public function pushTitle(Analysis $analysis): string
+    {
+        $meta = self::TYPES[$analysis->analysis_type->value] ?? null;
+
+        return $meta === null ? 'Temari' : trim($meta['emoji'] . ' ' . $meta['title']);
     }
 }

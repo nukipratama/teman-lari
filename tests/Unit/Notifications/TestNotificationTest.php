@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Models\TelegramConnection;
 use App\Models\User;
+use App\Notifications\Channels\IdempotentWebPushChannel;
 use App\Notifications\Channels\TelegramChannel;
 use App\Notifications\TestNotification;
 use App\Services\Telegram\TelegramReplies;
@@ -29,9 +30,31 @@ it('routes nowhere over a revoked connection', function (): void {
     expect(new TestNotification()->via($user))->toBe([]);
 });
 
+it('routes nowhere for the demo user', function (): void {
+    $user = User::factory()->create(['is_demo' => true]);
+    TelegramConnection::factory()->for($user)->create();
+
+    expect(new TestNotification()->via($user))->toBe([]);
+});
+
+it('routes to web push when the user has a subscription', function (): void {
+    $user = User::factory()->create();
+    $user->updatePushSubscription('https://fcm.googleapis.com/fcm/send/abc', 'p256dh-key', 'auth-token');
+
+    expect(new TestNotification()->via($user))->toBe([IdempotentWebPushChannel::class]);
+});
+
 it('builds the keyless test-reply message', function (): void {
     $message = new TestNotification()->toTelegram(User::factory()->create());
 
     expect($message->text)->toBe(TelegramReplies::test())
         ->and($message->deliveryKey)->toBeNull();
+});
+
+it('builds a web push test message', function (): void {
+    $notification = new TestNotification();
+
+    $payload = $notification->toWebPush(User::factory()->create(), $notification)->toArray();
+
+    expect($payload['body'])->toBe(TelegramReplies::test());
 });

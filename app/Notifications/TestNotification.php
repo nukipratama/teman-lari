@@ -5,19 +5,21 @@ declare(strict_types=1);
 namespace App\Notifications;
 
 use App\Models\User;
+use App\Notifications\Channels\IdempotentWebPushChannel;
 use App\Notifications\Channels\TelegramChannel;
 use App\Notifications\Messages\TelegramMessage;
 use App\Services\Telegram\TelegramReplies;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Notification;
+use NotificationChannels\WebPush\WebPushMessage;
 
 /**
  * The one-off "test notification" from the Aku page, so a user can confirm their
  * notification channels work without waiting for a run. Channel-agnostic by
- * design: `via()` fans out to every wired channel (only Telegram today; web push
- * joins it in the WebPush slice), so the single "Kirim tes" action reaches every
- * channel the user has.
+ * design: `via()` fans out to every wired channel (Telegram if connected, web
+ * push if subscribed), so the single "Kirim tes" action reaches every channel the
+ * user has. Never sends on the shared demo identity.
  */
 class TestNotification extends Notification implements ShouldQueue
 {
@@ -35,11 +37,19 @@ class TestNotification extends Notification implements ShouldQueue
      */
     public function via(User $notifiable): array
     {
+        if ($notifiable->is_demo) {
+            return [];
+        }
+
         $channels = [];
 
         $connection = $notifiable->telegramConnection;
         if ($connection !== null && ! $connection->isRevoked()) {
             $channels[] = TelegramChannel::class;
+        }
+
+        if ($notifiable->pushSubscriptions()->exists()) {
+            $channels[] = IdempotentWebPushChannel::class;
         }
 
         return $channels;
@@ -48,5 +58,13 @@ class TestNotification extends Notification implements ShouldQueue
     public function toTelegram(User $notifiable): TelegramMessage
     {
         return new TelegramMessage(text: TelegramReplies::test());
+    }
+
+    public function toWebPush(User $notifiable, Notification $notification): WebPushMessage
+    {
+        return new WebPushMessage()
+            ->title('Temari')
+            ->body(TelegramReplies::test())
+            ->icon('/icon-192.png');
     }
 }

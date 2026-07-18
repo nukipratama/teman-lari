@@ -8,6 +8,7 @@ use Throwable;
 use App\Models\AI\Analysis;
 use App\Models\RunCard;
 use App\Models\User;
+use App\Notifications\Channels\IdempotentWebPushChannel;
 use App\Notifications\Channels\TelegramChannel;
 use App\Notifications\Messages\TelegramMessage;
 use App\Services\AI\AnalysisType;
@@ -17,13 +18,15 @@ use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Notification;
 use Illuminate\Support\Facades\Log;
+use NotificationChannels\WebPush\WebPushMessage;
 
 /**
  * Fired from {@see \App\Services\AI\AnalysisService::markDone()} when a notifiable
- * analysis completes, and from the manual "Kirim ke Telegram" controllers
+ * analysis completes, and from the manual "Kirim notifikasi" controllers
  * ($force). `via()` decides per channel: an automatic push honours the recency
  * gate and the per-type opt-in, a manual push bypasses both and reaches every
- * wired channel. The actual delivery + idempotency lives in {@see TelegramChannel}.
+ * wired channel (Telegram if connected, web push if subscribed). Delivery +
+ * idempotency live in {@see TelegramChannel} / {@see IdempotentWebPushChannel}.
  */
 class AnalysisReadyNotification extends Notification implements ShouldQueue
 {
@@ -54,20 +57,23 @@ class AnalysisReadyNotification extends Notification implements ShouldQueue
         $telegramWired = filled(config('services.telegram.bot_token'))
             && $connection !== null
             && ! $connection->isRevoked();
+        $webPushWired = $notifiable->pushSubscriptions()->exists();
+        $recent = $registry->isRecentEnoughToAutoNotify($this->analysis);
 
-        if (! $telegramWired) {
-            return [];
-        }
-
-        // A manual push bypasses the recency + opt-in gates; the automatic path
-        // keeps both.
+        // A manual push bypasses the recency + opt-in gates and reaches every wired
+        // channel; the automatic path keeps the recency gate + per-type opt-in
+        // (web push opt-in is subscription existence until per-type prefs land).
         if ($this->force) {
-            return [TelegramChannel::class];
+            return array_values(array_filter([
+                $telegramWired ? TelegramChannel::class : null,
+                $webPushWired ? IdempotentWebPushChannel::class : null,
+            ]));
         }
 
-        return $registry->isRecentEnoughToAutoNotify($this->analysis) && $registry->isOptedIn($this->analysis, $connection)
-            ? [TelegramChannel::class]
-            : [];
+        return array_values(array_filter([
+            $telegramWired && $recent && $registry->isOptedIn($this->analysis, $connection) ? TelegramChannel::class : null,
+            $webPushWired && $recent ? IdempotentWebPushChannel::class : null,
+        ]));
     }
 
     public function toTelegram(User $notifiable): TelegramMessage
@@ -77,9 +83,26 @@ class AnalysisReadyNotification extends Notification implements ShouldQueue
         return new TelegramMessage(
             text: $registry->format($this->analysis),
             photoPng: $this->renderPostRunCard(),
-            deliveryKey: $this->analysis->id,
+            deliveryKey: $this->deliveryKey(),
             force: $this->force,
         );
+    }
+
+    public function toWebPush(User $notifiable, Notification $notification): WebPushMessage
+    {
+        $registry = app(NotifiableAnalysis::class);
+
+        return new WebPushMessage()
+            ->title($registry->pushTitle($this->analysis))
+            ->body(trim((string) $this->analysis->content))
+            ->icon('/icon-192.png')
+            ->data(['url' => $registry->url($this->analysis)]);
+    }
+
+    /** The idempotency key shared by every channel: the analysis id. */
+    public function deliveryKey(): int
+    {
+        return $this->analysis->id;
     }
 
     /**

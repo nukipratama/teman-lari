@@ -9,6 +9,7 @@ use App\Models\RunCard;
 use App\Models\TelegramConnection;
 use App\Models\User;
 use App\Notifications\AnalysisReadyNotification;
+use App\Notifications\Channels\IdempotentWebPushChannel;
 use App\Notifications\Channels\TelegramChannel;
 use App\Notifications\Messages\TelegramMessage;
 use App\Services\AI\AnalysisType;
@@ -111,6 +112,36 @@ it('force bypasses the recency gate for an old run', function (): void {
     expect(viaFor(postRunAnalysis($user, daysAgo: 10), $user, force: true))->toBe([TelegramChannel::class]);
 });
 
+it('routes to web push for a subscribed user with a recent analysis', function (): void {
+    $user = User::factory()->create();
+    $user->updatePushSubscription('https://fcm.googleapis.com/fcm/send/abc', 'p256dh-key', 'auth-token');
+
+    expect(viaFor(postRunAnalysis($user), $user))->toBe([IdempotentWebPushChannel::class]);
+});
+
+it('routes to both channels when Telegram and web push are both wired', function (): void {
+    $user = User::factory()->create();
+    TelegramConnection::factory()->for($user)->create(['notify_post_run' => true]);
+    $user->updatePushSubscription('https://fcm.googleapis.com/fcm/send/abc', 'p256dh-key', 'auth-token');
+
+    expect(viaFor(postRunAnalysis($user), $user))->toBe([TelegramChannel::class, IdempotentWebPushChannel::class]);
+});
+
+it('does not route to web push for an old automatic analysis (recency)', function (): void {
+    config(['services.telegram.notify_max_age_days' => 3]);
+    $user = User::factory()->create();
+    $user->updatePushSubscription('https://fcm.googleapis.com/fcm/send/abc', 'p256dh-key', 'auth-token');
+
+    expect(viaFor(postRunAnalysis($user, daysAgo: 10), $user))->toBe([]);
+});
+
+it('force reaches web push even without Telegram', function (): void {
+    $user = User::factory()->create();
+    $user->updatePushSubscription('https://fcm.googleapis.com/fcm/send/abc', 'p256dh-key', 'auth-token');
+
+    expect(viaFor(postRunAnalysis($user), $user, force: true))->toBe([IdempotentWebPushChannel::class]);
+});
+
 it('force still routes nowhere for the demo user or a revoked connection', function (): void {
     $demo = User::factory()->create(['is_demo' => true]);
     TelegramConnection::factory()->for($demo)->create();
@@ -157,6 +188,18 @@ it('sends as text when the post-run activity has no card', function (): void {
     $user = User::factory()->create();
 
     expect(new AnalysisReadyNotification(postRunAnalysis($user))->toTelegram($user)->photoPng)->toBeNull();
+});
+
+it('builds a web push message with title, body, and the tap-through url', function (): void {
+    $user = User::factory()->create();
+    $analysis = postRunAnalysis($user, 'Pace konsisten.');
+    $notification = new AnalysisReadyNotification($analysis);
+
+    $payload = $notification->toWebPush($user, $notification)->toArray();
+
+    expect($payload['title'])->toContain('Cerita lari')
+        ->and($payload['body'])->toContain('Pace konsisten.')
+        ->and($payload['data'])->toBe(['url' => route('aktivitas.show', $analysis->subject_id)]);
 });
 
 /**
