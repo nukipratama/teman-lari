@@ -15,10 +15,17 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         // Behind Cloudflare Tunnel in prod: TLS terminates at the CF edge and
-        // cloudflared forwards plain HTTP with X-Forwarded-Proto: https.
-        // Trust all proxies so Laravel honors the header and generates https
-        // URLs (otherwise Strava OAuth fails with redirect_uri mismatch).
-        $middleware->trustProxies(at: '*');
+        // cloudflared (on the host) forwards plain HTTP to the container over the
+        // docker bridge, so the immediate proxy the app sees is always a private
+        // address. Trust only private ranges + loopback — enough to honor
+        // X-Forwarded-Proto: https (otherwise Strava OAuth fails with redirect_uri
+        // mismatch) without trusting a forwarded header spoofed from a public IP.
+        $middleware->trustProxies(at: [
+            '127.0.0.0/8',
+            '10.0.0.0/8',
+            '172.16.0.0/12',
+            '192.168.0.0/16',
+        ]);
 
         $middleware->web(append: [
             HandleInertiaRequests::class,

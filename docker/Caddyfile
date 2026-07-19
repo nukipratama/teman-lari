@@ -62,6 +62,18 @@
 	# `is_admin`; Cloudflare Access fronts the edge. No basic-auth wall here.
 	handle {
 		header -Server
+		# Security response headers for the app HTML. HSTS is set at the Cloudflare
+		# edge (this origin listener is plain HTTP behind the tunnel), so it is
+		# intentionally not here. No public page is meant to be framed — card sharing
+		# is a rendered PNG (og:image), not an embeddable iframe — so DENY is safe.
+		header X-Frame-Options "DENY"
+		header X-Content-Type-Options "nosniff"
+		header Referrer-Policy "strict-origin-when-cross-origin"
+		# CSP starts Report-Only: the prod build serves only hashed /build/* bundles
+		# (no dev HMR / inline scripts), so `script-src 'self'` should hold, but the
+		# map tiles / chart libs / Google Fonts need a clean browser console before
+		# enforcing. Flip the header name to `Content-Security-Policy` once verified.
+		header Content-Security-Policy-Report-Only "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self'; worker-src 'self'; manifest-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'"
 		php_server
 	}
 }

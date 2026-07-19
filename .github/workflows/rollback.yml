@@ -11,6 +11,9 @@ concurrency:
   group: deploy-prod
   cancel-in-progress: false
 
+permissions:
+  contents: read
+
 jobs:
   rollback:
     runs-on: [self-hosted, homelab]
@@ -73,5 +76,5 @@ jobs:
             echo "| Status | ${{ job.status == 'success' && '✅ Rolled back' || '❌ Failed' }} |"
             echo ""
             echo "⚠️ This rolls back **code only**. Migrations from the failed deploy are still applied."
-            echo "If the failed deploy ran a destructive migration, restore the matching gzip from \`/var/lib/temari-backups\`."
+            echo "If the failed deploy ran a destructive migration, restore the matching gzip from \`/var/lib/temari-backups\` with \`./scripts/restore-db.sh <backup.sql.gz>\` **before** (or instead of) this code rollback."
           } >> "$GITHUB_STEP_SUMMARY"

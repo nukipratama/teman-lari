@@ -12,6 +12,11 @@ concurrency:
 env:
   PHP_VERSION: '8.5'
 
+# Least-privilege default for GITHUB_TOKEN across every job; a job that needs
+# more (e.g. secret-scan writes PR comments) widens it in its own permissions block.
+permissions:
+  contents: read
+
 jobs:
   changes:
     runs-on: ubuntu-latest
@@ -37,7 +42,7 @@ jobs:
           if printf '%s\n' "$changed" | grep -qE '^(app|bootstrap|config|database|routes|tests)/|^composer\.(json|lock)$|^phpunit\.xml$|^artisan$|^(phpstan|phpstan-baseline)\.neon$|^rector\.php$|^pint\.json$|^\.github/workflows/ci\.yml$|^docker/|^Dockerfile$|^compose[^/]*\.yaml$|^\.env\.example$'; then
             backend=true
           fi
-          if printf '%s\n' "$changed" | grep -qE '^resources/(js|css|views)/|^package(-lock)?\.json$|^vite\.config\.ts$|^vitest\.config\.ts$|^tsconfig\.json$|^eslint\.config\.|^\.nvmrc$|^\.github/workflows/ci\.yml$|^docker/|^Dockerfile$|^compose[^/]*\.yaml$|^\.env\.example$'; then
+          if printf '%s\n' "$changed" | grep -qE '^resources/(js|css|views)/|^public/|^package(-lock)?\.json$|^vite\.config\.ts$|^vitest\.config\.ts$|^tsconfig\.json$|^eslint\.config\.|^\.nvmrc$|^\.github/workflows/ci\.yml$|^docker/|^Dockerfile$|^compose[^/]*\.yaml$|^\.env\.example$'; then
             frontend=true
           fi
           echo "backend=$backend" >> "$GITHUB_OUTPUT"
@@ -320,17 +325,19 @@ jobs:
       - name: Tag new image with git SHA
         run: docker tag temari/app:latest temari/app:${{ github.sha }}
 
+      # MYSQL_PWD (exported inside the container) instead of `-p"$pass"` so the
+      # password never lands in the container process table / /proc/*/cmdline.
       - name: Backup DB before migrate
         run: |
           set -o pipefail
           mkdir -p "$BACKUP_DIR"
           out="$BACKUP_DIR/pre-deploy-${{ github.sha }}.sql.gz"
           $COMPOSE exec -T mysql sh -c \
-            'mysqldump -h 127.0.0.1 --single-transaction --quick --no-tablespaces -u"$DB_USERNAME" -p"$DB_PASSWORD" "$DB_DATABASE"' \
+            'export MYSQL_PWD="$DB_PASSWORD"; mysqldump -h 127.0.0.1 --single-transaction --quick --no-tablespaces -u"$DB_USERNAME" "$DB_DATABASE"' \
             | gzip > "$out"
           size=$(stat -c%s "$out")
           tables=$($COMPOSE exec -T mysql sh -c \
-            'mysql -h 127.0.0.1 -N -u"$DB_USERNAME" -p"$DB_PASSWORD" -e "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = \"$DB_DATABASE\""' \
+            'export MYSQL_PWD="$DB_PASSWORD"; mysql -h 127.0.0.1 -N -u"$DB_USERNAME" -e "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = \"$DB_DATABASE\""' \
             | tr -d '[:space:]')
           if [ "$size" -lt 1024 ] && [ "${tables:-0}" -gt 0 ]; then
             echo "::error::Backup at $out is only $size bytes (schema has $tables tables)"
@@ -342,11 +349,20 @@ jobs:
       - name: Backup analytics schema
         run: |
           out="$BACKUP_DIR/analytics-pre-deploy-${{ github.sha }}.sql.gz"
-          if $COMPOSE exec -T mysql sh -c 'adb="${DB_ANALYTICS_DATABASE:-temari_analytics}"; mysql -h 127.0.0.1 -u"$DB_USERNAME" -p"$DB_PASSWORD" -e "USE $adb"' 2>/dev/null; then
+          if $COMPOSE exec -T mysql sh -c 'adb="${DB_ANALYTICS_DATABASE:-temari_analytics}"; export MYSQL_PWD="$DB_PASSWORD"; mysql -h 127.0.0.1 -u"$DB_USERNAME" -e "USE $adb"' 2>/dev/null; then
             set -o pipefail
-            $COMPOSE exec -T mysql sh -c 'adb="${DB_ANALYTICS_DATABASE:-temari_analytics}"; mysqldump -h 127.0.0.1 --single-transaction --quick --no-tablespaces -u"$DB_USERNAME" -p"$DB_PASSWORD" --databases "$adb"' \
+            $COMPOSE exec -T mysql sh -c 'adb="${DB_ANALYTICS_DATABASE:-temari_analytics}"; export MYSQL_PWD="$DB_PASSWORD"; mysqldump -h 127.0.0.1 --single-transaction --quick --no-tablespaces -u"$DB_USERNAME" --databases "$adb"' \
               | gzip > "$out"
-            echo "Analytics backup OK: $out ($(stat -c%s "$out") bytes)"
+            # Same size + table-count guard the main backup gets, so a truncated or
+            # empty analytics dump fails the deploy instead of silently proceeding.
+            size=$(stat -c%s "$out")
+            tables=$($COMPOSE exec -T mysql sh -c 'adb="${DB_ANALYTICS_DATABASE:-temari_analytics}"; export MYSQL_PWD="$DB_PASSWORD"; mysql -h 127.0.0.1 -N -u"$DB_USERNAME" -e "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = \"$adb\""' \
+              | tr -d '[:space:]')
+            if [ "$size" -lt 1024 ] && [ "${tables:-0}" -gt 0 ]; then
+              echo "::error::Analytics backup at $out is only $size bytes (schema has $tables tables)"
+              exit 1
+            fi
+            echo "Analytics backup OK: $out ($size bytes, $tables tables)"
             ls -1t "$BACKUP_DIR"/analytics-pre-deploy-*.sql.gz | tail -n +11 | xargs -r rm
           else
             echo "Analytics schema not present yet — skipping (first deploy)."
@@ -361,8 +377,13 @@ jobs:
       - name: Migrate analytics schema
         run: $COMPOSE run --rm app php artisan migrate --database=analytics --path=database/migrations/analytics --force
 
-      - name: Roll app, workers + Pulse daemon onto the new image
-        run: $COMPOSE up -d --no-deps app horizon pulse
+      # Roll the app ALONE first and gate on its healthcheck before touching the
+      # workers, so a boot-broken build never reaches horizon/pulse (they keep
+      # running the old image). The app itself is on the new image from here — with
+      # migrations already applied there is no safe auto-rollback, so a failed gate
+      # fails the deploy red and recovery is the manual rollback workflow.
+      - name: Roll app onto the new image
+        run: $COMPOSE up -d --no-deps app
 
       - name: Optimize caches
         run: $COMPOSE exec -T app php artisan optimize
@@ -379,18 +400,37 @@ jobs:
 
       - name: Smoke test
         run: |
-          curl -fsS -o /dev/null -w "HTTP %{http_code} in %{time_total}s\n" \
+          curl -fsS -o /dev/null -w "login: HTTP %{http_code} in %{time_total}s\n" \
             http://127.0.0.1:7001/login
+          # PWA assets must serve with the right MIME + cache headers. Asserting them
+          # here catches a Caddyfile serving regression (e.g. the file copied to the
+          # wrong path → default config with no header handles) before the deploy goes green.
+          sw=$(curl -fsS -D- -o /dev/null http://127.0.0.1:7001/sw.js)
+          printf '%s' "$sw" | grep -qi '^content-type: *text/javascript' \
+            || { echo "::error::/sw.js missing Content-Type text/javascript"; exit 1; }
+          printf '%s' "$sw" | grep -qi '^cache-control: *no-cache' \
+            || { echo "::error::/sw.js missing Cache-Control no-cache"; exit 1; }
+          man=$(curl -fsS -D- -o /dev/null http://127.0.0.1:7001/manifest.webmanifest)
+          printf '%s' "$man" | grep -qi '^content-type: *application/manifest+json' \
+            || { echo "::error::/manifest.webmanifest missing Content-Type application/manifest+json"; exit 1; }
+          echo "PWA assets OK: /sw.js + /manifest.webmanifest"
+
+      - name: Roll workers + Pulse daemon onto the new image (app verified green)
+        run: $COMPOSE up -d --no-deps horizon pulse
 
       - name: Resume scheduler (deploy green)
         run: $COMPOSE up -d --no-deps scheduler
 
       - name: Restart background processing if the deploy failed
-        # A failure between the quiesce step and here leaves scheduler + horizon
-        # stopped. `start` (not `up -d`) resumes the existing containers on the
-        # OLD image so background processing is never left down indefinitely.
+        # In this ordering horizon/scheduler are quiesced before the roll and only
+        # moved to the new image AFTER the app passes its healthcheck, so any pre-gate
+        # failure leaves them merely stopped on the OLD image — `start` (not `up -d`)
+        # resumes them there. A broken new image therefore never reaches the workers.
+        # pulse is included too: if it's the "Roll workers + Pulse" step itself that
+        # fails, `start` is a harmless no-op on an already-running pulse and a real
+        # recovery attempt if that step left it down.
         if: failure()
-        run: $COMPOSE start scheduler horizon || true
+        run: $COMPOSE start scheduler horizon pulse || true
 
       - name: Prune old temari images
         # Prune by TAG reference, never by image id: after a deploy the old image
