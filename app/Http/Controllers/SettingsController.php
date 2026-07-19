@@ -23,7 +23,7 @@ class SettingsController extends Controller
     }
 
     /**
-     * @return array{connected: bool, username: string|null, connect_url: string|null, notify_post_run: bool, notify_weekly_recap: bool, notify_monthly_recap: bool, notify_daily_briefing: bool}
+     * @return array{connected: bool, username: string|null, connect_url: string|null, notify_post_run: bool, notify_weekly_recap: bool, notify_monthly_recap: bool}
      */
     private function resolveTelegram(User $user, TelegramLinkToken $linkToken): array
     {
@@ -43,7 +43,6 @@ class SettingsController extends Controller
                 'notify_post_run' => true,
                 'notify_weekly_recap' => true,
                 'notify_monthly_recap' => true,
-                'notify_daily_briefing' => false,
             ];
         }
 
@@ -56,7 +55,6 @@ class SettingsController extends Controller
             'notify_post_run' => $connection->notify_post_run,
             'notify_weekly_recap' => $connection->notify_weekly_recap,
             'notify_monthly_recap' => $connection->notify_monthly_recap,
-            'notify_daily_briefing' => $connection->notify_daily_briefing,
         ];
     }
 }

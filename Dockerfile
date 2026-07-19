@@ -24,6 +24,7 @@ RUN install-php-extensions \
         redis \
         intl \
         bcmath \
+        gmp \
         opcache \
         pcntl \
         imagick
@@ -112,6 +113,7 @@ RUN install-php-extensions \
         redis \
         intl \
         bcmath \
+        gmp \
         opcache \
         pcntl \
         imagick

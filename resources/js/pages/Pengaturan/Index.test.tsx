@@ -11,7 +11,6 @@ const connectedTelegram = {
     notify_post_run: true,
     notify_weekly_recap: false,
     notify_monthly_recap: true,
-    notify_daily_briefing: false,
 };
 
 beforeEach(() => {
@@ -44,7 +43,6 @@ describe('Pengaturan', () => {
             notify_post_run: true,
             notify_weekly_recap: true,
             notify_monthly_recap: true,
-            notify_daily_briefing: false,
         };
         render(<Pengaturan telegram={telegram} />);
         expect(screen.getByText('Telegram').closest('a')).toHaveAttribute('href', 'https://t.me/temari_bot?start=tok');
@@ -56,7 +54,6 @@ describe('Pengaturan', () => {
         expect(screen.getByRole('switch', { name: 'Cerita abis lari' })).toHaveAttribute('aria-checked', 'true');
         expect(screen.getByRole('switch', { name: 'Rekap mingguan' })).toHaveAttribute('aria-checked', 'false');
         expect(screen.getByRole('switch', { name: 'Rekap bulanan' })).toHaveAttribute('aria-checked', 'true');
-        expect(screen.getByRole('switch', { name: 'Ringkasan harian' })).toHaveAttribute('aria-checked', 'false');
     });
 
     it('patches preferences when a toggle is flipped, carrying all current values', () => {
@@ -67,7 +64,7 @@ describe('Pengaturan', () => {
 
         expect(router.patch).toHaveBeenCalledWith(
             '/profil/telegram',
-            { notify_post_run: true, notify_weekly_recap: true, notify_monthly_recap: true, notify_daily_briefing: false },
+            { notify_post_run: true, notify_weekly_recap: true, notify_monthly_recap: true },
             { preserveScroll: true },
         );
     });
