@@ -35,6 +35,10 @@ RUN install-php-extensions \
 # without a font the SVG <text> comes out blank.
 RUN apk add --no-cache librsvg font-dejavu fontconfig
 
+# Harden ImageMagick over the stock "open" alpine policy — deny network/scripting
+# coders the run-card rasteriser never uses. SVG/PNG stay enabled (see the file).
+COPY docker/imagemagick-policy.xml /etc/ImageMagick-7/policy.xml
+
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
 # Node + npm for `npm run dev` inside the container (composer dev script),
@@ -123,6 +127,10 @@ RUN install-php-extensions \
 # font-dejavu + fontconfig let librsvg actually render the card's text (name/km);
 # without a font the SVG <text> comes out blank.
 RUN apk add --no-cache librsvg font-dejavu fontconfig
+
+# Harden ImageMagick over the stock "open" alpine policy — deny network/scripting
+# coders the run-card rasteriser never uses. SVG/PNG stay enabled (see the file).
+COPY docker/imagemagick-policy.xml /etc/ImageMagick-7/policy.xml
 
 COPY --from=vendor /var/www/html /var/www/html
 COPY --from=assets /var/www/html/public/build /var/www/html/public/build

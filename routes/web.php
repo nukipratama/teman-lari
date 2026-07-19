@@ -60,7 +60,11 @@ Route::post('/client-errors', ClientErrorController::class)
 
 Route::middleware('guest')->group(function (): void {
     Route::get('/login', [LoginController::class, 'show'])->name('login');
-    Route::post('/auth/demo', [DemoAuthController::class, 'login'])->name('auth.demo');
+    // Throttled like the other public POSTs to blunt session-creation spam; it
+    // only ever logs in as the shared sandboxed demo user, so the cap is generous.
+    Route::post('/auth/demo', [DemoAuthController::class, 'login'])
+        ->middleware('throttle:10,1')
+        ->name('auth.demo');
 });
 
 // Strava OAuth is reachable by guests (first connect) AND authenticated users
