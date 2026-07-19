@@ -389,13 +389,11 @@ jobs:
       - name: Migrate analytics schema
         run: $COMPOSE run --rm app php artisan migrate --database=analytics --path=database/migrations/analytics --force
 
-      # Roll the app ALONE first and gate on its healthcheck before touching the
-      # workers, so a boot-broken build never reaches horizon/pulse (they keep
-      # running the old image). The app itself is on the new image from here — with
-      # migrations already applied there is no safe auto-rollback, so a failed gate
-      # fails the deploy red and recovery is the manual rollback workflow.
-      - name: Roll app onto the new image
-        run: $COMPOSE up -d --no-deps app
+      # Roll app + workers together: /up (VerifyDependencies) 500s unless Horizon is
+      # running, so the healthcheck can't gate the app alone. A boot-broken image is
+      # caught by the healthcheck and reverted by the failure-path auto-rollback below.
+      - name: Roll app, workers + Pulse daemon onto the new image
+        run: $COMPOSE up -d --no-deps app horizon pulse
 
       - name: Optimize caches
         run: $COMPOSE exec -T app php artisan optimize
@@ -426,9 +424,6 @@ jobs:
           printf '%s' "$man" | grep -qi '^content-type: *application/manifest+json' \
             || { echo "::error::/manifest.webmanifest missing Content-Type application/manifest+json"; exit 1; }
           echo "PWA assets OK: /sw.js + /manifest.webmanifest"
-
-      - name: Roll workers + Pulse daemon onto the new image (app verified green)
-        run: $COMPOSE up -d --no-deps horizon pulse
 
       - name: Resume scheduler (deploy green)
         run: $COMPOSE up -d --no-deps scheduler
