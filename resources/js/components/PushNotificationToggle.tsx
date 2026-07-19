@@ -102,7 +102,8 @@ export default function PushNotificationToggle() {
             setStatus('Notifikasi tes lagi dikirim…');
             router.post('/profil/notifikasi/test', {}, {
                 preserveScroll: true,
-                onFinish: () => setStatus('Kalau nggak muncul, cek Setelan HP > Notifikasi > Temari.'),
+                onSuccess: () => setStatus('Kalau nggak muncul, cek Setelan HP > Notifikasi > Temari.'),
+                onError: () => setStatus('Gagal kirim tes, coba lagi ya.'),
             });
         });
 
