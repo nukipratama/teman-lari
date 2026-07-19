@@ -24,7 +24,6 @@ interface TelegramPayload {
     notify_post_run: boolean;
     notify_weekly_recap: boolean;
     notify_monthly_recap: boolean;
-    notify_daily_briefing: boolean;
 }
 
 interface PengaturanProps {
@@ -38,7 +37,6 @@ const TELEGRAM_DEFAULT: TelegramPayload = {
     notify_post_run: true,
     notify_weekly_recap: true,
     notify_monthly_recap: true,
-    notify_daily_briefing: false,
 };
 
 export default function Pengaturan({ telegram = TELEGRAM_DEFAULT }: Readonly<PengaturanProps>) {
@@ -126,21 +124,19 @@ function TelegramPanel({ telegram }: Readonly<{ telegram: TelegramPayload }>) {
     const [postRun, setPostRun] = useState(telegram.notify_post_run);
     const [weeklyRecap, setWeeklyRecap] = useState(telegram.notify_weekly_recap);
     const [monthlyRecap, setMonthlyRecap] = useState(telegram.notify_monthly_recap);
-    const [dailyBriefing, setDailyBriefing] = useState(telegram.notify_daily_briefing);
     const { isDemo, open, setOpen, guard } = useDemoGuard();
 
-    const latestRef = useRef({ postRun, weeklyRecap, monthlyRecap, dailyBriefing });
-    latestRef.current = { postRun, weeklyRecap, monthlyRecap, dailyBriefing };
+    const latestRef = useRef({ postRun, weeklyRecap, monthlyRecap });
+    latestRef.current = { postRun, weeklyRecap, monthlyRecap };
 
     const savePrefs = useCallback(() => {
-        const { postRun: pr, weeklyRecap: wr, monthlyRecap: mr, dailyBriefing: db } = latestRef.current;
+        const { postRun: pr, weeklyRecap: wr, monthlyRecap: mr } = latestRef.current;
         router.patch(
             '/profil/telegram',
             {
                 notify_post_run: pr,
                 notify_weekly_recap: wr,
                 notify_monthly_recap: mr,
-                notify_daily_briefing: db,
             },
             { preserveScroll: true },
         );
@@ -221,17 +217,6 @@ function TelegramPanel({ telegram }: Readonly<{ telegram: TelegramPayload }>) {
                         guard(() => {
                             setMonthlyRecap(value);
                             latestRef.current.monthlyRecap = value;
-                            savePrefs();
-                        })
-                    }
-                />
-                <NotifyToggle
-                    label="Ringkasan harian"
-                    checked={dailyBriefing}
-                    onChange={(value) =>
-                        guard(() => {
-                            setDailyBriefing(value);
-                            latestRef.current.dailyBriefing = value;
                             savePrefs();
                         })
                     }

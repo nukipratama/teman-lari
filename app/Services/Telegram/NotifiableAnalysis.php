@@ -33,7 +33,6 @@ class NotifiableAnalysis
         AnalysisType::PostRunSpeech->value => ['pref' => 'notify_post_run', 'emoji' => '🏃', 'title' => 'Cerita lari', 'cta' => 'Lihat detail lari'],
         AnalysisType::WeeklyRecap->value => ['pref' => 'notify_weekly_recap', 'emoji' => '📊', 'title' => 'Rekap mingguan', 'cta' => 'Lihat riwayat'],
         AnalysisType::MonthlyRecap->value => ['pref' => 'notify_monthly_recap', 'emoji' => '🗓️', 'title' => 'Rekap bulanan', 'cta' => 'Lihat kalender'],
-        AnalysisType::BriefingHeadline->value => ['pref' => 'notify_daily_briefing', 'emoji' => '☀️', 'title' => 'Ringkasan hari ini', 'cta' => 'Lihat ringkasan hari ini'],
     ];
 
     /**
@@ -75,8 +74,8 @@ class NotifiableAnalysis
 
     /**
      * The date an automatic push for this type is measured against, or null when
-     * the type has nothing to gate on (BriefingHeadline) or its reference can't be
-     * resolved (missing activity/snapshot, blank discriminator).
+     * its reference can't be resolved (missing activity/snapshot, blank
+     * discriminator).
      */
     private function autoNotifyReferenceDate(Analysis $analysis): ?Carbon
     {
@@ -195,7 +194,6 @@ class NotifiableAnalysis
             AnalysisType::PostRunSpeech => route('aktivitas.show', $analysis->subject_id),
             AnalysisType::WeeklyRecap => route('aktivitas.index'),
             AnalysisType::MonthlyRecap => route('kalender', ['month' => $analysis->discriminator]),
-            AnalysisType::BriefingHeadline => route('dashboard'),
             default => null,
         };
     }
