@@ -444,7 +444,8 @@ describe('Riwayat/Jejak', () => {
 
         expect(router.get).toHaveBeenCalledWith(
             '/aktivitas',
-            { range: '8w', mood: 'enteng' },
+            // '8w' is the default range, so it is omitted from the URL.
+            { mood: 'enteng' },
             expect.objectContaining({ preserveScroll: true, preserveState: true }),
         );
     });
@@ -481,7 +482,7 @@ describe('Riwayat/Jejak', () => {
 
         expect(router.get).toHaveBeenCalledWith(
             '/aktivitas',
-            { range: '8w' },
+            {},
             expect.objectContaining({ preserveScroll: true, preserveState: true }),
         );
     });
@@ -540,6 +541,82 @@ describe('Riwayat/Jejak', () => {
         expect(screen.getByText('Gak ada lari yang cocok.')).toBeInTheDocument();
         fireEvent.click(screen.getByRole('button', { name: /Reset filter/ }));
         expect(router.get).toHaveBeenCalledWith('/aktivitas', {}, expect.anything());
+    });
+
+    it('carries every active filter forward when one of them changes', () => {
+        vi.mocked(router.get).mockReset();
+        render(
+            <RunsIndex
+                runs={[run(101, 'Pagi santai', '2026-05-19T06:00:00')]}
+                rangeFilter="1y"
+                moodFilter={['enteng']}
+                distanceFilter="21up"
+                searchFilter="tempo"
+                rangeStart="2025-05-19"
+                weeklySnapshots={[]}
+            />,
+        );
+
+        fireEvent.click(screen.getByLabelText('Buka filter'));
+        fireEvent.click(screen.getByRole('button', { name: /Di bawah 5K/ }));
+
+        expect(router.get).toHaveBeenCalledWith(
+            '/aktivitas',
+            { range: '1y', mood: 'enteng', dist: '0-5', q: 'tempo' },
+            expect.anything(),
+        );
+    });
+
+    it('clears the distance band when the active one is tapped again', () => {
+        vi.mocked(router.get).mockReset();
+        render(
+            <RunsIndex
+                runs={[run(101, 'Pagi santai', '2026-05-19T06:00:00')]}
+                rangeFilter="8w"
+                distanceFilter="21up"
+                rangeStart="2026-04-13"
+                weeklySnapshots={[]}
+            />,
+        );
+
+        fireEvent.click(screen.getByLabelText('Buka filter'));
+        fireEvent.click(screen.getByRole('button', { name: /Half ke atas/ }));
+
+        expect(router.get).toHaveBeenCalledWith('/aktivitas', {}, expect.anything());
+    });
+
+    it('submits a search term into the url', () => {
+        vi.mocked(router.get).mockReset();
+        render(
+            <RunsIndex
+                runs={[run(101, 'Pagi santai', '2026-05-19T06:00:00')]}
+                rangeFilter="8w"
+                rangeStart="2026-04-13"
+                weeklySnapshots={[]}
+            />,
+        );
+
+        fireEvent.click(screen.getByLabelText('Buka filter'));
+        const input = screen.getByLabelText('Cari nama lari');
+        fireEvent.change(input, { target: { value: '  tempo  ' } });
+        fireEvent.keyDown(input, { key: 'Enter' });
+
+        // Trimmed, so a stray space can't produce a different shareable URL.
+        expect(router.get).toHaveBeenCalledWith('/aktivitas', { q: 'tempo' }, expect.anything());
+    });
+
+    it('treats a distance or search filter as active for the result count', () => {
+        render(
+            <RunsIndex
+                runs={[run(101, 'Pagi santai', '2026-05-19T06:00:00')]}
+                rangeFilter="8w"
+                distanceFilter="21up"
+                rangeStart="2026-04-13"
+                weeklySnapshots={[]}
+            />,
+        );
+
+        expect(screen.getByText(/1 hasil/)).toBeInTheDocument();
     });
 
     it('keeps the onboarding empty state when there is no filter and no runs', () => {

@@ -71,6 +71,22 @@ class RunController extends Controller
         Temari::MOOD_ADEM,
     ];
 
+    /**
+     * Distance bands in metres as `[min inclusive, max exclusive|null]`. Cut at
+     * the distances runners actually think in (5K, 10K, half marathon) rather
+     * than at even numbers. `21up` is open-ended so an ultra still lands
+     * somewhere.
+     */
+    private const array DISTANCE_BANDS = [
+        '0-5' => [0, 5000],
+        '5-10' => [5000, 10000],
+        '10-21' => [10000, 21097],
+        '21up' => [21097, null],
+    ];
+
+    /** Longest accepted `?q=` term; anything beyond is truncated, not rejected. */
+    private const int MAX_SEARCH_LENGTH = 60;
+
     public function index(Request $request, PostRunNoteReader $noteReader): Response
     {
         /** @var User $user */
@@ -90,10 +106,33 @@ class RunController extends Controller
         $rangeStart = $this->rangeStartFor($effectiveRange);
 
         $moodFilter = $this->resolveMoods($request->query('mood'));
+        $distanceFilter = $this->resolveDistanceBand($request->query('dist'));
+        $searchFilter = $this->resolveSearch($request->query('q'));
 
         $runsQuery = Activity::query()
             ->where('user_id', $user->id)
-            ->whereHas('detail', fn ($q) => $rangeStart === null ? $q : $q->where('start_date_local', '>=', $rangeStart))
+            ->whereHas('detail', function ($q) use ($rangeStart, $distanceFilter, $searchFilter) {
+                if ($rangeStart !== null) {
+                    $q->where('start_date_local', '>=', $rangeStart);
+                }
+
+                if ($distanceFilter !== null) {
+                    [$min, $max] = self::DISTANCE_BANDS[$distanceFilter];
+                    $q->where('distance', '>=', $min);
+                    if ($max !== null) {
+                        $q->where('distance', '<', $max);
+                    }
+                }
+
+                if ($searchFilter !== null) {
+                    // Leading wildcard, so this can't use an index. Fine at a few
+                    // hundred runs per user; revisit with a FULLTEXT index if a
+                    // user's history ever makes it measurable.
+                    $q->where('name', 'like', '%'.addcslashes($searchFilter, '%_\\').'%');
+                }
+
+                return $q;
+            })
             ->with(['detail' => fn ($q) => $q->select(['id', 'activity_id', 'name', 'start_date_local', 'distance', 'moving_time', 'average_heartrate', 'trimp_edwards', 'workout_type'])]);
 
         // Mood lives on the post-run StoryLine, which is also what the list
@@ -147,6 +186,8 @@ class RunController extends Controller
             'moods' => $noteReader->moodsFor($runIds),
             'rangeFilter' => $effectiveRange,
             'moodFilter' => $moodFilter,
+            'distanceFilter' => $distanceFilter,
+            'searchFilter' => $searchFilter,
             'rangeStart' => $rangeStart?->toDateString(),
             'rangeAutoWidened' => $rangeAutoWidened,
             'runsTruncated' => $runsTruncated,
@@ -323,6 +364,30 @@ class RunController extends Controller
             array_unique(explode(',', $raw)),
             self::MOODS,
         ));
+    }
+
+    /**
+     * The selected distance band key, or null for "any distance". An unknown
+     * band widens rather than errors, matching {@see self::resolveMoods()}.
+     */
+    private function resolveDistanceBand(mixed $raw): ?string
+    {
+        return is_string($raw) && array_key_exists($raw, self::DISTANCE_BANDS) ? $raw : null;
+    }
+
+    /**
+     * The trimmed `?q=` term, or null when absent/blank. Capped so a pathological
+     * URL can't drive an enormous LIKE.
+     */
+    private function resolveSearch(mixed $raw): ?string
+    {
+        if (! is_string($raw)) {
+            return null;
+        }
+
+        $term = trim($raw);
+
+        return $term === '' ? null : mb_substr($term, 0, self::MAX_SEARCH_LENGTH);
     }
 
     /**

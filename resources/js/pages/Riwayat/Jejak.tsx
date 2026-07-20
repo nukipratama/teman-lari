@@ -54,6 +54,10 @@ interface RunsIndexProps {
     rangeFilter: RangeFilterValue;
     /** Moods the server filtered on. Empty = no mood filter. */
     moodFilter?: ReadonlyArray<Mood>;
+    /** Distance band the server filtered on, or null for any distance. */
+    distanceFilter?: DistanceBand | null;
+    /** Free-text term the server matched against the run name, or null. */
+    searchFilter?: string | null;
     rangeStart: string | null;
     /** Server widened the requested range to reach an older run. */
     rangeAutoWidened?: boolean;
@@ -78,20 +82,50 @@ interface WeekBucket {
 }
 
 export type RangeFilterValue = '8w' | '12w' | '6m' | '1y' | 'all';
+export type DistanceBand = '0-5' | '5-10' | '10-21' | '21up';
 
-const DEFAULT_RANGE: RangeFilterValue = '12w';
-const RANGE_RELOAD_PROPS = ['runs', 'rangeFilter', 'moodFilter', 'rangeStart', 'rangeAutoWidened', 'runsTruncated', 'maxRuns', 'weeklySnapshots', 'notes', 'moods'];
+/** Cut at the distances runners think in, not at even numbers. */
+const DISTANCE_OPTIONS: ReadonlyArray<{ value: DistanceBand; label: string; hint: string }> = [
+    { value: '0-5', label: 'Di bawah 5K', hint: '<5' },
+    { value: '5-10', label: '5K sampai 10K', hint: '5-10' },
+    { value: '10-21', label: '10K sampai half', hint: '10-21' },
+    { value: '21up', label: 'Half ke atas', hint: '21+' },
+];
 
 /**
- * `/aktivitas` URL carrying both filters. Defaults are omitted so the common
+ * Must match RunController::resolveRange()'s fallback and the first entry of
+ * RANGE_FILTER_OPTIONS (which RiwayatFilter treats as the implicit default).
+ * When it drifts, every URL carries a redundant `range=` and the "clean
+ * /aktivitas" case never happens.
+ */
+const DEFAULT_RANGE: RangeFilterValue = '8w';
+const RANGE_RELOAD_PROPS = ['runs', 'rangeFilter', 'moodFilter', 'distanceFilter', 'searchFilter', 'rangeStart', 'rangeAutoWidened', 'runsTruncated', 'maxRuns', 'weeklySnapshots', 'notes', 'moods'];
+
+/** Every filter the page owns, in one shape so callers can change one field. */
+interface FilterState {
+    range: RangeFilterValue;
+    moods: ReadonlySet<Mood>;
+    distance: DistanceBand | null;
+    search: string;
+}
+
+/**
+ * The query object for a filter state. Defaults are omitted so the common
  * unfiltered view stays a clean `/aktivitas`, and moods are serialised in
  * MOOD_ORDER so the same selection always produces the same shareable link.
  */
-function hrefWithFilters(range: RangeFilterValue, moods: ReadonlySet<Mood>): string {
-    const params = new URLSearchParams();
-    if (range !== DEFAULT_RANGE) params.set('range', range);
-    if (moods.size > 0) params.set('mood', MOOD_ORDER.filter((m) => moods.has(m)).join(','));
-    const query = params.toString();
+function filterQuery({ range, moods, distance, search }: FilterState): Record<string, string> {
+    const query: Record<string, string> = {};
+    if (range !== DEFAULT_RANGE) query.range = range;
+    if (moods.size > 0) query.mood = MOOD_ORDER.filter((m) => moods.has(m)).join(',');
+    if (distance !== null) query.dist = distance;
+    if (search !== '') query.q = search;
+
+    return query;
+}
+
+function hrefWithFilters(state: FilterState): string {
+    const query = new URLSearchParams(filterQuery(state)).toString();
 
     return query === '' ? '/aktivitas' : `/aktivitas?${query}`;
 }
@@ -124,6 +158,8 @@ export default function RunsIndex({
     moods = {},
     rangeFilter,
     moodFilter = [],
+    distanceFilter = null,
+    searchFilter = null,
     rangeAutoWidened = false,
     runsTruncated = false,
     maxRuns = 0,
@@ -138,27 +174,30 @@ export default function RunsIndex({
     }, [weeklySnapshots]);
 
     const selectedMoods = useMemo(() => new Set(moodFilter), [moodFilter]);
+    const current = useMemo<FilterState>(
+        () => ({
+            range: rangeFilter,
+            moods: selectedMoods,
+            distance: distanceFilter,
+            search: searchFilter ?? '',
+        }),
+        [rangeFilter, selectedMoods, distanceFilter, searchFilter],
+    );
 
-    // The filter lives in the URL and is applied by the server, so a toggle is a
+    // The filters live in the URL and are applied by the server, so a change is a
     // partial reload rather than local state. That makes a filtered view
     // shareable and restorable, and — unlike the old client-side pass — it
     // filters the runs that were *fetched*, not just the ones already on screen
     // within the current range window.
     const visitWithFilters = useCallback(
-        (next: { range?: RangeFilterValue; moods?: ReadonlySet<Mood> }) => {
-            const range = next.range ?? rangeFilter;
-            const moodSet = next.moods ?? selectedMoods;
-            const query: Record<string, string> = {};
-            if (range !== DEFAULT_RANGE) query.range = range;
-            if (moodSet.size > 0) query.mood = MOOD_ORDER.filter((m) => moodSet.has(m)).join(',');
-
-            router.get('/aktivitas', query, {
+        (patch: Partial<FilterState>) => {
+            router.get('/aktivitas', filterQuery({ ...current, ...patch }), {
                 preserveScroll: true,
                 preserveState: true,
                 only: RANGE_RELOAD_PROPS,
             });
         },
-        [rangeFilter, selectedMoods],
+        [current],
     );
 
     const toggleMood = useCallback(
@@ -171,8 +210,19 @@ export default function RunsIndex({
         [selectedMoods, visitWithFilters],
     );
 
+    const selectDistance = useCallback(
+        // Tapping the active band clears it, so the popover needs no extra "any" row.
+        (band: DistanceBand) => visitWithFilters({ distance: band === distanceFilter ? null : band }),
+        [distanceFilter, visitWithFilters],
+    );
+
+    const submitSearch = useCallback(
+        (term: string) => visitWithFilters({ search: term.trim() }),
+        [visitWithFilters],
+    );
+
     const resetFilters = useCallback(() => {
-        visitWithFilters({ range: DEFAULT_RANGE, moods: new Set() });
+        visitWithFilters({ range: DEFAULT_RANGE, moods: new Set(), distance: null, search: '' });
     }, [visitWithFilters]);
 
     // Stable prop objects so toggling a mood doesn't hand RiwayatFilter a fresh
@@ -181,10 +231,10 @@ export default function RunsIndex({
         () => ({
             value: rangeFilter,
             options: RANGE_FILTER_OPTIONS,
-            hrefFor: (r: RangeFilterValue) => hrefWithFilters(r, selectedMoods),
+            hrefFor: (r: RangeFilterValue) => hrefWithFilters({ ...current, range: r }),
             only: RANGE_RELOAD_PROPS,
         }),
-        [rangeFilter, selectedMoods],
+        [rangeFilter, current],
     );
     const moodSection = useMemo(
         () => ({
@@ -194,9 +244,22 @@ export default function RunsIndex({
         }),
         [selectedMoods, toggleMood],
     );
+    const distanceSection = useMemo(
+        () => ({
+            value: distanceFilter,
+            options: DISTANCE_OPTIONS,
+            onSelect: selectDistance,
+        }),
+        [distanceFilter, selectDistance],
+    );
+    const searchSection = useMemo(
+        () => ({ value: searchFilter ?? '', onSubmit: submitSearch }),
+        [searchFilter, submitSearch],
+    );
 
     const hasRuns = runs.length > 0;
-    const moodFiltered = selectedMoods.size > 0;
+    const anyFilterActive =
+        selectedMoods.size > 0 || distanceFilter !== null || (searchFilter ?? '') !== '';
 
     return (
         <>
@@ -205,7 +268,7 @@ export default function RunsIndex({
                 <header className="flex flex-col gap-5">
                     <PageHero
                         eyebrow={
-                            moodFiltered
+                            anyFilterActive
                                 ? `Riwayat · ${runs.length} hasil`
                                 : `Riwayat · ${runs.length} aktivitas`
                         }
@@ -218,6 +281,8 @@ export default function RunsIndex({
                         <RiwayatFilter
                             range={rangeSection}
                             mood={moodSection}
+                            distance={distanceSection}
+                            search={searchSection}
                             onReset={resetFilters}
                         />
                     </div>
@@ -236,7 +301,7 @@ export default function RunsIndex({
                                 snapshot={snapshotsByWeek.get(bucket.weekEnding) ?? null}
                                 notes={notes}
                                 moods={moods}
-                                filtered={moodFiltered}
+                                filtered={anyFilterActive}
                             />
                         ))}
                     </div>
@@ -244,8 +309,8 @@ export default function RunsIndex({
                 {/* A filtered view that matched nothing is a different story from
                     a genuinely empty history, so it gets its own state with a way
                     back rather than the "connect Strava" onboarding copy. */}
-                {!hasRuns && moodFiltered && <NoFilterMatchState onReset={resetFilters} />}
-                {!hasRuns && !moodFiltered && <EmptyState />}
+                {!hasRuns && anyFilterActive && <NoFilterMatchState onReset={resetFilters} />}
+                {!hasRuns && !anyFilterActive && <EmptyState />}
             </PageContainer>
         </>
     );

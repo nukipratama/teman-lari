@@ -36,9 +36,31 @@ interface MoodSection {
     onToggle: (mood: Mood) => void;
 }
 
-interface RiwayatFilterProps<V extends string> {
+export interface DistanceOption<B extends string> {
+    value: B;
+    label: string;
+    hint?: string;
+}
+
+interface DistanceSection<B extends string> {
+    /** Active band, or null for any distance. */
+    value: B | null;
+    options: ReadonlyArray<DistanceOption<B>>;
+    /** Selecting the active band again clears it. */
+    onSelect: (band: B) => void;
+}
+
+interface SearchSection {
+    /** The term the server is currently filtering on. */
+    value: string;
+    onSubmit: (term: string) => void;
+}
+
+interface RiwayatFilterProps<V extends string, B extends string = string> {
     range?: RangeSection<V>;
     mood?: MoodSection;
+    distance?: DistanceSection<B>;
+    search?: SearchSection;
     /** When the user hits Reset — clears every filter set this component owns. */
     onReset?: () => void;
     className?: string;
@@ -52,12 +74,14 @@ interface RiwayatFilterProps<V extends string> {
  * Active-filter count is surfaced as a badge on the button so the user can
  * see at a glance whether they're looking at a filtered slice.
  */
-export default function RiwayatFilter<V extends string>({
+export default function RiwayatFilter<V extends string, B extends string = string>({
     range,
     mood,
+    distance,
+    search,
     onReset,
     className,
-}: Readonly<RiwayatFilterProps<V>>) {
+}: Readonly<RiwayatFilterProps<V, B>>) {
     const [open, setOpen] = useState(false);
     const containerRef = useRef<HTMLDivElement>(null);
     const close = useCallback(() => setOpen(false), []);
@@ -69,8 +93,10 @@ export default function RiwayatFilter<V extends string>({
     // the first (most-recent) option — that's the implicit default.
     const rangeActive =
         range && range.options.length > 0 && range.value !== range.options[0].value ? 1 : 0;
-    const totalActive = moodActive + rangeActive;
-    const summary = buildSummary(range, moodActive);
+    const distanceActive = distance?.value != null ? 1 : 0;
+    const searchActive = (search?.value ?? '') !== '' ? 1 : 0;
+    const totalActive = moodActive + rangeActive + distanceActive + searchActive;
+    const summary = buildSummary(range, moodActive, distance, searchActive > 0);
 
     return (
         <div ref={containerRef} className={cn('relative', className)}>
@@ -122,7 +148,9 @@ export default function RiwayatFilter<V extends string>({
                             )}
                         </div>
                     )}
+                    {search && <SearchSectionView section={search} />}
                     {range && <RangeSectionView section={range} />}
+                    {distance && <DistanceSectionView section={distance} />}
                     {mood && <MoodSectionView section={mood} />}
                 </div>
             )}
@@ -194,14 +222,106 @@ function MoodSectionView({ section }: Readonly<{ section: MoodSection }>) {
     );
 }
 
-function buildSummary<V extends string>(range: RangeSection<V> | undefined, moodActive: number): string {
+/**
+ * Free-text search over the run name. Submits on Enter or blur rather than per
+ * keystroke: each submit is a server round trip, so debouncing every character
+ * would fire a burst of partial reloads for a term the user is still typing.
+ */
+function SearchSectionView({ section }: Readonly<{ section: SearchSection }>) {
+    const [term, setTerm] = useState(section.value);
+
+    // Re-sync when the server reports a different term (e.g. Reset was hit).
+    const [lastValue, setLastValue] = useState(section.value);
+    if (section.value !== lastValue) {
+        setLastValue(section.value);
+        setTerm(section.value);
+    }
+
+    return (
+        <div className="border-b border-line/60 px-3 py-3 last:border-b-0">
+            <div className="mb-2 font-mono text-[11px] font-bold uppercase tracking-[0.14em] text-ink-2">
+                Cari nama lari
+            </div>
+            <div className="relative">
+                <Icon
+                    icon="mdi:magnify"
+                    width={15}
+                    height={15}
+                    aria-hidden
+                    className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-ink-3"
+                />
+                <input
+                    type="search"
+                    value={term}
+                    onChange={(e) => setTerm(e.target.value)}
+                    onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                            e.preventDefault();
+                            section.onSubmit(term);
+                        }
+                    }}
+                    onBlur={() => term !== section.value && section.onSubmit(term)}
+                    placeholder="Misal: Pagi santai"
+                    aria-label="Cari nama lari"
+                    className="focus-ring min-h-11 w-full rounded-lg border border-line/60 bg-surface-warm py-2 pl-8 pr-2 text-xs text-ink placeholder:text-ink-3 lg:text-sm"
+                />
+            </div>
+        </div>
+    );
+}
+
+function DistanceSectionView<B extends string>({ section }: Readonly<{ section: DistanceSection<B> }>) {
+    return (
+        <div className="border-b border-line/60 px-3 py-3 last:border-b-0">
+            <div className="mb-2 font-mono text-[11px] font-bold uppercase tracking-[0.14em] text-ink-2">
+                Jarak
+            </div>
+            <div className="flex flex-col gap-1">
+                {section.options.map((opt) => {
+                    const active = opt.value === section.value;
+                    return (
+                        <button
+                            key={opt.value}
+                            type="button"
+                            aria-pressed={active}
+                            onClick={() => section.onSelect(opt.value)}
+                            className={cn(
+                                'focus-ring flex min-h-11 w-full items-center justify-between rounded-lg px-2 py-2 text-left text-xs transition lg:text-sm',
+                                active ? 'bg-sky/10 font-semibold text-sky' : 'text-ink hover:bg-surface-warm',
+                            )}
+                        >
+                            <span>{opt.label}</span>
+                            {opt.hint && (
+                                <span className="font-mono text-[11px] text-ink-3">{opt.hint}</span>
+                            )}
+                        </button>
+                    );
+                })}
+            </div>
+        </div>
+    );
+}
+
+function buildSummary<V extends string, B extends string>(
+    range: RangeSection<V> | undefined,
+    moodActive: number,
+    distance: DistanceSection<B> | undefined,
+    searchActive: boolean,
+): string {
     const parts: string[] = [];
     if (range) {
         const current = range.options.find((o) => o.value === range.value);
         if (current) parts.push(current.label);
     }
+    if (distance?.value != null) {
+        const band = distance.options.find((o) => o.value === distance.value);
+        if (band) parts.push(band.hint ?? band.label);
+    }
     if (moodActive > 0) {
         parts.push(`${moodActive} mood`);
+    }
+    if (searchActive) {
+        parts.push('cari');
     }
     return parts.length > 0 ? parts.join(' · ') : 'Filter';
 }

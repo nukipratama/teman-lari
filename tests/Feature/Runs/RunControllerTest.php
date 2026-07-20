@@ -198,6 +198,104 @@ it('combines the mood filter with the range window', function (): void {
         ->assertInertia(fn (Assert $page) => $page->has('runs', 2));
 });
 
+/**
+ * Three runs spanning the distance bands, all inside the default window.
+ */
+function distanceFixtures(User $user): void
+{
+    foreach ([['Sprint', 3_000], ['Sedang', 7_500], ['Long run', 25_000]] as [$name, $metres]) {
+        $activity = Activity::factory()->for($user)->analyzed()->create();
+        ActivityDetail::factory()->for($activity)->create([
+            'name' => $name,
+            'distance' => $metres,
+            'start_date_local' => Carbon::now()->subDays(5),
+        ]);
+    }
+}
+
+it('filters runs by distance band', function (string $band, array $expected): void {
+    $user = User::factory()->create();
+    distanceFixtures($user);
+
+    $this->actingAs($user)->get("/aktivitas?dist={$band}")
+        ->assertInertia(fn (Assert $page) => $page
+            ->has('runs', count($expected))
+            ->where('distanceFilter', $band));
+})->with([
+    'under 5K' => ['0-5', ['Sprint']],
+    '5 to 10K' => ['5-10', ['Sedang']],
+    // The 25K run sits above the half-marathon cut, so the 10-21 band excludes it.
+    '10K to half' => ['10-21', []],
+    'half and up' => ['21up', ['Long run']],
+]);
+
+it('treats an unknown distance band as no filter', function (): void {
+    $user = User::factory()->create();
+    distanceFixtures($user);
+
+    $this->actingAs($user)->get('/aktivitas?dist=marathon')
+        ->assertSuccessful()
+        ->assertInertia(fn (Assert $page) => $page
+            ->has('runs', 3)
+            ->where('distanceFilter', null));
+});
+
+it('searches runs by name, case-insensitively', function (): void {
+    $user = User::factory()->create();
+    distanceFixtures($user);
+
+    $this->actingAs($user)->get('/aktivitas?q=long')
+        ->assertInertia(fn (Assert $page) => $page
+            ->has('runs', 1)
+            ->where('runs.0.detail.name', 'Long run')
+            ->where('searchFilter', 'long'));
+});
+
+it('treats a blank search as no filter', function (): void {
+    $user = User::factory()->create();
+    distanceFixtures($user);
+
+    $this->actingAs($user)->get('/aktivitas?q=%20%20')
+        ->assertInertia(fn (Assert $page) => $page
+            ->has('runs', 3)
+            ->where('searchFilter', null));
+});
+
+// A LIKE wildcard typed into the search box should match literally, not act as
+// a wildcard that returns everything.
+it('escapes wildcards in the search term', function (): void {
+    $user = User::factory()->create();
+    distanceFixtures($user);
+
+    $this->actingAs($user)->get('/aktivitas?q=%25')
+        ->assertInertia(fn (Assert $page) => $page->has('runs', 0));
+});
+
+it('combines distance, search, mood and range', function (): void {
+    $user = User::factory()->create();
+    $match = Activity::factory()->for($user)->analyzed()->create();
+    ActivityDetail::factory()->for($match)->create([
+        'name' => 'Long tempo',
+        'distance' => 25_000,
+        'start_date_local' => Carbon::now()->subDays(5),
+    ]);
+    StoryLine::factory()->for($match)->create(['mood' => 'nyala']);
+
+    // Same distance + name, wrong mood.
+    $wrongMood = Activity::factory()->for($user)->analyzed()->create();
+    ActivityDetail::factory()->for($wrongMood)->create([
+        'name' => 'Long easy',
+        'distance' => 26_000,
+        'start_date_local' => Carbon::now()->subDays(6),
+    ]);
+    StoryLine::factory()->for($wrongMood)->create(['mood' => 'adem']);
+
+    $this->actingAs($user)->get('/aktivitas?dist=21up&q=Long&mood=nyala')
+        ->assertInertia(fn (Assert $page) => $page
+            ->has('runs', 1)
+            ->where('runs.0.detail.name', 'Long tempo'));
+});
+
 it('auto-widens the range and flags it when the newest run is outside the default window', function (): void {
     $user = User::factory()->create();
     $ancient = Activity::factory()->for($user)->analyzed()->create();
