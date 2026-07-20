@@ -28,7 +28,7 @@ foreach ($sizes as [$w, $h]) {
     $canvas->setImageFormat('png');
 
     // Icon at ~28% of the narrow edge, optically centred (slightly above middle).
-    $icon = new Imagick(__DIR__.'/../../public/icon-512.png');
+    $icon = new Imagick(__DIR__.'/../public/icon-512.png');
     $target = (int) round($w * 0.28);
     $icon->resizeImage($target, $target, Imagick::FILTER_LANCZOS, 1);
 

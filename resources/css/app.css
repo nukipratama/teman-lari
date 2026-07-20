@@ -273,6 +273,12 @@ body {
     }
 }
 
+.skeleton,
+.skeleton-on-sky {
+    background-size: 200% 100%;
+    animation: skeleton-sweep 1.6s linear infinite;
+}
+
 .skeleton {
     background-color: var(--color-cream-deep);
     background-image: linear-gradient(
@@ -281,8 +287,6 @@ body {
         color-mix(in srgb, var(--color-surface-elev) 85%, transparent) 50%,
         transparent 80%
     );
-    background-size: 200% 100%;
-    animation: skeleton-sweep 1.6s linear infinite;
 }
 
 /* Same sweep on the dark sky panels, where the cream placeholder would glare. */
@@ -294,8 +298,6 @@ body {
         color-mix(in srgb, var(--color-cream) 12%, transparent) 50%,
         transparent 80%
     );
-    background-size: 200% 100%;
-    animation: skeleton-sweep 1.6s linear infinite;
 }
 
 @media (prefers-reduced-motion: reduce) {
