@@ -185,9 +185,11 @@ export default function RiwayatFilter<V extends string, B extends string = strin
                         </div>
                     )}
                     {search && <SearchSectionView section={search} />}
-                    {sort && <SortSectionView section={sort} />}
+                    {/* Sitting on anything but the first option switches the page to a
+                        flat ranked list, which the hint spells out. */}
+                    {sort && <OptionListSectionView title="Urutan" section={sort} />}
                     {range && <RangeSectionView section={range} />}
-                    {distance && <DistanceSectionView section={distance} />}
+                    {distance && <OptionListSectionView title="Jarak" section={distance} />}
                     {mood && <MoodSectionView section={mood} />}
                 </div>
             )}
@@ -307,47 +309,19 @@ function SearchSectionView({ section }: Readonly<{ section: SearchSection }>) {
     );
 }
 
-function DistanceSectionView<B extends string>({ section }: Readonly<{ section: DistanceSection<B> }>) {
-    return (
-        <div className="border-b border-line/60 px-3 py-3 last:border-b-0">
-            <div className="mb-2 font-mono text-[11px] font-bold uppercase tracking-[0.14em] text-ink-2">
-                Jarak
-            </div>
-            <div className="flex flex-col gap-1">
-                {section.options.map((opt) => {
-                    const active = opt.value === section.value;
-                    return (
-                        <button
-                            key={opt.value}
-                            type="button"
-                            aria-pressed={active}
-                            onClick={() => section.onSelect(opt.value)}
-                            className={cn(
-                                'focus-ring flex min-h-11 w-full items-center justify-between rounded-lg px-2 py-2 text-left text-xs transition lg:text-sm',
-                                active ? 'bg-sky/10 font-semibold text-sky' : 'text-ink hover:bg-surface-warm',
-                            )}
-                        >
-                            <span>{opt.label}</span>
-                            {opt.hint && (
-                                <span className="font-mono text-[11px] text-ink-3">{opt.hint}</span>
-                            )}
-                        </button>
-                    );
-                })}
-            </div>
-        </div>
-    );
-}
-
 /**
- * Ordering. Sitting on anything but the first option switches the page to a flat
- * ranked list, so the hint spells out which shape the result takes.
+ * A titled list of buttons where at most one option is active. Backs both the
+ * distance and sort sections, which render identically and differ only in
+ * section title and value type.
  */
-function SortSectionView<S extends string>({ section }: Readonly<{ section: SortSection<S> }>) {
+function OptionListSectionView<T extends string>({
+    title,
+    section,
+}: Readonly<{ title: string; section: { value: T | null; options: ReadonlyArray<{ value: T; label: string; hint?: string }>; onSelect: (value: T) => void } }>) {
     return (
         <div className="border-b border-line/60 px-3 py-3 last:border-b-0">
             <div className="mb-2 font-mono text-[11px] font-bold uppercase tracking-[0.14em] text-ink-2">
-                Urutan
+                {title}
             </div>
             <div className="flex flex-col gap-1">
                 {section.options.map((opt) => {

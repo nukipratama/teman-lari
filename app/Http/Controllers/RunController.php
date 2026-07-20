@@ -162,8 +162,6 @@ class RunController extends Controller
                     // user's history ever makes it measurable.
                     $q->where('name', 'like', '%'.addcslashes($searchFilter, '%_\\').'%');
                 }
-
-                return $q;
             })
             ->with(['detail' => fn ($q) => $q->select(['id', 'activity_id', 'name', 'start_date_local', 'distance', 'moving_time', 'average_heartrate', 'trimp_edwards', 'workout_type'])]);
 
@@ -203,14 +201,23 @@ class RunController extends Controller
         $currentWeekEnding = Carbon::today()->endOfWeek(Carbon::SUNDAY)->startOfDay();
 
         // Chain head = the latest completed week the chain actually narrates
-        // (runs > 0, not the in-progress week). Snapshots are ordered
-        // week_ending desc, so it is the first such row. Matching the chain's
-        // runs>0 definition keeps a zero-run rest week from stealing the head
-        // and hiding "Baca ulang" on the real latest recap. Only the head may
+        // (runs > 0, not the in-progress week). Matching the chain's runs>0
+        // definition keeps a zero-run rest week from stealing the head and
+        // hiding "Baca ulang" on the real latest recap. Only the head may
         // regenerate, so re-narrating mid-history can't desync later links.
-        $chainHeadId = $weeklySnapshots
-            ->first(fn (WeeklySnapshot $row): bool => (int) $row->runs > 0
-                && ! $row->week_ending->equalTo($currentWeekEnding))?->id;
+        //
+        // Queried independently of $weeklySnapshots rather than picked from it:
+        // a `week` deep link (old weekly-recap notification, revisited after
+        // later weeks have closed) narrows that collection to a single, often
+        // stale week, which would otherwise get mislabelled as the head and
+        // expose a "Baca ulang" whose actual server-side effect targets a
+        // different week entirely.
+        $chainHeadId = WeeklySnapshot::query()
+            ->where('user_id', $user->id)
+            ->where('runs', '>', 0)
+            ->where('week_ending', '!=', $currentWeekEnding->toDateString())
+            ->orderByDesc('week_ending')
+            ->value('id');
 
         $runIds = $runs->pluck('id')->all();
 

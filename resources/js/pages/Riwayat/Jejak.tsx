@@ -157,6 +157,11 @@ function hrefWithFilters(state: FilterState): string {
     return query === '' ? '/aktivitas' : `/aktivitas?${query}`;
 }
 
+/** Looks up an option's label by value, falling back to the raw value itself. */
+function labelFor(options: ReadonlyArray<{ value: string; label: string }>, value: string): string {
+    return options.find((o) => o.value === value)?.label ?? value;
+}
+
 const RANGE_FILTER_OPTIONS: ReadonlyArray<RangeOption<RangeFilterValue>> = [
     { value: '8w', label: '2 bulan terakhir', hint: '8w' },
     { value: '12w', label: '3 bulan terakhir', hint: '12w' },
@@ -317,15 +322,15 @@ export default function RunsIndex({
             });
         }
         if (rangeFilter !== DEFAULT_RANGE) {
-            const label = RANGE_FILTER_OPTIONS.find((o) => o.value === rangeFilter)?.label ?? rangeFilter;
+            const label = labelFor(RANGE_FILTER_OPTIONS, rangeFilter);
             list.push({ key: `range:${rangeFilter}`, label, onRemove: () => visitWithFilters({ range: DEFAULT_RANGE }) });
         }
         if (sortMode !== DEFAULT_SORT) {
-            const label = SORT_OPTIONS.find((o) => o.value === sortMode)?.label ?? sortMode;
+            const label = labelFor(SORT_OPTIONS, sortMode);
             list.push({ key: `sort:${sortMode}`, label, onRemove: () => visitWithFilters({ sort: DEFAULT_SORT }) });
         }
         if (distanceFilter !== null) {
-            const label = DISTANCE_OPTIONS.find((o) => o.value === distanceFilter)?.label ?? distanceFilter;
+            const label = labelFor(DISTANCE_OPTIONS, distanceFilter);
             list.push({ key: `dist:${distanceFilter}`, label, onRemove: () => visitWithFilters({ distance: null }) });
         }
         for (const mood of MOOD_ORDER.filter((m) => selectedMoods.has(m))) {
@@ -461,7 +466,7 @@ function RankedList({
     moods: Record<number, Mood>;
     sort: SortMode;
 }>) {
-    const label = SORT_OPTIONS.find((o) => o.value === sort)?.label ?? sort;
+    const label = labelFor(SORT_OPTIONS, sort);
 
     return (
         <Card as="section" padding="none" className="overflow-hidden shadow-sm">
@@ -706,7 +711,7 @@ function RunsTruncatedNote({ maxRuns }: Readonly<{ maxRuns: number }>) {
 }
 
 function RangeWidenedNote({ rangeFilter }: Readonly<{ rangeFilter: RangeFilterValue }>) {
-    const label = RANGE_FILTER_OPTIONS.find((o) => o.value === rangeFilter)?.label ?? rangeFilter;
+    const label = labelFor(RANGE_FILTER_OPTIONS, rangeFilter);
     const message =
         rangeFilter === 'all'
             ? 'Menampilkan semua lari kamu, biar lari terakhir tetap kelihatan.'
@@ -728,13 +733,13 @@ function summariseQuery(query: Record<string, string>): string | null {
 
     if (query.week) parts.push('satu minggu');
     if (query.range) {
-        parts.push(RANGE_FILTER_OPTIONS.find((o) => o.value === query.range)?.label ?? query.range);
+        parts.push(labelFor(RANGE_FILTER_OPTIONS, query.range));
     }
     if (query.sort) {
-        parts.push(SORT_OPTIONS.find((o) => o.value === query.sort)?.label ?? query.sort);
+        parts.push(labelFor(SORT_OPTIONS, query.sort));
     }
     if (query.dist) {
-        parts.push(DISTANCE_OPTIONS.find((o) => o.value === query.dist)?.label ?? query.dist);
+        parts.push(labelFor(DISTANCE_OPTIONS, query.dist));
     }
     if (query.mood) {
         const moods = query.mood.split(',').filter((m): m is Mood => MOOD_ORDER.includes(m as Mood));

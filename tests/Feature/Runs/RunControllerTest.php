@@ -444,6 +444,21 @@ describe('week deep link', function (): void {
                 ->where('weeklySnapshots.0.week_ending', fn (string $w): bool => str_starts_with($w, '2026-05-17')));
     });
 
+    // The head flag drives whether "Baca ulang" regenerates in place; getting it
+    // wrong on a stale deep link (an old weekly-recap notification, opened after
+    // later weeks have closed) would expose a regenerate that actually targets a
+    // different week server-side and desyncs the chain.
+    it('does not mislabel the deep-linked week as chain head when a later week exists', function (): void {
+        $user = User::factory()->create();
+        WeeklySnapshot::factory()->for($user)->create(['week_ending' => '2026-05-17', 'runs' => 3]);
+        WeeklySnapshot::factory()->for($user)->create(['week_ending' => '2026-05-24', 'runs' => 3]);
+
+        $this->actingAs($user)->get('/aktivitas?week=2026-05-17')
+            ->assertInertia(fn (Assert $page) => $page
+                ->has('weeklySnapshots', 1)
+                ->where('weeklySnapshots.0.is_chain_head', false));
+    });
+
     it('ignores a malformed week rather than erroring', function (): void {
         $user = User::factory()->create();
         distanceFixtures($user);
