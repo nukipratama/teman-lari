@@ -89,6 +89,23 @@ describe('AppShell', () => {
         expect(main?.className).toContain('lg:pb-0');
     });
 
+    // The shell owns the cross-page banners; pages no longer render them, so
+    // this is the only place their mounting is asserted.
+    it('mounts the Strava zone reconnect banner as shell chrome', () => {
+        setMockPage({
+            auth: { user: andiUser },
+            flash: {},
+            demoLoginEnabled: false,
+            stravaZoneScopeMissing: true,
+        });
+        render(
+            <AppShell>
+                <p>child content</p>
+            </AppShell>,
+        );
+        expect(screen.getByText(/Sambungin ulang Strava/)).toBeInTheDocument();
+    });
+
     it('omits nav chrome when withNav is false', () => {
         setMockPage({ auth: { user: null }, flash: {}, demoLoginEnabled: false });
         render(

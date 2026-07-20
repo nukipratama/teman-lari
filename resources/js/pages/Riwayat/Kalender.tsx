@@ -1,7 +1,7 @@
 import { Head, Link } from '@inertiajs/react';
 import { Icon } from '@iconify/react';
 import { memo, useCallback, useMemo, useState, type ReactNode } from 'react';
-import AppShell from '@/layouts/AppShell';
+import { appLayout } from '@/layouts/appLayout';
 import AnalysisStatus from '@/components/temari/AnalysisStatus';
 import Temari from '@/components/temari/Temari';
 import RiwayatFilter, { type MoodOption } from '@/components/riwayat/RiwayatFilter';
@@ -98,7 +98,7 @@ export default function Kalender({
     const resetFilter = useCallback(() => setMoodFilter(new Set()), []);
 
     return (
-        <AppShell>
+        <>
             <Head title={`Riwayat · Kalender · ${monthLabel}`} />
             <PageContainer>
                 <header className="mb-8 min-w-0">
@@ -156,7 +156,7 @@ export default function Kalender({
                     ))}
                 </div>
             </PageContainer>
-        </AppShell>
+        </>
     );
 }
 
@@ -557,3 +557,4 @@ function groupByWeek(cells: ReadonlyArray<CalendarCell>): WeekRow[] {
     return weeks;
 }
 
+Kalender.layout = appLayout;

@@ -2,7 +2,7 @@ import { lazy, Suspense, useMemo, useState } from 'react';
 import { Head, Link, router } from '@inertiajs/react';
 import { Icon } from '@iconify/react';
 import { usePendingPost } from '@/hooks/usePendingPost';
-import AppShell from '@/layouts/AppShell';
+import { appLayout } from '@/layouts/appLayout';
 import PillButton from '@/components/ui/PillButton';
 import SendNotificationButton from '@/components/SendNotificationButton';
 import { useNotificationsReachable } from '@/hooks/useNotificationsReachable';
@@ -250,7 +250,7 @@ export default function RunsShow({
     };
 
     return (
-        <AppShell>
+        <>
             <Head title={detail.name ?? 'Run'} />
             <PageContainer>
                 <BackLink href="/aktivitas" className="mb-4">
@@ -480,7 +480,7 @@ export default function RunsShow({
                 kartu={shareOpen ? shareData : null}
                 onClose={() => setShareOpen(false)}
             />
-        </AppShell>
+        </>
     );
 }
 
@@ -806,3 +806,4 @@ function computeBarWidth(sec: number | null, fastest: number | null, slowest: nu
     return Math.round(90 - (1 - t) * amplitude);
 }
 
+RunsShow.layout = appLayout;

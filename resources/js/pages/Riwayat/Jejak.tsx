@@ -1,7 +1,7 @@
 import { Head, router, usePage } from '@inertiajs/react';
 import { Icon } from '@iconify/react';
 import { memo, useCallback, useMemo, useState } from 'react';
-import AppShell from '@/layouts/AppShell';
+import { appLayout } from '@/layouts/appLayout';
 import JourneyStrip, { type JourneyMatchData } from '@/components/aktivitas/JourneyStrip';
 import RingkasanCard from '@/components/aktivitas/RingkasanCard';
 import RunListRow, { type RunNote } from '@/components/run/RunListRow';
@@ -172,7 +172,7 @@ export default function RunsIndex({
     const hasRuns = runs.length > 0;
 
     return (
-        <AppShell>
+        <>
             <Head title="Riwayat · Jejak" />
             <PageContainer>
                 <header className="flex flex-col gap-5">
@@ -213,7 +213,7 @@ export default function RunsIndex({
                     <EmptyState />
                 )}
             </PageContainer>
-        </AppShell>
+        </>
     );
 }
 
@@ -542,3 +542,4 @@ function weekRangeLabel(monday: Date): string {
     return `${start} - ${end}`;
 }
 
+RunsIndex.layout = appLayout;

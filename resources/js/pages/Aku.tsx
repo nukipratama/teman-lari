@@ -1,7 +1,7 @@
 import { Head, usePage } from '@inertiajs/react';
 import { Icon } from '@iconify/react';
 import { useState } from 'react';
-import AppShell from '@/layouts/AppShell';
+import { appLayout } from '@/layouts/appLayout';
 import Card from '@/components/ui/Card';
 import Chip from '@/components/ui/Chip';
 import HeroPanel from '@/components/ui/HeroPanel';
@@ -85,7 +85,7 @@ export default function Aku({
     if (monthsSinceFirstRun !== null) eyebrowParts.push(`${monthsSinceFirstRun} bulan`);
 
     return (
-        <AppShell>
+        <>
             <Head title="Aku" />
             <PageContainer>
                 <header className="mb-8">
@@ -211,7 +211,7 @@ export default function Aku({
                     </div>
                 </section>
             </PageContainer>
-        </AppShell>
+        </>
     );
 }
 
@@ -292,3 +292,5 @@ function ProgressionSection({
         </Card>
     );
 }
+
+Aku.layout = appLayout;
