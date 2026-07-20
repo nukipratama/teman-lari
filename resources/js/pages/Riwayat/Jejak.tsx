@@ -6,7 +6,8 @@ import JourneyStrip, { type JourneyMatchData } from '@/components/aktivitas/Jour
 import RingkasanCard from '@/components/aktivitas/RingkasanCard';
 import RunListRow, { type RunNote } from '@/components/run/RunListRow';
 import Card from '@/components/ui/Card';
-import SendToTelegramButton from '@/components/SendToTelegramButton';
+import SendNotificationButton from '@/components/SendNotificationButton';
+import { useNotificationsReachable } from '@/hooks/useNotificationsReachable';
 import PageHero from '@/components/ui/PageHero';
 import RiwayatFilter, { type MoodOption, type RangeOption } from '@/components/riwayat/RiwayatFilter';
 import RiwayatTabs from '@/components/riwayat/RiwayatTabs';
@@ -43,7 +44,7 @@ interface WeeklySnapshotRow {
     is_chain_head: boolean;
     recap_analysis: AnalysisPayload;
     /** Remaining Telegram-send cooldown for this week's recap, or null. */
-    telegram_retry_after_seconds: number | null;
+    notification_retry_after_seconds: number | null;
 }
 
 interface RunsIndexProps {
@@ -226,7 +227,7 @@ interface WeekSectionProps {
 }
 
 const WeekSection = memo(function WeekSection({ bucket, snapshot, notes, moods, matchedRunIds }: Readonly<WeekSectionProps>) {
-    const telegramConnected = usePage<SharedProps>().props.telegramConnected ?? false;
+    const notificationsReachable = useNotificationsReachable();
     const matchCount = matchedRunIds
         ? bucket.runs.filter((r) => matchedRunIds.has(r.id)).length
         : bucket.runs.length;
@@ -291,10 +292,10 @@ const WeekSection = memo(function WeekSection({ bucket, snapshot, notes, moods, 
                             />
                             {snapshot.recap_analysis.status === 'done' && (
                                 <div className="mt-3">
-                                    <SendToTelegramButton
-                                        url={`/rekap-mingguan/${snapshot.id}/telegram`}
-                                        retryAfterSeconds={snapshot.telegram_retry_after_seconds}
-                                        connected={telegramConnected}
+                                    <SendNotificationButton
+                                        url={`/rekap-mingguan/${snapshot.id}/kirim`}
+                                        retryAfterSeconds={snapshot.notification_retry_after_seconds}
+                                        reachable={notificationsReachable}
                                     />
                                 </div>
                             )}

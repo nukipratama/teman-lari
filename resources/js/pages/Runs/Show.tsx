@@ -1,10 +1,11 @@
 import { lazy, Suspense, useMemo, useState } from 'react';
-import { Head, Link, router, usePage } from '@inertiajs/react';
+import { Head, Link, router } from '@inertiajs/react';
 import { Icon } from '@iconify/react';
 import { usePendingPost } from '@/hooks/usePendingPost';
 import AppShell from '@/layouts/AppShell';
 import PillButton from '@/components/ui/PillButton';
-import SendToTelegramButton from '@/components/SendToTelegramButton';
+import SendNotificationButton from '@/components/SendNotificationButton';
+import { useNotificationsReachable } from '@/hooks/useNotificationsReachable';
 import Card from '@/components/ui/Card';
 import Chip from '@/components/ui/Chip';
 import FourLensGrid from '@/components/run/FourLensGrid';
@@ -47,7 +48,6 @@ import type {
     CardEdition,
     Mood,
     RunCard,
-    SharedProps,
     StoryLine,
     StreamSummaryPartial,
 } from '@/types/inertia';
@@ -125,7 +125,7 @@ interface ShowProps {
     /** This run is the head of the per-activity narration chain (latest run). */
     isChainHead: boolean;
     /** Remaining Telegram-send cooldown for this run's speech, or null. */
-    telegramRetryAfterSeconds: number | null;
+    notificationRetryAfterSeconds: number | null;
     pastYou: PastYouMatch | null;
     /** This run's effort vs the runner's own 28-day baseline, or null (no HR). */
     relativeEffort: RelativeEffortPayload | null;
@@ -142,11 +142,11 @@ export default function RunsShow({
     insightZones,
     moodFallback,
     isChainHead,
-    telegramRetryAfterSeconds,
+    notificationRetryAfterSeconds,
     pastYou,
     relativeEffort,
 }: Readonly<ShowProps>) {
-    const telegramConnected = usePage<SharedProps>().props.telegramConnected ?? false;
+    const notificationsReachable = useNotificationsReachable();
     const summary = (detail.stream_summary ?? {}) as Record<string, unknown>;
     const perKm = (summary.per_km as PerKmRow[] | undefined) ?? [];
     const partialSplit = (summary.partial_split as StreamSummaryPartial | null | undefined) ?? null;
@@ -274,10 +274,10 @@ export default function RunsShow({
                         />
                         {resyncing ? 'Lagi narik…' : 'Resync dari Strava'}
                     </PillButton>
-                    <SendToTelegramButton
-                        url={`/aktivitas/${activity.id}/telegram`}
-                        retryAfterSeconds={telegramRetryAfterSeconds}
-                        connected={telegramConnected}
+                    <SendNotificationButton
+                        url={`/aktivitas/${activity.id}/kirim`}
+                        retryAfterSeconds={notificationRetryAfterSeconds}
+                        reachable={notificationsReachable}
                     />
                 </div>
 

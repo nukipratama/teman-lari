@@ -366,11 +366,11 @@ it('surfaces the run speech Telegram cooldown when a send is on cooldown', funct
         'subject_id' => $activity->id,
         'discriminator' => null,
     ]);
-    RateLimiter::hit(Cooldown::telegramKey($speech->id), Cooldown::WINDOW_SECONDS);
+    RateLimiter::hit(Cooldown::notificationKey($speech->id), Cooldown::WINDOW_SECONDS);
 
     $this->actingAs($user)->get("/aktivitas/{$activity->id}")
         ->assertInertia(fn (Assert $page) => $page
-            ->where('telegramRetryAfterSeconds', fn (?int $s): bool => $s !== null && $s > 0)
+            ->where('notificationRetryAfterSeconds', fn (?int $s): bool => $s !== null && $s > 0)
             ->etc());
 });
 
@@ -385,11 +385,11 @@ it('surfaces the weekly recap Telegram cooldown on the snapshot payload', functi
         'subject_id' => $snapshot->id,
         'discriminator' => null,
     ]);
-    RateLimiter::hit(Cooldown::telegramKey($recap->id), Cooldown::WINDOW_SECONDS);
+    RateLimiter::hit(Cooldown::notificationKey($recap->id), Cooldown::WINDOW_SECONDS);
 
     $this->actingAs($user)->get('/aktivitas')
         ->assertInertia(fn (Assert $page) => $page
-            ->where('weeklySnapshots.0.telegram_retry_after_seconds', fn (?int $s): bool => $s !== null && $s > 0)
+            ->where('weeklySnapshots.0.notification_retry_after_seconds', fn (?int $s): bool => $s !== null && $s > 0)
             ->etc());
 });
 

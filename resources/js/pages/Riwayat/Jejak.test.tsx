@@ -167,7 +167,7 @@ describe('Riwayat/Jejak', () => {
                     subject_id: 1,
                     discriminator: null,
                 },
-                telegram_retry_after_seconds: null,
+                notification_retry_after_seconds: null,
             },
         ];
         render(
@@ -213,7 +213,7 @@ describe('Riwayat/Jejak', () => {
                     subject_id: 1,
                     discriminator: null,
                 },
-                telegram_retry_after_seconds: null,
+                notification_retry_after_seconds: null,
             },
         ];
         render(
@@ -261,7 +261,7 @@ describe('Riwayat/Jejak', () => {
                     subject_id: 1,
                     discriminator: null,
                 },
-                telegram_retry_after_seconds: null,
+                notification_retry_after_seconds: null,
             },
         ];
         render(
@@ -300,7 +300,7 @@ describe('Riwayat/Jejak', () => {
             subject_id: 7,
             discriminator: null,
         },
-        telegram_retry_after_seconds: null,
+        notification_retry_after_seconds: null,
     };
 
     it('shows a muted weekly recap Telegram button that nudges (no send) when not connected', () => {
@@ -314,11 +314,11 @@ describe('Riwayat/Jejak', () => {
                 weeklySnapshots={[doneWeekSnapshot]}
             />,
         );
-        fireEvent.click(screen.getByText('Kirim ke Telegram'));
+        fireEvent.click(screen.getByText('Kirim notifikasi'));
         expect(router.post).not.toHaveBeenCalled();
     });
 
-    it('force-sends the weekly recap to Telegram when connected and the button is clicked', () => {
+    it('force-sends the weekly recap when a channel is wired and the button is clicked', () => {
         vi.mocked(router.post).mockReset();
         setMockPage({
             auth: { user: makeUser({ name: 'Ada', first_name: 'Ada' }) },
@@ -335,9 +335,9 @@ describe('Riwayat/Jejak', () => {
                 weeklySnapshots={[doneWeekSnapshot]}
             />,
         );
-        fireEvent.click(screen.getByText('Kirim ke Telegram'));
+        fireEvent.click(screen.getByText('Kirim notifikasi'));
         expect(router.post).toHaveBeenCalledWith(
-            '/rekap-mingguan/7/telegram',
+            '/rekap-mingguan/7/kirim',
             {},
             expect.objectContaining({ preserveScroll: true }),
         );
@@ -365,7 +365,7 @@ describe('Riwayat/Jejak', () => {
                 subject_id: 1,
                 discriminator: null,
             },
-            telegram_retry_after_seconds: null,
+            notification_retry_after_seconds: null,
         };
         // Four weekly buckets, one run + one matching snapshot per bucket, each
         // snapshot using a different FormStatus value so every branch in

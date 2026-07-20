@@ -125,7 +125,7 @@ class RunController extends Controller
                 'is_current_week' => $row->week_ending->equalTo($currentWeekEnding),
                 'is_chain_head' => $row->id === $chainHeadId,
                 'recap_analysis' => $recapAnalyses[$row->id],
-                'telegram_retry_after_seconds' => Analysis::telegramCooldownRemaining($recapAnalyses[$row->id]),
+                'notification_retry_after_seconds' => Analysis::notificationCooldownRemaining($recapAnalyses[$row->id]),
             ])->values(),
             'journeyMatch' => $this->buildJourneyMatch($user),
         ]);
@@ -339,7 +339,7 @@ class RunController extends Controller
             'moodFallback' => Temari::moodForActivityOrDefault($activity),
             'isChainHead' => $isChainHead,
             'speechAnalysis' => $speechAnalysis,
-            'telegramRetryAfterSeconds' => Analysis::telegramCooldownRemaining($speechAnalysis),
+            'notificationRetryAfterSeconds' => Analysis::notificationCooldownRemaining($speechAnalysis),
             'insightTechnical' => $payloadFor(AnalysisType::RunInsightTechnical),
             'insightSplits' => $payloadFor(AnalysisType::RunInsightSplits),
             'insightZones' => $payloadFor(AnalysisType::RunInsightZones),
