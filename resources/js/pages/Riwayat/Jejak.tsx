@@ -58,6 +58,8 @@ interface RunsIndexProps {
     distanceFilter?: DistanceBand | null;
     /** Free-text term the server matched against the run name, or null. */
     searchFilter?: string | null;
+    /** Ordering the server applied. Anything but 'newest' renders a flat list. */
+    sortMode?: SortMode;
     rangeStart: string | null;
     /** Server widened the requested range to reach an older run. */
     rangeAutoWidened?: boolean;
@@ -83,6 +85,18 @@ interface WeekBucket {
 
 export type RangeFilterValue = '8w' | '12w' | '6m' | '1y' | 'all';
 export type DistanceBand = '0-5' | '5-10' | '10-21' | '21up';
+export type SortMode = 'newest' | 'longest' | 'fastest';
+
+/**
+ * Sorting is a mode switch, not just an ordering: the weekly recap cards only
+ * make sense in date order, so ranking globally drops the week grouping and
+ * renders one flat list. `newest` is the grouped browse view.
+ */
+const SORT_OPTIONS: ReadonlyArray<{ value: SortMode; label: string; hint: string }> = [
+    { value: 'newest', label: 'Terbaru dulu', hint: 'per minggu' },
+    { value: 'longest', label: 'Paling jauh', hint: 'peringkat' },
+    { value: 'fastest', label: 'Paling ngebut', hint: 'peringkat' },
+];
 
 /** Cut at the distances runners think in, not at even numbers. */
 const DISTANCE_OPTIONS: ReadonlyArray<{ value: DistanceBand; label: string; hint: string }> = [
@@ -99,7 +113,7 @@ const DISTANCE_OPTIONS: ReadonlyArray<{ value: DistanceBand; label: string; hint
  * /aktivitas" case never happens.
  */
 const DEFAULT_RANGE: RangeFilterValue = '8w';
-const RANGE_RELOAD_PROPS = ['runs', 'rangeFilter', 'moodFilter', 'distanceFilter', 'searchFilter', 'rangeStart', 'rangeAutoWidened', 'runsTruncated', 'maxRuns', 'weeklySnapshots', 'notes', 'moods'];
+const RANGE_RELOAD_PROPS = ['runs', 'rangeFilter', 'moodFilter', 'distanceFilter', 'searchFilter', 'sortMode', 'rangeStart', 'rangeAutoWidened', 'runsTruncated', 'maxRuns', 'weeklySnapshots', 'notes', 'moods'];
 
 /** Every filter the page owns, in one shape so callers can change one field. */
 interface FilterState {
@@ -107,19 +121,23 @@ interface FilterState {
     moods: ReadonlySet<Mood>;
     distance: DistanceBand | null;
     search: string;
+    sort: SortMode;
 }
+
+const DEFAULT_SORT: SortMode = 'newest';
 
 /**
  * The query object for a filter state. Defaults are omitted so the common
  * unfiltered view stays a clean `/aktivitas`, and moods are serialised in
  * MOOD_ORDER so the same selection always produces the same shareable link.
  */
-function filterQuery({ range, moods, distance, search }: FilterState): Record<string, string> {
+function filterQuery({ range, moods, distance, search, sort }: FilterState): Record<string, string> {
     const query: Record<string, string> = {};
     if (range !== DEFAULT_RANGE) query.range = range;
     if (moods.size > 0) query.mood = MOOD_ORDER.filter((m) => moods.has(m)).join(',');
     if (distance !== null) query.dist = distance;
     if (search !== '') query.q = search;
+    if (sort !== DEFAULT_SORT) query.sort = sort;
 
     return query;
 }
@@ -160,6 +178,7 @@ export default function RunsIndex({
     moodFilter = [],
     distanceFilter = null,
     searchFilter = null,
+    sortMode = DEFAULT_SORT,
     rangeAutoWidened = false,
     runsTruncated = false,
     maxRuns = 0,
@@ -180,8 +199,9 @@ export default function RunsIndex({
             moods: selectedMoods,
             distance: distanceFilter,
             search: searchFilter ?? '',
+            sort: sortMode,
         }),
-        [rangeFilter, selectedMoods, distanceFilter, searchFilter],
+        [rangeFilter, selectedMoods, distanceFilter, searchFilter, sortMode],
     );
 
     // The filters live in the URL and are applied by the server, so a change is a
@@ -221,8 +241,19 @@ export default function RunsIndex({
         [visitWithFilters],
     );
 
+    const selectSort = useCallback(
+        (sort: SortMode) => visitWithFilters({ sort }),
+        [visitWithFilters],
+    );
+
     const resetFilters = useCallback(() => {
-        visitWithFilters({ range: DEFAULT_RANGE, moods: new Set(), distance: null, search: '' });
+        visitWithFilters({
+            range: DEFAULT_RANGE,
+            moods: new Set(),
+            distance: null,
+            search: '',
+            sort: DEFAULT_SORT,
+        });
     }, [visitWithFilters]);
 
     // Stable prop objects so toggling a mood doesn't hand RiwayatFilter a fresh
@@ -256,10 +287,18 @@ export default function RunsIndex({
         () => ({ value: searchFilter ?? '', onSubmit: submitSearch }),
         [searchFilter, submitSearch],
     );
+    const sortSection = useMemo(
+        () => ({ value: sortMode, options: SORT_OPTIONS, onSelect: selectSort }),
+        [sortMode, selectSort],
+    );
 
     const hasRuns = runs.length > 0;
     const anyFilterActive =
         selectedMoods.size > 0 || distanceFilter !== null || (searchFilter ?? '') !== '';
+    // Ranking globally is incompatible with week buckets (a weekly recap card
+    // only means anything in date order), so a non-default sort switches the
+    // page to a flat list.
+    const ranked = sortMode !== DEFAULT_SORT;
 
     return (
         <>
@@ -283,6 +322,7 @@ export default function RunsIndex({
                             mood={moodSection}
                             distance={distanceSection}
                             search={searchSection}
+                            sort={sortSection}
                             onReset={resetFilters}
                         />
                     </div>
@@ -294,16 +334,20 @@ export default function RunsIndex({
                     <div className="space-y-8">
                         {rangeAutoWidened && <RangeWidenedNote rangeFilter={rangeFilter} />}
                         {runsTruncated && <RunsTruncatedNote maxRuns={maxRuns} />}
-                        {buckets.map((bucket) => (
-                            <WeekSection
-                                key={bucket.weekStart}
-                                bucket={bucket}
-                                snapshot={snapshotsByWeek.get(bucket.weekEnding) ?? null}
-                                notes={notes}
-                                moods={moods}
-                                filtered={anyFilterActive}
-                            />
-                        ))}
+                        {ranked ? (
+                            <RankedList runs={runs} notes={notes} moods={moods} sort={sortMode} />
+                        ) : (
+                            buckets.map((bucket) => (
+                                <WeekSection
+                                    key={bucket.weekStart}
+                                    bucket={bucket}
+                                    snapshot={snapshotsByWeek.get(bucket.weekEnding) ?? null}
+                                    notes={notes}
+                                    moods={moods}
+                                    filtered={anyFilterActive}
+                                />
+                            ))
+                        )}
                     </div>
                 )}
                 {/* A filtered view that matched nothing is a different story from
@@ -313,6 +357,47 @@ export default function RunsIndex({
                 {!hasRuns && !anyFilterActive && <EmptyState />}
             </PageContainer>
         </>
+    );
+}
+
+/**
+ * The ranked (non-chronological) view. Week cards and their recap narration are
+ * deliberately absent: a weekly recap only means something in date order, so
+ * ranking globally is a different mode rather than a re-ordering of this one.
+ * The header says which ranking is active so the missing weeks aren't a mystery.
+ */
+function RankedList({
+    runs,
+    notes,
+    moods,
+    sort,
+}: Readonly<{
+    runs: ReadonlyArray<RunWithDetail>;
+    notes: Record<number, RunNote>;
+    moods: Record<number, Mood>;
+    sort: SortMode;
+}>) {
+    const label = SORT_OPTIONS.find((o) => o.value === sort)?.label ?? sort;
+
+    return (
+        <Card as="section" padding="none" className="overflow-hidden shadow-sm">
+            <header className="flex flex-wrap items-baseline justify-between gap-3 border-b border-cream-deep bg-cream-deep/40 px-5 py-4">
+                <div className="font-display text-lg italic text-ink">{label}</div>
+                <div className="font-mono text-[11px] uppercase tracking-[0.12em] text-ink-3">
+                    {runs.length} lari · diurutkan
+                </div>
+            </header>
+            <div>
+                {runs.map((activity) => (
+                    <RunListRow
+                        key={activity.id}
+                        detail={activity.detail}
+                        note={notes[activity.id] ?? null}
+                        mood={moods[activity.id] ?? null}
+                    />
+                ))}
+            </div>
+        </Card>
     );
 }
 

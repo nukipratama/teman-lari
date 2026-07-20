@@ -17,6 +17,7 @@ use App\Services\Run\Metrics\RelativeEffort;
 use App\Services\Run\PostRunNoteReader;
 use App\Services\Run\Story\PastYouMatcher;
 use App\Services\Run\Story\Temari;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Inertia\Inertia;
@@ -87,6 +88,19 @@ class RunController extends Controller
     /** Longest accepted `?q=` term; anything beyond is truncated, not rejected. */
     private const int MAX_SEARCH_LENGTH = 60;
 
+    /**
+     * Sort modes. `newest` is the default chronological view the week grouping
+     * depends on; the other two rank runs globally, which the page renders as a
+     * flat list instead (weekly recap cards only make sense in date order).
+     */
+    private const string SORT_NEWEST = 'newest';
+
+    private const string SORT_LONGEST = 'longest';
+
+    private const string SORT_FASTEST = 'fastest';
+
+    private const array SORTS = [self::SORT_NEWEST, self::SORT_LONGEST, self::SORT_FASTEST];
+
     public function index(Request $request, PostRunNoteReader $noteReader): Response
     {
         /** @var User $user */
@@ -108,6 +122,7 @@ class RunController extends Controller
         $moodFilter = $this->resolveMoods($request->query('mood'));
         $distanceFilter = $this->resolveDistanceBand($request->query('dist'));
         $searchFilter = $this->resolveSearch($request->query('q'));
+        $sort = $this->resolveSort($request->query('sort'));
 
         $runsQuery = Activity::query()
             ->where('user_id', $user->id)
@@ -147,8 +162,9 @@ class RunController extends Controller
                 ->whereIn('mood', $moodFilter));
         }
 
+        $this->applySort($runsQuery, $sort);
+
         $runs = $runsQuery
-            ->orderByDesc('id')
             ->limit(self::MAX_RUNS + 1)
             ->get();
 
@@ -188,6 +204,7 @@ class RunController extends Controller
             'moodFilter' => $moodFilter,
             'distanceFilter' => $distanceFilter,
             'searchFilter' => $searchFilter,
+            'sortMode' => $sort,
             'rangeStart' => $rangeStart?->toDateString(),
             'rangeAutoWidened' => $rangeAutoWidened,
             'runsTruncated' => $runsTruncated,
@@ -364,6 +381,45 @@ class RunController extends Controller
             array_unique(explode(',', $raw)),
             self::MOODS,
         ));
+    }
+
+    /** The requested sort mode, falling back to newest for anything unknown. */
+    private function resolveSort(mixed $raw): string
+    {
+        return is_string($raw) && in_array($raw, self::SORTS, true) ? $raw : self::SORT_NEWEST;
+    }
+
+    /**
+     * Ordering for the runs list. `newest` uses the activity id, which tracks
+     * insertion order and needs no join. The ranked modes order by a detail
+     * column, so they join it under an alias (the filter above uses a separate
+     * `whereHas` subquery, so the alias avoids colliding with it).
+     *
+     * @param  Builder<Activity>  $query
+     */
+    private function applySort(Builder $query, string $sort): void
+    {
+        if ($sort === self::SORT_NEWEST) {
+            $query->orderByDesc('id');
+
+            return;
+        }
+
+        $query->join('activity_details as sort_detail', 'sort_detail.activity_id', '=', 'activities.id')
+            ->select('activities.*');
+
+        if ($sort === self::SORT_LONGEST) {
+            $query->orderByDesc('sort_detail.distance');
+
+            return;
+        }
+
+        // Fastest = lowest seconds per metre. Runs missing distance or time have
+        // no pace to rank, so they drop out rather than sorting as infinitely
+        // fast (and the division stays safe).
+        $query->where('sort_detail.distance', '>', 0)
+            ->where('sort_detail.moving_time', '>', 0)
+            ->orderByRaw('sort_detail.moving_time / sort_detail.distance asc');
     }
 
     /**

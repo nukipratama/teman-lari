@@ -296,6 +296,96 @@ it('combines distance, search, mood and range', function (): void {
             ->where('runs.0.detail.name', 'Long tempo'));
 });
 
+it('defaults to newest-first and reports the sort mode', function (): void {
+    $user = User::factory()->create();
+    distanceFixtures($user);
+
+    $this->actingAs($user)->get('/aktivitas')
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('sortMode', 'newest')
+            // Newest-first is activity id desc, and the fixtures insert in order.
+            ->where('runs.0.detail.name', 'Long run'));
+});
+
+it('ranks by distance when sorting longest', function (): void {
+    $user = User::factory()->create();
+    distanceFixtures($user);
+
+    $this->actingAs($user)->get('/aktivitas?sort=longest')
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('sortMode', 'longest')
+            ->has('runs', 3)
+            ->where('runs.0.detail.name', 'Long run')
+            ->where('runs.1.detail.name', 'Sedang')
+            ->where('runs.2.detail.name', 'Sprint'));
+});
+
+it('ranks by pace when sorting fastest', function (): void {
+    $user = User::factory()->create();
+    // 5K in 25min (5:00/km) vs 5K in 30min (6:00/km).
+    $quick = Activity::factory()->for($user)->analyzed()->create();
+    ActivityDetail::factory()->for($quick)->create([
+        'name' => 'Quick', 'distance' => 5_000, 'moving_time' => 1_500,
+        'start_date_local' => Carbon::now()->subDays(3),
+    ]);
+    $slow = Activity::factory()->for($user)->analyzed()->create();
+    ActivityDetail::factory()->for($slow)->create([
+        'name' => 'Slow', 'distance' => 5_000, 'moving_time' => 1_800,
+        'start_date_local' => Carbon::now()->subDays(2),
+    ]);
+
+    $this->actingAs($user)->get('/aktivitas?sort=fastest')
+        ->assertInertia(fn (Assert $page) => $page
+            ->has('runs', 2)
+            ->where('runs.0.detail.name', 'Quick')
+            ->where('runs.1.detail.name', 'Slow'));
+});
+
+// A run with no distance or time has no pace, so it can't be ranked rather than
+// sorting as infinitely fast.
+it('drops pace-less runs from the fastest ranking', function (): void {
+    $user = User::factory()->create();
+    $paced = Activity::factory()->for($user)->analyzed()->create();
+    ActivityDetail::factory()->for($paced)->create([
+        'name' => 'Paced', 'distance' => 5_000, 'moving_time' => 1_500,
+        'start_date_local' => Carbon::now()->subDays(3),
+    ]);
+    $noDistance = Activity::factory()->for($user)->analyzed()->create();
+    ActivityDetail::factory()->for($noDistance)->create([
+        'name' => 'No distance', 'distance' => 0, 'moving_time' => 1_500,
+        'start_date_local' => Carbon::now()->subDays(2),
+    ]);
+
+    $this->actingAs($user)->get('/aktivitas?sort=fastest')
+        ->assertInertia(fn (Assert $page) => $page
+            ->has('runs', 1)
+            ->where('runs.0.detail.name', 'Paced'));
+
+    // It is still present in the default chronological view.
+    $this->actingAs($user)->get('/aktivitas')
+        ->assertInertia(fn (Assert $page) => $page->has('runs', 2));
+});
+
+it('falls back to newest for an unknown sort', function (): void {
+    $user = User::factory()->create();
+    distanceFixtures($user);
+
+    $this->actingAs($user)->get('/aktivitas?sort=shortest')
+        ->assertSuccessful()
+        ->assertInertia(fn (Assert $page) => $page->where('sortMode', 'newest'));
+});
+
+it('applies filters and sort together', function (): void {
+    $user = User::factory()->create();
+    distanceFixtures($user);
+
+    // Only the 7.5K run is in the 5-10 band, whatever the ordering.
+    $this->actingAs($user)->get('/aktivitas?dist=5-10&sort=longest')
+        ->assertInertia(fn (Assert $page) => $page
+            ->has('runs', 1)
+            ->where('runs.0.detail.name', 'Sedang'));
+});
+
 it('auto-widens the range and flags it when the newest run is outside the default window', function (): void {
     $user = User::factory()->create();
     $ancient = Activity::factory()->for($user)->analyzed()->create();

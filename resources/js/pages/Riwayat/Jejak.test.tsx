@@ -619,6 +619,92 @@ describe('Riwayat/Jejak', () => {
         expect(screen.getByText(/1 hasil/)).toBeInTheDocument();
     });
 
+    describe('sort', () => {
+        it('puts a non-default sort in the url', () => {
+            vi.mocked(router.get).mockReset();
+            render(
+                <RunsIndex
+                    runs={[run(101, 'Pagi santai', '2026-05-19T06:00:00')]}
+                    rangeFilter="8w"
+                    rangeStart="2026-04-13"
+                    weeklySnapshots={[]}
+                />,
+            );
+
+            fireEvent.click(screen.getByLabelText('Buka filter'));
+            fireEvent.click(screen.getByRole('button', { name: /Paling jauh/ }));
+
+            expect(router.get).toHaveBeenCalledWith('/aktivitas', { sort: 'longest' }, expect.anything());
+        });
+
+        it('omits the default sort from the url', () => {
+            vi.mocked(router.get).mockReset();
+            render(
+                <RunsIndex
+                    runs={[run(101, 'Pagi santai', '2026-05-19T06:00:00')]}
+                    rangeFilter="8w"
+                    sortMode="longest"
+                    rangeStart="2026-04-13"
+                    weeklySnapshots={[]}
+                />,
+            );
+
+            fireEvent.click(screen.getByLabelText('Buka filter'));
+            fireEvent.click(screen.getByRole('button', { name: /Terbaru dulu/ }));
+
+            expect(router.get).toHaveBeenCalledWith('/aktivitas', {}, expect.anything());
+        });
+
+        // Ranking globally is a mode switch: weekly recap cards only mean
+        // something in date order, so they are absent from the ranked view.
+        it('drops the week grouping for a ranked sort', () => {
+            const runs = [
+                run(101, 'Pagi santai', '2026-05-19T06:00:00'),
+                run(102, 'Sore panjang', '2026-05-12T17:00:00'),
+            ];
+            const { rerender } = render(
+                <RunsIndex runs={runs} rangeFilter="8w" rangeStart="2026-04-13" weeklySnapshots={[]} />,
+            );
+            // Grouped view labels each week.
+            expect(screen.queryByText('Paling jauh')).not.toBeInTheDocument();
+
+            rerender(
+                <RunsIndex
+                    runs={runs}
+                    rangeFilter="8w"
+                    sortMode="longest"
+                    rangeStart="2026-04-13"
+                    weeklySnapshots={[]}
+                />,
+            );
+
+            expect(screen.getByText('Paling jauh')).toBeInTheDocument();
+            expect(screen.getByText(/2 lari · diurutkan/)).toBeInTheDocument();
+            // Both runs still render, just without week cards.
+            expect(screen.getByText('Pagi santai')).toBeInTheDocument();
+            expect(screen.getByText('Sore panjang')).toBeInTheDocument();
+        });
+
+        it('resets the sort back to newest along with the filters', () => {
+            vi.mocked(router.get).mockReset();
+            render(
+                <RunsIndex
+                    runs={[run(101, 'Pagi santai', '2026-05-19T06:00:00')]}
+                    rangeFilter="8w"
+                    sortMode="fastest"
+                    moodFilter={['enteng']}
+                    rangeStart="2026-04-13"
+                    weeklySnapshots={[]}
+                />,
+            );
+
+            fireEvent.click(screen.getByLabelText('Buka filter'));
+            fireEvent.click(screen.getByRole('button', { name: 'Reset' }));
+
+            expect(router.get).toHaveBeenCalledWith('/aktivitas', {}, expect.anything());
+        });
+    });
+
     it('keeps the onboarding empty state when there is no filter and no runs', () => {
         render(
             <RunsIndex

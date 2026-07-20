@@ -56,11 +56,24 @@ interface SearchSection {
     onSubmit: (term: string) => void;
 }
 
-interface RiwayatFilterProps<V extends string, B extends string = string> {
+export interface SortOption<S extends string> {
+    value: S;
+    label: string;
+    hint?: string;
+}
+
+interface SortSection<S extends string> {
+    value: S;
+    options: ReadonlyArray<SortOption<S>>;
+    onSelect: (sort: S) => void;
+}
+
+interface RiwayatFilterProps<V extends string, B extends string = string, S extends string = string> {
     range?: RangeSection<V>;
     mood?: MoodSection;
     distance?: DistanceSection<B>;
     search?: SearchSection;
+    sort?: SortSection<S>;
     /** When the user hits Reset — clears every filter set this component owns. */
     onReset?: () => void;
     className?: string;
@@ -74,14 +87,15 @@ interface RiwayatFilterProps<V extends string, B extends string = string> {
  * Active-filter count is surfaced as a badge on the button so the user can
  * see at a glance whether they're looking at a filtered slice.
  */
-export default function RiwayatFilter<V extends string, B extends string = string>({
+export default function RiwayatFilter<V extends string, B extends string = string, S extends string = string>({
     range,
     mood,
     distance,
     search,
+    sort,
     onReset,
     className,
-}: Readonly<RiwayatFilterProps<V, B>>) {
+}: Readonly<RiwayatFilterProps<V, B, S>>) {
     const [open, setOpen] = useState(false);
     const containerRef = useRef<HTMLDivElement>(null);
     const close = useCallback(() => setOpen(false), []);
@@ -95,8 +109,11 @@ export default function RiwayatFilter<V extends string, B extends string = strin
         range && range.options.length > 0 && range.value !== range.options[0].value ? 1 : 0;
     const distanceActive = distance?.value != null ? 1 : 0;
     const searchActive = (search?.value ?? '') !== '' ? 1 : 0;
-    const totalActive = moodActive + rangeActive + distanceActive + searchActive;
-    const summary = buildSummary(range, moodActive, distance, searchActive > 0);
+    // Like range, the first sort option is the implicit default and isn't counted.
+    const sortActive =
+        sort && sort.options.length > 0 && sort.value !== sort.options[0].value ? 1 : 0;
+    const totalActive = moodActive + rangeActive + distanceActive + searchActive + sortActive;
+    const summary = buildSummary(range, moodActive, distance, searchActive > 0, sort);
 
     return (
         <div ref={containerRef} className={cn('relative', className)}>
@@ -149,6 +166,7 @@ export default function RiwayatFilter<V extends string, B extends string = strin
                         </div>
                     )}
                     {search && <SearchSectionView section={search} />}
+                    {sort && <SortSectionView section={sort} />}
                     {range && <RangeSectionView section={range} />}
                     {distance && <DistanceSectionView section={distance} />}
                     {mood && <MoodSectionView section={mood} />}
@@ -302,13 +320,54 @@ function DistanceSectionView<B extends string>({ section }: Readonly<{ section: 
     );
 }
 
-function buildSummary<V extends string, B extends string>(
+/**
+ * Ordering. Sitting on anything but the first option switches the page to a flat
+ * ranked list, so the hint spells out which shape the result takes.
+ */
+function SortSectionView<S extends string>({ section }: Readonly<{ section: SortSection<S> }>) {
+    return (
+        <div className="border-b border-line/60 px-3 py-3 last:border-b-0">
+            <div className="mb-2 font-mono text-[11px] font-bold uppercase tracking-[0.14em] text-ink-2">
+                Urutan
+            </div>
+            <div className="flex flex-col gap-1">
+                {section.options.map((opt) => {
+                    const active = opt.value === section.value;
+                    return (
+                        <button
+                            key={opt.value}
+                            type="button"
+                            aria-pressed={active}
+                            onClick={() => section.onSelect(opt.value)}
+                            className={cn(
+                                'focus-ring flex min-h-11 w-full items-center justify-between rounded-lg px-2 py-2 text-left text-xs transition lg:text-sm',
+                                active ? 'bg-sky/10 font-semibold text-sky' : 'text-ink hover:bg-surface-warm',
+                            )}
+                        >
+                            <span>{opt.label}</span>
+                            {opt.hint && (
+                                <span className="font-mono text-[11px] text-ink-3">{opt.hint}</span>
+                            )}
+                        </button>
+                    );
+                })}
+            </div>
+        </div>
+    );
+}
+
+function buildSummary<V extends string, B extends string, S extends string>(
     range: RangeSection<V> | undefined,
     moodActive: number,
     distance: DistanceSection<B> | undefined,
     searchActive: boolean,
+    sort: SortSection<S> | undefined,
 ): string {
     const parts: string[] = [];
+    if (sort && sort.options.length > 0 && sort.value !== sort.options[0].value) {
+        const current = sort.options.find((o) => o.value === sort.value);
+        if (current) parts.push(current.label);
+    }
     if (range) {
         const current = range.options.find((o) => o.value === range.value);
         if (current) parts.push(current.label);
