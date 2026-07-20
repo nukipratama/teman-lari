@@ -206,6 +206,43 @@ body {
     overscroll-behavior-y: none;
 }
 
+/* Page-enter animation. The content region is keyed on the Inertia component
+   name in AppShell, so this replays on a real navigation and is skipped on a
+   partial reload (the key is unchanged, nothing remounts).
+
+   Why an enter animation and NOT the View Transitions API: the persistent shell
+   makes `document.startViewTransition` tempting, but Inertia's DOM swap only
+   happens *after* the network round trip. Wrapping the swap means calling
+   startViewTransition before the request and resolving its callback after the
+   response, which leaves the browser holding a frozen snapshot — the whole UI
+   locked and unresponsive — for the entire request. On a constrained homelab
+   behind a tunnel that is a visible regression, and strictly worse than the
+   current thin progress bar. An enter-only animation keeps the outgoing page
+   live and interactive until the new one is actually ready, then brings it in.
+
+   Short and small on purpose (160ms, 6px): enough to read as motion, not enough
+   to delay a user who navigates quickly. */
+@keyframes page-enter {
+    from {
+        opacity: 0;
+        transform: translateY(6px);
+    }
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}
+
+.page-enter {
+    animation: page-enter 160ms ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .page-enter {
+        animation: none;
+    }
+}
+
 /* Hide native scrollbar — used on horizontal strips where explicit
    arrow buttons or swipe are the scroll affordance, so the native bar
    would just be visual noise. */

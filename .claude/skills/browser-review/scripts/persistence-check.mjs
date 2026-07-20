@@ -74,6 +74,24 @@ for (const tab of TABS) {
     );
 }
 
+// The content region must replay the enter animation on a real navigation.
+// Count animationstart events on #main-content while clicking a tab.
+await page.evaluate(() => {
+    window.__enterAnimations = 0;
+    document.addEventListener(
+        'animationstart',
+        (e) => {
+            if (e.animationName === 'page-enter') window.__enterAnimations += 1;
+        },
+        true,
+    );
+});
+await page.locator('nav[aria-label="Primary"].fixed a:has-text("Riwayat")').first().click();
+await page.waitForURL((u) => u.pathname === '/aktivitas', { timeout: 15000 });
+await page.waitForLoadState('networkidle');
+const afterNav = await page.evaluate(() => window.__enterAnimations);
+console.log(`ENTER_ANIMATIONS_AFTER_NAV=${afterNav}`);
+
 console.log(`SHELL_PERSISTED=${allPersisted}`);
 console.log(`CONSOLE_ERRORS=${consoleErrors.length}`);
 for (const e of consoleErrors) console.log(`  ${e}`);
