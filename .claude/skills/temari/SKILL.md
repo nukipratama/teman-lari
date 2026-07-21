@@ -186,11 +186,13 @@ Code quality (pint/phpstan/rector/tsc) runs on **pre-commit**; coverage runs in 
 - After changing a PHP enum exposed to TS: `./vendor/bin/sail artisan typescript:enums` (`--check` mirrors CI).
 - Local UI/demo data (deterministic, no LLM tokens, no Strava HTTP): `./vendor/bin/sail artisan demo:seed`. Idempotent, re-run any time to converge. It only upserts the current blueprint set, so to purge rows from retired blueprints do a full reset: `./vendor/bin/sail artisan migrate:fresh` then `demo:seed`.
 
-## Boost MCP tools
+## Inspecting real state
 
-Wired via [.mcp.json](../../../.mcp.json) (runs `boost:mcp` in the Sail container, so the container must be up). Prefer these over guessing; when a bug is reported, start here before hypothesizing:
-- **`search-docs`** — version-correct docs for this exact stack (Laravel 13 / Inertia v3 / React 19 / Tailwind v4 / Pest 4). Use it before reaching for memory on framework APIs; they drift.
-- **`database-query` / `database-schema` / `database-connections`** — inspect real data and schema instead of inferring from migrations.
-- **`read-log-entries` / `last-error`** — read actual app errors.
-- **`browser-logs`** — live React/Inertia console errors (this is how you confirm UI changes, since [tests/Feature/Smoke/PagesRenderTest.php](../../../tests/Feature/Smoke/PagesRenderTest.php) only asserts server-side render).
-- **`application-info` / `get-absolute-url`** — env/package versions and route URLs.
+No MCP server; use the toolchain directly. Prefer these over guessing:
+- **Data** — `./vendor/bin/sail artisan tinker --execute '...'`, or `./vendor/bin/sail mysql`.
+- **Schema** — `./vendor/bin/sail artisan db:show --counts`, `db:table <name>`.
+- **App errors** — `./vendor/bin/sail logs -f`, or `storage/logs/laravel-*.log` (daily rotation).
+- **React/Inertia console errors** — browser devtools, or the `browser-review` scripts, which
+  capture `console`/`pageerror` per page across the viewport matrix.
+- **Framework APIs** — read the installed source under `vendor/` rather than recalling; this
+  stack (Laravel 13 / Inertia v3 / React 19 / Tailwind v4 / Pest 4) drifts fast.
