@@ -27,6 +27,7 @@ const briefing: BriefingResult = {
     recoveryLabel: 'Pemulihan: 41j',
     recoveryTone: 'positive',
     recoveryHoursLabel: '41j',
+    recoveryHours: 41,
     streakLabel: 'Lari hari ini',
     sigilPattern: 'orct',
     accessory: null,
@@ -99,9 +100,40 @@ describe('VitalChips', () => {
         expect(kesiapanMeter).toHaveAttribute('max', '40');
     });
 
-    it('renders no gauges when load is null', () => {
+    // Recovery is driven by hours since the last run, not by training load, so
+    // it keeps its gauge even when there is no load to compute Vibe/Kesiapan
+    // from. Only the two load-derived rails disappear.
+    it('drops only the load-derived gauges when load is null', () => {
         render(<VitalChips briefing={briefing} load={null} />);
-        expect(screen.queryByRole('meter')).not.toBeInTheDocument();
+        expect(screen.queryByRole('meter', { name: 'Vibe' })).not.toBeInTheDocument();
+        expect(screen.queryByRole('meter', { name: 'Kesiapan' })).not.toBeInTheDocument();
+        expect(screen.getByRole('meter', { name: 'Recovery' })).toBeInTheDocument();
+    });
+
+    // All three tiles now share one structure: dot + label + explainer, value,
+    // a bounded gauge with anchors, and a one-line sub. Recovery used to be the
+    // odd one out — a solid full-width rail with no scale and no explainer.
+    it('gives Recovery the same bounded gauge as its siblings', () => {
+        render(<VitalChips briefing={briefing} load={load} />);
+        const meter = screen.getByRole('meter', { name: 'Recovery' });
+        expect(meter).toHaveAttribute('value', '41');
+        expect(meter).toHaveAttribute('min', '0');
+        expect(meter).toHaveAttribute('max', '72');
+    });
+
+    it('clamps the Recovery gauge once past the 72h mark', () => {
+        const longRest: BriefingResult = { ...briefing, recoveryHours: 200, recoveryHoursLabel: '8 hari' };
+        render(<VitalChips briefing={longRest} load={load} />);
+        expect(screen.getByRole('meter', { name: 'Recovery' })).toHaveAttribute('value', '72');
+    });
+
+    it('gives every tile an explainer, Recovery included', () => {
+        render(<VitalChips briefing={briefing} load={load} />);
+        // Vibe's explainer points at the `vibe_vs_mood` entry, so its label is
+        // the glossary label rather than the tile label.
+        expect(screen.getByRole('button', { name: 'Penjelasan Vibe vs Mood' })).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'Penjelasan Kesiapan' })).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'Penjelasan Recovery' })).toBeInTheDocument();
     });
 
     it('falls back to streakLabel then recoveryLabel for the Recovery chip', () => {

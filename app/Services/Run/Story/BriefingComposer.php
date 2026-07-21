@@ -57,6 +57,7 @@ class BriefingComposer
             recoveryLabel: FormStatus::label($load),
             recoveryTone: FormStatus::tone($load),
             recoveryHoursLabel: $this->recoveryHoursLabel($hoursSince),
+            recoveryHours: $hoursSince,
             streakLabel: $this->streakLabel($daysSince),
             sigilPattern: Temari::sigilForMoodPublic($mood),
             accessory: Temari::accessoryForMoodPublic($mood),

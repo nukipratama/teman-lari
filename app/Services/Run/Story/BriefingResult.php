@@ -40,6 +40,8 @@ final readonly class BriefingResult implements Arrayable
         public string $recoveryLabel,
         public string $recoveryTone,
         public ?string $recoveryHoursLabel,
+        /** Raw hours since the last run, so the dashboard gauge can plot what the label already states. */
+        public ?int $recoveryHours,
         public ?string $streakLabel,
         public string $sigilPattern,
         public ?string $accessory,
@@ -63,6 +65,7 @@ final readonly class BriefingResult implements Arrayable
             'recoveryLabel' => $this->recoveryLabel,
             'recoveryTone' => $this->recoveryTone,
             'recoveryHoursLabel' => $this->recoveryHoursLabel,
+            'recoveryHours' => $this->recoveryHours,
             'streakLabel' => $this->streakLabel,
             'sigilPattern' => $this->sigilPattern,
             'accessory' => $this->accessory,
