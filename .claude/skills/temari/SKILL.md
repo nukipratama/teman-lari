@@ -130,9 +130,37 @@ The scale is fluid `clamp()` tokens in `app.css` (`text-display-*`, `text-headli
 ## AI narration pipeline
 
 Every narrated block flows: **Narrator → Analyze\*Job → Analysis row → AnalysisType → AnalysisController → UI (AnalysisStatus)**.
-Adding a new narrated block touches ~6 places — use the **`/add-narrator`** command so none are
-missed (a missing wire fails the structure tests). The failure model, idempotency guard, and
-unconfigured-env fallback are documented in the always-on guideline ("LLM Integration" in CLAUDE.md).
+The failure model, idempotency guard, and unconfigured-env fallback are documented in the
+always-on guideline ("LLM Integration" in CLAUDE.md).
+
+### Adding a new narrated block — all 6 wires
+
+Miss one and it fails loudly: `php artisan` breaks on enum match exhaustiveness (PHPStan), or
+the structure / coverage gates fail. **Model the shape on an existing sibling and mirror it** —
+per-user-per-day follows `TrendCaption`; per-activity follows `RunInsight*`; per-row-model
+follows `WeeklyRecap` / `PrContext` / `CardFlavor`. Let `Name` = StudlyCase, `snake` = snake_case.
+
+1. **Narrator** — `app/Services/AI/Narrators/{Name}Narrator.php`. Inject `StructuredChatCaller`;
+   expose `generate(...)` returning the narrated string. Build `$context` from real metrics
+   (route any pace through `App\Services\Run\Metrics\PaceCalculator`). No em-dashes in the prompt.
+2. **Job** — `app/Jobs/AI/Analyze{Name}Job.php` extending `AnalyzeRowJob` (single row) or
+   `AnalyzeGroupJob` (multi-row). Row job: override `generateContent()` to resolve the subject and
+   call the narrator (see `AnalyzeTrendCaptionJob`). Group job: override `generateAll()` to resolve
+   the subject once and return the per-type payload (see `AnalyzeBriefingJob`).
+3. **AnalysisType** — `app/Services/AI/AnalysisType.php`: add `case {Name} = '{snake}';`; if the
+   subject is a synthetic user/day/month key (not an Eloquent model) add a `*_SUBJECT_TYPE` const
+   and return it from `subjectType()`, otherwise return the model class; add the `jobClass()` arm.
+4. **AnalysisController** — add the `authorizeSubject()` match arm in
+   `app/Http/Controllers/Api/AnalysisController.php`: user-scoped → `$subjectId === $user->id`;
+   model-scoped → `$this->userOwns(...)`.
+5. **Aggregate suites** — register the narrator in
+   `tests/Unit/Services/AI/Narrators/NarratorsCoverageTest.php` and the job in
+   `tests/Unit/Jobs/AI/JobsCoverageTest.php`. The structure test exempts these namespaces on the
+   basis that these suites cover them.
+6. **Frontend** — render the block through `resources/js/components/temari/AnalysisStatus.tsx` on
+   the page that shows it, so pending / failed / retry states are handled.
+
+Then run `./vendor/bin/sail composer check` and fix anything red.
 
 ## Testing
 
@@ -158,11 +186,13 @@ Code quality (pint/phpstan/rector/tsc) runs on **pre-commit**; coverage runs in 
 - After changing a PHP enum exposed to TS: `./vendor/bin/sail artisan typescript:enums` (`--check` mirrors CI).
 - Local UI/demo data (deterministic, no LLM tokens, no Strava HTTP): `./vendor/bin/sail artisan demo:seed`. Idempotent, re-run any time to converge. It only upserts the current blueprint set, so to purge rows from retired blueprints do a full reset: `./vendor/bin/sail artisan migrate:fresh` then `demo:seed`.
 
-## Boost MCP tools
+## Inspecting real state
 
-Wired via [.mcp.json](../../../.mcp.json) (runs `boost:mcp` in the Sail container, so the container must be up). Prefer these over guessing; when a bug is reported, start here before hypothesizing:
-- **`search-docs`** — version-correct docs for this exact stack (Laravel 13 / Inertia v3 / React 19 / Tailwind v4 / Pest 4). Use it before reaching for memory on framework APIs; they drift.
-- **`database-query` / `database-schema` / `database-connections`** — inspect real data and schema instead of inferring from migrations.
-- **`read-log-entries` / `last-error`** — read actual app errors.
-- **`browser-logs`** — live React/Inertia console errors (this is how you confirm UI changes, since [tests/Feature/Smoke/PagesRenderTest.php](../../../tests/Feature/Smoke/PagesRenderTest.php) only asserts server-side render).
-- **`application-info` / `get-absolute-url`** — env/package versions and route URLs.
+No MCP server; use the toolchain directly. Prefer these over guessing:
+- **Data** — `./vendor/bin/sail artisan tinker --execute '...'`, or `./vendor/bin/sail mysql`.
+- **Schema** — `./vendor/bin/sail artisan db:show --counts`, `db:table <name>`.
+- **App errors** — `./vendor/bin/sail logs -f`, or `storage/logs/laravel-*.log` (daily rotation).
+- **React/Inertia console errors** — browser devtools, or the `browser-review` scripts, which
+  capture `console`/`pageerror` per page across the viewport matrix.
+- **Framework APIs** — read the installed source under `vendor/` rather than recalling; this
+  stack (Laravel 13 / Inertia v3 / React 19 / Tailwind v4 / Pest 4) drifts fast.
