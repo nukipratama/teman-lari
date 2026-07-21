@@ -9,6 +9,42 @@ describe('MobileTopBar', () => {
         expect(screen.getByLabelText('Beranda')).toHaveAttribute('href', '/');
     });
 
+    // Roots show identity, pushed screens show a way out — the native split.
+    // Note the third case: /kalender, /rekor, /aksesori and /target resolve to a
+    // tab too, but are reached through in-page tab strips, so they are siblings
+    // rather than pushes and must keep the brand mark.
+    it.each([
+        ['Runs/Show', '/aktivitas', 'Riwayat'],
+        ['Pengaturan/Index', '/profil', 'Aku'],
+        ['Pengaturan/ZonaHR', '/pengaturan', 'Pengaturan'],
+    ])('replaces the brand mark with a back button on %s', (component, href, label) => {
+        setMockPage({}, '/x', component);
+        render(<MobileTopBar />);
+
+        const back = screen.getByLabelText(`Kembali ke ${label}`);
+        expect(back).toHaveAttribute('href', href);
+        expect(screen.queryByLabelText('Beranda')).not.toBeInTheDocument();
+    });
+
+    it.each(['HariIni', 'Koleksi/Kartu', 'Riwayat/Jejak', 'Aku', 'Riwayat/Kalender', 'Koleksi/Rekor'])(
+        'keeps the brand mark and shows no back button on %s',
+        (component) => {
+            setMockPage({}, '/x', component);
+            render(<MobileTopBar />);
+
+            expect(screen.getByLabelText('Beranda')).toBeInTheDocument();
+            expect(screen.queryByLabelText(/^Kembali ke/)).not.toBeInTheDocument();
+        },
+    );
+
+    // A notification deep link opens the run detail cold, with nothing behind
+    // it, so back has to be a real href rather than history.back().
+    it('points back at a real url rather than relying on history', () => {
+        setMockPage({}, '/aktivitas/123', 'Runs/Show');
+        render(<MobileTopBar />);
+        expect(screen.getByLabelText('Kembali ke Riwayat').getAttribute('href')).toBe('/aktivitas');
+    });
+
     it('shows the user menu when a user is signed in', () => {
         setMockPage({ auth: { user: makeUser({ name: 'Ada Lovelace' }) } });
         render(<MobileTopBar />);

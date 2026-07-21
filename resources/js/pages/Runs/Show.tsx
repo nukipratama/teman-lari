@@ -253,7 +253,7 @@ export default function RunsShow({
         <>
             <Head title={detail.name ?? 'Run'} />
             <PageContainer>
-                <BackLink href="/aktivitas" className="mb-4">
+                <BackLink href="/aktivitas" className="mb-4 hidden lg:inline-flex">
                     Riwayat · Jejak
                 </BackLink>
 

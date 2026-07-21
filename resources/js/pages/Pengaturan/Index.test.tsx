@@ -34,6 +34,16 @@ describe('Pengaturan', () => {
         expect(screen.getByText('Hapus akun')).toBeInTheDocument();
     });
 
+    // Back lives in MobileTopBar on mobile now, so the in-page breadcrumb is
+    // desktop-only — each viewport gets exactly one back affordance rather than
+    // two stacked or none at all.
+    it('keeps the in-page back link for desktop only', () => {
+        render(<Pengaturan />);
+        const back = screen.getByRole('link', { name: /Aku/ });
+        expect(back).toHaveClass('hidden', 'lg:inline-flex');
+        expect(back).toHaveAttribute('href', '/profil');
+    });
+
     it('links the Zona HR row to the zones page', () => {
         render(<Pengaturan />);
         expect(screen.getByText('Zona HR').closest('a')).toHaveAttribute('href', '/pengaturan/zona');

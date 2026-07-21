@@ -157,8 +157,11 @@ export default function ZonaHR({
             <Head title="Pengaturan · Zona HR" />
             <PageContainer>
                 <header>
-                    <BackLink href="/profil" className="mb-4">
-                        Aku · Pengaturan
+                    {/* Now points at the real parent. It used to read as a trail
+                        ("Aku · Pengaturan") while hrefing straight to /profil,
+                        skipping the page it came from. */}
+                    <BackLink href="/pengaturan" className="mb-4 hidden lg:inline-flex">
+                        Pengaturan
                     </BackLink>
                     <h1 className="font-display italic text-display-md text-ink">
                         Zona Heart Rate kamu.
