@@ -15,12 +15,14 @@ import type { SharedProps } from '@/types/inertia';
  * behaves, with the hairline appearing only once something is actually
  * underneath (see useScrolled).
  *
- * Navy rather than cream because the app runs `black-translucent` for the iOS
- * status bar (see app.blade.php), which forces white clock/battery glyphs. This
- * bar is what sits beneath them on every app screen, so it has to be dark
- * enough to read against — a cream bar would leave the clock invisible. It
- * bookends `MobileBottomNav`, which was already `bg-sky`, and `StatusBarScrim`
- * carries the same ground up through the inset so the two never seam.
+ * Rendered on **Aku only** (see AppShell). On the other tabs it was permanent
+ * chrome carrying a decorative brand mark and an ambient sync chip, and the one
+ * thing that genuinely needed reaching from anywhere — the account menu —
+ * belongs on the profile tab the way it does in a native app.
+ *
+ * Cream, not dark: `StatusBarScrim`'s gradient now supplies the contrast the
+ * forced-white iOS status glyphs need, so this bar no longer has to be the dark
+ * surface underneath them.
  *
  * `pt-[max(0.75rem,env(safe-area-inset-top))]` is what keeps the row clear of
  * the notch. Under `black-translucent` that inset resolves to a real value and
@@ -34,18 +36,19 @@ export default function MobileTopBar() {
 
     return (
         <header
+            data-testid="mobile-top-bar"
             className={cn(
-                'sticky top-0 z-30 flex items-center justify-between gap-3 border-b bg-sky/85 px-5 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))] backdrop-blur-xl transition-colors lg:hidden',
-                scrolled ? 'border-white/10' : 'border-transparent',
+                'sticky top-0 z-30 flex items-center justify-between gap-3 border-b bg-cream-deep/85 px-5 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))] backdrop-blur-xl transition-colors lg:hidden',
+                scrolled ? 'border-line' : 'border-transparent',
             )}
         >
-            <Link href="/" aria-label="Beranda" className="focus-ring-on-sky rounded">
-                <BrandMark tone="cream" wordmarkClassName="hidden min-[350px]:inline" />
+            <Link href="/" aria-label="Beranda" className="focus-ring rounded">
+                <BrandMark wordmarkClassName="hidden min-[350px]:inline" />
             </Link>
             <div className="flex items-center gap-2">
-                <StravaSyncBadge sync={stravaSync} density="compact" onDark />
+                <StravaSyncBadge sync={stravaSync} density="compact" />
                 {user && (
-                    <UserMenu name={user.name} avatarUrl={user.avatar_url} onDark />
+                    <UserMenu name={user.name} avatarUrl={user.avatar_url} />
                 )}
             </div>
         </header>
