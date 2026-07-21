@@ -1,6 +1,6 @@
 ---
 title: Settings (Pengaturan)
-description: The settings hub at /pengaturan — Telegram notification toggles, the HR-zone entry, and account deletion — reached from a single row on Aku.
+description: The settings hub at /pengaturan — notification types and channels, the HR-zone entry, and account deletion — reached from the avatar menu.
 tags: [feature, settings]
 status: living
 reviewed: 2026-07-13
@@ -21,11 +21,15 @@ Server entry is [SettingsController](../../app/Http/Controllers/SettingsControll
 
 ## Sections
 
-- **Notifikasi** — the three channel-neutral per-type toggles (`post_run`, `weekly_recap`, `monthly_recap`) plus a "Kirim notifikasi tes" button. The toggles gate Telegram and phone push alike. Full behaviour in [[telegram-notifications]].
-- **Notifikasi HP** — the web-push subscribe/permission flow (`PushNotificationToggle`), shown once a VAPID key is configured.
-- **Telegram** — the connect / disconnect flow. The demo account is guarded by the `block-demo-telegram` middleware and the front-door `DemoBlockedModal`.
+- **Notifikasi** — one section holding two groups, because the user's model is one topic with two questions rather than three unrelated ones:
+  - *Apa yang dikirim* — the three channel-neutral per-type toggles (`post_run`, `weekly_recap`, `monthly_recap`), which gate Telegram and phone push alike. Full behaviour in [[telegram-notifications]].
+  - *Ke mana* — Telegram connect/disconnect and the web-push permission flow ([PushNotificationToggle](../../resources/js/components/PushNotificationToggle.tsx), rendered once a VAPID key is configured), plus the "Kirim notifikasi tes" button. The test button sits here rather than with the types: what it proves is that a channel can reach you.
 - **Lari · Zona HR** — a row linking to [[settings-hr-zones]] (`/pengaturan/zona`).
 - **Akun · Hapus akun** — see below.
+
+Every line is one primitive. [SettingsRow](../../resources/js/components/ui/SettingsRow.tsx) takes an optional `control` slot that replaces its chevron, so toggle rows and navigation rows share a layout instead of each inventing padding and type; a row carrying a control is never itself tappable, since a row that both navigates and holds a switch gives two different outcomes for taps a few pixels apart. The switch itself is [Toggle](../../resources/js/components/ui/Toggle.tsx), promoted out of this page once more than one place needed it.
+
+The page opens with [PageHero](../../resources/js/components/ui/PageHero.tsx) like every other screen. It previously used a bare `<h1>`, which made it the one page that looked like it belonged to a different product. The in-page back link is `lg`-only — [MobileTopBar](../../resources/js/components/MobileTopBar.tsx) carries back on phones, see [[installed-app-shell]].
 
 ## Account deletion
 

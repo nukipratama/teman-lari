@@ -1,19 +1,19 @@
 import { Head, router } from '@inertiajs/react';
 import { Icon } from '@iconify/react';
-import { useCallback, useRef, useState } from 'react';
+import { type ReactNode, useCallback, useRef, useState } from 'react';
 import { appLayout } from '@/layouts/appLayout';
 import BackLink from '@/components/ui/BackLink';
 import Card from '@/components/ui/Card';
-import Chip from '@/components/ui/Chip';
 import PageContainer from '@/components/ui/PageContainer';
+import PageHero from '@/components/ui/PageHero';
 import PillButton from '@/components/ui/PillButton';
 import SectionLabel from '@/components/ui/SectionLabel';
 import SettingsRow from '@/components/ui/SettingsRow';
+import Toggle from '@/components/ui/Toggle';
 import DemoBlockedModal from '@/components/DemoBlockedModal';
 import PushNotificationToggle from '@/components/PushNotificationToggle';
 import TemariNudgeModal from '@/components/temari/TemariNudgeModal';
 import { useDemoGuard } from '@/hooks/useDemoGuard';
-import { cn } from '@/lib/cn';
 
 // The demo account can't be deleted; the backend guard rejects it and the
 // shared ErrorBanner surfaces the reason, so the confirm modal stays generic.
@@ -56,28 +56,23 @@ export default function Pengaturan({
             <Head title="Pengaturan" />
             <PageContainer>
                 <header className="mb-8">
+                    {/* Desktop only: MobileTopBar carries back on phones, so the
+                        two never both appear. */}
                     <BackLink href="/profil" className="mb-3.5 hidden lg:inline-flex">
                         Aku
                     </BackLink>
-                    <h1 className="font-display text-display-lg text-ink">Pengaturan</h1>
+                    <PageHero eyebrow="Aku · Pengaturan" lead="Atur Temari," emph="sesuai kamu." />
                 </header>
 
+                {/* One notification section, not three. The user holds a single
+                    model with two questions — what gets sent, and where it goes —
+                    and splitting those across "Notifikasi", "Notifikasi HP" and
+                    "Telegram" made them look unrelated. */}
                 <section>
                     <SectionLabel>Notifikasi</SectionLabel>
                     <div className="mt-3">
                         <Card padding="lg">
-                            <NotificationPrefsPanel prefs={notificationPrefs} />
-                        </Card>
-                    </div>
-                </section>
-
-                <PushNotificationToggle />
-
-                <section className="mt-10">
-                    <SectionLabel>Telegram</SectionLabel>
-                    <div className="mt-3">
-                        <Card padding="lg">
-                            <TelegramPanel telegram={telegram} />
+                            <NotificationPrefsPanel prefs={notificationPrefs} telegram={telegram} />
                         </Card>
                     </div>
                 </section>
@@ -139,7 +134,10 @@ function DeleteAccountPanel() {
     );
 }
 
-function NotificationPrefsPanel({ prefs }: Readonly<{ prefs: NotificationPrefs }>) {
+function NotificationPrefsPanel({
+    prefs,
+    telegram,
+}: Readonly<{ prefs: NotificationPrefs; telegram: TelegramPayload }>) {
     // Local state prevents a rapid-click race: if the user flips two toggles before
     // Inertia refreshes props, the second PATCH would read stale props for the first
     // toggle's value and silently revert it. Local state sees the latest flipped value.
@@ -161,53 +159,91 @@ function NotificationPrefsPanel({ prefs }: Readonly<{ prefs: NotificationPrefs }
     }, []);
 
     return (
-        <div className="flex flex-col gap-5">
-            <p className="font-sans text-[12px] text-ink-3">Berlaku buat Telegram sama notifikasi HP.</p>
-            <div className="flex flex-col gap-3">
-                <NotifyToggle
-                    label="Cerita abis lari"
-                    checked={postRun}
-                    onChange={(value) =>
-                        guard(() => {
-                            setPostRun(value);
-                            latestRef.current.postRun = value;
-                            savePrefs();
-                        })
-                    }
-                />
-                <NotifyToggle
-                    label="Rekap mingguan"
-                    checked={weeklyRecap}
-                    onChange={(value) =>
-                        guard(() => {
-                            setWeeklyRecap(value);
-                            latestRef.current.weeklyRecap = value;
-                            savePrefs();
-                        })
-                    }
-                />
-                <NotifyToggle
-                    label="Rekap bulanan"
-                    checked={monthlyRecap}
-                    onChange={(value) =>
-                        guard(() => {
-                            setMonthlyRecap(value);
-                            latestRef.current.monthlyRecap = value;
-                            savePrefs();
-                        })
-                    }
-                />
+        <div className="flex flex-col gap-6">
+            <div>
+                <GroupLabel>Apa yang dikirim</GroupLabel>
+                <div className="flex flex-col">
+                    <SettingsRow
+                        icon="mdi:message-text-outline"
+                        label="Cerita abis lari"
+                        control={
+                            <Toggle
+                                label="Cerita abis lari"
+                                checked={postRun}
+                                onChange={(value) =>
+                                    guard(() => {
+                                        setPostRun(value);
+                                        latestRef.current.postRun = value;
+                                        savePrefs();
+                                    })
+                                }
+                            />
+                        }
+                    />
+                    <SettingsRow
+                        icon="mdi:calendar-week"
+                        label="Rekap mingguan"
+                        control={
+                            <Toggle
+                                label="Rekap mingguan"
+                                checked={weeklyRecap}
+                                onChange={(value) =>
+                                    guard(() => {
+                                        setWeeklyRecap(value);
+                                        latestRef.current.weeklyRecap = value;
+                                        savePrefs();
+                                    })
+                                }
+                            />
+                        }
+                    />
+                    <SettingsRow
+                        icon="mdi:calendar-month-outline"
+                        label="Rekap bulanan"
+                        control={
+                            <Toggle
+                                label="Rekap bulanan"
+                                checked={monthlyRecap}
+                                onChange={(value) =>
+                                    guard(() => {
+                                        setMonthlyRecap(value);
+                                        latestRef.current.monthlyRecap = value;
+                                        savePrefs();
+                                    })
+                                }
+                            />
+                        }
+                    />
+                </div>
             </div>
-            <PillButton
-                tone="outline"
-                onClick={() => guard(() => router.post('/profil/notifikasi/test', {}, { preserveScroll: true }))}
-            >
-                <Icon icon="mdi:send-outline" width={14} height={14} aria-hidden />
-                Kirim notifikasi tes
-            </PillButton>
+
+            <div className="border-t border-line/60 pt-5">
+                <GroupLabel>Ke mana</GroupLabel>
+                <div className="flex flex-col">
+                    <TelegramPanel telegram={telegram} />
+                    <PushNotificationToggle />
+                </div>
+                {/* Lives with the channels rather than the types: what it proves
+                    is that a channel can reach you, not that a type is on. */}
+                <div className="mt-4">
+                    <PillButton
+                        tone="outline"
+                        onClick={() => guard(() => router.post('/profil/notifikasi/test', {}, { preserveScroll: true }))}
+                    >
+                        <Icon icon="mdi:send-outline" width={14} height={14} aria-hidden />
+                        Kirim notifikasi tes
+                    </PillButton>
+                </div>
+            </div>
+
             <DemoBlockedModal open={open} onClose={() => setOpen(false)} />
         </div>
     );
+}
+
+/** Sub-heading inside a settings card, one tier below SectionLabel. */
+function GroupLabel({ children }: Readonly<{ children: ReactNode }>) {
+    return <div className="mb-2 px-2 text-label-micro font-semibold text-ink-3">{children}</div>;
 }
 
 function TelegramPanel({ telegram }: Readonly<{ telegram: TelegramPayload }>) {
@@ -215,9 +251,18 @@ function TelegramPanel({ telegram }: Readonly<{ telegram: TelegramPayload }>) {
 
     if (!telegram.connected) {
         if (telegram.connect_url === null) {
-            return <p className="font-sans text-[12px] text-ink-3">Bot Telegram belum dikonfigurasi.</p>;
+            return (
+                <SettingsRow
+                    icon="mdi:telegram"
+                    label="Telegram"
+                    description="Bot Telegram belum dikonfigurasi."
+                    control={<span aria-hidden />}
+                />
+            );
         }
 
+        // Whole-row tap when the row means one thing ("go connect"); a discrete
+        // control only once there is an action distinct from the row itself.
         if (isDemo) {
             return (
                 <SettingsRow
@@ -242,54 +287,23 @@ function TelegramPanel({ telegram }: Readonly<{ telegram: TelegramPayload }>) {
     }
 
     return (
-        <>
-            <div className="flex items-center justify-between gap-3">
-                <span className="min-w-0 overflow-hidden">
-                    <Chip tone="horizon" className="truncate">
-                        Telegram aktif{telegram.username ? ` · @${telegram.username}` : ''}
-                    </Chip>
-                </span>
+        <SettingsRow
+            icon="mdi:telegram"
+            label="Telegram"
+            description={telegram.username ? `Aktif · @${telegram.username}` : 'Aktif'}
+            control={
                 <button
                     type="button"
                     onClick={() => guard(() => router.delete('/profil/telegram', { preserveScroll: true }))}
-                    className="focus-ring inline-flex items-center gap-1 rounded font-mono text-[12px] font-semibold uppercase tracking-[0.14em] text-ink-3 transition hover:text-ember-deep"
+                    className="focus-ring inline-flex shrink-0 items-center gap-1 rounded font-mono text-[12px] font-semibold uppercase tracking-[0.14em] text-ink-3 transition hover:text-ember-deep"
                 >
                     <Icon icon="mdi:link-off" width={13} height={13} aria-hidden />
                     Putuskan
                 </button>
-            </div>
+            }
+        >
             <DemoBlockedModal open={open} onClose={() => setOpen(false)} />
-        </>
-    );
-}
-
-function NotifyToggle({
-    label,
-    checked,
-    onChange,
-}: Readonly<{ label: string; checked: boolean; onChange: (value: boolean) => void }>) {
-    return (
-        <label className="flex items-center justify-between gap-3">
-            <span className="font-display text-base text-ink">{label}</span>
-            <button
-                type="button"
-                role="switch"
-                aria-checked={checked}
-                aria-label={label}
-                onClick={() => onChange(!checked)}
-                className={cn(
-                    'focus-ring relative h-6 w-11 rounded-full transition',
-                    checked ? 'bg-horizon' : 'bg-cream-deep',
-                )}
-            >
-                <span
-                    className={cn(
-                        'absolute top-0.5 h-5 w-5 rounded-full bg-white transition',
-                        checked ? 'left-[1.375rem]' : 'left-0.5',
-                    )}
-                />
-            </button>
-        </label>
+        </SettingsRow>
     );
 }
 

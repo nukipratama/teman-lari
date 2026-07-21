@@ -1,8 +1,8 @@
 import { usePage } from '@inertiajs/react';
 import { Icon } from '@iconify/react';
-import { type ReactNode, useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import PillButton from '@/components/ui/PillButton';
-import SectionLabel from '@/components/ui/SectionLabel';
+import SettingsRow from '@/components/ui/SettingsRow';
 import { useDemoGuard } from '@/hooks/useDemoGuard';
 import DemoBlockedModal from '@/components/DemoBlockedModal';
 import {
@@ -30,6 +30,12 @@ type PushState =
  * is in the install/permission flow and shows the one right action — the payoff
  * of the PWA work: native lock-screen notifications on iPhone. Only rendered when
  * a VAPID public key is configured.
+ *
+ * Renders as a `SettingsRow` rather than owning a section, so it sits in the
+ * "Ke mana" group beside Telegram and both channels read as the same kind of
+ * thing. Each of the eight states resolves to a description plus at most one
+ * action; the states that are pure explanation (unsupported, needs-install,
+ * denied) simply have no control.
  */
 export default function PushNotificationToggle() {
     const publicKey = usePage<SharedProps>().props.webPushPublicKey ?? '';
@@ -101,23 +107,46 @@ export default function PushNotificationToggle() {
         return null;
     }
 
-    return (
-        <section className="mt-10">
-            <SectionLabel>Notifikasi HP</SectionLabel>
-            <div className="mt-3 flex flex-col gap-3 rounded-2xl border border-cream-deep bg-cream p-4">
-                <PushBody state={state} busy={busy} onSubscribe={runSubscribe} onUnsubscribe={runUnsubscribe} />
+    if (state === 'loading') {
+        return null;
+    }
 
-                <p role="status" aria-live="polite" className="min-h-[1rem] text-sm text-ink-3">
+    return (
+        <SettingsRow
+            icon="mdi:cellphone-message"
+            label="Notifikasi HP"
+            description={PUSH_DESCRIPTION[state]}
+            control={<PushAction state={state} busy={busy} onSubscribe={runSubscribe} onUnsubscribe={runUnsubscribe} />}
+        >
+            {status !== '' && (
+                <p role="status" aria-live="polite" className="px-2 pb-1 text-[12px] text-ink-3">
                     {status}
                 </p>
-
-                <DemoBlockedModal open={open} onClose={() => setOpen(false)} />
-            </div>
-        </section>
+            )}
+            <DemoBlockedModal open={open} onClose={() => setOpen(false)} />
+        </SettingsRow>
     );
 }
 
-function PushBody({
+/** One line per state, standing in for the old free-floating hint paragraphs. */
+const PUSH_DESCRIPTION: Record<PushState, string> = {
+    loading: '',
+    unsupported: 'HP atau browser ini belum bisa nerima notifikasi Temari.',
+    'needs-install-safari':
+        'Tambahin Temari ke Home Screen dulu (Share → Add to Home Screen), baru bisa nyalain notifikasi.',
+    'needs-install-other':
+        'Buka Temari di Safari dulu, terus Share → Add to Home Screen — notifikasi HP cuma jalan dari sana.',
+    denied: 'Notifikasi diblokir. Nyalain lagi dari Setelan HP → Notifikasi → Temari.',
+    stale: 'Perlu didaftarin ulang di HP ini.',
+    subscribed: 'Aktif di HP ini.',
+    ready: 'Nyalain biar Temari bisa kabarin kamu di HP.',
+};
+
+/**
+ * The single action a state offers, or nothing when the state is purely
+ * explanatory and there is no button that would help.
+ */
+function PushAction({
     state,
     busy,
     onSubscribe,
@@ -129,47 +158,28 @@ function PushBody({
     onUnsubscribe: () => void;
 }>) {
     switch (state) {
-        case 'loading':
-            return null;
-        case 'unsupported':
-            return <Hint>HP atau browser ini belum bisa nerima notifikasi Temari.</Hint>;
-        case 'needs-install-safari':
-            return <Hint>Tambahin Temari ke Home Screen dulu (tombol Share → Add to Home Screen), baru bisa nyalain notifikasi.</Hint>;
-        case 'needs-install-other':
-            return <Hint>Buka Temari di Safari dulu, terus Share → Add to Home Screen — notifikasi HP cuma jalan dari sana.</Hint>;
-        case 'denied':
-            return <Hint>Notifikasi diblokir. Nyalain lagi dari Setelan HP → Notifikasi → Temari.</Hint>;
         case 'stale':
             return (
-                <>
-                    <Hint>Notifikasi perlu didaftarin ulang di HP ini.</Hint>
-                    <PillButton tone="horizon" disabled={busy} onClick={onSubscribe}>
-                        <Icon icon="mdi:bell-cog-outline" width={14} height={14} aria-hidden />
-                        Perbaiki
-                    </PillButton>
-                </>
+                <PillButton tone="horizon" disabled={busy} onClick={onSubscribe}>
+                    <Icon icon="mdi:bell-cog-outline" width={14} height={14} aria-hidden />
+                    Perbaiki
+                </PillButton>
             );
         case 'subscribed':
             return (
-                <div className="flex flex-col gap-2">
-                    <Hint>Notifikasi HP aktif. Tes kirimannya lewat "Kirim notifikasi tes" di atas.</Hint>
-                    <PillButton tone="outline" disabled={busy} onClick={onUnsubscribe}>
-                        <Icon icon="mdi:bell-off-outline" width={14} height={14} aria-hidden />
-                        Matikan
-                    </PillButton>
-                </div>
+                <PillButton tone="outline" disabled={busy} onClick={onUnsubscribe}>
+                    <Icon icon="mdi:bell-off-outline" width={14} height={14} aria-hidden />
+                    Matikan
+                </PillButton>
             );
         case 'ready':
-        default:
             return (
                 <PillButton tone="horizon" disabled={busy} onClick={onSubscribe}>
                     <Icon icon="mdi:bell-ring-outline" width={14} height={14} aria-hidden />
-                    Nyalakan notifikasi
+                    Nyalakan
                 </PillButton>
             );
+        default:
+            return null;
     }
-}
-
-function Hint({ children }: Readonly<{ children: ReactNode }>) {
-    return <p className="text-sm text-ink-2">{children}</p>;
 }

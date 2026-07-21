@@ -40,7 +40,7 @@ it('renders nothing when no VAPID public key is configured', () => {
 it('shows the enable button when ready and subscribes on click', async () => {
     render(<PushNotificationToggle />);
 
-    fireEvent.click(await screen.findByRole('button', { name: /Nyalakan notifikasi/ }));
+    fireEvent.click(await screen.findByRole('button', { name: /Nyalakan/ }));
 
     await waitFor(() => expect(webPush.subscribe).toHaveBeenCalledWith('test-key'));
 });

@@ -27,11 +27,26 @@ beforeEach(() => {
 describe('Pengaturan', () => {
     it('renders the settings sections', () => {
         render(<Pengaturan />);
-        expect(screen.getByText('Pengaturan')).toBeInTheDocument();
         expect(screen.getByText('Notifikasi')).toBeInTheDocument();
         expect(screen.getByText('Telegram')).toBeInTheDocument();
         expect(screen.getByText('Zona HR')).toBeInTheDocument();
         expect(screen.getByText('Hapus akun')).toBeInTheDocument();
+    });
+
+    // The page used to open with a bare <h1>Pengaturan</h1>, the only screen in
+    // the app not using the editorial header every other page shares.
+    it('opens with the editorial header rather than a bare title', () => {
+        render(<Pengaturan />);
+        expect(screen.getByText('Aku · Pengaturan')).toBeInTheDocument();
+        expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Atur Temari, sesuai kamu.');
+    });
+
+    // What gets sent and where it goes were three separate sections; they are
+    // now two labelled groups inside one Notifikasi card.
+    it('groups the notification settings by what and where', () => {
+        render(<Pengaturan />);
+        expect(screen.getByText('Apa yang dikirim')).toBeInTheDocument();
+        expect(screen.getByText('Ke mana')).toBeInTheDocument();
     });
 
     // Back lives in MobileTopBar on mobile now, so the in-page breadcrumb is
