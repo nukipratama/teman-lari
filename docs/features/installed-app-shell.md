@@ -1,6 +1,6 @@
 ---
 title: Installed app shell
-description: What makes Temari feel native once it is on the iOS Home Screen — status-bar takeover, launch image, sticky header, touch feel, edge-swipe back
+description: What makes Temari feel native once it is on the iOS Home Screen — status-bar takeover, launch image, Aku-only top bar, touch feel, edge-swipe back
 tags: [feature, pwa]
 status: living
 reviewed: 2026-07-21
@@ -32,23 +32,38 @@ under the status bar, `env(safe-area-inset-top)` resolves to a real value, and
 those pixels are ours.
 
 The trade is not optional: **iOS forces white status glyphs in this mode**, with
-no way to ask for dark ones. Every surface that can reach the top of the display
-must therefore be dark, or the clock disappears. That is the whole reason
-`MobileTopBar` is `bg-sky/85` rather than cream
-([MobileTopBar.tsx](resources/js/components/MobileTopBar.tsx)) — it bookends
-`MobileBottomNav`, which was already `bg-sky`. Do not revert the header colour
-without also reverting the meta.
+no way to ask for dark ones. Something dark has to sit under them on every
+screen, or the clock disappears against the cream app.
 
-Modals are the case that is easy to miss. They are `fixed inset-0` at z-50/51
-and paint their own scrim over the status region; `CardReveal`'s is dark, others
-are not. So [StatusBarScrim](resources/js/components/StatusBarScrim.tsx) sits at
-`z-[70]` above all of them and guarantees the backing, in the same `sky` as the
-bar beneath it so the two never read as two bands. It is zero-height wherever
+That job belongs to
+[StatusBarScrim](resources/js/components/StatusBarScrim.tsx), and it is a
+**gradient** rather than a solid strip. A solid one is the original bug: a hard
+dark edge above cream content reads as a band stuck to the top of the app.
+Fading `sky` → transparent over a little more than the inset gives the glyphs an
+opaque ground exactly where they sit, then dissolves before meeting page
+content, so there is no edge to notice. That is also what let the top bar stay
+cream — the contrast comes from the scrim, not from the bar.
+
+It sits at `z-[70]`, above the modal layer, because every modal is
+`fixed inset-0` at z-50/51 and paints its own scrim over that region;
+`CardReveal`'s is dark, `TemariNudgeModal`'s is not. Rather than auditing each
+overlay for top-of-screen contrast, this outranks them all. Zero-height wherever
 the inset is 0, i.e. everywhere but the installed app.
 
-`pt-[max(0.75rem,env(safe-area-inset-top))]` on the header is what keeps the row
-clear of the notch; under `black-translucent` the `max()` now picks the real
-inset rather than the 0.75rem floor.
+## The mobile top bar is Aku-only
+
+[MobileTopBar](resources/js/components/MobileTopBar.tsx) used to be permanent
+chrome on every tab. What it carried did not justify that on a phone: a
+decorative brand mark (the bottom nav already has a Hari Ini tab), an ambient
+sync chip, and the account menu. Only the last is load-bearing, and it belongs
+on the profile tab the way it does in a native app.
+
+`AppShell` renders it only when the Inertia page is `Aku`. The consequence to
+remember is that **it also owned the notch padding** — so on every other page
+the shell adds `pt-[env(safe-area-inset-top)]` itself, or content runs up under
+the notch. Desktop is untouched: `TopNav` is a separate component, and is also a
+`<header>`, which is why tests select the mobile bar by `data-testid` rather
+than by tag.
 
 ### What this replaced, and why it is worth recording
 
@@ -79,8 +94,8 @@ changing `public/icon-512.png`.
 
 ## Sticky header
 
-`MobileTopBar` is `sticky` + translucent, with the hairline appearing only once
-content is actually underneath it — driven by
+On Aku, `MobileTopBar` is `sticky` + translucent, with the hairline appearing
+only once content is actually underneath it — driven by
 [useScrolled.ts#L21](resources/js/hooks/useScrolled.ts#L21), which reads scroll
 offset through `useSyncExternalStore` so a restored scroll position is already
 correct on first paint.

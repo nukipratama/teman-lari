@@ -4,8 +4,8 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <meta name="color-scheme" content="light">
-    <!-- Matches the app's MobileTopBar navy, like app.blade.php. -->
-    <meta name="theme-color" content="#1F2747">
+    <!-- Matches the app's cream, like app.blade.php. -->
+    <meta name="theme-color" content="#EEE7D6">
     <title>Lagi offline · Temari</title>
     <!--
         Served by the service worker when a navigation fails with no network.
@@ -37,15 +37,16 @@
         /* The app runs `apple-mobile-web-app-status-bar-style: black-translucent`,
            which forces white status glyphs for the whole standalone session —
            including this page, which the service worker swaps in without a
-           reload. Cream behind white glyphs hides the clock, so back the strip
-           in the same navy the app's top bar uses. Mirrors StatusBarScrim; it
-           collapses to zero height wherever the inset is 0. */
+           reload. Cream behind white glyphs hides the clock, so back them with
+           the same fading navy StatusBarScrim uses in the app — a gradient
+           rather than a solid strip, so there is no hard edge to read as a band
+           above the cream page. Collapses to near-nothing where the inset is 0. */
         body::before {
             content: '';
             position: fixed;
             inset: 0 0 auto;
-            height: env(safe-area-inset-top);
-            background: #1F2747;
+            height: calc(env(safe-area-inset-top) + 14px);
+            background: linear-gradient(to bottom, #1F2747, rgba(31, 39, 71, 0.8) 55%, rgba(31, 39, 71, 0));
         }
         img { width: 96px; height: 96px; }
         h1 { margin: 0.5rem 0 0; font-size: 1.4rem; font-weight: 600; }

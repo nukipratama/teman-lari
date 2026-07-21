@@ -2,7 +2,7 @@ import { render, screen, fireEvent, act } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { MotionConfigProps } from 'framer-motion';
 import AppShell from './AppShell';
-import { setMockPage } from '@/test/setup';
+import { makeUser, setMockPage } from '@/test/setup';
 import type { PendingReveal } from '@/types/inertia';
 
 const pendingCard: PendingReveal = {
@@ -158,6 +158,37 @@ describe('AppShell', () => {
         );
 
         expect(document.getElementById('main-content')).toBe(before);
+    });
+
+    // The mobile top bar was permanent chrome on every tab, carrying a
+    // decorative brand mark and an ambient sync chip. It now appears only on the
+    // profile tab, where the account menu belongs.
+    it('shows the mobile top bar on Aku', () => {
+        setMockPage({ auth: { user: makeUser() } }, '/profil', 'Aku');
+        render(<AppShell>content</AppShell>);
+        expect(screen.getByTestId('mobile-top-bar')).toBeInTheDocument();
+    });
+
+    it('omits the mobile top bar on every other page', () => {
+        setMockPage({ auth: { user: makeUser() } }, '/kartu', 'Koleksi/Kartu');
+        render(<AppShell>content</AppShell>);
+        // Scoped by testid, not by tag: TopNav is also a <header> and stays in
+        // the DOM on mobile, hidden by CSS alone.
+        expect(screen.queryByTestId('mobile-top-bar')).not.toBeInTheDocument();
+    });
+
+    // With no bar on the page, nothing else keeps content clear of the notch —
+    // `black-translucent` runs the web view edge to edge.
+    it('pads for the notch itself when the top bar is absent', () => {
+        setMockPage({ auth: { user: makeUser() } }, '/kartu', 'Koleksi/Kartu');
+        const { container } = render(<AppShell>content</AppShell>);
+        expect(container.querySelector('.min-h-screen')).toHaveClass('pt-[env(safe-area-inset-top)]');
+    });
+
+    it('leaves that padding to the top bar on Aku', () => {
+        setMockPage({ auth: { user: makeUser() } }, '/profil', 'Aku');
+        const { container } = render(<AppShell>content</AppShell>);
+        expect(container.querySelector('.min-h-screen')).not.toHaveClass('pt-[env(safe-area-inset-top)]');
     });
 
     // The scrim is what makes `black-translucent` safe: iOS forces white status

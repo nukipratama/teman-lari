@@ -48,15 +48,15 @@ describe('MobileTopBar', () => {
             window.dispatchEvent(new Event('scroll'));
         });
 
-        expect(container.querySelector('header')).toHaveClass('border-white/10');
+        expect(container.querySelector('header')).toHaveClass('border-line');
         window.scrollY = 0;
     });
 
-    // The bar is what sits under the forced-white iOS status glyphs once
-    // `black-translucent` is on (app.blade.php). A cream bar leaves the clock
-    // unreadable, so the dark ground is load-bearing, not decorative.
-    it('keeps a dark ground so the white status glyphs stay legible', () => {
+    // Back to cream: StatusBarScrim's gradient now supplies the contrast the
+    // forced-white iOS status glyphs need, so this bar no longer has to be the
+    // dark surface underneath them.
+    it('keeps the cream ground', () => {
         const { container } = render(<MobileTopBar />);
-        expect(container.querySelector('header')).toHaveClass('bg-sky/85');
+        expect(container.querySelector('header')).toHaveClass('bg-cream-deep/85');
     });
 });

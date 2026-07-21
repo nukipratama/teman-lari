@@ -31,12 +31,13 @@
          status bar — that was tried in #396 and did not move it. --}}
     <meta name="color-scheme" content="light">
 
-    {{-- Matches MobileTopBar so the two never seam. Android/Chrome uses this to
-         tint its toolbar; iOS does not use it for the standalone status bar at
-         all, which is why two rounds of retinting this value never touched the
-         dark band around the notch. Fixed rather than following the dawn-shift,
-         since the header it butts against is one colour at every hour. --}}
-    <meta name="theme-color" content="#1F2747">
+    {{-- Android/Chrome uses this to tint its toolbar. iOS does not use it for
+         the standalone status bar at all, which is why two rounds of retinting
+         it never touched the dark band around the notch — see StatusBarScrim
+         for what actually paints that. Cream because that is the app's top
+         surface on a device with no safe-area inset, where the scrim gradient
+         is only a few px tall. Fixed rather than following the dawn-shift. --}}
+    <meta name="theme-color" content="#EEE7D6">
 
     {{-- PWA: installable + standalone; push works once added to the Home Screen via Safari. --}}
     <link rel="manifest" href="{{ asset('manifest.webmanifest') }}">

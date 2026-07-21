@@ -4,7 +4,6 @@ import { useCallback, useRef, useState } from "react";
 import UserAvatar from "@/components/UserAvatar";
 import { useDismissable } from "@/hooks/useDismissable";
 import { useFocusReturn } from "@/hooks/useFocusReturn";
-import { cn } from "@/lib/cn";
 
 /** Shared by both menu items so they read as one list. */
 const ITEM_CLASS =
@@ -24,8 +23,7 @@ const ITEM_CLASS =
 export default function UserMenu({
   name,
   avatarUrl,
-  onDark = false,
-}: Readonly<{ name: string; avatarUrl: string | null; onDark?: boolean }>) {
+}: Readonly<{ name: string; avatarUrl: string | null }>) {
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const close = useCallback(() => setOpen(false), []);
@@ -44,14 +42,7 @@ export default function UserMenu({
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
         aria-label={`Buka menu ${name}`}
-        className={cn(
-          "flex h-11 w-11 items-center justify-center rounded-full ring-2 transition hover:ring-leaf focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-leaf focus-visible:ring-offset-2",
-          // The dropdown panel below stays cream either way — only the trigger
-          // sits on the host bar, which is navy on mobile (see MobileTopBar).
-          onDark
-            ? "ring-white/20 focus-visible:ring-offset-sky"
-            : "ring-cream-deep focus-visible:ring-offset-cream",
-        )}
+        className="flex h-11 w-11 items-center justify-center rounded-full ring-2 ring-cream-deep transition hover:ring-leaf focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-leaf focus-visible:ring-offset-2 focus-visible:ring-offset-cream"
       >
         <UserAvatar name={name} avatarUrl={avatarUrl} size="md" className="h-11 w-11" />
       </button>
