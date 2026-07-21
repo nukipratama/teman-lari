@@ -1,6 +1,6 @@
 ---
 title: Installed app shell
-description: What makes Temari feel native once it is on the iOS Home Screen — edge-to-edge status bar, launch image, Aku-only top bar, touch feel, edge-swipe back
+description: What makes Temari feel native once it is on the iOS Home Screen — edge-to-edge status bar, launch image, top bar with back button, touch feel, edge-swipe back
 tags: [feature, pwa]
 status: living
 reviewed: 2026-07-21
@@ -61,38 +61,40 @@ first rather than assuming it from the spec.
 `pt-[env(safe-area-inset-top)]` on the shell everywhere else, are what keep
 content clear of the notch now that the web view runs edge to edge.
 
-## The mobile top bar is Aku-only
+## The mobile top bar, and its back button
 
-[MobileTopBar](resources/js/components/MobileTopBar.tsx) used to be permanent
-chrome on every tab. What it carried did not justify that on a phone: a
-decorative brand mark (the bottom nav already has a Hari Ini tab), an ambient
-sync chip, and the account menu. Only the last is load-bearing, and it belongs
-on the profile tab the way it does in a native app.
+[MobileTopBar](resources/js/components/MobileTopBar.tsx) is on **every** page.
+#398 briefly scoped it to Aku on the argument that a decorative brand mark and
+an ambient sync chip did not justify permanent space on a phone. That
+under-weighted the sync chip: Strava freshness is time-sensitive and `revoked`
+is an actionable failure, so hiding it on the profile tab made a broken
+connection invisible until the user visited a tab they had no reason to open
+*because* nothing was syncing. It also quietly undid #396, which had moved
+Pengaturan and Keluar into the avatar menu precisely so account actions were
+reachable everywhere.
 
-`AppShell` renders it only when the Inertia page is `Aku`. The consequence to
-remember is that **it also owned the notch padding** — so on every other page
-the shell adds `pt-[env(safe-area-inset-top)]` itself, or content runs up under
-the notch. Desktop is untouched: `TopNav` is a separate component, and is also a
-`<header>`, which is why tests select the mobile bar by `data-testid` rather
-than by tag.
+On a **pushed** screen the brand mark gives way to a back button — roots show
+identity, pushes show a way out. Which screens count is an explicit map in
+`MobileTopBar`, not something derived from `activeTabFromUrl`: `/kalender`,
+`/rekor`, `/aksesori` and `/target` resolve to a tab too, but are reached
+through in-page tab strips, so they are siblings of their root and keep the
+brand mark.
 
-### What this replaced, and why it is worth recording
+Two details worth keeping:
 
-Two earlier attempts blamed the wrong thing for the dark band above the header,
-and both shipped without fixing it:
+- **Back is a real `<Link href>`, never `history.back()`.** A notification deep
+  link opens `/aktivitas/{id}` cold with nothing behind it, and `history.back()`
+  would strand the user or exit the app. [useSwipeBack](resources/js/hooks/useSwipeBack.ts)
+  remains the gesture equivalent.
+- **Desktop keeps the in-page breadcrumb.** The bar is `lg:hidden`, so the
+  [BackLink](resources/js/components/ui/BackLink.tsx) on the pushed pages is
+  hidden below `lg` rather than deleted — each viewport gets exactly one back
+  affordance. `Pengaturan/ZonaHR`'s link also had its target corrected: it read
+  "Aku · Pengaturan" as a trail while hrefing past its actual parent to
+  `/profil`.
 
-- **#395** pinned `theme-color` to the header's cream. iOS does not use
-  `theme-color` for the standalone status bar at all — only Android/Chrome does,
-  for its toolbar. The meta is still set (now navy, matching the header, in both
-  the blade and [manifest.webmanifest](public/manifest.webmanifest)) but it was
-  never the lever.
-- **#396** declared `color-scheme: light`, on the theory that a Dark Mode device
-  was rendering the UA-owned strip dark. That declaration is correct and worth
-  keeping for form controls and scrollbars, but the band survived a fresh
-  install, so it does not govern the strip either.
-
-The actual cause was that under `default`, the strip is iOS-owned and
-unreachable from CSS. Nothing in the stylesheet could ever have fixed it.
+`TopNav` is a separate component and also a `<header>`, which is why tests
+select the mobile bar by `data-testid` rather than by tag.
 
 ## Launch image
 
@@ -105,8 +107,8 @@ changing `public/icon-512.png`.
 
 ## Sticky header
 
-On Aku, `MobileTopBar` is `sticky` + translucent, with the hairline appearing
-only once content is actually underneath it — driven by
+`MobileTopBar` is `sticky` + translucent, with the hairline appearing only once
+content is actually underneath it — driven by
 [useScrolled.ts#L21](resources/js/hooks/useScrolled.ts#L21), which reads scroll
 offset through `useSyncExternalStore` so a restored scroll position is already
 correct on first paint.

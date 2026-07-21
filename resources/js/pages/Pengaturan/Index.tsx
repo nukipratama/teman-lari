@@ -56,7 +56,7 @@ export default function Pengaturan({
             <Head title="Pengaturan" />
             <PageContainer>
                 <header className="mb-8">
-                    <BackLink href="/profil" className="mb-3.5">
+                    <BackLink href="/profil" className="mb-3.5 hidden lg:inline-flex">
                         Aku
                     </BackLink>
                     <h1 className="font-display text-display-lg text-ink">Pengaturan</h1>

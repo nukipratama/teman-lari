@@ -11,12 +11,8 @@ import ErrorBanner from '@/components/ErrorBanner';
 import StravaZoneReconnectBanner from '@/components/StravaZoneReconnectBanner';
 import AiOutageBanner from '@/components/AiOutageBanner';
 import { useDawnShift } from '@/hooks/useDawnShift';
-import { cn } from '@/lib/cn';
 import { useSwipeBack } from '@/hooks/useSwipeBack';
 import type { SharedProps, UnlockFlash } from '@/types/inertia';
-
-/** Inertia page name of the profile tab — the only page that keeps the mobile top bar. */
-const MOBILE_TOP_BAR_PAGE = 'Aku';
 
 interface AppShellProps {
     children: ReactNode;
@@ -27,15 +23,8 @@ interface AppShellProps {
 export default function AppShell({ children, withNav = true }: Readonly<AppShellProps>) {
     useDawnShift();
     useSwipeBack();
-    const page = usePage<SharedProps>();
-    const { pendingReveal, flash } = page.props;
+    const { pendingReveal, flash } = usePage<SharedProps>().props;
     const pending = pendingReveal ?? null;
-
-    // The mobile top bar earns its space on the profile tab, where the account
-    // menu belongs, and nowhere else: on the other tabs it was permanent chrome
-    // for a decorative brand mark and an ambient sync chip. Desktop is
-    // unaffected — TopNav carries navigation there and is a different component.
-    const showMobileTopBar = page.component === MOBILE_TOP_BAR_PAGE;
     const unlock = flash?.unlock ?? null;
     const [majorUnlock, setMajorUnlock] = useState<UnlockFlash | null>(
         () => (unlock?.is_major ? unlock : null),
@@ -68,16 +57,9 @@ export default function AppShell({ children, withNav = true }: Readonly<AppShell
 
     return (
         <MotionConfig reducedMotion="user">
-        <div
-            className={cn(
-                'min-h-screen bg-cream-deep text-ink',
-                // With no top bar on this page, nothing else keeps content
-                // clear of the notch — under `black-translucent` the web view
-                // runs edge to edge. Mobile only: the inset is 0 on desktop
-                // anyway, but TopNav owns the top there regardless.
-                !showMobileTopBar && 'pt-[env(safe-area-inset-top)] lg:pt-0',
-            )}
-        >
+        {/* MobileTopBar carries the safe-area padding for this branch, so
+            nothing is needed here — see its pt-[max(...)]. */}
+        <div className="min-h-screen bg-cream-deep text-ink">
             <a
                 href="#main-content"
                 className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-lg focus:bg-leaf focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-white focus:shadow-lg"
@@ -86,7 +68,7 @@ export default function AppShell({ children, withNav = true }: Readonly<AppShell
             </a>
 
             <TopNav />
-            {showMobileTopBar && <MobileTopBar />}
+            <MobileTopBar />
 
             <ErrorBanner />
             <StravaZoneReconnectBanner />
