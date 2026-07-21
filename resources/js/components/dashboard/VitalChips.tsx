@@ -11,6 +11,11 @@ import type { BriefingResult, RecoveryTone, TrainingLoad } from '@/types/inertia
 // overreaching within roughly ±40 at typical CTL, so that's the rail's clamp range.
 const FORM_RANGE = 40;
 
+// Recovery rails at 72h: BriefingComposer switches its label from hours to days
+// at the same threshold, and roughly three days is where a hard session stops
+// costing you. Past it the gauge just reads full.
+const RECOVERY_HOURS_FULL = 72;
+
 // A one-line gloss per vibe, keyed by its Indonesian label (mirrors Vibe::LABELS).
 // Sits on the sub-line so the tile says something ("badan lagi enteng") instead
 // of just restating the word.
@@ -57,9 +62,18 @@ export default function VitalChips({ briefing, load }: Readonly<{ briefing: Brie
             <VitalChip
                 label="Recovery"
                 value={briefing.recoveryHoursLabel ?? briefing.streakLabel ?? briefing.recoveryLabel}
-                sub="dari lari terakhir"
+                sub="lari terakhir"
                 tone="ink"
+                explainerKey="recovery"
                 recoveryTone={briefing.recoveryTone}
+                gauge={briefing.recoveryHours != null ? {
+                    label: 'Recovery',
+                    value: briefing.recoveryHours,
+                    min: 0,
+                    max: RECOVERY_HOURS_FULL,
+                    tone: briefing.recoveryTone,
+                    anchors: ['0', `${RECOVERY_HOURS_FULL}j`],
+                } : undefined}
             />
         </div>
     );
@@ -71,10 +85,18 @@ interface GaugeConfig {
     value: number;
     min: number;
     max: number;
-    tone: 'horizon' | 'leaf';
+    tone: 'horizon' | 'leaf' | RecoveryTone;
     bipolar?: boolean;
     anchors: [string, string];
 }
+
+const GAUGE_FILL: Record<string, string> = {
+    horizon: 'bg-horizon',
+    positive: 'bg-leaf',
+    warning: 'bg-citrus',
+    alert: 'bg-ember',
+    neutral: 'bg-ink-3/40',
+};
 
 /** Thin bounded rail so a raw signed score reads as "where am I in the range" at a glance. */
 function VitalGauge({ label, value, min, max, tone, bipolar, anchors }: Readonly<GaugeConfig>) {
@@ -82,7 +104,7 @@ function VitalGauge({ label, value, min, max, tone, bipolar, anchors }: Readonly
     const pct = ((clamped - min) / (max - min)) * 100;
     // Bipolar (Kesiapan): fill grows from the zero mark; leaf when positive, ember when negative.
     const leafPolarity = value >= 0 ? 'bg-leaf' : 'bg-ember';
-    const fillColor = tone === 'leaf' ? leafPolarity : 'bg-horizon';
+    const fillColor = tone === 'leaf' ? leafPolarity : (GAUGE_FILL[tone] ?? 'bg-horizon');
     const zeroPct = bipolar ? ((0 - min) / (max - min)) * 100 : 0;
     return (
         <div className="mt-1.5">

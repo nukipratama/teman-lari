@@ -28,6 +28,7 @@ function briefingWith(content: string): BriefingResult {
         recoveryLabel: 'Pemulihan: 41j',
         recoveryTone: 'positive',
         recoveryHoursLabel: '41j',
+    recoveryHours: 41,
         streakLabel: 'Lari hari ini',
         sigilPattern: 'orct',
         accessory: null,

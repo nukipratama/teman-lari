@@ -50,6 +50,10 @@ export const METRIC_GLOSSARY = {
         label: 'Decoupling',
         body: 'Selisih efisiensi paruh pertama dan paruh kedua lari. Di atas 5% berarti HR drift, base aerobic belum solid atau kamu sudah kepayahan.',
     },
+    recovery: {
+        label: 'Recovery',
+        body: 'Berapa lama sejak lari terakhirmu. Makin panjang jedanya, makin pulih badanmu. Sekitar 72 jam biasanya sudah balik segar buat sesi berat lagi, tapi lari enteng nggak perlu nunggu selama itu.',
+    },
     vibe: {
         label: 'Vibe',
         body: 'Ringkasan kondisi kamu hari ini, diambil dari Form dan tren mingguan. Aku pakai ini untuk menentukan tone briefing.',

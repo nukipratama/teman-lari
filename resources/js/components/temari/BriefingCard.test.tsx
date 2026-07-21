@@ -29,6 +29,7 @@ function makeBriefing(overrides: Partial<BriefingResult> = {}): BriefingResult {
         recoveryLabel: 'Pemulihan: cukup',
         recoveryTone: 'positive',
         recoveryHoursLabel: '12j',
+        recoveryHours: 12,
         streakLabel: 'Lari hari ini',
         sigilPattern: 'orct',
         accessory: 'headband',

@@ -167,6 +167,8 @@ export interface BriefingResult {
     recoveryLabel: string;
     recoveryTone: RecoveryTone;
     recoveryHoursLabel: string | null;
+    /** Raw hours since the last run — the number `recoveryHoursLabel` is rendered from. */
+    recoveryHours: number | null;
     streakLabel: string | null;
     sigilPattern: string;
     accessory: string | null;
