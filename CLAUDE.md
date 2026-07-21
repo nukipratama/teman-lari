@@ -56,3 +56,17 @@ Briefing and analysis narration is LLM-backed via Azure OpenAI through openai-ph
 ## Debugging
 
 When a bug or error is reported, ground the investigation in real state before hypothesising. Server errors: `./vendor/bin/sail logs -f` or `storage/logs/laravel-*.log` (daily rotation). Data: `./vendor/bin/sail artisan tinker --execute '...'`, or `sail mysql`. Schema: `sail artisan db:show --counts` / `db:table <name>`. React/Inertia console errors: the browser devtools console, or the `browser-review` skill's scripts, which capture `console`/`pageerror` per page.
+
+## Visual iteration
+
+Frontend work converges by tweak → look → tweak, and that loop is the most expensive thing in
+this repo: 110 files have been edited 8+ times in a single session (`shareCard.ts` 121 times).
+The edits are cheap; re-checking is not.
+
+- Batch several visual changes before looking. Don't screenshot per tweak.
+- One screenshot per round, not per change. Have a subagent look and report in text — an image
+  read into the main context is re-billed on every later turn.
+- Cropping for detail: crop and downscale in one step, write `.jpg`. Never write a
+  full-resolution intermediate and then read it.
+- Run the narrowest check that can fail (`--filter`, `--group`, a single path) before the full
+  suite. Stop at the first failure; widen only when it passes.
